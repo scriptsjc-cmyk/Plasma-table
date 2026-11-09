@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14171a">
+<title>Plasma Table</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span id="machineName">Plasma Table</span>
+    <span id="conn" class="dot" title="Connection"></span>
+  </div>
+  <button id="btnConnect" class="accent small">Connect</button>
+  <span id="stateBadge" class="badge">Not connected</span>
+  <button id="btnStop" class="stop">STOP</button>
+</header>
+
+<section id="connectPanel" class="connect">
+  <div>
+    <b>Connect to the machine</b>
+    <p class="muted small" id="connectHelp">Plug the controller into this computer's USB, press <b>Connect</b> and pick the port
+      (usually "USB Serial Device" or "STM32 Virtual ComPort"). Works in Chrome or Edge on a computer.</p>
+  </div>
+  <div class="row">
+    <button id="btnConnect2" class="accent">Connect</button>
+    <button id="btnDemo">Try demo machine</button>
+  </div>
+</section>
+
+<div id="alarmBar" class="alarm hidden">
+  <div><strong id="alarmTitle">Alarm</strong> <span id="alarmText"></span></div>
+  <button data-cmd="unlock" class="small">Unlock</button>
+</div>
+
+<div id="refBar" class="refbar hidden">
+  <div><strong>Machine position unknown.</strong> Home it before cutting so it can't run off the edge.</div>
+  <button data-cmd="home" class="small">Home</button>
+</div>
+
+<main>
+  <!-- position -->
+  <section class="card pos">
+    <div class="axis"><span>X</span><b id="posX">0.0</b></div>
+    <div class="axis"><span>Y</span><b id="posY">0.0</b></div>
+    <div class="axis"><span>Z</span><b id="posZ">0.0</b></div>
+    <div class="torch" id="torchLamp">TORCH OFF</div>
+    <div class="probe" id="probeLamp">PROBE</div>
+  </section>
+
+  <!-- 1 move -->
+  <section class="card" id="moveCard">
+    <h2><span class="num">1</span> Position the torch</h2>
+    <div class="steps" id="steps"></div>
+    <div class="jog">
+      <span></span><button class="j" data-axis="Y" data-dir="1">Y+</button><span></span>
+      <button class="j z" data-axis="Z" data-dir="1">Z↑</button>
+      <button class="j" data-axis="X" data-dir="-1">X−</button>
+      <button class="j home" data-cmd="goto_zero" title="Go to XY zero">⌖</button>
+      <button class="j" data-axis="X" data-dir="1">X+</button>
+      <span></span>
+      <span></span><button class="j" data-axis="Y" data-dir="-1">Y−</button><span></span>
+      <button class="j z" data-axis="Z" data-dir="-1">Z↓</button>
+    </div>
+    <div class="row">
+      <button data-cmd="home">Home</button>
+      <button data-cmd="raise">Raise torch</button>
+      <button data-cmd="zero_xy" class="accent">Set start here (XY zero)</button>
+    </div>
+  </section>
+
+  <!-- 2 material -->
+  <section class="card">
+    <h2><span class="num">2</span> Material</h2>
+    <div class="row">
+      <label class="grow">Material<select id="material"></select></label>
+      <label>Thickness<select id="thickness"></select></label>
+    </div>
+    <div class="settings" id="cutInfo"></div>
+    <details>
+      <summary>Adjust for this job</summary>
+      <div class="row">
+        <label>Feed mm/min<input id="ovFeed" type="number" inputmode="decimal"></label>
+        <label>Pierce delay s<input id="ovDelay" type="number" step="0.1" inputmode="decimal"></label>
+        <label>Pierce height mm<input id="ovPierce" type="number" step="0.1" inputmode="decimal"></label>
+        <label>Cut height mm<input id="ovCut" type="number" step="0.1" inputmode="decimal"></label>
+      </div>
+    </details>
+  </section>
+
+  <!-- 3 job -->
+  <section class="card">
+    <h2><span class="num">3</span> Job</h2>
+    <div class="row">
+      <label class="file grow">
+        <input type="file" id="file" accept=".nc,.gcode,.ngc,.tap,.txt,.cnc,.g">
+        <span id="fileName">Choose G-code file…</span>
+      </label>
+      <label class="check"><input type="checkbox" id="dryRun"> Dry run (no torch)</label>
+    </div>
+    <canvas id="preview" width="800" height="500"></canvas>
+    <div id="fit" class="fit"></div>
+    <div id="jobStats" class="stats"></div>
+    <ul id="warnings" class="warnings"></ul>
+    <div class="progress"><div id="progBar"></div></div>
+    <div id="progText" class="muted"></div>
+    <div class="row">
+      <button data-cmd="trace_outline" id="btnTrace" disabled>Trace outline (torch off)</button>
+    </div>
+    <div class="row big">
+      <button id="btnStart" class="go" disabled>Start cutting</button>
+      <button id="btnPause" disabled>Pause</button>
+    </div>
+    <p class="muted small">Pause stops the torch too. Resume relights it and carries on.
+      Keep this tab open and the laptop awake while cutting.</p>
+  </section>
+
+  <!-- boundaries -->
+  <section class="card" id="safetyCard">
+    <h2>Boundaries &amp; crash protection</h2>
+    <div class="safetystate">
+      <div><span>Machine position</span><b id="refState">Unknown</b></div>
+      <div><span>Boundaries</span><b id="limState">Not set</b></div>
+    </div>
+    <p class="muted small" id="safetyHint"></p>
+    <div class="row">
+      <button data-cmd="home">Home</button>
+      <button data-cmd="set_reference" id="btnRef">Torch is at the home corner</button>
+      <button id="btnWizard" class="accent">Set up boundaries</button>
+    </div>
+    <ol id="wizard" class="wizard hidden">
+      <li id="wz1"><b>Find home.</b> Press <i>Home</i>. No home switches? Jog the torch to the marked home corner, fully raised, and press <i>Torch is at the home corner</i>.</li>
+      <li id="wz2"><b>Far corner.</b> Jog to the furthest X and Y the torch can safely reach, then
+        <button data-cmd="limits_far" class="small">Set far corner</button> <span id="wzFar" class="muted"></span></li>
+      <li id="wz3"><b>Lowest point.</b> With no sheet on, jog the torch down onto a slat (use 1 mm steps at the end) until the <b>PROBE</b> light comes on, then
+        <button data-cmd="limits_zbottom" class="small">Set Z bottom</button> <span id="wzZ" class="muted"></span></li>
+      <li id="wz4"><b>Save.</b> <button data-cmd="limits_save" class="small accent">Save boundaries</button>
+        <button data-cmd="limits_clear" class="small">Clear boundaries</button></li>
+    </ol>
+  </section>
+
+  <!-- tools -->
+  <section class="card">
+    <h2>Checks &amp; tools</h2>
+    <div class="row">
+      <button data-cmd="touchoff_test">Touch-off test</button>
+      <button id="btnTorchTest" class="warn">Torch test</button>
+      <button data-cmd="pins">Show pins</button>
+      <button data-cmd="settings_list">Show settings</button>
+      <button id="btnPushSettings">Send settings</button>
+      <button id="btnDisconnect">Disconnect</button>
+    </div>
+    <div class="console">
+      <div id="log"></div>
+      <form id="consoleForm" class="row">
+        <input id="consoleIn" class="grow" placeholder="G-code or $ command" autocomplete="off" autocapitalize="characters">
+        <button>Send</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
