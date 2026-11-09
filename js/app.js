@@ -7,13 +7,14 @@ import { SimTransport } from "./sim.js";
 import { parseDXF } from "./dxf.js";
 import { parseSVG } from "./svg.js";
 import { designToGcode } from "./cam.js";
-import { SHAPES, makeShape, copies } from "./shapes.js";
+import { SHAPES, copies } from "./shapes.js";
+import { Sketch } from "./sketch.js";
 
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 const S = {
   cfg: null, chart: null, jogStep: 10, status: { state: "Disconnected" }, job: null, prepared: null,
-  gcode: null, design: null, fileName: "", safety: {}, shape: "rect", shapeVals: {}, cur: 1, material: null, thickness: null, connected: false,
+  gcode: null, design: null, fileName: "", safety: {}, src: "file", showMachine: true, cur: 1, material: null, thickness: null, connected: false,
   lastAlarm: null, speed: null, lastFeedOv: 100,
 };
 const MAT_TIPS = {
@@ -90,8 +91,6 @@ function mountJogPads() {
   document.addEventListener("click", (e) => {
     const sb = e.target.closest(".steps button");
     if (sb) { S.jogStep = Number(sb.dataset.step); syncSteps(); return; }
-    const jb = e.target.closest(".j[data-axis]");
-    if (jb) jog(jb.dataset.axis, Number(jb.dataset.dir));
   });
   syncSteps();
 }
@@ -102,11 +101,49 @@ function jog(axis, dir) {
   const step = axis === "Z" ? Math.min(S.jogStep, 10) : S.jogStep;
   cmd("jog", { axis, dist: step * dir });
 }
+// ---- press-and-hold jogging
+// press: one step straight away. Still held after a moment: glide towards the edge (absolute target,
+// queued behind the step, so there's no stop-start). Change direction: cancel, wait for it to stop, go again.
+// Let go: cancel (the controller decelerates and stops).
+const J = { held: new Map(), timer: null, gliding: false, dir: null, seq: 0, slow: false };
+function jogVector() {
+  const v = [0, 0, 0];
+  for (const [axis, dir] of J.held.values()) v["XYZ".indexOf(axis)] = dir;
+  return v;
+}
+async function waitStopped(ms = 1500) {
+  const t0 = Date.now();
+  while (Date.now() - t0 < ms && ["Jog", "Run"].includes(S.status.state)) await new Promise((r) => setTimeout(r, 25));
+}
+async function glide() {
+  const my = ++J.seq, v = jogVector();
+  if (!v.some(Boolean)) return;
+  if (J.gliding) { cmd("jog_cancel"); await waitStopped(); if (my !== J.seq || !J.held.size) return; }
+  J.gliding = true; J.dir = v.join();
+  try { M.command({ cmd: "jog_dir", dir: v, slow: J.slow }); }
+  catch (e) { toast(e.message, true); }
+}
+function jogPress(id, axis, dir) {
+  if (!M.grbl) return;
+  const first = J.held.size === 0;
+  J.held.set(id, [axis, dir]);
+  if (first) {
+    jog(axis, dir);                                  // tap = one step
+    clearTimeout(J.timer);
+    J.timer = setTimeout(() => { if (J.held.size) glide(); }, 220);
+  } else if (J.gliding) glide();                     // second key: go diagonal
+}
+function jogRelease(id) {
+  if (!J.held.delete(id)) return;
+  if (J.held.size) { if (J.gliding && jogVector().join() !== J.dir) glide(); return; }
+  clearTimeout(J.timer); J.seq++;
+  if (J.gliding) { J.gliding = false; J.dir = null; cmd("jog_cancel"); }
+}
+function jogReleaseAll() { for (const id of [...J.held.keys()]) jogRelease(id); }
 function renderPos() {
   const w = S.status.WPos || [0, 0, 0];
   const html = `<div><span>X</span><b>${w[0].toFixed(1)}</b></div><div><span>Y</span><b>${w[1].toFixed(1)}</b></div><div><span>Z</span><b>${w[2].toFixed(1)}</b></div>`;
   $$(".small-pos").forEach((el) => (el.innerHTML = html));
-  $("posMove").innerHTML = html;
 }
 
 // ------------------------------------------------------------------ step 1: file
@@ -145,37 +182,66 @@ function openText(name, text, remember) {
 }
 function setFile(name, text, remember) { openText(name, text, remember); }
 
-// ------------------------------------------------------------------ shape maker
+// ------------------------------------------------------------------ shape maker (drag-and-drop editor)
+let sketch = null, shapeTimer = null, editBefore = null;
 function renderShapeTiles() {
   $("shapeTiles").innerHTML = SHAPES.map((sh) =>
-    `<button data-shape="${sh.id}" class="${sh.id === S.shape ? "sel" : ""}"><i>${sh.icon}</i>${esc(sh.name)}</button>`).join("");
-  const sh = SHAPES.find((x) => x.id === S.shape);
-  const vals = S.shapeVals[S.shape] || {};
-  $("shapeForm").innerHTML = sh.params.map(([k, label, d]) =>
-    `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${vals[k] ?? d}"></label>`).join("");
+    `<button data-shape="${sh.id}" title="Add ${esc(sh.name)}"><i>${sh.icon}</i>${esc(sh.name)}</button>`).join("");
 }
-function shapeValues() {
-  const v = {};
-  $$("#shapeForm [data-p]").forEach((i) => (v[i.dataset.p] = i.value));
-  S.shapeVals[S.shape] = v;
-  return v;
+function renderShapeForm() {
+  const it = sketch.selected();
+  $("skUndo").disabled = !sketch.past.length; $("skRedo").disabled = !sketch.future.length;
+  $("skClear").disabled = !sketch.items.length;
+  if (!it) {
+    $("shapeForm").innerHTML = sketch.items.length
+      ? `<p class="muted">Click a shape on the drawing to change it.</p>` : "";
+    return;
+  }
+  const sh = SHAPES.find((x) => x.id === it.type), b = sketch.boxOf(it);
+  const moved = Object.keys(it.holes || {}).length;
+  $("shapeForm").innerHTML = `
+    <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${sketch.sel.hole != null ? ` <span class="muted">· hole selected – drag it or use the arrow keys</span>` : ""}</div>
+    <div class="grid2">${sh.params.map(([k, label]) =>
+      `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${it.p[k]}"></label>`).join("")}
+      <label>Position X<input type="number" step="any" inputmode="decimal" data-pos="x" value="${Math.round(b[0] * 10) / 10}"></label>
+      <label>Position Y<input type="number" step="any" inputmode="decimal" data-pos="y" value="${Math.round(b[1] * 10) / 10}"></label>
+    </div>
+    <div class="skbtns">
+      <button data-sk="rotate">⟳ Rotate</button>
+      <button data-sk="duplicate">⧉ Copy</button>
+      ${moved ? `<button data-sk="resetHoles">↺ Holes back</button>` : ""}
+      <button data-sk="remove" class="danger">🗑 Delete</button>
+    </div>`;
 }
+// keep the boxes in step while dragging, without rebuilding them
+function syncShapeForm() {
+  const it = sketch.selected(); if (!it) return;
+  const b = sketch.boxOf(it);
+  $$("#shapeForm [data-p]").forEach((i) => { if (document.activeElement !== i) i.value = it.p[i.dataset.p]; });
+  $$("#shapeForm [data-pos]").forEach((i) => { if (document.activeElement !== i) i.value = Math.round(b[i.dataset.pos === "x" ? 0 : 1] * 10) / 10; });
+}
+function useShapeSoon() { clearTimeout(shapeTimer); shapeTimer = setTimeout(useShape, 250); }
 function useShape() {
-  const sh = SHAPES.find((x) => x.id === S.shape);
-  try {
-    let c = makeShape(S.shape, shapeValues());
-    const nx = Number($("cpX").value) || 1, ny = Number($("cpY").value) || 1;
-    if (nx * ny > 1) c = copies(c, nx, ny, Number($("cpGap").value) || 0);
-    S.design = { name: sh.name + (nx * ny > 1 ? ` ×${nx * ny}` : ""), contours: c, warnings: [] };
-    S.gcode = null; S.fileName = S.design.name;
-    loadJob();
-  } catch (e) { $("warnings").innerHTML = `<li>${esc(e.message)}</li>`; }
+  clearTimeout(shapeTimer);
+  if (S.src !== "shape") return;
+  let c = sketch.contours();
+  if (!c.length) {
+    S.design = null; S.prepared = null; S.fileName = "";
+    $("warnings").innerHTML = ""; refresh(); return;
+  }
+  const nx = Number($("cpX").value) || 1, ny = Number($("cpY").value) || 1;
+  if (nx * ny > 1) c = copies(c, nx, ny, Number($("cpGap").value) || 0);
+  S.design = { name: sketch.name() + (nx * ny > 1 ? ` ×${nx * ny}` : ""), contours: c, warnings: sketch.problems() };
+  S.gcode = null; S.fileName = S.design.name;
+  loadJob();
 }
 function showSource(src) {
+  S.src = src;
   $$(".srcTab").forEach((b) => b.classList.toggle("sel", b.dataset.src === src));
   $("srcFile").classList.toggle("hidden", src !== "file");
   $("srcShape").classList.toggle("hidden", src !== "shape");
-  if (src === "shape") useShape();
+  if (src === "shape") { renderShapeForm(); useShape(); }
+  drawPreview();
 }
 
 function recentList() {
@@ -309,16 +375,30 @@ function fit() {
 }
 function drawPreview() {
   const cv = $("preview");
+  const grid = cv && cv.closest(".cutgrid");
+  if (grid) grid.classList.toggle("nofile", S.cur === 1 && S.src === "file" && !S.prepared);
+  drawCanvas($("moveMap"), false);
+  if (!cv || !cv.offsetParent) return;
+  const editing = !!sketch && S.src === "shape" && S.cur === 1;
+  if (sketch && sketch.active !== editing) sketch.setActive(editing);
+  $("showMachWrap").classList.toggle("hidden", editing || (!!S.prepared && S.cur <= 2));
+  if (editing) { sketch.draw(); return; }
+  drawCanvas(cv, true);
+}
+function drawCanvas(cv, main) {
   if (!cv || !cv.offsetParent) return;
   const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 600;
-  // steps 1-2: zoom in on the part. Step 3 onwards: the whole table, with the part where it will be cut.
-  const zoom = S.prepared && S.cur <= 2;
+  // steps 1-2: zoom in on the part. Step 3 onwards (and the Move tab): the whole table, with the part where it will be cut.
+  const zoom = main && S.prepared && S.cur <= 2;
   let A, ox = 0, oy = 0;
   if (zoom) {
     const b = S.prepared.stats.bounds, pad = Math.max(5, 0.06 * Math.max(b[2] - b[0], b[3] - b[1]));
     A = { x: [b[0] - pad, b[2] + pad], y: [b[1] - pad, b[3] + pad], label: "" };
   } else {
-    A = viewArea();
+    const T = viewArea();
+    // room around the table for the machine: X beam along the front, Y arm off its carriage
+    const mg = S.showMachine ? [40, 110, 40] : [0, 0, 0];
+    A = { x: [T.x[0] - mg[0], T.x[1] + mg[0]], y: [T.y[0] - mg[1], T.y[1] + mg[2]], label: T.label, table: T };
     const w0 = wcoNow(); [ox, oy] = toView(w0[0], w0[1]);
   }
   const ax = A.x[1] - A.x[0], ay = A.y[1] - A.y[0];
@@ -330,31 +410,70 @@ function drawPreview() {
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
   const X = (x) => offX + (x - A.x[0]) * sc, Y = (y) => h - offY - (y - A.y[0]) * sc;
-  if (!zoom) {
-    ctx.strokeStyle = edgesOn() ? "#16a34a" : "#3a424c"; ctx.lineWidth = edgesOn() ? 2 : 1;
-    ctx.strokeRect(X(A.x[0]), Y(A.y[1]), ax * sc, ay * sc);
-    ctx.fillStyle = "#6b7280"; ctx.font = "12px system-ui";
-    ctx.fillText(`${A.label} ${Math.round(ax)} × ${Math.round(ay)} mm`, X(A.x[0]) + 6, Y(A.y[1]) + 16);
-  }
+  if (!zoom) drawMachineBed(ctx, A.table, X, Y, sc);
   if (S.prepared) {
     const pv = S.prepared.preview;
     const path = (p) => { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(X(x + ox), Y(y + oy)) : ctx.moveTo(X(x + ox), Y(y + oy)))); ctx.stroke(); };
-    if (S.prepared.outline) { ctx.strokeStyle = "#cbd5e1"; ctx.lineWidth = 1; S.prepared.outline.forEach((p) => path([...p, p[0]])); }
-    ctx.setLineDash([4, 4]); ctx.strokeStyle = "#4b5563"; ctx.lineWidth = 1; pv.rapids.forEach(path);
-    ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? "#ef4444" : "#f97316"; ctx.lineWidth = zoom ? 2.5 : 2;
+    if (S.prepared.outline) { ctx.strokeStyle = "#c9d1d9"; ctx.lineWidth = 1; S.prepared.outline.forEach((p) => path([...p, p[0]])); }
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = "#4a5868"; ctx.lineWidth = 1; pv.rapids.forEach(path);
+    ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? "#ef4444" : "#f08a3c"; ctx.lineWidth = zoom ? 2.5 : 2;
     for (const p of pv.cuts) { path(p); ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.arc(X(p[0][0] + ox), Y(p[0][1] + oy), zoom ? 4 : 3, 0, 7); ctx.fill(); }
     if (zoom) {
-      ctx.fillStyle = "#9aa4ae"; ctx.font = "12px system-ui";
-      ctx.fillText("orange = torch path · grey = your part · dots = pierce points", 8, h - 8);
+      ctx.fillStyle = "#94a2b0"; ctx.font = "12px system-ui";
+      ctx.fillText("orange: torch path   grey: your part   dots: where it pierces", 8, h - 8);
     }
   }
-  ctx.strokeStyle = "#3b82f6"; ctx.lineWidth = 2;
+  ctx.strokeStyle = "#4f7fe0"; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(X(ox) - 9, Y(oy)); ctx.lineTo(X(ox) + 9, Y(oy)); ctx.moveTo(X(ox), Y(oy) - 9); ctx.lineTo(X(ox), Y(oy) + 9); ctx.stroke();
-  if (!zoom && S.status.MPos) {
-    const [tx, ty] = toView(S.status.MPos[0], S.status.MPos[1]);
-    ctx.fillStyle = S.status.torch ? "#f97316" : "#e5e7eb";
+  if (!zoom) drawGantry(ctx, A.table, X, Y, sc);
+}
+
+// bird's-eye view of the table: slats across, the X beam along the front
+function drawMachineBed(ctx, T, X, Y, sc) {
+  const [x0, x1] = T.x, [y0, y1] = T.y;
+  ctx.fillStyle = "#18212b"; ctx.fillRect(X(x0), Y(y1), (x1 - x0) * sc, (y1 - y0) * sc);
+  ctx.strokeStyle = "#232e3a"; ctx.lineWidth = Math.max(1, 3 * sc);                  // slats every 100 mm
+  ctx.beginPath();
+  for (let x = Math.ceil((x0 + 1) / 100) * 100; x < x1; x += 100) { ctx.moveTo(X(x), Y(y0)); ctx.lineTo(X(x), Y(y1)); }
+  if (S.showMachine) ctx.stroke();
+  ctx.strokeStyle = edgesOn() ? "#2f9e5b" : "#3d4c5c"; ctx.lineWidth = edgesOn() ? 2 : 1;
+  ctx.strokeRect(X(x0), Y(y1), (x1 - x0) * sc, (y1 - y0) * sc);
+  ctx.fillStyle = "#94a2b0"; ctx.font = "12px Barlow, system-ui";
+  ctx.textAlign = "right"; ctx.fillText(`${T.label} ${Math.round(x1 - x0)} × ${Math.round(y1 - y0)} mm`, X(x1) - 8, Y(y0) - 8); ctx.textAlign = "start";
+  if (!S.showMachine) return;
+  // X beam (box section) with its rail
+  ctx.fillStyle = "#3a4756"; ctx.fillRect(X(x0 - 30), Y(y0 - 50), (x1 - x0 + 60) * sc, 40 * sc);
+  ctx.strokeStyle = "#56677a"; ctx.lineWidth = 1; ctx.strokeRect(X(x0 - 30), Y(y0 - 50), (x1 - x0 + 60) * sc, 40 * sc);
+  ctx.fillStyle = "#94a2b0"; ctx.font = "12px system-ui";
+  ctx.textAlign = "right"; ctx.fillText("X beam", X(x1 + 30) - 6, Y(y0 - 50) + 18); ctx.textAlign = "start";
+}
+// the moving parts: carriage on the beam, Y arm across the table, torch on the arm
+function drawGantry(ctx, T, X, Y, sc) {
+  const has = !!S.status.MPos;
+  const [tx, ty] = has ? toView(S.status.MPos[0], S.status.MPos[1]) : [T.x[0], T.y[0]];
+  const armW = 40, top = T.y[1] + 25;
+  if (!S.showMachine) {                      // just the torch dot
+    if (!has) return;
+    ctx.fillStyle = S.status.torch ? "#a98bff" : "#edeee8";
     ctx.beginPath(); ctx.arc(X(tx), Y(ty), 6, 0, 7); ctx.fill();
+    return;
   }
+  ctx.globalAlpha = has ? 1 : 0.45;
+  ctx.fillStyle = "#4a5868"; ctx.strokeStyle = "#94a2b0"; ctx.lineWidth = 1;
+  ctx.fillRect(X(tx - 70), Y(T.y[0] - 65), 140 * sc, 70 * sc);                      // carriage
+  ctx.strokeRect(X(tx - 70), Y(T.y[0] - 65), 140 * sc, 70 * sc);
+  ctx.fillStyle = "rgba(109,124,140,.55)";                                          // Y arm (see-through)
+  ctx.fillRect(X(tx - armW / 2), Y(top), armW * sc, (top - (T.y[0] - 65)) * sc);
+  ctx.strokeRect(X(tx - armW / 2), Y(top), armW * sc, (top - (T.y[0] - 65)) * sc);
+  ctx.fillStyle = "#1d2732"; ctx.strokeStyle = "#edeee8";                           // Z carriage + torch
+  ctx.fillRect(X(tx - 35), Y(ty + 35), 70 * sc, 70 * sc); ctx.strokeRect(X(tx - 35), Y(ty + 35), 70 * sc, 70 * sc);
+  ctx.globalAlpha = 1;
+  const r = Math.max(5, 9 * sc);
+  if (S.status.torch) { ctx.fillStyle = "rgba(169,139,255,.38)"; ctx.beginPath(); ctx.arc(X(tx), Y(ty), r * 2.2, 0, 7); ctx.fill(); }
+  ctx.fillStyle = S.status.torch ? "#a98bff" : "#edeee8";
+  ctx.beginPath(); ctx.arc(X(tx), Y(ty), r, 0, 7); ctx.fill();
+  ctx.strokeStyle = "#121920"; ctx.lineWidth = 1.5; ctx.beginPath();
+  ctx.moveTo(X(tx) - r, Y(ty)); ctx.lineTo(X(tx) + r, Y(ty)); ctx.moveTo(X(tx), Y(ty) - r); ctx.lineTo(X(tx), Y(ty) + r); ctx.stroke();
 }
 
 // ------------------------------------------------------------------ step 4: checks
@@ -589,9 +708,29 @@ function bind() {
 
   // step 1: drawing or shape
   $$(".srcTab").forEach((b) => (b.onclick = () => showSource(b.dataset.src)));
-  $("shapeTiles").onclick = (e) => { const b = e.target.closest("[data-shape]"); if (b) { shapeValues(); S.shape = b.dataset.shape; renderShapeTiles(); useShape(); } };
-  $("shapeForm").addEventListener("input", useShape);
-  ["cpX", "cpY", "cpGap"].forEach((id) => $(id).addEventListener("input", useShape));
+  $("shapeTiles").onclick = (e) => { const b = e.target.closest("[data-shape]"); if (b) sketch.add(b.dataset.shape); };
+  $("shapeForm").addEventListener("focusin", (e) => { if (e.target.matches("input")) editBefore = sketch.snapshot(); });
+  $("shapeForm").addEventListener("input", (e) => {
+    const i = e.target, v = Number(i.value);
+    if (i.value.trim() === "" || !Number.isFinite(v)) return;
+    const it = sketch.selected(); if (!it) return;
+    if (i.dataset.p) { if (v < 0) return; it.p[i.dataset.p] = v; }
+    else if (i.dataset.pos) {                // position = bottom-left corner of the shape
+      const b = sketch.boxOf(it);
+      if (i.dataset.pos === "x") it.x += v - b[0]; else it.y += v - b[1];
+    }
+    sketch.save(); sketch.draw(); useShapeSoon();
+  });
+  $("shapeForm").addEventListener("change", () => {
+    if (editBefore && editBefore !== sketch.snapshot()) { sketch.past.push(editBefore); sketch.future = []; }
+    editBefore = sketch.snapshot(); renderShapeForm();
+  });
+  $("shapeForm").addEventListener("click", (e) => { const b = e.target.closest("[data-sk]"); if (b) sketch[b.dataset.sk](); });
+  $("skUndo").onclick = () => sketch.undo();
+  $("skRedo").onclick = () => sketch.redo();
+  $("skFit").onclick = () => sketch.fitView();
+  $("skClear").onclick = () => { if (confirm("Remove every shape from the drawing?")) sketch.clear(); };
+  ["cpX", "cpY", "cpGap"].forEach((id) => $(id).addEventListener("input", useShapeSoon));
 
   // step 2
   $("materials").onclick = (e) => {
@@ -638,18 +777,13 @@ function bind() {
     $("dropTitle").textContent = "Tap to choose a file"; $("drop").classList.remove("loaded"); goStep(1);
   };
 
-  // keyboard: arrows = X/Y, Page Up/Down = Z. Tap = one step, hold = keep moving until released.
+  // keyboard + on-screen pad: tap = one step, hold = glide until released (diagonals too).
+  // Arrows = X/Y, Page Up/Down = Z, hold Shift for slow.
   const KEYS = { ArrowLeft: ["X", -1], ArrowRight: ["X", 1], ArrowUp: ["Y", 1], ArrowDown: ["Y", -1], PageUp: ["Z", 1], PageDown: ["Z", -1] };
-  let held = null;
-  const stopHeld = () => {
-    if (!held) return;
-    clearTimeout(held.timer);
-    if (held.continuous) cmd("jog_cancel");
-    held = null;
-  };
   document.addEventListener("keydown", (e) => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
     if (e.key === "Escape") { if (M.grbl) cmd("stop"); return; }
+    if (e.key === "Shift") { J.slow = true; return; }
     if (!S.connected) return;
     if (S.job && S.job.running) {
       if (e.key === " ") { e.preventDefault(); cmd(S.status.state === "Hold" ? "resume" : "hold"); }
@@ -658,19 +792,36 @@ function bind() {
     const k = KEYS[e.key];
     if (!k) return;
     e.preventDefault();
-    if (e.repeat || held) return;
-    const [axis, dir] = k;
-    jog(axis, dir);                                   // tap: one step
-    held = { timer: setTimeout(() => {                // still held: keep going until key up
-      if (!held) return;
-      held.continuous = true;
-      cmd("jog_cancel");
-      const far = axis === "Z" ? S.cfg.travel_mm.z : Math.max(S.cfg.travel_mm.x, S.cfg.travel_mm.y);
-      cmd("jog", { axis, dist: dir * far });          // stops at the machine edges if they're set
-    }, 400) };
+    if (e.repeat) return;
+    J.slow = e.shiftKey;
+    jogPress("key:" + e.key, k[0], k[1]);
   });
-  document.addEventListener("keyup", (e) => { if (KEYS[e.key]) stopHeld(); });
-  window.addEventListener("blur", stopHeld);
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "Shift") J.slow = false;
+    if (KEYS[e.key]) jogRelease("key:" + e.key);
+  });
+  document.addEventListener("pointerdown", (e) => {
+    const b = e.target.closest(".j[data-axis]");
+    if (!b || !S.connected || b.disabled || (S.job && S.job.running)) return;
+    e.preventDefault();
+    const id = "pad:" + e.pointerId;
+    try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    b.classList.add("down");
+    const up = () => { b.classList.remove("down"); jogRelease(id); b.removeEventListener("pointerup", up); b.removeEventListener("pointercancel", up); };
+    b.addEventListener("pointerup", up); b.addEventListener("pointercancel", up);
+    jogPress(id, b.dataset.axis, Number(b.dataset.dir));
+  });
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".j[data-axis]");
+    if (b && e.detail === 0 && S.connected) jog(b.dataset.axis, Number(b.dataset.dir));   // keyboard "click"
+  });
+  window.addEventListener("blur", jogReleaseAll);
+  document.addEventListener("visibilitychange", () => { if (document.hidden) jogReleaseAll(); });
+  $("showMach").addEventListener("change", () => {
+    S.showMachine = $("showMach").checked;
+    try { localStorage.setItem("plasma.showMachine", S.showMachine ? "1" : "0"); } catch (e) { /* ignore */ }
+    drawPreview();
+  });
   window.addEventListener("resize", drawPreview);
   window.addEventListener("beforeunload", (e) => { if (M.jobRunning()) { e.preventDefault(); e.returnValue = ""; } });
 }
@@ -691,10 +842,17 @@ async function init() {
     if (saved) { S.material = saved.m; S.thickness = saved.t; }
   } catch (e) { /* ignore */ }
   if (!chart.materials.some((m) => m.name === S.material)) S.material = chart.materials[0].name;
+  try { S.showMachine = localStorage.getItem("plasma.showMachine") !== "0"; } catch (e) { /* ignore */ }
+  $("showMach").checked = S.showMachine;
   mountJogPads();
   defaultSpeed();
   renderMaterials();
   renderRecent();
+  sketch = new Sketch($("preview"), {
+    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); } },
+    onSelect: () => renderShapeForm(),
+  });
+  window.plasmaSketch = sketch;   // handy for testing from the console
   renderShapeTiles();
   bind();
   if (!WebSerialTransport.supported()) {

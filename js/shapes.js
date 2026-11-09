@@ -23,11 +23,13 @@ function slot(cx, cy, len, wid) {
 export const SHAPES = [
   {
     id: "rect", name: "Rectangle / plate", icon: "▭",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
     params: [["w", "Width", 100], ["h", "Height", 60], ["r", "Corner radius", 0]],
     make: (p) => [roundedRect(0, 0, p.w, p.h, p.r)],
   },
   {
     id: "plate", name: "Plate with holes", icon: "⊡",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
     params: [["w", "Width", 120], ["h", "Height", 80], ["r", "Corner radius", 6], ["hole", "Hole Ø", 10], ["inset", "Hole centre from edge", 15], ["mid", "Centre hole Ø (0 = none)", 0]],
     make: (p) => {
       const c = [roundedRect(0, 0, p.w, p.h, p.r)];
@@ -38,16 +40,19 @@ export const SHAPES = [
   },
   {
     id: "disc", name: "Disc", icon: "●",
+    uniform: true, fit: (p, W) => ({ ...p, d: W }),
     params: [["d", "Diameter", 100]],
     make: (p) => [circleContour(p.d / 2, p.d / 2, p.d / 2)],
   },
   {
     id: "ring", name: "Ring / washer", icon: "◎",
+    uniform: true, fit: (p, W) => ({ ...p, d: W, id: (p.id * W) / p.d }),
     params: [["d", "Outside Ø", 100], ["id", "Inside Ø", 50]],
     make: (p) => [circleContour(p.d / 2, p.d / 2, p.d / 2), circleContour(p.d / 2, p.d / 2, p.id / 2)],
   },
   {
     id: "flange", name: "Flange", icon: "✺",
+    uniform: true, fit: (p, W) => { const k = W / p.d; return { ...p, d: W, id: p.id * k, pcd: p.pcd * k }; },
     params: [["d", "Outside Ø", 150], ["id", "Centre hole Ø", 60], ["pcd", "Bolt circle Ø (PCD)", 115], ["n", "Number of bolt holes", 4], ["hole", "Bolt hole Ø", 12]],
     make: (p) => {
       const R = p.d / 2, c = [circleContour(R, R, R)];
@@ -62,6 +67,7 @@ export const SHAPES = [
   },
   {
     id: "slot", name: "Slot / link", icon: "⊂⊃",
+    fit: (p, W, H) => ({ ...p, len: W, wid: H }),
     params: [["len", "Length", 120], ["wid", "Width", 40], ["hole", "End holes Ø (0 = none)", 16]],
     make: (p) => {
       const c = [slot(p.len / 2, p.wid / 2, p.len, p.wid)];
@@ -73,6 +79,7 @@ export const SHAPES = [
   },
   {
     id: "gusset", name: "Gusset (triangle)", icon: "◣",
+    fit: (p, W, H) => ({ ...p, a: W, b: H }),
     params: [["a", "Bottom leg", 100], ["b", "Upright leg", 100], ["cut", "Corner cut-off", 10], ["hole", "Hole Ø (0 = none)", 0]],
     make: (p) => {
       const L = Math.hypot(p.a, p.b), k = Math.max(0, Math.min(p.cut, p.a * 0.4, p.b * 0.4));
@@ -87,6 +94,7 @@ export const SHAPES = [
   },
   {
     id: "bracket", name: "Bracket with slot", icon: "▯",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
     params: [["w", "Width", 50], ["h", "Height", 120], ["r", "Corner radius", 8], ["slotLen", "Slot length", 40], ["slotWid", "Slot width", 10], ["hole", "Bottom hole Ø", 10]],
     make: (p) => {
       const c = [roundedRect(0, 0, p.w, p.h, p.r)];
@@ -99,6 +107,12 @@ export const SHAPES = [
       if (p.hole > 0) c.push(circleContour(p.w / 2, Math.max(p.hole, p.w * 0.35), p.hole / 2));
       return c;
     },
+  },
+  {
+    id: "hole", name: "Hole", icon: "○",
+    uniform: true, fit: (p, W) => ({ ...p, d: W }),
+    params: [["d", "Diameter", 20]],
+    make: (p) => [circleContour(p.d / 2, p.d / 2, p.d / 2)],
   },
 ];
 

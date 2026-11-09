@@ -140,7 +140,7 @@ export class GrblLink {
       this.running = false;
       clearInterval(this.poll);
     };
-    this.poll = setInterval(() => { if (this.running) this.t.write(RT.STATUS); }, 200);
+    this.poll = setInterval(() => { if (this.running) this.t.write(RT.STATUS); }, 100);
   }
 
   _emit(kind, data) { try { this.onEvent(kind, data); } catch (e) { console.error(e); } }

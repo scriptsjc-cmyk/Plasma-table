@@ -128,6 +128,24 @@ export class Machine {
         if (Math.abs(safe - dist) > 0.01) return { ok: true, note: `Stopped at the ${axis} boundary.` };
         break;
       }
+      case "jog_dir": {
+        // keep moving this way (dir = [x, y, z] each -1, 0 or 1) until jog_cancel.
+        // Absolute machine target, so it can follow on from a step jog without overshooting the edge.
+        const d = (body.dir || []).map((v) => Math.sign(Number(v) || 0));
+        const mp = g.status.MPos || [0, 0, 0], sf = this.safety, on = sf.active(), parts = [];
+        // how far each axis can go that way; diagonals go at 45° until either edge is reached
+        // (an axis already at its edge drops out, so you slide along the edge)
+        const roomOf = (i) => (on ? (sf.limits["xyz"[i]][d[i] > 0 ? 1 : 0] + sf.ref[i] - mp[i]) * d[i] : m.travel_mm["xyz"[i]]);
+        for (const i of [0, 1, 2]) if (d[i] && roomOf(i) <= 0.05) d[i] = 0;
+        const room = [0, 1, 2].filter((i) => d[i]).map(roomOf);
+        const dist = room.length ? Math.min(...room) : 0;
+        ["X", "Y", "Z"].forEach((a, i) => { if (d[i] && dist > 0.05) parts.push(`${a}${(mp[i] + d[i] * dist).toFixed(3)}`); });
+        if (!parts.length) throw new JobError("At the edge – can't go further that way.");
+        const onlyZ = d[2] && !d[0] && !d[1];
+        const feed = Math.round((onlyZ ? m.jog.feed_z : m.jog.feed_xy) * (body.slow ? 0.25 : 1));
+        g.send(`$J=G53 G21 ${parts.join(" ")} F${feed}`);
+        break;
+      }
       case "home": g.send("$H"); break;
       case "unlock": g.send("$X"); break;
       case "zero_xy": g.send("G10 L20 P1 X0 Y0"); break;

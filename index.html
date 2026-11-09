@@ -3,7 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#14171a">
+<meta name="theme-color" content="#18202a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' aria-hidden='true'><path d='M11 3h10l-2 12h-6z' fill='%23e3a73c'/><path d='M13.5 15h5l-1 3h-3z' fill='%23c8803a'/><path d='M16 18.5l-2 4 3 1-2.5 5.5' fill='none' stroke='%23a98bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/><path d='M4 29h24' stroke='%234f7fe0' stroke-width='2.5' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 <title>Plasma Table</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -11,7 +15,7 @@
 
 <!-- ============================================================ top bar -->
 <header class="topbar">
-  <div class="brand" id="machineName">Plasma Table</div>
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M11 3h10l-2 12h-6z" fill="#e3a73c"/><path d="M13.5 15h5l-1 3h-3z" fill="#c8803a"/><path d="M16 18.5l-2 4 3 1-2.5 5.5" fill="none" stroke="#a98bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 29h24" stroke="#4f7fe0" stroke-width="2.5" stroke-linecap="round"/></svg><span id="machineName">Plasma Table</span></div>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
   <span id="stateBadge" class="badge hidden"></span>
   <button id="btnStop" class="stop" title="Stop (Esc)">STOP</button>
@@ -40,6 +44,7 @@
 <!-- ============================================================ connect screen -->
 <section id="connectView" class="view">
   <div class="hero">
+    <svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true" class="arcmark"><path d="M11 3h10l-2 12h-6z" fill="#e3a73c"/><path d="M13.5 15h5l-1 3h-3z" fill="#c8803a"/><path d="M16 18.5l-2 4 3 1-2.5 5.5" fill="none" stroke="#a98bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 29h24" stroke="#4f7fe0" stroke-width="2.5" stroke-linecap="round"/></svg>
     <h1>Connect to the plasma table</h1>
     <ol class="plain">
       <li>Plug the table's USB cable into this computer.</li>
@@ -67,6 +72,7 @@
     <!-- preview, always visible -->
     <div class="previewPane">
       <canvas id="preview"></canvas>
+      <label class="showmach" id="showMachWrap"><input type="checkbox" id="showMach" checked> Show machine</label>
       <div id="fit" class="fit"></div>
       <div id="jobStats" class="stats"></div>
     </div>
@@ -94,9 +100,14 @@
         </div>
 
         <div id="srcShape" class="hidden">
-          <div id="shapeTiles" class="tiles"></div>
-          <div id="shapeForm" class="grid2 shapeform"></div>
-          <h3>How many?</h3>
+          <p class="muted small skhelp">Drag a shape to move it, or a corner to resize it. Holes drag too. Scroll or pinch to zoom. With a shape picked: arrows nudge 1 mm (Shift for 10), R rotates, Delete removes, Ctrl+Z undoes.</p>
+          <h3>Add a shape</h3>
+          <div id="shapeTiles" class="tiles small"></div>
+          <div class="sktools">
+            <button id="skUndo">↶ Undo</button><button id="skRedo">↷ Redo</button><button id="skFit">⤢ Fit</button><button id="skClear">Clear all</button>
+          </div>
+          <div id="shapeForm" class="shapeform"></div>
+          <h3>How many of the whole drawing?</h3>
           <div class="grid3">
             <label>Across<input id="cpX" type="number" min="1" value="1" inputmode="numeric"></label>
             <label>Up<input id="cpY" type="number" min="1" value="1" inputmode="numeric"></label>
@@ -160,7 +171,7 @@
         <p class="muted">Put the sheet on the table. Move the torch over the <b>bottom-left corner</b> of where you want the part, then press <b>Start here</b>.
           (Parts made here sit a few mm in from that spot, leaving room for the lead-in.)</p>
         <div class="jogmount"></div>
-        <p class="muted small keyhint">Keyboard: ← → ↑ ↓ move · Page Up / Page Down raise / lower · tap = one step, hold = keep moving</p>
+        <p class="muted small keyhint">Keyboard: arrows move, Page Up / Page Down raise and lower. Tap for one step, hold to glide. Two arrows go diagonal, add Shift to go slow.</p>
         <button id="btnZero" class="xl accent wide">📍 Start here</button>
         <button id="btnTrace" class="wide">Trace the outline (torch off) to check it's on the sheet</button>
         <div class="nav"><button class="back" data-go="2">← Back</button><button class="next xl" data-go="4">Next →</button></div>
@@ -212,15 +223,17 @@
 
 <!-- ============================================================ MOVE -->
 <section id="moveView" class="view hidden">
-  <div class="card">
-    <div class="pos" id="posMove"></div>
+  <div class="card movegrid">
+   <div>
     <div class="jogmount"></div>
     <div class="row">
       <button class="do-home">⌂ Home</button>
       <button class="do-raise">⤒ Raise torch</button>
       <button id="btnGoStart">Go to start point</button>
     </div>
-    <p class="muted small">Keyboard: ← → ↑ ↓ move · Page Up / Page Down raise / lower · tap = one step, hold = keep moving · Esc stops.</p>
+    <p class="muted small">Keyboard: arrows move, Page Up / Page Down raise and lower. Tap for one step, hold to glide. Two arrows go diagonal, add Shift to go slow. Esc stops everything.</p>
+   </div>
+   <canvas id="moveMap" class="map" aria-label="Live view of the table from above"></canvas>
   </div>
 </section>
 
