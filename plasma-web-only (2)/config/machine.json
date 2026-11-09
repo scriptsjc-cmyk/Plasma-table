@@ -1,0 +1,38 @@
+{
+  "name": "Plasma Table",
+  "serial": {
+    "port": "auto",
+    "baud": 115200
+  },
+  "rx_buffer_size": 127,
+  "travel_mm": {
+    "x": 1300,
+    "y": 800,
+    "z": 60
+  },
+  "jog": {
+    "feed_xy": 3000,
+    "feed_z": 600,
+    "steps_mm": [
+      0.1,
+      1,
+      10,
+      50
+    ]
+  },
+  "probe": {
+    "switch_offset_mm": 1.5,
+    "probe_feed": 300,
+    "probe_distance_mm": 50,
+    "plunge_feed": 300
+  },
+  "torch": {
+    "spindle_s": 1000,
+    "safe_lift_mm": 8,
+    "test_seconds": 0.5,
+    "raise_mm": 10
+  },
+  "rapid_feed_estimate": 6000,
+  "z_park_machine": null,
+  "require_reference_to_cut": true
+}
