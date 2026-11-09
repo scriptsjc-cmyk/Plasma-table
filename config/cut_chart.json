@@ -3,41 +3,149 @@
   "air_bar": "4.5-5",
   "pierce_height_mm": 1.5,
   "cut_height_mm": 1.5,
+  "kerf_mm": 1.5,
+  "lead_in_mm": 3,
   "materials": [
     {
       "name": "Mild steel",
       "rows": [
-        { "thickness_mm": 1.0, "amps": 25, "pierce_delay_s": 0.1, "feed_mm_min": 4000 },
-        { "thickness_mm": 1.5, "amps": 30, "pierce_delay_s": 0.2, "feed_mm_min": 3500 },
-        { "thickness_mm": 2.0, "amps": 30, "pierce_delay_s": 0.3, "feed_mm_min": 2800 },
-        { "thickness_mm": 3.0, "amps": 40, "pierce_delay_s": 0.4, "feed_mm_min": 2000 },
-        { "thickness_mm": 4.0, "amps": 40, "pierce_delay_s": 0.5, "feed_mm_min": 1400 },
-        { "thickness_mm": 5.0, "amps": 40, "pierce_delay_s": 0.7, "feed_mm_min": 1000 },
-        { "thickness_mm": 6.0, "amps": 40, "pierce_delay_s": 0.9, "feed_mm_min": 750 },
-        { "thickness_mm": 8.0, "amps": 40, "pierce_delay_s": 1.2, "feed_mm_min": 450, "pierce_height_mm": 2.5 }
+        {
+          "thickness_mm": 1.0,
+          "amps": 25,
+          "pierce_delay_s": 0.1,
+          "feed_mm_min": 4000
+        },
+        {
+          "thickness_mm": 1.5,
+          "amps": 30,
+          "pierce_delay_s": 0.2,
+          "feed_mm_min": 3500
+        },
+        {
+          "thickness_mm": 2.0,
+          "amps": 30,
+          "pierce_delay_s": 0.3,
+          "feed_mm_min": 2800
+        },
+        {
+          "thickness_mm": 3.0,
+          "amps": 40,
+          "pierce_delay_s": 0.4,
+          "feed_mm_min": 2000
+        },
+        {
+          "thickness_mm": 4.0,
+          "amps": 40,
+          "pierce_delay_s": 0.5,
+          "feed_mm_min": 1400
+        },
+        {
+          "thickness_mm": 5.0,
+          "amps": 40,
+          "pierce_delay_s": 0.7,
+          "feed_mm_min": 1000
+        },
+        {
+          "thickness_mm": 6.0,
+          "amps": 40,
+          "pierce_delay_s": 0.9,
+          "feed_mm_min": 750
+        },
+        {
+          "thickness_mm": 8.0,
+          "amps": 40,
+          "pierce_delay_s": 1.2,
+          "feed_mm_min": 450,
+          "pierce_height_mm": 2.5
+        }
       ]
     },
     {
       "name": "Stainless steel",
       "rows": [
-        { "thickness_mm": 1.0, "amps": 25, "pierce_delay_s": 0.1, "feed_mm_min": 3500 },
-        { "thickness_mm": 1.5, "amps": 30, "pierce_delay_s": 0.2, "feed_mm_min": 3000 },
-        { "thickness_mm": 2.0, "amps": 35, "pierce_delay_s": 0.3, "feed_mm_min": 2300 },
-        { "thickness_mm": 3.0, "amps": 40, "pierce_delay_s": 0.5, "feed_mm_min": 1600 },
-        { "thickness_mm": 4.0, "amps": 40, "pierce_delay_s": 0.6, "feed_mm_min": 1100 },
-        { "thickness_mm": 5.0, "amps": 40, "pierce_delay_s": 0.8, "feed_mm_min": 800 },
-        { "thickness_mm": 6.0, "amps": 40, "pierce_delay_s": 1.0, "feed_mm_min": 600 }
+        {
+          "thickness_mm": 1.0,
+          "amps": 25,
+          "pierce_delay_s": 0.1,
+          "feed_mm_min": 3500
+        },
+        {
+          "thickness_mm": 1.5,
+          "amps": 30,
+          "pierce_delay_s": 0.2,
+          "feed_mm_min": 3000
+        },
+        {
+          "thickness_mm": 2.0,
+          "amps": 35,
+          "pierce_delay_s": 0.3,
+          "feed_mm_min": 2300
+        },
+        {
+          "thickness_mm": 3.0,
+          "amps": 40,
+          "pierce_delay_s": 0.5,
+          "feed_mm_min": 1600
+        },
+        {
+          "thickness_mm": 4.0,
+          "amps": 40,
+          "pierce_delay_s": 0.6,
+          "feed_mm_min": 1100
+        },
+        {
+          "thickness_mm": 5.0,
+          "amps": 40,
+          "pierce_delay_s": 0.8,
+          "feed_mm_min": 800
+        },
+        {
+          "thickness_mm": 6.0,
+          "amps": 40,
+          "pierce_delay_s": 1.0,
+          "feed_mm_min": 600
+        }
       ]
     },
     {
       "name": "Aluminium",
       "rows": [
-        { "thickness_mm": 1.0, "amps": 30, "pierce_delay_s": 0.1, "feed_mm_min": 4000 },
-        { "thickness_mm": 1.5, "amps": 30, "pierce_delay_s": 0.2, "feed_mm_min": 3500 },
-        { "thickness_mm": 2.0, "amps": 35, "pierce_delay_s": 0.2, "feed_mm_min": 3000 },
-        { "thickness_mm": 3.0, "amps": 40, "pierce_delay_s": 0.3, "feed_mm_min": 2200 },
-        { "thickness_mm": 4.0, "amps": 40, "pierce_delay_s": 0.4, "feed_mm_min": 1500 },
-        { "thickness_mm": 5.0, "amps": 40, "pierce_delay_s": 0.6, "feed_mm_min": 1000 }
+        {
+          "thickness_mm": 1.0,
+          "amps": 30,
+          "pierce_delay_s": 0.1,
+          "feed_mm_min": 4000
+        },
+        {
+          "thickness_mm": 1.5,
+          "amps": 30,
+          "pierce_delay_s": 0.2,
+          "feed_mm_min": 3500
+        },
+        {
+          "thickness_mm": 2.0,
+          "amps": 35,
+          "pierce_delay_s": 0.2,
+          "feed_mm_min": 3000
+        },
+        {
+          "thickness_mm": 3.0,
+          "amps": 40,
+          "pierce_delay_s": 0.3,
+          "feed_mm_min": 2200
+        },
+        {
+          "thickness_mm": 4.0,
+          "amps": 40,
+          "pierce_delay_s": 0.4,
+          "feed_mm_min": 1500
+        },
+        {
+          "thickness_mm": 5.0,
+          "amps": 40,
+          "pierce_delay_s": 0.6,
+          "feed_mm_min": 1000
+        }
       ]
     }
   ]

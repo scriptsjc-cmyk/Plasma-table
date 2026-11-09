@@ -12,7 +12,7 @@ export class SimTransport {
     this.alarm = false; this.torch = false; this.hold = false; this.spindleStopped = false;
     this.homing = false; this.relative = false; this.feed = 1000; this.motion = 0;
     this.sheetZ = sheetZ; this.switchOffset = switchOffset; this.speedup = speedup;
-    this.busyUntil = 0; this.queue = []; this.inbuf = ""; this.log = [];
+    this.busyUntil = 0; this.queue = []; this.feedOv = 100; this.estop = false; this.inbuf = ""; this.log = [];
     this.torchOnCount = 0; this.probeCount = 0; this.closed = false; this.resetGen = 0;
   }
   async open() {
@@ -30,6 +30,11 @@ export class SimTransport {
       else if (c === "\x18") this._reset();
       else if (c === "\x85") { /* jog cancel */ }
       else if (c === "\x9e") { if (this.hold) this.spindleStopped = !this.spindleStopped; }
+      else if (c === "\x90") this.feedOv = 100;
+      else if (c === "\x91") this.feedOv = Math.min(200, this.feedOv + 10);
+      else if (c === "\x92") this.feedOv = Math.max(10, this.feedOv - 10);
+      else if (c === "\x93") this.feedOv = Math.min(200, this.feedOv + 1);
+      else if (c === "\x94") this.feedOv = Math.max(10, this.feedOv - 1);
       else {
         this.inbuf += c;
         let i;
@@ -50,8 +55,17 @@ export class SimTransport {
     else if (this.homing) st = "Home";
     else if (Date.now() < this.busyUntil || this.queue.length || this.executing) st = "Run";
     const acc = this.torch && !this.spindleStopped ? "|A:S" : "";
+    let pn = "";
+    if (this.mpos[2] <= this.sheetZ - this.switchOffset + 1e-6) pn += "P";   // floating head pushed up
+    if (this.estop) pn += "E";
+    if (pn) pn = "|Pn:" + pn;
     const f = (a) => a.map((v) => v.toFixed(3)).join(",");
-    return `<${st}|MPos:${f(this.mpos)}|FS:${Math.round(this.feed)},0|WCO:${f(this.wco)}${acc}>`;
+    return `<${st}|MPos:${f(this.mpos)}|FS:${Math.round(this.feed * this.feedOv / 100)},0|WCO:${f(this.wco)}|Ov:${this.feedOv},100,100${pn}${acc}>`;
+  }
+  // demo only: press / release the e-stop
+  setEstop(on) {
+    this.estop = on;
+    if (on) { this.queue = []; this.torch = false; this.busyUntil = 0; this.resetGen++; this.alarm = true; this._send("ALARM:10"); }
   }
   _reset() {
     const moving = Date.now() < this.busyUntil;
@@ -115,7 +129,7 @@ export class SimTransport {
       const t = [...this.mpos];
       "XYZ".split("").forEach((a, i) => { if (a in ax) t[i] = this.relative ? this.mpos[i] + ax[a] : ax[a] + this.wco[i]; });
       this._send("ok");
-      await this._move(t, this.motion === 0 ? 8000 : this.feed);
+      await this._move(t, this.motion === 0 ? 8000 : (this.feed * this.feedOv) / 100);
       return;
     }
     this._send("ok");
@@ -134,7 +148,10 @@ export class SimTransport {
     this._send("ok");
   }
   async _dollar(u) {
-    if (u === "$X") { this.alarm = false; this._send("[MSG:Caution: Unlocked]"); }
+    if (u === "$X") {
+      if (this.estop) return this._send("error:79");
+      this.alarm = false; this._send("[MSG:Caution: Unlocked]");
+    }
     else if (u === "$H") {
       this.homing = true;
       await this._waitMove(Math.hypot(...this.mpos), 4000);

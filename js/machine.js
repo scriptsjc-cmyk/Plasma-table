@@ -108,6 +108,12 @@ export class Machine {
       case "stop": g.stop(); return { ok: true };
       case "reset": g.reset(); return { ok: true };
       case "jog_cancel": g.realtime(RT.JOG_CANCEL); return { ok: true };
+      case "feed_override": {
+        const map = { "+10": RT.FEED_UP10, "-10": RT.FEED_DOWN10, "+1": RT.FEED_UP1, "-1": RT.FEED_DOWN1, reset: RT.FEED_100 };
+        if (!map[body.step]) throw new JobError("Bad speed step.");
+        g.realtime(map[body.step]);
+        return { ok: true };
+      }
     }
     if (this.jobRunning()) throw new JobError("A job is running. Pause or stop it first.");
 
@@ -208,6 +214,9 @@ export class Machine {
     if (!this.grbl) throw new JobError("Not connected. Press Connect.");
     if (!this.prepared) throw new JobError("Load a job first.");
     if (this.state() !== "Idle") throw new JobError(`Machine must be Idle to start (it is ${this.state()}).`);
+    const inp = this.grbl.status.inputs || {};
+    if (inp.estop) throw new JobError("E-stop is pressed. Release it and press Unlock.");
+    if (inp.probe) throw new JobError("The floating head is pushed up. Check the torch isn't touching anything or stuck.");
     if (this.safety.limits && !this.safety.referenced && this.requireReference)
       throw new JobError("The machine doesn't know where its edges are yet. Press Home (or 'Torch is at the home corner') first.");
     const problem = this.safety.jobCheck(this.prepared.stats.bounds, this.wco());

@@ -5,6 +5,9 @@
 export const RT = {
   STATUS: "?", HOLD: "!", RESUME: "~", RESET: "\x18",
   JOG_CANCEL: new Uint8Array([0x85]), SPINDLE_STOP: new Uint8Array([0x9e]),
+  // live cut-speed (feed override): reset to 100%, +10%, -10%, +1%, -1%
+  FEED_100: new Uint8Array([0x90]), FEED_UP10: new Uint8Array([0x91]), FEED_DOWN10: new Uint8Array([0x92]),
+  FEED_UP1: new Uint8Array([0x93]), FEED_DOWN1: new Uint8Array([0x94]),
 };
 
 export const ALARMS = {
@@ -103,6 +106,18 @@ export function parseStatus(text) {
   return st;
 }
 
+// grblHAL lists the inputs that are ACTIVE in the "Pn:" field (nothing listed = all off)
+export const PIN_NAMES = {
+  P: "probe", E: "estop", X: "limX", Y: "limY", Z: "limZ", A: "limA",
+  D: "door", H: "hold", S: "start", R: "reset", M: "motorFault",
+};
+export function decodePins(pn = "") {
+  const out = { probe: false, estop: false, limX: false, limY: false, limZ: false, limA: false,
+    door: false, hold: false, start: false, reset: false, motorFault: false };
+  for (const ch of pn) if (PIN_NAMES[ch]) out[PIN_NAMES[ch]] = true;
+  return out;
+}
+
 // ------------------------------------------------------------------ controller link
 export class GrblLink {
   constructor(transport, rxSize = 127, onEvent = () => {}) {
@@ -113,6 +128,7 @@ export class GrblLink {
     this.inflight = [];
     this.wco = [0, 0, 0];
     this.status = { state: "Unknown", MPos: [0, 0, 0], WPos: [0, 0, 0], pins: "" };
+    this.feedOv = 100;
     this.job = null;
     this.running = true;
     this.t.onLine = (l) => this._line(l);
@@ -237,6 +253,9 @@ export class GrblLink {
       if (st.MPos) st.WPos = st.MPos.map((v, i) => v - this.wco[i]);
       else if (st.WPos) st.MPos = st.WPos.map((v, i) => v + this.wco[i]);
       st.torch = (st.accessories || "").includes("S");
+      st.inputs = decodePins(st.pins);
+      if (st.overrides) this.feedOv = Number(st.overrides.split(",")[0]) || 100;  // only sent now and then
+      st.feedOv = this.feedOv;
       this.status = st;
       this._emit("status", st);
       return;
