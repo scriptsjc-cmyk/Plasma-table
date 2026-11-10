@@ -109,7 +109,9 @@
           <div class="skopts">
             <label>Snap to <select id="skSnap"><option value="0">off</option><option value="0.1">0.1 mm</option><option value="0.5">0.5 mm</option><option value="1">1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option></select></label>
             <label class="check"><input type="checkbox" id="skGuides"> Line-up guides</label>
+            <label class="check protoggle"><input type="checkbox" id="skPro"> Pro mode</label>
           </div>
+          <div id="proTools" class="protools hidden"></div>
           <h3>Add a part</h3>
           <div id="shapeTiles" class="tiles small"></div>
           <h3>Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
@@ -122,7 +124,9 @@
             <ul>
               <li><b>Add</b> – tap a part. Tap a hole with a part picked and it drops into the middle of it.</li>
               <li><b>Move</b> – drag it. Orange guide lines appear when it lines up with another shape. Hold <b>Alt</b> to move freely.</li>
-              <li><b>Size</b> – drag a corner, or type exact sizes in the boxes. Round things stay round.</li>
+              <li><b>Size</b> – tap the blue millimetre label above or beside the shape and type the exact size (you can use 100/2 or 50+12.5). Or drag a corner, or use the boxes below.</li>
+              <li><b>Versions</b> – tap a shape, then pick a version (rounded, chamfered, corner holes, flange, gusset…). It keeps the size and place.</li>
+              <li><b>Pro mode</b> – turn it on for arrays, subtract, offset, measure, draw an outline, even spacing and auto-arrange.</li>
               <li><b>Holes</b> – drag a hole to move it. The orange numbers show how far its middle is from the part's left and bottom edges.</li>
               <li><b>Several at once</b> – Shift-click them, or drag a box round them on empty space. Then move, copy, turn, mirror or delete them together.</li>
               <li><b>Join</b> – pick shapes that touch or overlap and press <b>Join into one part</b>. They become one outline, with all their holes. Now copy it, resize it or turn it as one part.</li>
@@ -365,6 +369,32 @@
 </template>
 
 <div id="toast" class="toast hidden"></div>
+
+<div id="numPad" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="numPadLabel">
+  <div class="numpad-card">
+    <div class="numpad-label" id="numPadLabel">Size (mm)</div>
+    <div class="numpad-value" id="numPadValue" inputmode="decimal"></div>
+    <div class="numpad-keys" id="numPadKeys"></div>
+    <div class="numpad-row">
+      <button type="button" id="numPadCancel">Cancel</button>
+      <button type="button" id="numPadEnter" class="go">Enter</button>
+    </div>
+  </div>
+</div>
+<div id="cadDialog" class="numpad hidden" role="dialog" aria-modal="true">
+  <div class="numpad-card">
+    <h3 id="cadTitle">Options</h3>
+    <div id="cadFields" class="cadfields"></div>
+    <div class="numpad-row">
+      <button type="button" id="cadCancel">Cancel</button>
+      <button type="button" id="cadOk" class="go">Do it</button>
+    </div>
+  </div>
+</div>
+<div id="toolBar" class="toolbar hidden">
+  <button type="button" id="toolFinish" class="go">Close outline</button>
+  <button type="button" id="toolCancel">Cancel</button>
+</div>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

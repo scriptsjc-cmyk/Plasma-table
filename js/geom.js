@@ -228,3 +228,90 @@ export function unionOutlines(list) {
   holes = holes.filter((h) => h.length >= 3 && !list.some((o) => pointInPoly(h[0], o) && pointInPoly(h[Math.floor(h.length / 2)], o)));
   return { outer: cur, holes: holes.map((h) => (signedArea(h) > 0 ? [...h].reverse() : h)) };
 }
+
+
+// A minus B. If B sits fully inside A, B becomes a hole. If they overlap on an
+// edge (a notch), a Greiner-Hormann difference is used. Returns
+// { outer: pts, holes: [pts...] } or null if they do not overlap.
+export function differenceOutlines(A, B) {
+  A = ccw(cleanPts(A, true)); B = ccw(cleanPts(B, true));
+  if (A.length < 3 || B.length < 3) return null;
+  const aInB = pointInPoly(A[0], B) && pointInPoly(A[Math.floor(A.length / 2)], B);
+  const bInA = pointInPoly(B[0], A) && pointInPoly(B[Math.floor(B.length / 2)], A);
+  const r = ghUnion(A, B);
+  if (!r) {
+    if (bInA && !aInB) return { outer: A, holes: [signedArea(B) > 0 ? [...B].reverse() : B] };
+    return null;
+  }
+  if (bInA && !aInB && r.loops.length <= 1) {
+    // no crossings: clean hole
+    return { outer: A, holes: [signedArea(B) > 0 ? [...B].reverse() : B] };
+  }
+  // overlapping: take the difference via a second walk that treats B as a hole
+  const d = ghDifference(A, B);
+  if (!d) return bInA ? { outer: A, holes: [signedArea(B) > 0 ? [...B].reverse() : B] } : null;
+  return d;
+}
+
+function ghDifference(A, B) {
+  // Same intersection plumbing as ghUnion, but entry flags are set for A−B:
+  // walk along A outside B, and along B in reverse when inside A.
+  const mk = (pts) => {
+    const nodes = pts.map(([x, y]) => ({ x, y, inter: false }));
+    nodes.forEach((n, i) => { n.next = nodes[(i + 1) % nodes.length]; n.prev = nodes[(i - 1 + nodes.length) % nodes.length]; });
+    return nodes;
+  };
+  const LA = mk(A), LB = mk(B);
+  const ins = (a, node) => {
+    let at = a;
+    while (at.next.inter && at.next.alpha < node.alpha) at = at.next;
+    node.prev = at; node.next = at.next; at.next.prev = node; at.next = node;
+  };
+  let count = 0;
+  for (const a of LA) {
+    const a2 = A[(LA.indexOf(a) + 1) % A.length];
+    for (let j = 0; j < B.length; j++) {
+      const b = B[j], b2 = B[(j + 1) % B.length];
+      const dxa = a2[0] - a.x, dya = a2[1] - a.y, dxb = b2[0] - b[0], dyb = b2[1] - b[1];
+      const den = dxa * dyb - dya * dxb;
+      if (Math.abs(den) < 1e-14) continue;
+      const ta = ((b[0] - a.x) * dyb - (b[1] - a.y) * dxb) / den;
+      const tb = ((b[0] - a.x) * dya - (b[1] - a.y) * dxa) / den;
+      if (ta <= 1e-9 || ta >= 1 - 1e-9 || tb <= 1e-9 || tb >= 1 - 1e-9) continue;
+      const x = a.x + ta * dxa, y = a.y + ta * dya;
+      const na = { x, y, inter: true, alpha: ta }, nb = { x, y, inter: true, alpha: tb };
+      na.neighbor = nb; nb.neighbor = na;
+      ins(a, na); ins(LB[j], nb);
+      count++;
+    }
+  }
+  if (!count) return null;
+  const mark = (start, other, invert) => {
+    let inside = pointInPoly([start.x, start.y], other), n = start;
+    do { if (n.inter) { n.entry = invert ? !inside : inside; inside = !inside; } n = n.next; } while (n !== start);
+  };
+  // A: entry when going into B is a departure for A−B (leave A along B)
+  mark(LA[0], B, true);
+  mark(LB[0], A, false);
+  const loops = [];
+  for (;;) {
+    let start = null, n = LA[0];
+    do { if (n.inter && !n.visited) { start = n; break; } n = n.next; } while (n !== LA[0]);
+    if (!start) break;
+    const poly = [];
+    let cur = start, guard = 0;
+    do {
+      cur.visited = true; if (cur.neighbor) cur.neighbor.visited = true;
+      poly.push([cur.x, cur.y]);
+      if (cur.entry) { cur = cur.next; while (!cur.inter) { poly.push([cur.x, cur.y]); cur = cur.next; } }
+      else { cur = cur.prev; while (!cur.inter) { poly.push([cur.x, cur.y]); cur = cur.prev; } }
+      cur = cur.neighbor;
+    } while (cur && !cur.visited && ++guard < 20000);
+    if (poly.length >= 3) loops.push(cleanPts(poly, true));
+  }
+  if (!loops.length) return null;
+  const byArea = loops.map((p) => ({ p, a: Math.abs(signedArea(p)) })).sort((a, b) => b.a - a.a);
+  const outer = ccw(byArea[0].p);
+  const holes = byArea.slice(1).map((x) => (signedArea(x.p) > 0 ? [...x.p].reverse() : x.p));
+  return { outer, holes };
+}

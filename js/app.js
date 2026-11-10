@@ -9,6 +9,8 @@ import { parseSVG } from "./svg.js";
 import { designToGcode } from "./cam.js";
 import { SHAPES, copies } from "./shapes.js";
 import { Sketch, shapeDef } from "./sketch.js";
+import { variantsFor, variantKey } from "./variants.js";
+import { evalExpr } from "./expr.js";
 import { checkDesign, machineLimits } from "./check.js";
 
 const $ = (id) => document.getElementById(id);
@@ -226,6 +228,8 @@ function renderShapeTiles() {
   $("holeTiles").innerHTML = SHAPES.filter((sh) => sh.hole).map(tile).join("");
   $("skSnap").value = String(sketch.opts.snap);
   $("skGuides").checked = !!sketch.opts.guides;
+  $("skPro").checked = !!sketch.opts.pro;
+  renderProTools();
 }
 const ALIGN = [["left", "⇤ Left"], ["centre", "↔ Centre"], ["right", "⇥ Right"], ["both", "◎ Dead centre"],
   ["bottom", "⤓ Bottom"], ["middle", "↕ Middle"], ["top", "⤒ Top"]];
@@ -239,6 +243,17 @@ function renderShapeForm() {
     return;
   }
   if (list.length > 1) {
+    const pro = sketch.opts.pro ? `
+      <h4>Pro</h4>
+      <div class="skbtns">
+        <button data-pro="subtract">✂ Subtract</button>
+        <button data-pro="distx">↔ Space across</button>
+        <button data-pro="disty">↕ Space up</button>
+        <button data-pro="linarray">Linear array</button>
+        <button data-pro="polar">Circular array</button>
+        <button data-pro="lock">${list.every((i) => i.lock) ? "Unlock" : "🔒 Lock"}</button>
+        <button data-sk="flipV">⇅ Flip up/down</button>
+      </div>` : "";
     $("shapeForm").innerHTML = `
       <div class="selhead"><b>${list.length} shapes picked</b></div>
       <p class="tip">Drag any of them to move them all. <b>Join</b> makes touching shapes one part (with their holes).</p>
@@ -250,13 +265,28 @@ function renderShapeForm() {
         <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
       </div>
       <h4>Line up with the biggest one</h4>
-      <div class="alignrow">${ALIGN.map(([k, t]) => `<button data-sk="align" data-arg="${k}">${t}</button>`).join("")}</div>`;
+      <div class="alignrow">${ALIGN.map(([k, t]) => `<button data-sk="align" data-arg="${k}">${t}</button>`).join("")}</div>${pro}`;
     return;
   }
   const sh = shapeDef(it.type), b = sketch.boxOf(it);
   const moved = Object.keys(it.holes || {}).length;
+  const curKey = sketch.currentVariantKey();
+  const vars = variantsFor(it.type).map((v) => {
+    const d = shapeDef(v.id); const label = v.label || (d ? d.name : v.id);
+    return `<button type="button" data-var="${esc(variantKey(v))}" class="${variantKey(v) === curKey ? "sel" : ""}">${esc(label)}</button>`;
+  }).join("");
+  const varBox = vars ? `<div class="varbox"><h4>Versions of this shape</h4><div class="varrow">${vars}</div><p class="muted small">Keeps this size and place. Then edit holes, radii and so on below. Tap a blue size on the drawing to type an exact measurement.</p></div>` : `<p class="muted small">Tap a blue size on the drawing to type an exact measurement.</p>`;
+  const proOne = sketch.opts.pro ? `
+      <div class="skbtns">
+        <button data-pro="linarray">Linear array</button>
+        <button data-pro="polar">Circular array</button>
+        <button data-pro="offset">Offset</button>
+        <button data-pro="lock">${it.lock ? "Unlock" : "🔒 Lock"}</button>
+        <button data-sk="flipV">⇅ Flip up/down</button>
+      </div>` : "";
   $("shapeForm").innerHTML = `
-    <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
+    <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
+    ${varBox}
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
     <div class="grid2">${sh.params.map(([k, label]) =>
       `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${it.p[k]}"></label>`).join("")}
@@ -271,9 +301,115 @@ function renderShapeForm() {
       <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
       ${moved ? `<button data-sk="resetHoles">↺ Holes back</button>` : ""}
       <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
-    </div>`;
+    </div>${proOne}`;
 }
 // keep the boxes in step while dragging, without rebuilding them
+
+function renderProTools() {
+  const box = $("proTools");
+  if (!box) return;
+  const on = !!(sketch && sketch.opts.pro);
+  box.classList.toggle("hidden", !on);
+  if (!on) { $("toolBar").classList.add("hidden"); return; }
+  const tool = sketch.tool;
+  box.innerHTML = `
+    <button data-pro="draw" class="${tool === "draw" ? "on" : ""}">✎ Draw outline</button>
+    <button data-pro="measure" class="${tool === "measure" ? "on" : ""}">📏 Measure</button>
+    <button data-pro="nest">⊞ Auto-arrange</button>
+    <button data-pro="points" class="${sketch.opts.pointSnap ? "on" : ""}">Snap to points</button>`;
+  $("toolBar").classList.toggle("hidden", tool !== "draw");
+  $("toolFinish").textContent = "Close outline";
+}
+
+function openNumPad(dim) {
+  const pad = $("numPad");
+  pad.classList.remove("hidden");
+  $("numPadLabel").textContent = dim.label || "Value (mm)";
+  const seed = { w: () => { const b = sketch.boxOf(dim.it); return b[2] - b[0]; },
+    h: () => { const b = sketch.boxOf(dim.it); return b[3] - b[1]; },
+    d: () => { const b = sketch.boxOf(dim.it); return b[2] - b[0]; },
+    x: () => sketch.boxOf(dim.it)[0], y: () => sketch.boxOf(dim.it)[1],
+    hx: () => dim._v, hy: () => dim._v }[dim.kind];
+  let cur = "";
+  $("numPadValue").textContent = "";
+  $("numPadValue").dataset.seed = seed ? String(Math.round(seed() * 1000) / 1000) : "";
+  if (!cur) $("numPadValue").textContent = $("numPadValue").dataset.seed;
+  const keys = [["7","7"],["8","8"],["9","9"],["/","/"],["4","4"],["5","5"],["6","6"],["*","*"],["1","1"],["2","2"],["3","3"],["-","-"],["0","0"],[".","."],["⌫","DEL"],["+","+"]];
+  $("numPadKeys").innerHTML = keys.map(([k, lab]) => `<button type="button" data-k="${k}" class="${"+-*/⌫".includes(k) ? "op" : ""}">${lab}</button>`).join("");
+  const apply = () => {
+    const raw = $("numPadValue").textContent.trim();
+    const v = evalExpr(raw);
+    if (!Number.isFinite(v)) { toast("Use a number, or something like 100/2 or 50+12.5", true); return; }
+    if (dim.kind === "w") sketch.setWidth(v);
+    else if (dim.kind === "h") sketch.setHeight(v);
+    else if (dim.kind === "d") sketch.setDiameter(v);
+    else if (dim.kind === "x" || dim.kind === "y") sketch.setPos(dim.kind, v);
+    else if (dim.kind === "hx" || dim.kind === "hy") sketch.setHoleOffset(dim.kind === "hx" ? "x" : "y", v);
+    closeNumPad();
+  };
+  pad._apply = apply;
+  pad._cur = true; // first key replaces the seed
+}
+
+function closeNumPad() { $("numPad").classList.add("hidden"); $("numPad")._apply = null; }
+
+function openCad(title, fields, onOk) {
+  $("cadTitle").textContent = title;
+  $("cadFields").innerHTML = fields.map((f) => `<label>${esc(f.label)}<input id="cad_${f.id}" type="${f.type || "number"}" inputmode="decimal" step="any" value="${f.value ?? ""}"></label>`).join("");
+  $("cadDialog").classList.remove("hidden");
+  $("cadDialog")._ok = () => {
+    const vals = {};
+    for (const f of fields) {
+      const raw = $("cad_" + f.id).value;
+      vals[f.id] = f.text ? raw : evalExpr(raw);
+      if (!f.text && !Number.isFinite(vals[f.id])) { toast("Check the number in " + f.label, true); return; }
+    }
+    $("cadDialog").classList.add("hidden");
+    onOk(vals);
+  };
+}
+function closeCad() { $("cadDialog").classList.add("hidden"); $("cadDialog")._ok = null; }
+
+function runPro(cmd) {
+  const sheet = S.cfg && S.cfg.travel_mm ? S.cfg.travel_mm : { x: 1300, y: 800 };
+  if (cmd === "draw") { sketch.setTool("draw"); renderProTools(); toast("Tap points on the drawing, then Close outline."); return; }
+  if (cmd === "measure") { sketch.setTool("measure"); renderProTools(); toast("Tap two points to measure."); return; }
+  if (cmd === "points") { sketch.setPointSnap(!sketch.opts.pointSnap); renderProTools(); return; }
+  if (cmd === "lock") { sketch.toggleLock(); return; }
+  if (cmd === "subtract") { sketch.subtract(); return; }
+  if (cmd === "distx") { sketch.distribute("x"); return; }
+  if (cmd === "disty") { sketch.distribute("y"); return; }
+  if (cmd === "linarray") {
+    openCad("Linear array", [
+      { id: "n", label: "How many (including this one)", value: 3 },
+      { id: "gx", label: "Gap across (mm)", value: 10 },
+      { id: "gy", label: "Gap up (mm)", value: 0 },
+    ], (v) => sketch.linearArray(v.n, v.gx, v.gy));
+    return;
+  }
+  if (cmd === "polar") {
+    openCad("Circular array", [
+      { id: "n", label: "How many around the circle", value: 4 },
+      { id: "pcd", label: "Circle Ø (PCD, mm) – 0 = auto", value: 0 },
+    ], (v) => sketch.polarArray(v.n, v.pcd));
+    return;
+  }
+  if (cmd === "offset") {
+    openCad("Offset the outline", [
+      { id: "d", label: "Offset (mm) – plus grows, minus shrinks", value: 5 },
+    ], (v) => sketch.offsetBy(v.d));
+    return;
+  }
+  if (cmd === "nest") {
+    openCad("Auto-arrange on the sheet", [
+      { id: "gap", label: "Gap between parts (mm)", value: 10 },
+      { id: "sw", label: "Sheet width (mm)", value: sheet.x },
+      { id: "sh", label: "Sheet height (mm)", value: sheet.y },
+    ], (v) => sketch.nest(v.gap, v.sw, v.sh));
+    return;
+  }
+}
+
 function syncShapeForm() {
   const it = sketch.selected(); if (!it) return;
   const b = sketch.boxOf(it);
@@ -975,7 +1111,7 @@ function bind() {
   $("skGuides").onchange = () => sketch.setGuides($("skGuides").checked);
   $("shapeForm").addEventListener("focusin", (e) => { if (e.target.matches("input")) editBefore = sketch.snapshot(); });
   $("shapeForm").addEventListener("input", (e) => {
-    const i = e.target, v = Number(i.value);
+    const i = e.target, v = evalExpr(i.value) ;
     if (i.value.trim() === "" || !Number.isFinite(v)) return;
     const it = sketch.selected(); if (!it) return;
     if (i.dataset.angle) return;                     // applied on change
@@ -992,9 +1128,50 @@ function bind() {
     editBefore = sketch.snapshot(); renderShapeForm();
   });
   $("shapeForm").addEventListener("click", (e) => {
+    const v = e.target.closest("[data-var]");
+    if (v) {
+      const it = sketch.selected(); if (!it) return;
+      const spec = variantsFor(it.type).find((x) => variantKey(x) === v.dataset.var);
+      if (spec) sketch.applyVariant(spec);
+      return;
+    }
+    const p = e.target.closest("[data-pro]");
+    if (p) { runPro(p.dataset.pro); return; }
     const b = e.target.closest("[data-sk]"); if (!b) return;
     const a = b.dataset.arg; sketch[b.dataset.sk](a === undefined ? undefined : isNaN(Number(a)) ? a : Number(a));
   });
+  $("proTools").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-pro]"); if (b) runPro(b.dataset.pro);
+  });
+  $("skPro").onchange = () => { sketch.setPro($("skPro").checked); renderProTools(); renderShapeForm(); };
+  $("numPadKeys").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-k]"); if (!b) return;
+    const k = b.dataset.k, el = $("numPadValue");
+    if ($("numPad")._cur) { el.textContent = (k === "⌫" || k === ".") ? "" : ""; $("numPad")._cur = false; }
+    let s = $("numPad")._cur === false ? el.textContent : "";
+    if (k === "⌫") s = s.slice(0, -1);
+    else s += k;
+    el.textContent = s;
+  });
+  $("numPadEnter").onclick = () => { if ($("numPad")._apply) $("numPad")._apply(); };
+  $("numPadCancel").onclick = closeNumPad;
+  $("numPad").addEventListener("click", (e) => { if (e.target === $("numPad")) closeNumPad(); });
+  $("cadOk").onclick = () => { if ($("cadDialog")._ok) $("cadDialog")._ok(); };
+  $("cadCancel").onclick = closeCad;
+  $("cadDialog").addEventListener("click", (e) => { if (e.target === $("cadDialog")) closeCad(); });
+  $("toolFinish").onclick = () => { sketch.finishDraw(); renderProTools(); };
+  $("toolCancel").onclick = () => { sketch.setTool(null); renderProTools(); };
+  document.addEventListener("keydown", (e) => {
+    if (!$("numPad").classList.contains("hidden")) {
+      if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); if ($("numPad")._apply) $("numPad")._apply(); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeNumPad(); }
+      else if (e.key === "Backspace") { e.preventDefault(); e.stopPropagation(); const el = $("numPadValue"); if ($("numPad")._cur) { el.textContent = ""; $("numPad")._cur = false; } else el.textContent = el.textContent.slice(0, -1); }
+      else if (/^[0-9.+\-*/]$/.test(e.key)) { e.preventDefault(); e.stopPropagation(); const el = $("numPadValue"); if ($("numPad")._cur) { el.textContent = ""; $("numPad")._cur = false; } el.textContent += e.key; }
+      else e.stopPropagation();
+      return;
+    }
+    if (!$("cadDialog").classList.contains("hidden") && e.key === "Escape") { e.preventDefault(); closeCad(); }
+  }, true);
   $("skUndo").onclick = () => sketch.undo();
   $("skRedo").onclick = () => sketch.redo();
   $("skFit").onclick = () => sketch.fitView();
@@ -1119,10 +1296,26 @@ async function init() {
   renderMaterials();
   renderRecent();
   sketch = new Sketch($("preview"), {
-    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); } },
-    onSelect: () => renderShapeForm(),
+    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); } },
+    onSelect: () => { renderShapeForm(); renderProTools(); },
     onMessage: (t) => toast(t),
+    onDimTap: (dim) => {
+      if (dim.kind === "hx" || dim.kind === "hy") {
+        const it = sketch.selected(); if (!it) return;
+        const cs = sketch.contoursOf(it);
+        let hc = null, host = it;
+        if (sketch.sel.hole != null && cs[sketch.sel.hole]) hc = cs[sketch.sel.hole];
+        else if (sketch.isHole(it)) { hc = cs[0]; host = sketch.hostOf(it); }
+        if (hc && host) {
+          const hb = sketch.boxOf(host), cb = (function(){ const pts = hc.pts; let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for (const [x,y] of pts) { x0=Math.min(x0,x); y0=Math.min(y0,y); x1=Math.max(x1,x); y1=Math.max(y1,y);} return [x0,y0,x1,y1]; })();
+          dim._v = dim.kind === "hx" ? (cb[0] + cb[2]) / 2 - hb[0] : (cb[1] + cb[3]) / 2 - hb[1];
+        }
+      }
+      openNumPad(dim);
+    },
   });
+  if (new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S };
+
   window.plasmaSketch = sketch;   // handy for testing from the console
   renderShapeTiles();
   bind();

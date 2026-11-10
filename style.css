@@ -382,3 +382,37 @@ h3 .muted.small { text-transform: none; font-weight: 400; }
 .grid2 label, .grid3 label { min-width: 0; }
 input[type=number], input:not([type]), input[type=text] { width: 100%; min-width: 0; box-sizing: border-box; }
 @media (max-width: 520px) { .sktools { grid-template-columns: repeat(3, 1fr); } .shapeform .alignrow { grid-template-columns: repeat(2, 1fr); } }
+
+
+/* variants, pro tools, numeric keypad */
+.varbox { margin: 0 0 12px; }
+.varbox h4 { margin: 0 0 8px; font-size: 14px; color: var(--muted); font-weight: 600; }
+.varrow { display: flex; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 2px 0 8px; }
+.varrow button { flex: 0 0 auto; min-height: 52px; min-width: 96px; padding: 8px 12px; font-size: 13px; font-weight: 600; }
+.varrow button.sel { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.protoggle { font-weight: 700; }
+.protools { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin: 8px 0 4px; }
+.protools button { min-height: 48px; font-size: 13px; padding: 6px 8px; }
+.protools button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.skopts { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 8px 0; }
+.numpad { position: fixed; inset: 0; z-index: 80; background: rgba(8,12,16,.72); display: flex; align-items: flex-end; justify-content: center; padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.numpad.hidden { display: none !important; }
+.numpad-card { width: min(420px, 100%); background: #1b242e; border: 1px solid var(--line); border-radius: 16px 16px 12px 12px; padding: 14px; box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+.numpad-label { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+.numpad-value { font-family: var(--cond); font-size: 36px; font-weight: 700; min-height: 48px; padding: 6px 10px; background: #121920; border: 1px solid var(--line); border-radius: 10px; letter-spacing: .5px; word-break: break-all; }
+.numpad-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+.numpad-keys button { min-height: 52px; font-size: 22px; font-weight: 700; font-family: var(--cond); }
+.numpad-keys button.op { background: #2a3340; color: #e3a73c; }
+.numpad-keys button.wide { grid-column: span 2; }
+.numpad-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.numpad-row button { min-height: 52px; font-size: 18px; font-weight: 700; }
+.cadfields { display: grid; gap: 10px; margin: 12px 0; }
+.cadfields label { font-size: 14px; }
+.cadfields input { width: 100%; min-height: 48px; font-size: 18px; box-sizing: border-box; }
+.toolbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; gap: 8px; padding: 10px 12px max(10px, env(safe-area-inset-bottom)); background: rgba(14,20,27,.94); border-top: 1px solid var(--line); }
+.toolbar.hidden { display: none !important; }
+.toolbar button { flex: 1; min-height: 52px; font-weight: 700; }
+@media (min-width: 800px) {
+  .numpad { align-items: center; }
+  .numpad-card { border-radius: 16px; }
+}

@@ -11,6 +11,12 @@ function roundedRect(x, y, w, h, r) {
   p.pop(); // last arc point equals the first point
   return { pts: p, closed: true };
 }
+
+function chamferRect(x, y, w, h, c) {
+  c = Math.max(0, Math.min(c, w / 2 - 0.01, h / 2 - 0.01));
+  if (c <= 0.01) return { pts: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], closed: true };
+  return { pts: [[x + c, y], [x + w - c, y], [x + w, y + c], [x + w, y + h - c], [x + w - c, y + h], [x + c, y + h], [x, y + h - c], [x, y + c]], closed: true };
+}
 function slot(cx, cy, len, wid) {
   const r = wid / 2, s = Math.max(0, len - wid) / 2;
   if (s <= 0) return circleContour(cx, cy, r);
@@ -136,6 +142,39 @@ export const SHAPES = [
     make: (p) => {
       const pts = [[0, 0], [p.w, 0], [p.w / 2, p.h]];
       return [{ pts: p.r > 0 ? roundCorners(pts, p.r) : pts, closed: true }];
+    },
+  },
+  {
+    id: "chamfer", name: "Chamfered plate", icon: "▭",
+    tip: "Plate with the corners cut off at an angle.",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
+    params: [["w", "Width", 100], ["h", "Height", 60], ["c", "Chamfer", 8]],
+    make: (p) => [chamferRect(0, 0, p.w, p.h, p.c)],
+  },
+  {
+    id: "slotted", name: "Slotted plate", icon: "▭",
+    tip: "Plate with a slot through the middle, for adjustment bolts.",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
+    params: [["w", "Width", 120], ["h", "Height", 60], ["r", "Corner radius", 4], ["slotLen", "Slot length", 50], ["slotWid", "Slot width", 10]],
+    make: (p) => {
+      const c = [roundedRect(0, 0, p.w, p.h, p.r)];
+      if (p.slotLen > 0 && p.slotWid > 0) c.push(slot(p.w / 2, p.h / 2, Math.min(p.slotLen, p.w - 8), Math.min(p.slotWid, p.h - 8)));
+      return c;
+    },
+  },
+  {
+    id: "tab", name: "Plate with tab", icon: "⊓",
+    tip: "Plate with a locating tab sticking out of one side – handy for a slot in another part.",
+    fit: (p, W, H) => ({ ...p, w: Math.max(10, W - (p.tabH || 15)), h: H }),
+    params: [["w", "Plate width", 80], ["h", "Plate height", 50], ["r", "Corner radius", 4], ["tabW", "Tab width", 20], ["tabH", "Tab length", 15], ["hole", "Hole Ø (0 = none)", 8]],
+    make: (p) => {
+      const tw = Math.min(p.tabW, p.w - 2), th = Math.max(0, p.tabH), mid = p.w / 2;
+      const x0 = mid - tw / 2, x1 = mid + tw / 2;
+      // tab on the bottom (−Y), plate above it
+      const pts = [[0, th], [x0, th], [x0, 0], [x1, 0], [x1, th], [p.w, th], [p.w, th + p.h], [0, th + p.h]];
+      const c = [{ pts: p.r > 0 ? roundCorners(pts, Math.min(p.r, tw / 2 - 0.1, th / 2 - 0.1, p.w / 4, p.h / 4)) : pts, closed: true }];
+      if (p.hole > 0) c.push(circleContour(p.w / 2, th + p.h / 2, p.hole / 2));
+      return c;
     },
   },
   {
