@@ -2,10 +2,11 @@
 //
 // This file paints the right-hand panel and talks to the host ONLY through
 // window.ptInspector. It does not read the sketch, the job, or CAM state.
-// If window.ptInspector already exists when this module runs, that object is
-// used and the mock at the bottom is not installed. Assign the real object
-// before this script (it is loaded after js/app.js), or the mock stays in place
-// until a reload.
+// window.ptInspector is read lazily (api()). js/app.js assigns the real object
+// from js/inspector-api.js during async init, which is still in flight when
+// this deferred module runs. The sample mock is installed only when that
+// property is still undefined after init has had time to finish, and a later
+// assignment replaces it.
 //
 // Units are millimetres and degrees. The panel sends partial objects: only the
 // fields the operator changed. The host merges them and then emits "change".
@@ -379,24 +380,48 @@ function bindFields(aside) {
   else if (mq.addListener) mq.addListener(onMq);
 }
 
+let boundHost = null;
+let unsubHost = null;
+
+// Re-bind whenever the object on window.ptInspector changes, so the real API
+// wins even if the sample mock was installed while app.js was still starting.
+function followHost() {
+  const host = api();
+  if (host === boundHost) return;
+  if (typeof unsubHost === "function") {
+    try { unsubHost(); } catch (e) { /* ignore */ }
+    unsubHost = null;
+  }
+  boundHost = host;
+  if (!host) return;
+  if (typeof host.on === "function") {
+    try {
+      const off = host.on("change", paint);
+      if (typeof off === "function") unsubHost = off;
+    } catch (e) { /* the panel still paints */ }
+  }
+  paint();
+}
+
 function start() {
-  installMockIfNeeded();
   const aside = mount();
   if (!aside) return;
   bindFields(aside);
-  const host = api();
-  if (host && typeof host.on === "function") {
-    try { host.on("change", paint); }
-    catch (e) { /* the panel still paints once */ }
-  }
-  paint();
+  followHost();
+  const watch = setInterval(followHost, 50);
+  setTimeout(() => clearInterval(watch), 15000);
+  // Mock only if the real API has not appeared. app.js assigns it after the
+  // config fetch, which is after this module's first turn.
+  setTimeout(() => {
+    if (window.ptInspector == null) installMockIfNeeded();
+    followHost();
+  }, 3000);
 }
 
 // ============================================================
 // MOCK — sample data so the shell can be reviewed before the lead
 // wires the real selection, cut settings and layers.
-// Installed only when window.ptInspector is missing.
-// Delete this block once the real object is assigned before this script.
+// Installed only when window.ptInspector is still undefined.
 // ============================================================
 function installMockIfNeeded() {
   if (window.ptInspector != null) return;
