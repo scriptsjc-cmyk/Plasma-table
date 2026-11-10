@@ -2,7 +2,7 @@
 // (same behaviour as the App class in plasma/server.py, without a server).
 
 import { GrblLink, RT } from "./grbl.js";
-import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt } from "./job.js";
+import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt, jobPlan } from "./job.js";
 import { Safety, SafetyError } from "./safety.js";
 
 const POSITION_LOST_ALARMS = new Set([1, 3, 10, 13]);
@@ -247,6 +247,7 @@ export class Machine {
     const problem = this.safety.jobCheck(this.prepared.stats.bounds, this.wco());
     if (problem) throw new JobError(problem);
     const lines = [...this.raiseLines(false), ...this.boundedProbes(this.prepared.lines), ...this.raiseLines(false)];
+    this.plan = jobPlan(lines, this.cfg);
     this.grbl.startJob(lines);
     this.emit("log", { text: `Started ${this.prepared.name}${this.prepared.dry_run ? " (dry run)" : ""}`, level: "info" });
     return { ok: true };

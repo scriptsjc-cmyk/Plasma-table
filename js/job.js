@@ -192,3 +192,47 @@ export function torchTestLines(machine) {
   const t = machine.torch;
   return [`M3 S${fmt(t.spindle_s)}`, `G4 P${fmt(t.test_seconds)}`, "M5"];
 }
+
+// Rough time for each streamed line (seconds at 100% speed) so the screen can show live progress.
+// Also notes where the torch turns on/off, which the app uses to re-sync while cutting.
+export function jobPlan(lines, machine) {
+  const rapid = machine.rapid_feed_estimate || 6000, probe = machine.probe || {};
+  const probeT = ((probe.probe_distance_mm || 50) / Math.max(probe.probe_feed || 300, 1)) * 60 * 0.3;
+  let abs = true, x = 0, y = 0, feed = 1000, motion = 0, lit = false;
+  const secs = [], torchOn = [], torchOff = [];
+  lines.forEach((raw, i) => {
+    const u = String(raw).toUpperCase().replace(/\(.*?\)/g, "").replace(/;.*$/, "");
+    const g = [], w = {};
+    for (const m of u.matchAll(/([A-Z])\s*([-+]?\d*\.?\d+)/g)) { if (m[1] === "G") g.push(Number(m[2])); else w[m[1]] = Number(m[2]); }
+    if (g.includes(90)) abs = true;
+    if (g.includes(91)) abs = false;
+    if ("F" in w) feed = w.F;
+    if ((w.M === 3 || w.M === 4) && !lit) { torchOn.push(i); lit = true; }
+    if (w.M === 5 && lit) { torchOff.push(i); lit = false; }      // the safety M5 at the start doesn't count
+    let t = 0;
+    if (g.includes(4)) t = w.P || 0;
+    else if (g.some((v) => v >= 38 && v < 39)) t = probeT;
+    else if (g.includes(53)) t = "Z" in w ? 0.4 : 0;
+    else {
+      for (const v of g) if ([0, 1, 2, 3].includes(v)) motion = v;
+      const f = motion === 0 ? rapid : Math.max(feed, 1);
+      if ("X" in w || "Y" in w) {
+        const nx = "X" in w ? (abs ? w.X : x + w.X) : x, ny = "Y" in w ? (abs ? w.Y : y + w.Y) : y;
+        let len = Math.hypot(nx - x, ny - y);
+        if ((motion === 2 || motion === 3) && ("I" in w || "J" in w)) {
+          const cx = x + (w.I || 0), cy = y + (w.J || 0), r = Math.hypot(w.I || 0, w.J || 0);
+          const a0 = Math.atan2(y - cy, x - cx), a1 = Math.atan2(ny - cy, nx - cx);
+          let sw = motion === 2 ? a0 - a1 : a1 - a0;
+          while (sw <= 1e-6) sw += 2 * Math.PI;
+          len = r * sw;
+        }
+        t = (len / f) * 60 + 0.02;
+        x = nx; y = ny;
+      } else if ("Z" in w) t = abs ? 0.3 : (Math.abs(w.Z) / f) * 60;
+    }
+    secs.push(t);
+  });
+  const cum = []; let acc = 0;
+  for (const t of secs) { acc += t; cum.push(acc); }
+  return { cum, total: acc, torchOn, torchOff };
+}

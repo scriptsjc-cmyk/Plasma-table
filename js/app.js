@@ -33,6 +33,38 @@ function toast(text, err = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add("hidden"), err ? 6000 : 2500);
 }
+function clock(s) {
+  s = Math.max(0, Math.round(s));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+  return (h ? `${h}:${String(m).padStart(2, "0")}` : `${m}`) + ":" + String(r).padStart(2, "0");
+}
+// ---- live progress while cutting: time-based estimate, re-synced every time the torch fires or stops
+function trackProgress(st) {
+  const plan = M && M.plan, j = S.job;
+  if (!plan || !j) return;
+  const now = Date.now();
+  if (!S.run || S.run.plan !== plan) S.run = { plan, t: 0, last: now, start: now, torch: false, ons: 0, offs: 0 };
+  const R = S.run, dt = Math.min(1, (now - R.last) / 1000);
+  R.last = now;
+  if (!j.running) return;
+  const state = st.state || "";
+  if (!/^(Hold|Alarm|Door)/.test(state)) R.t += dt * (st.torch ? (st.feedOv || 100) / 100 : 1);
+  const torch = !!st.torch;
+  if (torch && !R.torch) { R.ons++; const i = plan.torchOn[R.ons - 1]; if (i != null) R.t = plan.cum[i]; }
+  if (!torch && R.torch) { R.offs++; const i = plan.torchOff[R.offs - 1]; if (i != null) R.t = plan.cum[i]; }
+  R.torch = torch;
+  const acked = j.acked > 0 ? plan.cum[Math.min(j.acked, plan.cum.length) - 1] : 0;
+  R.t = Math.min(R.t, acked, plan.total * 0.995);
+  R.shown = Math.max(R.shown || 0, R.t);          // never count backwards on screen
+}
+function liveProgress() {
+  const R = S.run, plan = R && R.plan;
+  if (!plan || !plan.total) return { pct: 0, left: 0, elapsed: 0, cut: 0 };
+  const ov = (S.status.feedOv || 100) / 100;
+  const t = R.shown || 0;
+  return { pct: Math.min(100, (100 * t) / plan.total), left: (plan.total - t) / (ov || 1),
+    elapsed: (Date.now() - R.start) / 1000, cut: R.ons };
+}
 function fmtTime(s) {
   s = Math.max(0, Math.round(s));
   const m = Math.floor(s / 60), r = s % 60;
@@ -401,8 +433,8 @@ function drawCanvas(cv, main) {
   } else {
     const T = viewArea();
     // room around the table for the machine: X beam along the front, Y arm off its carriage
-    const mg = S.showMachine ? [40, 110, 40] : [0, 0, 0];
-    A = { x: [T.x[0] - mg[0], T.x[1] + mg[0]], y: [T.y[0] - mg[1], T.y[1] + mg[2]], label: T.label, table: T };
+    const mg = S.showMachine ? [70, 190, 70, 140] : [0, 0, 0, 0];   // left, front, back, right
+    A = { x: [T.x[0] - mg[0], T.x[1] + mg[3]], y: [T.y[0] - mg[1], T.y[1] + mg[2]], label: T.label, table: T };
     [ox, oy] = originView();
   }
   const ax = A.x[1] - A.x[0], ay = A.y[1] - A.y[0];
@@ -512,50 +544,91 @@ function bindPlacing() {
   cv.addEventListener("pointercancel", end);
 }
 
-// bird's-eye view of the table: slats across, the X beam along the front
+// ---- bird's-eye view of the machine (HMM-style: X beam along the front, Y arm cantilevered across the table,
+// torch on a plate on the left face of the arm). Sizes in mm.
+const MACH = { beamH: 50, armW: 50, plate: 26, torchOff: 30, carW: 190, carD: 120, motor: 57 };
 function drawMachineBed(ctx, T, X, Y, sc) {
   const [x0, x1] = T.x, [y0, y1] = T.y;
-  ctx.fillStyle = "#18212b"; ctx.fillRect(X(x0), Y(y1), (x1 - x0) * sc, (y1 - y0) * sc);
-  ctx.strokeStyle = "#232e3a"; ctx.lineWidth = Math.max(1, 3 * sc);                  // slats every 100 mm
-  ctx.beginPath();
-  for (let x = Math.ceil((x0 + 1) / 100) * 100; x < x1; x += 100) { ctx.moveTo(X(x), Y(y0)); ctx.lineTo(X(x), Y(y1)); }
-  if (S.showMachine) ctx.stroke();
+  const R = (x, y, w, h) => [X(x), Y(y + h), w * sc, h * sc];
+  // water tray / table
+  ctx.fillStyle = "#151d26"; ctx.fillRect(...R(x0, y0, x1 - x0, y1 - y0));
+  if (S.showMachine) {
+    ctx.strokeStyle = "#2a3542"; ctx.lineWidth = Math.max(1, 3 * sc);                 // slats every 100 mm
+    ctx.beginPath();
+    for (let x = Math.ceil((x0 + 1) / 100) * 100; x < x1; x += 100) { ctx.moveTo(X(x), Y(y0)); ctx.lineTo(X(x), Y(y1)); }
+    ctx.stroke();
+    ctx.strokeStyle = "#1e2833"; ctx.lineWidth = 1; ctx.beginPath();                  // slat teeth (light)
+    for (let y = y0 + 50; y < y1; y += 50) for (let x = Math.ceil((x0 + 1) / 100) * 100; x < x1; x += 100) { ctx.moveTo(X(x) - 2, Y(y)); ctx.lineTo(X(x) + 2, Y(y)); }
+    ctx.stroke();
+  }
   ctx.strokeStyle = edgesOn() ? "#2f9e5b" : "#3d4c5c"; ctx.lineWidth = edgesOn() ? 2 : 1;
-  ctx.strokeRect(X(x0), Y(y1), (x1 - x0) * sc, (y1 - y0) * sc);
+  ctx.strokeRect(...R(x0, y0, x1 - x0, y1 - y0));
   ctx.fillStyle = "#94a2b0"; ctx.font = "12px Barlow, system-ui";
-  ctx.textAlign = "right"; ctx.fillText(`${T.label} ${Math.round(x1 - x0)} × ${Math.round(y1 - y0)} mm`, X(x1) - 8, Y(y0) - 8); ctx.textAlign = "start";
+  ctx.textAlign = "right"; ctx.fillText(`${T.label} ${Math.round(x1 - x0)} × ${Math.round(y1 - y0)} mm`, X(x1) - 8, Y(y1) - 8 + 20); ctx.textAlign = "start";
   if (!S.showMachine) return;
-  // X beam (box section) with its rail
-  ctx.fillStyle = "#3a4756"; ctx.fillRect(X(x0 - 30), Y(y0 - 50), (x1 - x0 + 60) * sc, 40 * sc);
-  ctx.strokeStyle = "#56677a"; ctx.lineWidth = 1; ctx.strokeRect(X(x0 - 30), Y(y0 - 50), (x1 - x0 + 60) * sc, 40 * sc);
-  ctx.fillStyle = "#94a2b0"; ctx.font = "12px system-ui";
-  ctx.textAlign = "right"; ctx.fillText("X beam", X(x1 + 30) - 6, Y(y0 - 50) + 18); ctx.textAlign = "start";
+  // X beam: box section with the rail on top and end caps
+  const bx0 = x0 - 40, bx1 = x1 + 110, by = y0 - 20 - MACH.beamH;
+  ctx.fillStyle = "#262d36"; ctx.fillRect(...R(bx0, by, bx1 - bx0, MACH.beamH));
+  ctx.fillStyle = "#3a4552"; ctx.fillRect(...R(bx0, by + MACH.beamH - 10, bx1 - bx0, 6));   // rail
+  ctx.fillStyle = "#56677a"; ctx.fillRect(...R(bx0, by + MACH.beamH - 8, bx1 - bx0, 2));
+  ctx.strokeStyle = "#465464"; ctx.lineWidth = 1; ctx.strokeRect(...R(bx0, by, bx1 - bx0, MACH.beamH));
+  ctx.fillStyle = "#3557c9"; ctx.fillRect(...R(bx0 - 6, by - 4, 8, MACH.beamH + 8)); ctx.fillRect(...R(bx1 - 2, by - 4, 8, MACH.beamH + 8));
+  ctx.fillStyle = "#6d7c8c"; ctx.font = "11px Barlow, system-ui";
+  ctx.textAlign = "right"; ctx.fillText("X beam", X(bx1) - 8, Y(by + MACH.beamH / 2) + 4); ctx.textAlign = "start";
 }
-// the moving parts: carriage on the beam, Y arm across the table, torch on the arm
 function drawGantry(ctx, T, X, Y, sc) {
   const has = !!S.status.MPos;
   const [tx, ty] = has ? toView(S.status.MPos[0], S.status.MPos[1]) : [T.x[0], T.y[0]];
-  const armW = 40, top = T.y[1] + 25;
+  const r = Math.max(5, 9 * sc);
   if (!S.showMachine) {                      // just the torch dot
     if (!has) return;
     ctx.fillStyle = S.status.torch ? "#a98bff" : "#edeee8";
     ctx.beginPath(); ctx.arc(X(tx), Y(ty), 6, 0, 7); ctx.fill();
     return;
   }
-  ctx.globalAlpha = has ? 1 : 0.45;
-  ctx.fillStyle = "#4a5868"; ctx.strokeStyle = "#94a2b0"; ctx.lineWidth = 1;
-  ctx.fillRect(X(tx - 70), Y(T.y[0] - 65), 140 * sc, 70 * sc);                      // carriage
-  ctx.strokeRect(X(tx - 70), Y(T.y[0] - 65), 140 * sc, 70 * sc);
-  ctx.fillStyle = "rgba(109,124,140,.55)";                                          // Y arm (see-through)
-  ctx.fillRect(X(tx - armW / 2), Y(top), armW * sc, (top - (T.y[0] - 65)) * sc);
-  ctx.strokeRect(X(tx - armW / 2), Y(top), armW * sc, (top - (T.y[0] - 65)) * sc);
-  ctx.fillStyle = "#1d2732"; ctx.strokeStyle = "#edeee8";                           // Z carriage + torch
-  ctx.fillRect(X(tx - 35), Y(ty + 35), 70 * sc, 70 * sc); ctx.strokeRect(X(tx - 35), Y(ty + 35), 70 * sc, 70 * sc);
+  const M_ = MACH, R = (x, y, w, h) => [X(x), Y(y + h), w * sc, h * sc];
+  const rr = (x, y, w, h, rad) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(...R(x, y, w, h), rad * sc); else ctx.rect(...R(x, y, w, h)); };
+  const armX = tx + M_.torchOff, armC = armX + M_.armW / 2;          // arm's left face sits just right of the torch
+  const by = T.y[0] - 20 - M_.beamH, top = T.y[1] + 30, carY = by - 25;
+  ctx.globalAlpha = has ? 1 : 0.5;
+  // cable chain from the left end of the beam to the carriage (in front of the beam)
+  const chainY = by - 34, cx0 = T.x[0] - 30, cx1 = armC - M_.carW / 2;
+  if (cx1 > cx0) {
+    ctx.fillStyle = "#1b2027"; ctx.fillRect(...R(cx0, chainY, cx1 - cx0, 18));
+    ctx.strokeStyle = "#3a4450"; ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = cx0; x < cx1; x += 14) { ctx.moveTo(X(x), Y(chainY)); ctx.lineTo(X(x), Y(chainY + 18)); }
+    ctx.stroke();
+  }
+  // X carriage: blue plate with bearings and the X motor
+  ctx.fillStyle = "#2f4fb8"; ctx.strokeStyle = "#5b7be0"; ctx.lineWidth = 1;
+  rr(armC - M_.carW / 2, carY, M_.carW, M_.carD, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#c9d1d9";
+  for (const dx of [-70, 70]) for (const dy of [12, M_.carD - 12]) { ctx.beginPath(); ctx.arc(X(armC + dx), Y(carY + dy), Math.max(1.5, 7 * sc), 0, 7); ctx.fill(); }
+  ctx.fillStyle = "#15191e"; ctx.fillRect(...R(armC + 40, carY - 30, M_.motor, M_.motor));        // X motor hangs off the front
+  ctx.strokeStyle = "#3d4752"; ctx.strokeRect(...R(armC + 40, carY - 30, M_.motor, M_.motor));
+  ctx.fillStyle = "#2a3038"; ctx.beginPath(); ctx.arc(X(armC + 40 + M_.motor / 2), Y(carY - 30 + M_.motor / 2), 14 * sc, 0, 7); ctx.fill();
+  // Y arm: black box section with its rail, end cap and the Y motor at the back end
+  const armLen = top - carY;
+  ctx.fillStyle = "#1c2128"; ctx.fillRect(...R(armX, carY, M_.armW, armLen));
+  ctx.fillStyle = "#2c333c"; ctx.fillRect(...R(armX, carY, 6, armLen));                            // lit edge
+  ctx.fillStyle = "#56677a"; ctx.fillRect(...R(armX + M_.armW - 8, carY, 3, armLen));               // rail
+  ctx.strokeStyle = "#465464"; ctx.strokeRect(...R(armX, carY, M_.armW, armLen));
+  ctx.fillStyle = "#3557c9"; ctx.fillRect(...R(armX - 3, top - 6, M_.armW + 6, 8));                // end cap
+  ctx.fillStyle = "#15191e"; ctx.fillRect(...R(armX + M_.armW + 2, carY + 10, M_.motor, M_.motor)); // Y motor
+  ctx.strokeStyle = "#3d4752"; ctx.strokeRect(...R(armX + M_.armW + 2, carY + 10, M_.motor, M_.motor));
+  // Z carriage: blue plate on the arm's left face, height sensor, torch body and red handle
   ctx.globalAlpha = 1;
-  const r = Math.max(5, 9 * sc);
-  if (S.status.torch) { ctx.fillStyle = "rgba(169,139,255,.38)"; ctx.beginPath(); ctx.arc(X(tx), Y(ty), r * 2.2, 0, 7); ctx.fill(); }
+  ctx.fillStyle = "#2f4fb8"; ctx.strokeStyle = "#7aa2f0"; ctx.lineWidth = 1;
+  rr(tx - 4, ty - 40, M_.torchOff + 4, 80, 5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#c9d1d9"; ctx.beginPath(); ctx.arc(X(tx + 14), Y(ty + 26), Math.max(2, 7 * sc), 0, 7); ctx.fill();   // sensor
+  ctx.save(); ctx.translate(X(tx), Y(ty)); ctx.rotate(Math.PI * 0.82);                                 // handle out to the front-left
+  ctx.fillStyle = "#b5453f"; ctx.fillRect(0, -11 * sc, 130 * sc, 22 * sc);
+  ctx.fillStyle = "#8f322e"; for (let k = 30; k < 120; k += 22) ctx.fillRect(k * sc, -11 * sc, 4 * sc, 22 * sc);
+  ctx.restore();
+  ctx.fillStyle = "#3d4752"; ctx.beginPath(); ctx.arc(X(tx), Y(ty), 16 * sc + 2, 0, 7); ctx.fill();   // torch body
+  if (S.status.torch) { ctx.fillStyle = "rgba(169,139,255,.38)"; ctx.beginPath(); ctx.arc(X(tx), Y(ty), r * 2.4, 0, 7); ctx.fill(); }
   ctx.fillStyle = S.status.torch ? "#a98bff" : "#edeee8";
-  ctx.beginPath(); ctx.arc(X(tx), Y(ty), r, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.arc(X(tx), Y(ty), r * 0.75, 0, 7); ctx.fill();
   ctx.strokeStyle = "#121920"; ctx.lineWidth = 1.5; ctx.beginPath();
   ctx.moveTo(X(tx) - r, Y(ty)); ctx.lineTo(X(tx) + r, Y(ty)); ctx.moveTo(X(tx), Y(ty) - r); ctx.lineTo(X(tx), Y(ty) + r); ctx.stroke();
 }
@@ -612,13 +685,14 @@ function refresh() {
 
   // running / done panel
   if (S.job) {
-    const j = S.job, pct = j.total ? Math.min(100, Math.round((100 * j.acked) / j.total)) : 0;
+    const j = S.job, P = liveProgress();
     const finished = !j.running && S.status.state === "Idle";
-    $("pct").textContent = pct + "%";
-    $("progBar").style.width = pct + "%";
-    const est = S.prepared ? S.prepared.stats.estimated_seconds : 0;
-    const left = pct > 3 ? (j.elapsed * (100 - pct)) / pct : est;
-    $("runInfo").textContent = `Running ${fmtTime(j.elapsed)} · about ${fmtTime(left)} left`;
+    const pct = j.result === "done" ? 100 : P.pct;
+    $("pct").textContent = Math.floor(pct) + "%";
+    $("progBar").style.width = pct.toFixed(1) + "%";
+    $("timeLeft").textContent = j.running ? clock(P.left) : "0:00";
+    const pierces = S.prepared ? S.prepared.stats.pierces : 0;
+    $("runInfo").textContent = `${clock(P.elapsed)} so far` + (pierces ? ` · cut ${Math.max(1, Math.min(P.cut, pierces))} of ${pierces}` : "");
     $("runTitle").textContent = S.status.state === "Hold" ? "Paused" : j.running ? "Cutting…" : "Finishing last moves…";
     $("btnPause").textContent = S.status.state === "Hold" ? "▶ Resume" : "⏸ Pause";
     const ov = S.status.feedOv || 100;
@@ -654,6 +728,7 @@ function refresh() {
 
 function onStatus(st) {
   S.status = st;
+  trackProgress(st);
   if (S.dragOrigin && !S.dragging) {
     const [vx, vy] = (() => { const w = wcoNow(); return toView(w[0], w[1]); })();
     if (Math.abs(vx - S.dragOrigin[0]) < 0.05 && Math.abs(vy - S.dragOrigin[1]) < 0.05) S.dragOrigin = null;
