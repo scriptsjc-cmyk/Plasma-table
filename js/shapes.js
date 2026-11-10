@@ -23,12 +23,14 @@ function slot(cx, cy, len, wid) {
 export const SHAPES = [
   {
     id: "rect", name: "Rectangle / plate", icon: "▭",
+    tip: "Plain plate. Add a corner radius to round the corners.",
     fit: (p, W, H) => ({ ...p, w: W, h: H }),
     params: [["w", "Width", 100], ["h", "Height", 60], ["r", "Corner radius", 0]],
     make: (p) => [roundedRect(0, 0, p.w, p.h, p.r)],
   },
   {
     id: "plate", name: "Plate with holes", icon: "⊡",
+    tip: "Plate with a hole near each corner, and an optional middle hole.",
     fit: (p, W, H) => ({ ...p, w: W, h: H }),
     params: [["w", "Width", 120], ["h", "Height", 80], ["r", "Corner radius", 6], ["hole", "Hole Ø", 10], ["inset", "Hole centre from edge", 15], ["mid", "Centre hole Ø (0 = none)", 0]],
     make: (p) => {
@@ -40,18 +42,21 @@ export const SHAPES = [
   },
   {
     id: "disc", name: "Disc", icon: "●",
+    tip: "Solid round disc.",
     uniform: true, fit: (p, W) => ({ ...p, d: W }),
     params: [["d", "Diameter", 100]],
     make: (p) => [circleContour(p.d / 2, p.d / 2, p.d / 2)],
   },
   {
     id: "ring", name: "Ring / washer", icon: "◎",
+    tip: "Washer: a disc with a hole in the middle.",
     uniform: true, fit: (p, W) => ({ ...p, d: W, id: (p.id * W) / p.d }),
     params: [["d", "Outside Ø", 100], ["id", "Inside Ø", 50]],
     make: (p) => [circleContour(p.d / 2, p.d / 2, p.d / 2), circleContour(p.d / 2, p.d / 2, p.id / 2)],
   },
   {
     id: "flange", name: "Flange", icon: "✺",
+    tip: "Round flange with a centre hole and bolt holes.",
     uniform: true, fit: (p, W) => { const k = W / p.d; return { ...p, d: W, id: p.id * k, pcd: p.pcd * k }; },
     params: [["d", "Outside Ø", 150], ["id", "Centre hole Ø", 60], ["pcd", "Bolt circle Ø (PCD)", 115], ["n", "Number of bolt holes", 4], ["hole", "Bolt hole Ø", 12]],
     make: (p) => {
@@ -67,6 +72,7 @@ export const SHAPES = [
   },
   {
     id: "slot", name: "Slot / link", icon: "⊂⊃",
+    tip: "Link with round ends and a hole at each end.",
     fit: (p, W, H) => ({ ...p, len: W, wid: H }),
     params: [["len", "Length", 120], ["wid", "Width", 40], ["hole", "End holes Ø (0 = none)", 16]],
     make: (p) => {
@@ -79,6 +85,7 @@ export const SHAPES = [
   },
   {
     id: "gusset", name: "Gusset (triangle)", icon: "◣",
+    tip: "Right-angle gusset with the sharp tips cut off.",
     fit: (p, W, H) => ({ ...p, a: W, b: H }),
     params: [["a", "Bottom leg", 100], ["b", "Upright leg", 100], ["cut", "Corner cut-off", 10], ["hole", "Hole Ø (0 = none)", 0]],
     make: (p) => {
@@ -94,6 +101,7 @@ export const SHAPES = [
   },
   {
     id: "bracket", name: "Bracket with slot", icon: "▯",
+    tip: "Upright bracket with a slot at the top and a hole at the bottom.",
     fit: (p, W, H) => ({ ...p, w: W, h: H }),
     params: [["w", "Width", 50], ["h", "Height", 120], ["r", "Corner radius", 8], ["slotLen", "Slot length", 40], ["slotWid", "Slot width", 10], ["hole", "Bottom hole Ø", 10]],
     make: (p) => {
@@ -109,12 +117,85 @@ export const SHAPES = [
     },
   },
   {
-    id: "hole", name: "Hole", icon: "○",
+    id: "polygon", name: "Polygon (hex etc.)", icon: "⬡", uniform: true,
+    tip: "Flat-sided shape: 6 sides makes a hexagon. Size is across the corners.",
+    fit: (p, W) => ({ ...p, d: W }),
+    params: [["n", "Number of sides", 6], ["d", "Size across corners", 100], ["r", "Corner radius", 0]],
+    make: (p) => {
+      const n = Math.max(3, Math.min(64, Math.round(p.n))), R = p.d / 2;
+      const pts = [];
+      for (let i = 0; i < n; i++) { const a = Math.PI / 2 + (i * 2 * Math.PI) / n; pts.push([R + R * Math.cos(a), R + R * Math.sin(a)]); }
+      return [{ pts: p.r > 0 ? roundCorners(pts, p.r) : pts, closed: true }];
+    },
+  },
+  {
+    id: "triangle", name: "Triangle", icon: "△",
+    tip: "Triangle with its point in the middle of the top.",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
+    params: [["w", "Base", 100], ["h", "Height", 80], ["r", "Corner radius", 0]],
+    make: (p) => {
+      const pts = [[0, 0], [p.w, 0], [p.w / 2, p.h]];
+      return [{ pts: p.r > 0 ? roundCorners(pts, p.r) : pts, closed: true }];
+    },
+  },
+  {
+    id: "hole", name: "Hole", icon: "○", hole: true,
+    tip: "A round hole – select a part first and it drops in the middle.",
     uniform: true, fit: (p, W) => ({ ...p, d: W }),
     params: [["d", "Diameter", 20]],
     make: (p) => [circleContour(p.d / 2, p.d / 2, p.d / 2)],
   },
+  {
+    id: "slothole", name: "Slot hole", icon: "⊖", hole: true,
+    tip: "A long hole with round ends – drop it on a part.",
+    fit: (p, W, H) => ({ ...p, len: W, wid: H }),
+    params: [["len", "Length", 40], ["wid", "Width", 12]],
+    make: (p) => [slot(p.len / 2, p.wid / 2, p.len, p.wid)],
+  },
+  {
+    id: "boltcircle", name: "Ring of holes", icon: "⁘", hole: true, multi: true, uniform: true,
+    tip: "Holes evenly round a circle (bolt pattern) – drop it on a part.",
+    fit: (p, W) => ({ ...p, pcd: Math.max(1, W - p.hole) }),
+    params: [["n", "Number of holes", 6], ["pcd", "Circle Ø (PCD)", 80], ["hole", "Hole Ø", 10], ["start", "First hole angle °", 90]],
+    make: (p) => {
+      const n = Math.max(1, Math.min(72, Math.round(p.n))), R = p.pcd / 2, c = R + p.hole / 2, out = [];
+      for (let i = 0; i < n; i++) { const a = ((p.start || 0) * Math.PI) / 180 + (i * 2 * Math.PI) / n; out.push(circleContour(c + R * Math.cos(a), c + R * Math.sin(a), p.hole / 2)); }
+      return out;
+    },
+  },
+  {
+    id: "holegrid", name: "Grid of holes", icon: "⁙", hole: true, multi: true,
+    tip: "Rows and columns of holes – drop it on a part.",
+    fit: (p, W, H) => ({ ...p, sx: p.cols > 1 ? Math.max(p.hole, (W - p.hole) / (p.cols - 1)) : p.sx, sy: p.rows > 1 ? Math.max(p.hole, (H - p.hole) / (p.rows - 1)) : p.sy }),
+    params: [["cols", "Across", 3], ["rows", "Up", 2], ["sx", "Spacing across", 30], ["sy", "Spacing up", 30], ["hole", "Hole Ø", 8]],
+    make: (p) => {
+      const out = [], cols = Math.max(1, Math.min(50, Math.round(p.cols))), rows = Math.max(1, Math.min(50, Math.round(p.rows))), r = p.hole / 2;
+      for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) out.push(circleContour(r + i * p.sx, r + j * p.sy, r));
+      return out;
+    },
+  },
 ];
+
+// round every corner of a convex polygon with radius r
+function roundCorners(pts, r) {
+  const n = pts.length, out = [];
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n];
+    const v1 = [p0[0] - p1[0], p0[1] - p1[1]], v2 = [p2[0] - p1[0], p2[1] - p1[1]];
+    const l1 = Math.hypot(...v1), l2 = Math.hypot(...v2);
+    const ang = Math.acos(Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2))));
+    let d = r / Math.tan(ang / 2);
+    d = Math.min(d, l1 / 2 - 0.01, l2 / 2 - 0.01);
+    const rr = d * Math.tan(ang / 2);
+    const a = [p1[0] + (v1[0] / l1) * d, p1[1] + (v1[1] / l1) * d], b = [p1[0] + (v2[0] / l2) * d, p1[1] + (v2[1] / l2) * d];
+    const bis = [v1[0] / l1 + v2[0] / l2, v1[1] / l1 + v2[1] / l2], bl = Math.hypot(...bis);
+    const cd = Math.hypot(d, rr);
+    const c = [p1[0] + (bis[0] / bl) * cd, p1[1] + (bis[1] / bl) * cd];
+    const a0 = Math.atan2(a[1] - c[1], a[0] - c[0]), a1 = Math.atan2(b[1] - c[1], b[0] - c[0]);
+    out.push(a, ...arcPoints(c[0], c[1], rr, a0, a1, true));
+  }
+  return dedupe(out);
+}
 
 function dedupe(pts) {
   const out = [];

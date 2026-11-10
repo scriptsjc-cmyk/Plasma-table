@@ -34,5 +34,7 @@
   },
   "rapid_feed_estimate": 6000,
   "z_park_machine": null,
-  "require_reference_to_cut": true
+  "require_reference_to_cut": true,
+  "accuracy_mm": 0.5,
+  "slat_pitch_mm": 100
 }

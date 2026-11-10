@@ -2,13 +2,14 @@
 // Guided flow: File -> Material -> Position -> Check -> Cut.
 // Machine logic lives in machine.js; this file is only the screen.
 import { Machine } from "./machine.js";
-import { WebSerialTransport } from "./grbl.js";
+import { WebSerialTransport, WiFiTransport } from "./grbl.js";
 import { SimTransport } from "./sim.js";
 import { parseDXF } from "./dxf.js";
 import { parseSVG } from "./svg.js";
 import { designToGcode } from "./cam.js";
 import { SHAPES, copies } from "./shapes.js";
-import { Sketch } from "./sketch.js";
+import { Sketch, shapeDef } from "./sketch.js";
+import { checkDesign, machineLimits } from "./check.js";
 
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -59,7 +60,10 @@ function trackProgress(st) {
 }
 function liveProgress() {
   const R = S.run, plan = R && R.plan;
-  if (!plan || !plan.total) return { pct: 0, left: 0, elapsed: 0, cut: 0 };
+  if (!plan || !plan.total) {
+    const j = S.job || {};
+    return { pct: j.total ? (100 * j.acked) / j.total : 0, left: 0, elapsed: j.elapsed || 0, cut: 0 };
+  }
   const ov = (S.status.feedOv || 100) / 100;
   const t = R.shown || 0;
   return { pct: Math.min(100, (100 * t) / plan.total), left: (plan.total - t) / (ov || 1),
@@ -217,32 +221,56 @@ function setFile(name, text, remember) { openText(name, text, remember); }
 // ------------------------------------------------------------------ shape maker (drag-and-drop editor)
 let sketch = null, shapeTimer = null, editBefore = null;
 function renderShapeTiles() {
-  $("shapeTiles").innerHTML = SHAPES.map((sh) =>
-    `<button data-shape="${sh.id}" title="Add ${esc(sh.name)}"><i>${sh.icon}</i>${esc(sh.name)}</button>`).join("");
+  const tile = (sh) => `<button data-shape="${sh.id}" title="${esc(sh.tip || "Add " + sh.name)}"><i>${sh.icon}</i>${esc(sh.name)}</button>`;
+  $("shapeTiles").innerHTML = SHAPES.filter((sh) => !sh.hole).map(tile).join("");
+  $("holeTiles").innerHTML = SHAPES.filter((sh) => sh.hole).map(tile).join("");
+  $("skSnap").value = String(sketch.opts.snap);
+  $("skGuides").checked = !!sketch.opts.guides;
 }
+const ALIGN = [["left", "⇤ Left"], ["centre", "↔ Centre"], ["right", "⇥ Right"], ["both", "◎ Dead centre"],
+  ["bottom", "⤓ Bottom"], ["middle", "↕ Middle"], ["top", "⤒ Top"]];
 function renderShapeForm() {
-  const it = sketch.selected();
+  const list = sketch.picked(), it = sketch.selected();
   $("skUndo").disabled = !sketch.past.length; $("skRedo").disabled = !sketch.future.length;
-  $("skClear").disabled = !sketch.items.length;
-  if (!it) {
+  $("skClear").disabled = !sketch.items.length; $("skAll").disabled = !sketch.items.length;
+  if (!list.length) {
     $("shapeForm").innerHTML = sketch.items.length
-      ? `<p class="muted">Click a shape on the drawing to change it.</p>` : "";
+      ? `<p class="muted">Click a shape on the drawing to change it. Shift-click or drag a box round several to move, copy, join or line them up.</p>` : "";
     return;
   }
-  const sh = SHAPES.find((x) => x.id === it.type), b = sketch.boxOf(it);
+  if (list.length > 1) {
+    $("shapeForm").innerHTML = `
+      <div class="selhead"><b>${list.length} shapes picked</b></div>
+      <p class="tip">Drag any of them to move them all. <b>Join</b> makes touching shapes one part (with their holes).</p>
+      <div class="skbtns">
+        <button data-sk="join" class="join" title="Ctrl+J">⬟ Join into one part</button>
+        <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
+        <button data-sk="rotateBy" data-arg="90" title="R">⟳ Turn 90°</button>
+        <button data-sk="mirror" title="M">⇋ Mirror</button>
+        <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
+      </div>
+      <h4>Line up with the biggest one</h4>
+      <div class="alignrow">${ALIGN.map(([k, t]) => `<button data-sk="align" data-arg="${k}">${t}</button>`).join("")}</div>`;
+    return;
+  }
+  const sh = shapeDef(it.type), b = sketch.boxOf(it);
   const moved = Object.keys(it.holes || {}).length;
   $("shapeForm").innerHTML = `
-    <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${sketch.sel.hole != null ? ` <span class="muted">· hole selected – drag it or use the arrow keys</span>` : ""}</div>
+    <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
+    ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
     <div class="grid2">${sh.params.map(([k, label]) =>
       `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${it.p[k]}"></label>`).join("")}
-      <label>Position X<input type="number" step="any" inputmode="decimal" data-pos="x" value="${Math.round(b[0] * 10) / 10}"></label>
-      <label>Position Y<input type="number" step="any" inputmode="decimal" data-pos="y" value="${Math.round(b[1] * 10) / 10}"></label>
+      <label>Position X (left edge)<input type="number" step="any" inputmode="decimal" data-pos="x" value="${Math.round(b[0] * 10) / 10}"></label>
+      <label>Position Y (bottom edge)<input type="number" step="any" inputmode="decimal" data-pos="y" value="${Math.round(b[1] * 10) / 10}"></label>
+      <label>Angle °<input type="number" step="any" inputmode="decimal" data-angle="1" value="${Math.round((it.rot || 0) * 10) / 10}"></label>
+      <label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>
     </div>
     <div class="skbtns">
-      <button data-sk="rotate">⟳ Rotate</button>
-      <button data-sk="duplicate">⧉ Copy</button>
+      <button data-sk="rotateBy" data-arg="90" title="R">⟳ Turn 90°</button>
+      <button data-sk="mirror" title="M">⇋ Mirror</button>
+      <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
       ${moved ? `<button data-sk="resetHoles">↺ Holes back</button>` : ""}
-      <button data-sk="remove" class="danger">🗑 Delete</button>
+      <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
     </div>`;
 }
 // keep the boxes in step while dragging, without rebuilding them
@@ -263,7 +291,7 @@ function useShape() {
   }
   const nx = Number($("cpX").value) || 1, ny = Number($("cpY").value) || 1;
   if (nx * ny > 1) c = copies(c, nx, ny, Number($("cpGap").value) || 0);
-  S.design = { name: sketch.name() + (nx * ny > 1 ? ` ×${nx * ny}` : ""), contours: c, warnings: sketch.problems() };
+  S.design = { name: sketch.name() + (nx * ny > 1 ? ` ×${nx * ny}` : ""), contours: c, warnings: [] };
   S.gcode = null; S.fileName = S.design.name;
   loadJob();
 }
@@ -360,6 +388,39 @@ function setSpeed(v) {
 // ------------------------------------------------------------------ job prepare + preview
 function kerfNow() { const v = Number($("ovKerf").value); return v > 0 ? v : (row().kerf_mm ?? S.chart.kerf_mm ?? 1.5); }
 function leadNow() { const v = $("ovLead").value.trim(); return v !== "" && Number(v) >= 0 ? Number(v) : (row().lead_in_mm ?? S.chart.lead_in_mm ?? 3); }
+// ---- cut check + what the machine can do
+function limitsNow() {
+  const t = S.cfg.travel_mm, L = S.safety.limits;
+  const table = L ? [Math.round(L.x[1] - L.x[0]), Math.round(L.y[1] - L.y[0])] : [t.x, t.y];
+  return { thickness: S.thickness, kerf: kerfNow(), leadIn: leadNow(), table, accuracy: S.cfg.accuracy_mm ?? 0.5, slatPitch: S.cfg.slat_pitch_mm ?? 100 };
+}
+function runCheck(contours) {
+  try { return checkDesign(contours, limitsNow()); } catch (e) { console.error(e); return null; }
+}
+function renderCutCheck() {
+  const chk = S.check, mat = `${(S.material || "").toLowerCase()} ${S.thickness} mm`;
+  const html = !chk ? "" : `
+    <div class="cchead">Cut check <span>· ${esc(mat)}${S.cur === 1 ? " (change it in step 2)" : ""}</span></div>
+    ${chk.groups.length ? `<ol>${chk.groups.map((g) => `<li class="${g.level}"><b>${g.n}</b><span>${g.spots.length > 1 ? `<i>${g.spots.length} places:</i> ` : ""}${esc(g.text)}</span></li>`).join("")}</ol>`
+      : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${esc(mat)}.</p>`}`;
+  $("cutCheck").innerHTML = S.src === "shape" ? html : "";
+  $("cutCheck2").innerHTML = html;
+  if (sketch) sketch.setMarks(S.src === "shape" && chk ? chk.issues : []);
+  const L = machineLimits(limitsNow());
+  const rows = [
+    ["Cutting area", `${L.table[0]} × ${L.table[1]} mm${S.safety.limits ? " (your edges)" : ""}`],
+    ["Accuracy", `about ±${L.accuracy} mm`],
+    ["Cut width (kerf)", `${L.kerf} mm – allowed for automatically, parts come out the size you draw`],
+    ["Smallest hole", `${L.minHole} mm for ${L.thickness} mm sheet (about 1½ × thickness) – smaller is better drilled`],
+    ["Thinnest strip of metal", `${L.minStrip} mm between cuts`],
+    ["Gap between parts", `${L.minPartGap} mm or more (lead-in + cut)`],
+    ["Inside corners", `come out slightly round (about ${L.insideCorner} mm radius)`],
+    ["Edges", "a little bevel and dross on thick plate – normal for plasma"],
+    ["Small parts", `under about ${L.slatPitch} mm can tip between the slats – put scrap under them`],
+  ];
+  const body = `<table class="limits">${rows.map(([a, b]) => `<tr><td>${a}</td><td>${esc(b)}</td></tr>`).join("")}</table>`;
+  $$(".limitsBody").forEach((el) => (el.innerHTML = body));
+}
 function loadJob() {
   if (!S.gcode && !S.design) return;
   try {
@@ -372,9 +433,12 @@ function loadJob() {
     S.prepared = M.loadJob({ gcode, name: S.fileName, material: S.material, thickness: S.thickness,
       dry_run: $("dryRun").checked, overrides: overrides() });
     if (cam) { S.prepared.outline = cam.outline; S.prepared.summary = cam.summary; }
+    S.check = S.design ? runCheck(S.design.contours) : null;
+    if (S.check && cam) S.prepared.marks = S.check.issues.map((m) => ({ ...m, at: [m.at[0] + cam.shift[0], m.at[1] + cam.shift[1]] }));
     // the "left of zero" warning doesn't apply to parts we laid out ourselves
     const ws = [...pre, ...S.prepared.warnings.filter((w) => !(cam && /zero point/.test(w)))];
     $("warnings").innerHTML = ws.map((w) => `<li>${esc(w)}</li>`).join("");
+    renderCutCheck();
   } catch (e) {
     S.prepared = null;
     $("warnings").innerHTML = `<li>${esc(e.message)}</li>`;
@@ -467,6 +531,13 @@ function drawCanvas(cv, main) {
     ctx.setLineDash([4, 4]); ctx.strokeStyle = "#4a5868"; ctx.lineWidth = 1; pv.rapids.forEach(path);
     ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? "#ef4444" : "#f08a3c"; ctx.lineWidth = zoom ? 2.5 : 2;
     for (const p of pv.cuts) { path(p); ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.arc(X(p[0][0] + ox), Y(p[0][1] + oy), zoom ? 4 : 3, 0, 7); ctx.fill(); }
+    if (zoom && S.prepared.marks) S.prepared.marks.forEach((m) => {     // cut check markers
+      const col = m.level === "error" ? "#e0342b" : m.level === "warn" ? "#e3a73c" : "#4f7fe0";
+      ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(m.at[0]), Y(m.at[1]), 10, 0, 7); ctx.fill();
+      ctx.strokeStyle = "#121920"; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = m.level === "warn" ? "#1d1406" : "#fff"; ctx.font = "bold 12px Barlow, system-ui"; ctx.textAlign = "center";
+      ctx.fillText(String(m.n), X(m.at[0]), Y(m.at[1]) + 4); ctx.textAlign = "start";
+    });
     if (zoom) {
       ctx.fillStyle = "#94a2b0"; ctx.font = "12px system-ui";
       ctx.fillText("orange: torch path   grey: your part   dots: where it pierces", 8, h - 8);
@@ -807,6 +878,31 @@ async function connectUSB() {
     toast("Couldn't open the port: " + e.message + " – is Mach3 or another program using it?", true);
   }
 }
+// ---- Wi-Fi (page served by the Pi at the table)
+async function connectWiFi(quiet = false) {
+  if (S.wifiBusy) return;
+  S.wifiBusy = true;
+  try {
+    const t = new WiFiTransport();
+    await t.open();
+    await M.connect(t);
+    S.demo = null; S.wifi = true; S.wifiUsed = true; S.userDisconnected = false;
+    setConnected(true, quiet ? "" : "the table over Wi-Fi");
+    if (quiet) toast("Wi-Fi back ✓");
+    if (M.grbl.job && M.grbl.job.running) { S.job = M.grbl.jobProgress(); showTab("cut"); goStep(5); }
+  } catch (e) {
+    if (!quiet) toast(e.message, true);
+  } finally { S.wifiBusy = false; }
+}
+// phone asleep / Wi-Fi blip: the Pi keeps cutting; we quietly reconnect
+function wifiWatch() {
+  setInterval(() => {
+    if (S.wifiUsed && !S.connected && !S.userDisconnected && document.visibilityState === "visible") connectWiFi(true);
+  }, 3000);
+  document.addEventListener("visibilitychange", () => {
+    if (S.wifiUsed && !S.connected && !S.userDisconnected && document.visibilityState === "visible") connectWiFi(true);
+  });
+}
 async function connectDemo() {
   const t = new SimTransport({ switchOffset: S.cfg.probe.switch_offset_mm, sheetZ: -15, speedup: 1 });   // real speed
   await t.open();
@@ -815,7 +911,8 @@ async function connectDemo() {
   setConnected(true, "the demo (nothing real moves)");
 }
 async function disconnect() {
-  if (M.jobRunning() && !confirm("A job is running. Disconnect anyway?")) return;
+  if (M.jobRunning() && !S.wifi && !confirm("A job is running. Disconnect anyway?")) return;
+  S.userDisconnected = true;
   await M.disconnect();
   setConnected(false);
 }
@@ -871,12 +968,17 @@ function bind() {
 
   // step 1: drawing or shape
   $$(".srcTab").forEach((b) => (b.onclick = () => showSource(b.dataset.src)));
-  $("shapeTiles").onclick = (e) => { const b = e.target.closest("[data-shape]"); if (b) sketch.add(b.dataset.shape); };
+  const addTile = (e) => { const b = e.target.closest("[data-shape]"); if (b) sketch.add(b.dataset.shape); };
+  $("shapeTiles").onclick = addTile; $("holeTiles").onclick = addTile;
+  $("skAll").onclick = () => sketch.pickAll();
+  $("skSnap").onchange = () => { sketch.setSnap(Number($("skSnap").value)); sketch.draw(); };
+  $("skGuides").onchange = () => sketch.setGuides($("skGuides").checked);
   $("shapeForm").addEventListener("focusin", (e) => { if (e.target.matches("input")) editBefore = sketch.snapshot(); });
   $("shapeForm").addEventListener("input", (e) => {
     const i = e.target, v = Number(i.value);
     if (i.value.trim() === "" || !Number.isFinite(v)) return;
     const it = sketch.selected(); if (!it) return;
+    if (i.dataset.angle) return;                     // applied on change
     if (i.dataset.p) { if (v < 0) return; it.p[i.dataset.p] = v; }
     else if (i.dataset.pos) {                // position = bottom-left corner of the shape
       const b = sketch.boxOf(it);
@@ -884,11 +986,15 @@ function bind() {
     }
     sketch.save(); sketch.draw(); useShapeSoon();
   });
-  $("shapeForm").addEventListener("change", () => {
+  $("shapeForm").addEventListener("change", (e) => {
+    if (e.target.dataset.angle) { sketch.setAngle(Number(e.target.value)); editBefore = sketch.snapshot(); renderShapeForm(); return; }
     if (editBefore && editBefore !== sketch.snapshot()) { sketch.past.push(editBefore); sketch.future = []; }
     editBefore = sketch.snapshot(); renderShapeForm();
   });
-  $("shapeForm").addEventListener("click", (e) => { const b = e.target.closest("[data-sk]"); if (b) sketch[b.dataset.sk](); });
+  $("shapeForm").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-sk]"); if (!b) return;
+    const a = b.dataset.arg; sketch[b.dataset.sk](a === undefined ? undefined : isNaN(Number(a)) ? a : Number(a));
+  });
   $("skUndo").onclick = () => sketch.undo();
   $("skRedo").onclick = () => sketch.redo();
   $("skFit").onclick = () => sketch.fitView();
@@ -1015,13 +1121,32 @@ async function init() {
   sketch = new Sketch($("preview"), {
     onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); } },
     onSelect: () => renderShapeForm(),
+    onMessage: (t) => toast(t),
   });
   window.plasmaSketch = sketch;   // handy for testing from the console
   renderShapeTiles();
   bind();
-  if (!WebSerialTransport.supported()) {
-    $("connectHelp").innerHTML = "This browser can't talk to USB. Open this page in <b>Chrome or Edge on a computer</b>. You can still try the demo.";
-    $("btnConnect").disabled = true;
+  const pi = await WiFiTransport.available();
+  if (pi) {
+    S.wifi = true;
+    $("btnConnect").textContent = "Connect over Wi-Fi";
+    $("btnConnect").onclick = () => { S.userDisconnected = false; connectWiFi(); };
+    $("connectHelp").innerHTML = pi.serial
+      ? "This page is coming from the Pi at the table. The Pi runs each cut itself, so the job carries on if your phone sleeps or the Wi-Fi drops."
+      : "The Pi is on, but it can't see the controller. Check the USB cable from the Pi to the controller.";
+    const steps = document.querySelector(".hero ol.plain"); if (steps) steps.classList.add("hidden");
+    wifiWatch();
+  } else if (!WebSerialTransport.supported()) {
+    const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const phone = apple || /Android/.test(navigator.userAgent);
+    $("connectHelp").innerHTML = apple
+      ? "iPhones and iPads can't plug into the table by USB. With the Wi-Fi Pi fitted, open <b>http://plasma.local</b> instead. Otherwise run the table from the laptop in <b>Chrome or Edge</b>. You can still look around with the demo here."
+      : phone
+        ? "Phones can't plug into the table. Run it from a computer in <b>Chrome or Edge</b>. You can still look around with the demo here."
+        : "This browser can't talk to USB. Open this page in <b>Chrome or Edge on a computer</b>. You can still try the demo.";
+    $("btnConnect").classList.add("hidden");
+    $("btnDemo").classList.add("go");
+    const steps = document.querySelector(".hero ol.plain"); if (steps) steps.classList.add("hidden");
   }
   onSafety(M.safety.state());
   setConnected(false);

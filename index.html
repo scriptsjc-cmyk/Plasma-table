@@ -54,7 +54,7 @@
       <button id="btnConnect" class="xl go">Connect</button>
       <button id="btnDemo" class="xl">Try the demo</button>
     </div>
-    <p id="connectHelp" class="muted">Works in Chrome or Edge on a computer. Close Mach3 or any other program using the table first.</p>
+    <p id="connectHelp" class="muted">Works in Chrome or Edge on a computer. Close Mach3 or any other program using the table first. Got the Wi-Fi Pi fitted? Open <b>http://plasma.local</b> instead.</p>
   </div>
 </section>
 
@@ -100,20 +100,45 @@
         </div>
 
         <div id="srcShape" class="hidden">
-          <p class="muted small skhelp">Drag a shape to move it, or a corner to resize it. Holes drag too. Scroll or pinch to zoom. With a shape picked: arrows nudge 1 mm (Shift for 10), R rotates, Delete removes, Ctrl+Z undoes.</p>
-          <h3>Add a shape</h3>
-          <div id="shapeTiles" class="tiles small"></div>
+          <p class="muted small skhelp">Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</p>
           <div class="sktools">
-            <button id="skUndo">↶ Undo</button><button id="skRedo">↷ Redo</button><button id="skFit">⤢ Fit</button><button id="skClear">Clear all</button>
+            <button id="skUndo" title="Undo (Ctrl+Z)">↶ Undo</button><button id="skRedo" title="Redo (Ctrl+Y)">↷ Redo</button>
+            <button id="skAll" title="Pick every shape (Ctrl+A)">▣ Pick all</button><button id="skFit" title="Show everything (double-click empty space)">⤢ Fit</button>
+            <button id="skClear" title="Remove every shape">Clear</button>
           </div>
+          <div class="skopts">
+            <label>Snap to <select id="skSnap"><option value="0">off</option><option value="0.1">0.1 mm</option><option value="0.5">0.5 mm</option><option value="1">1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option></select></label>
+            <label class="check"><input type="checkbox" id="skGuides"> Line-up guides</label>
+          </div>
+          <h3>Add a part</h3>
+          <div id="shapeTiles" class="tiles small"></div>
+          <h3>Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
+          <div id="holeTiles" class="tiles small"></div>
           <div id="shapeForm" class="shapeform"></div>
+          <div id="cutCheck" class="cutcheck"></div>
+          <details class="guide"><summary>What this machine can cut</summary><div class="limitsBody"></div></details>
+          <details class="guide howto">
+            <summary>How to use the shape maker</summary>
+            <ul>
+              <li><b>Add</b> – tap a part. Tap a hole with a part picked and it drops into the middle of it.</li>
+              <li><b>Move</b> – drag it. Orange guide lines appear when it lines up with another shape. Hold <b>Alt</b> to move freely.</li>
+              <li><b>Size</b> – drag a corner, or type exact sizes in the boxes. Round things stay round.</li>
+              <li><b>Holes</b> – drag a hole to move it. The orange numbers show how far its middle is from the part's left and bottom edges.</li>
+              <li><b>Several at once</b> – Shift-click them, or drag a box round them on empty space. Then move, copy, turn, mirror or delete them together.</li>
+              <li><b>Join</b> – pick shapes that touch or overlap and press <b>Join into one part</b>. They become one outline, with all their holes. Now copy it, resize it or turn it as one part.</li>
+              <li><b>Line up</b> – with several picked, the Line-up buttons move them to match the biggest one (e.g. pick a plate and a hole, press <b>Dead centre</b>).</li>
+              <li><b>Copy</b> – Copy button, or Ctrl+C then Ctrl+V. For lots of the same thing use <b>How many</b> below.</li>
+              <li><b>Keys</b> – arrows nudge 1 mm (Shift 10, Alt 0.1), R turns 90°, M mirrors, Delete removes, Ctrl+Z undo, Ctrl+J join.</li>
+              <li><b>View</b> – scroll or pinch to zoom; drag with the right mouse button, a finger or Space held to pan; double-click empty space to fit.</li>
+            </ul>
+          </details>
           <h3>How many of the whole drawing?</h3>
           <div class="grid3">
             <label>Across<input id="cpX" type="number" min="1" value="1" inputmode="numeric"></label>
             <label>Up<input id="cpY" type="number" min="1" value="1" inputmode="numeric"></label>
             <label>Gap (mm)<input id="cpGap" type="number" min="0" value="10" inputmode="decimal"></label>
           </div>
-          <p class="muted small">All sizes in mm. Sizes are the finished part – the cut width is allowed for automatically.</p>
+          <p class="muted small">All sizes in mm and are the finished part – the cut width is allowed for automatically.</p>
         </div>
 
         <ul id="warnings" class="warnings"></ul>
@@ -127,6 +152,8 @@
         <h3>Thickness</h3>
         <div id="thicknesses" class="choice small"></div>
         <div id="ampsCard" class="amps"></div>
+        <div id="cutCheck2" class="cutcheck"></div>
+        <details class="guide"><summary>What this machine can cut at this thickness</summary><div class="limitsBody"></div></details>
 
         <div class="speed">
           <div class="speedhead"><b>Cut speed</b><button id="spReset" class="small">Use recommended</button></div>

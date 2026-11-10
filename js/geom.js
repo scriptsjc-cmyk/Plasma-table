@@ -147,3 +147,84 @@ export function selfIntersects(pts, limit = 4000) {
   }
   return false;
 }
+
+// ------------------------------------------------------------------ union of outlines (for "Join")
+// Greiner-Hormann polygon union. Shapes are grown by a hair and nudged a hair so that edges
+// that exactly touch (very common on a 1 mm grid) still overlap cleanly. Returns
+// { outer: pts, holes: [pts...] } or null if the two don't touch.
+const ccw = (pts) => (signedArea(pts) < 0 ? [...pts].reverse() : pts);
+function ghUnion(A, B) {
+  const mk = (pts) => {
+    const nodes = pts.map(([x, y]) => ({ x, y, inter: false }));
+    nodes.forEach((n, i) => { n.next = nodes[(i + 1) % nodes.length]; n.prev = nodes[(i - 1 + nodes.length) % nodes.length]; });
+    return nodes;
+  };
+  const LA = mk(A), LB = mk(B);
+  const ins = (a, node) => {           // insert intersection node after vertex a, ordered by alpha
+    let at = a;
+    while (at.next.inter && at.next.alpha < node.alpha) at = at.next;
+    node.prev = at; node.next = at.next; at.next.prev = node; at.next = node;
+  };
+  let count = 0;
+  for (const a of LA) {
+    const a2 = A[(LA.indexOf(a) + 1) % A.length];
+    for (let j = 0; j < B.length; j++) {
+      const b = B[j], b2 = B[(j + 1) % B.length];
+      const dxa = a2[0] - a.x, dya = a2[1] - a.y, dxb = b2[0] - b[0], dyb = b2[1] - b[1];
+      const den = dxa * dyb - dya * dxb;
+      if (Math.abs(den) < 1e-14) continue;
+      const ta = ((b[0] - a.x) * dyb - (b[1] - a.y) * dxb) / den;
+      const tb = ((b[0] - a.x) * dya - (b[1] - a.y) * dxa) / den;
+      if (ta <= 0 || ta >= 1 || tb <= 0 || tb >= 1) continue;
+      const x = a.x + ta * dxa, y = a.y + ta * dya;
+      const na = { x, y, inter: true, alpha: ta }, nb = { x, y, inter: true, alpha: tb };
+      na.neighbor = nb; nb.neighbor = na;
+      ins(a, na); ins(LB[j], nb);
+      count++;
+    }
+  }
+  if (!count) {
+    if (pointInPoly(A[0], B)) return { loops: [B] };
+    if (pointInPoly(B[0], A)) return { loops: [A] };
+    return null;
+  }
+  const mark = (start, other) => {
+    let inside = pointInPoly([start.x, start.y], other), n = start;
+    do { if (n.inter) { n.entry = inside; inside = !inside; } n = n.next; } while (n !== start);   // union: flags inverted
+  };
+  mark(LA[0], B); mark(LB[0], A);
+  const loops = [];
+  for (;;) {
+    let start = null, n = LA[0];
+    do { if (n.inter && !n.visited) { start = n; break; } n = n.next; } while (n !== LA[0]);
+    if (!start) break;
+    const poly = [];
+    let cur = start;
+    do {
+      cur.visited = true; cur.neighbor.visited = true;
+      poly.push([cur.x, cur.y]);
+      if (cur.entry) { cur = cur.next; while (!cur.inter) { poly.push([cur.x, cur.y]); cur = cur.next; } }
+      else { cur = cur.prev; while (!cur.inter) { poly.push([cur.x, cur.y]); cur = cur.prev; } }
+      cur = cur.neighbor;
+    } while (!cur.visited);
+    if (poly.length >= 3) loops.push(poly);
+  }
+  return { loops };
+}
+export function unionOutlines(list) {
+  const GROW = 0.02;
+  let cur = ccw(offsetPolygon(ccw(list[0]), GROW));
+  let holes = [];
+  for (let k = 1; k < list.length; k++) {
+    const nudge = [0.0013 * k, 0.0029 * k];
+    const B = ccw(offsetPolygon(ccw(list[k]), GROW)).map(([x, y]) => [x + nudge[0], y + nudge[1]]);
+    const r = ghUnion(cur, B);
+    if (!r) return null;
+    const byArea = r.loops.map((p) => ({ p, a: Math.abs(signedArea(p)) })).sort((a, b) => b.a - a.a);
+    cur = ccw(cleanPts(byArea[0].p, true));
+    holes.push(...byArea.slice(1).map((x) => cleanPts(x.p, true)));
+  }
+  // gaps that a later shape filled in aren't holes any more
+  holes = holes.filter((h) => h.length >= 3 && !list.some((o) => pointInPoly(h[0], o) && pointInPoly(h[Math.floor(h.length / 2)], o)));
+  return { outer: cur, holes: holes.map((h) => (signedArea(h) > 0 ? [...h].reverse() : h)) };
+}

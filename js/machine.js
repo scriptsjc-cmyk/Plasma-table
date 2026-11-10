@@ -22,13 +22,21 @@ export class Machine {
   }
 
   on(fn) { this.listeners.push(fn); }
-  emit(kind, data) { for (const fn of this.listeners) { try { fn(kind, data); } catch (e) { console.error(e); } } }
+  emit(kind, data) {
+    // over Wi-Fi the Pi remembers where home is, so a reconnect doesn't need re-homing
+    if (kind === "safety" && this.grbl && this.grbl.t.keep) this.grbl.t.keep({ ref: this.safety.ref, refMode: this.safety.refMode });
+    for (const fn of this.listeners) { try { fn(kind, data); } catch (e) { console.error(e); } }
+  }
 
   async connect(transport) {
     await this.disconnect();
     this.safety.clearReference();
     this.emit("safety", this.safety.state());
     this.grbl = new GrblLink(transport, this.cfg.rx_buffer_size || 127, (k, d) => this.onGrbl(k, d));
+    if (transport.kept && transport.kept.ref) {
+      this.safety.setReference(transport.kept.ref, transport.kept.refMode || "kept");
+      this.emit("safety", this.safety.state());
+    }
     this.emit("log", { text: `Connected to ${transport.label || "controller"}`, level: "info" });
   }
   async disconnect() {

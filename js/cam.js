@@ -110,6 +110,7 @@ export function designToGcode(contours, { kerf = 1.5, leadIn = 3, name = "design
     gcode: lines.join("\n") + "\n",
     warnings,
     outline: outline.map((p) => p.map(([x, y]) => [Math.round(x * 100) / 100, Math.round(y * 100) / 100])),
+    shift: [dx, dy],
     summary: { parts, holes, width: Math.round((db[2] - db[0]) * 10) / 10, height: Math.round((db[3] - db[1]) * 10) / 10, cuts: order.length },
   };
 }

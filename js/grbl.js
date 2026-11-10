@@ -118,6 +118,64 @@ export function decodePins(pn = "") {
   return out;
 }
 
+// ------------------------------------------------------------------ Wi-Fi: the Raspberry Pi bridge at the table (pi/bridge.py)
+// The Pi serves this page, passes commands to the controller and runs cut jobs itself,
+// so a Wi-Fi dropout or a phone going to sleep can't stall the torch mid-cut.
+export class WiFiTransport {
+  constructor(url) {
+    this.url = url || `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
+    this.onLine = null; this.onClose = null; this.onJob = null;
+    this.remoteJobs = true; this.label = "Wi-Fi"; this.kept = null; this.hello = null;
+  }
+  // is this page being served by the Pi?
+  static async available() {
+    try {
+      const r = await fetch("bridge.json", { cache: "no-store" });
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j && j.bridge ? j : null;
+    } catch (e) { return null; }
+  }
+  open() {
+    return new Promise((resolve, reject) => {
+      let ready = false;
+      const ws = new WebSocket(this.url);
+      this.ws = ws;
+      const timer = setTimeout(() => { if (!ready) { try { ws.close(); } catch (e) { /* ignore */ } reject(new Error("The Pi didn't answer. Check it's switched on and on the same Wi-Fi.")); } }, 6000);
+      ws.onmessage = (ev) => {
+        let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+        if (m.t === "hello") {
+          clearTimeout(timer);
+          this.hello = m; this.kept = m.keep || null; this.label = `Wi-Fi (${m.name || "Pi"})`;
+          if (!m.serial) {
+            this.closing = true; ws.close();
+            reject(new Error("The Pi is on, but it can't see the controller. Check the USB cable from the Pi to the controller."));
+            return;
+          }
+          ready = true; resolve();
+        } else if (m.t === "l") { if (this.onLine) this.onLine(m.d); }
+        else if (m.t === "job") { if (this.onJob) this.onJob(m.job); }
+        else if (m.t === "serial" && !m.ok) { if (this.onLine) this.onLine("[MSG:Controller unplugged from the Pi]"); this.closing = true; ws.close(); }
+        else if (m.t === "taken") { this.takenOver = true; }
+      };
+      ws.onclose = () => {
+        clearTimeout(timer);
+        if (!ready) { reject(new Error("Couldn't reach the Pi over Wi-Fi.")); return; }
+        if (this.onClose) this.onClose();
+      };
+      ws.onerror = () => { /* onclose follows */ };
+    });
+  }
+  _send(obj) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(obj)); }
+  write(data) {
+    this._send({ t: "w", d: typeof data === "string" ? data : String.fromCharCode(...data) });
+    return Promise.resolve();
+  }
+  startJob(lines) { this._send({ t: "job", lines }); }
+  keep(data) { this._send({ t: "keep", data }); }       // the Pi remembers this until the controller resets
+  async close() { this.closing = true; try { this.ws.close(); } catch (e) { /* ignore */ } }
+}
+
 // ------------------------------------------------------------------ controller link
 export class GrblLink {
   constructor(transport, rxSize = 127, onEvent = () => {}) {
@@ -141,6 +199,20 @@ export class GrblLink {
       clearInterval(this.poll);
     };
     this.poll = setInterval(() => { if (this.running) this.t.write(RT.STATUS); }, 100);
+    if (transport.remoteJobs) {          // the Pi runs the job; we just show its progress
+      transport.onJob = (p) => this._remoteJob(p);
+      const j = transport.hello && transport.hello.job;
+      if (j && j.running) this._remoteJob(j);
+    }
+  }
+  _remoteJob(p) {
+    if (!p) return;
+    const was = this.job;
+    this.job = { total: p.total, sent: p.sent, acked: p.acked, errors: p.errors, running: p.running, result: p.result,
+      started: was && was.started ? was.started : (p.started ? p.started * 1000 : Date.now()),
+      finished: p.running ? null : (was && was.finished) || Date.now() };
+    if (was && was.running && !p.running && p.message) this._emit("log", { text: p.message, level: p.result === "done" ? "info" : "warn" });
+    this._emit("job", this.jobProgress());
   }
 
   _emit(kind, data) { try { this.onEvent(kind, data); } catch (e) { console.error(e); } }
@@ -161,6 +233,7 @@ export class GrblLink {
     if (this.job && this.job.running) throw new Error("A job is already running.");
     const body = lines.filter((l) => l.trim() && !l.trim().startsWith(";"));
     this.job = { total: body.length, sent: 0, acked: 0, errors: 0, running: true, started: Date.now(), finished: null, result: null };
+    if (this.t.remoteJobs) { this.t.startJob(body); this._emit("job", this.jobProgress()); return; }
     for (const l of body) this.pending.push({ line: l, source: "job" });
     this._pump();
     this._emit("job", this.jobProgress());
