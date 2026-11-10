@@ -12,12 +12,14 @@ import { Sketch, shapeDef } from "./sketch.js";
 import { variantsFor, variantKey } from "./variants.js";
 import { evalExpr } from "./expr.js";
 import { checkDesign, machineLimits } from "./check.js";
+import * as Acc from "./account.js";
+import { initAccountUi, openAccount, openClaim, openGate, closeAccountUi, acctOverlayOpen, saveCurrent } from "./account-ui.js";
 
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 const S = {
   cfg: null, chart: null, jogStep: 10, status: { state: "Disconnected" }, job: null, prepared: null,
-  gcode: null, design: null, fileName: "", safety: {}, src: "file", showMachine: true, cur: 1, material: null, thickness: null, connected: false,
+  gcode: null, design: null, fileName: "", safety: {}, src: "file", showMachine: true, cur: 1, material: null, thickness: null, connected: false, designOnly: false, currentPart: null,
   lastAlarm: null, speed: null, lastFeedOv: 100,
 };
 const MAT_TIPS = {
@@ -92,10 +94,82 @@ function cmd(name, extra = {}) {
   } catch (e) { toast(e.message, true); return null; }
 }
 
+// ------------------------------------------------------------------ accounts / machine gate
+function machineAllowed() {
+  // The on-screen demo controller is free so people can look around and design.
+  if (S.demo) return true;
+  return Acc.hasLinkedMachine();
+}
+function requireMachine(why) {
+  if (machineAllowed()) return true;
+  openGate(why || "Link your machine to run jobs");
+  return false;
+}
+function applyAccountMode(mode) {
+  if (!sketch) {
+    document.body.classList.toggle("beginner", mode === "beginner");
+    return;
+  }
+  if (mode === "pro" || mode === "beginner") {
+    sketch.setPro(mode === "pro");
+    $("skPro").checked = mode === "pro";
+    document.body.classList.toggle("beginner", mode === "beginner");
+  } else {
+    document.body.classList.remove("beginner");
+  }
+  renderProTools(); renderShapeForm(); renderQuickBar();
+}
+function refreshGate() {
+  const needLink = !Acc.hasLinkedMachine();
+  $("btnConnect").classList.toggle("locked", needLink);
+  $("connectLock").classList.toggle("hidden", !needLink);
+  const runLocked = needLink && !S.demo;
+  $("btnStart").classList.toggle("locked", runLocked);
+  $("startLock").classList.toggle("hidden", !runLocked);
+  const send = $("btnConsoleSend");
+  if (send) send.classList.toggle("locked", runLocked);
+  document.body.classList.toggle("run-locked", runLocked);
+}
+function enterDesignOnly() {
+  S.designOnly = true;
+  S.demo = null;
+  $("connectView").classList.add("hidden");
+  $$(".tabs").forEach((t) => t.classList.remove("hidden"));
+  $("cutView").classList.remove("hidden");
+  $("moveView").classList.add("hidden");
+  $("setupView").classList.add("hidden");
+  showTab("cut");
+  goStep(1);
+  refreshGate();
+  toast("Design and save freely. Link a machine when you want to cut.");
+}
+function exportGcode() {
+  if (!Acc.allowExportWithoutMachine() && !Acc.hasLinkedMachine()) {
+    openGate("Link your machine to download G-code");
+    return;
+  }
+  if (!S.prepared) loadJob();
+  let text = "";
+  if (S.prepared && Array.isArray(S.prepared.lines) && S.prepared.lines.length) text = S.prepared.lines.join("\n") + "\n";
+  else if (S.prepared && S.prepared.source) text = S.prepared.source;
+  else if (S.gcode) text = S.gcode;
+  if (!text) { toast("Nothing to export yet. Load or design a part first.", true); return; }
+  const blob = new Blob([text], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = ((S.fileName || "part").replace(/\.[^.]+$/, "") || "part") + ".nc";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 // ------------------------------------------------------------------ tabs & steps
 function showTab(name) {
+  if (!S.connected && S.designOnly && name !== "cut") {
+    openGate("Link your machine to run jobs");
+    name = "cut";
+  }
   $$(".tab").forEach((t) => t.classList.toggle("sel", t.dataset.tab === name));
-  ["cut", "move", "setup"].forEach((v) => $(v + "View").classList.toggle("hidden", v !== name || !S.connected));
+  ["cut", "move", "setup"].forEach((v) => $(v + "View").classList.toggle("hidden", v !== name || (!S.connected && !S.designOnly)));
   S.tab = name;
   if (name === "cut") drawPreview();
 }
@@ -136,6 +210,7 @@ function syncSteps() {
   $$(".steps button").forEach((b) => b.classList.toggle("sel", Number(b.dataset.step) === S.jogStep));
 }
 function jog(axis, dir) {
+  if (!machineAllowed()) { requireMachine("Link your machine to run jobs"); return; }
   const step = axis === "Z" ? Math.min(S.jogStep, 10) : S.jogStep;
   cmd("jog", { axis, dist: step * dir });
 }
@@ -975,7 +1050,7 @@ function refresh() {
 
   // start button + reasons
   const b = blockers();
-  $("btnStart").disabled = b.length > 0;
+  $("btnStart").disabled = b.length > 0 || !machineAllowed();
   $("blockers").innerHTML = b.length && S.cur === 4 ? `Can't start yet:<ul>${b.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
 
 
@@ -1086,17 +1161,22 @@ function onEvent(kind, d) {
 // ------------------------------------------------------------------ connection
 function setConnected(on, label = "") {
   S.connected = on;
-  $("connectView").classList.toggle("hidden", on);
-  $$(".tabs").forEach((t) => t.classList.toggle("hidden", !on));
+  if (on) S.designOnly = false;
+  const work = on || S.designOnly;
+  $("connectView").classList.toggle("hidden", work);
+  $$(".tabs").forEach((t) => t.classList.toggle("hidden", !work));
   $("connPill").textContent = on ? "● Connected" : "● Not connected";
   $("connPill").className = "pill " + (on ? "on" : "off");
   $("stateBadge").classList.toggle("hidden", !on);
   if (on) { showTab(S.tab || "cut"); if (label) toast("Connected to " + label); }
+  else if (S.designOnly) { showTab("cut"); }
   else ["cut", "move", "setup"].forEach((v) => $(v + "View").classList.add("hidden"));
   $("demoInputs").classList.toggle("hidden", !(on && S.demo));
+  refreshGate();
   refresh();
 }
 async function connectUSB() {
+  if (!requireMachine("Link your machine to run jobs")) return;
   if (!WebSerialTransport.supported()) { toast("This browser can't use USB. Use Chrome or Edge on a computer.", true); return; }
   try {
     const t = new WebSerialTransport();
@@ -1111,10 +1191,12 @@ async function connectUSB() {
 }
 // ---- Wi-Fi (page served by the Pi at the table)
 async function connectWiFi(quiet = false) {
+  if (!quiet && !requireMachine("Link your machine to run jobs")) return;
+  if (quiet && !machineAllowed()) return;
   if (S.wifiBusy) return;
   S.wifiBusy = true;
   try {
-    const t = new WiFiTransport(null, S.wifiToken);
+    const t = new WiFiTransport(null, S.wifiToken, Acc.accessToken());
     await t.open();
     await M.connect(t);
     S.demo = null; S.wifi = true; S.wifiUsed = true; S.userDisconnected = false;
@@ -1162,6 +1244,11 @@ function bind() {
   $$("[data-go]").forEach((b) => (b.onclick = () => goStep(Number(b.dataset.go))));
   $("btnConnect").onclick = connectUSB;
   $("btnDemo").onclick = connectDemo;
+  $("btnDesignOnly").onclick = enterDesignOnly;
+  $("btnExport").onclick = exportGcode;
+  $("btnSavePartQuick").onclick = () => saveCurrent().catch((e) => toast(e.message, true));
+  $("connectLock").onclick = () => { if (!Acc.hasLinkedMachine()) openGate("Link your machine to run jobs"); };
+  $("startLock").onclick = () => openGate("Link your machine to run jobs");
   $("connPill").onclick = () => (S.connected ? showTab("setup") : connectUSB());
   $("btnDisconnect").onclick = disconnect;
   $("btnStop").onclick = () => { if (M.grbl) cmd("stop"); };
@@ -1178,9 +1265,9 @@ function bind() {
   $("btnRef").onclick = () => { if (confirm("Is the torch exactly at the home corner, raised right up?")) cmd("set_reference"); };
   $("btnClearLimits").onclick = () => { if (confirm("Clear the saved edges? Crash protection will be off until you set them again.")) cmd("limits_clear"); };
   $("btnTouchTest").onclick = () => cmd("touchoff_test", { material: S.material, thickness: S.thickness, overrides: overrides() });
-  $("btnTorchTest").onclick = () => { if (confirm("Fire the torch for half a second?\nTorch over scrap, earth clamp on, hands clear.")) cmd("torch_test", { confirm: true }); };
+  $("btnTorchTest").onclick = () => { if (!requireMachine("Link your machine to run jobs")) return; if (confirm("Fire the torch for half a second?\nTorch over scrap, earth clamp on, hands clear.")) cmd("torch_test", { confirm: true }); };
   $("btnPushSettings").onclick = () => { if (confirm("Send the controller settings? Only after editing the CHANGE-ME values for your machine.")) cmd("push_settings"); };
-  $("consoleForm").onsubmit = (e) => { e.preventDefault(); const l = $("consoleIn").value.trim(); if (l) cmd("console", { line: l }); $("consoleIn").value = ""; };
+  $("consoleForm").onsubmit = (e) => { e.preventDefault(); if (!requireMachine("Link your machine to run jobs")) return; const l = $("consoleIn").value.trim(); if (l) cmd("console", { line: l }); $("consoleIn").value = ""; };
 
   // step 1
   $("file").onchange = () => readFile($("file").files[0]);
@@ -1266,7 +1353,7 @@ function bind() {
   $("proTools").addEventListener("click", (e) => {
     const b = e.target.closest("[data-pro]"); if (b) runPro(b.dataset.pro);
   });
-  $("skPro").onchange = () => { sketch.setPro($("skPro").checked); renderProTools(); renderShapeForm(); renderQuickBar(); };
+  $("skPro").onchange = () => { sketch.setPro($("skPro").checked); renderProTools(); renderShapeForm(); renderQuickBar(); if (Acc.isSignedIn()) Acc.setMode($("skPro").checked ? "pro" : "beginner").catch(() => {}); };
   $("numPadKeys").addEventListener("click", (e) => {
     const b = e.target.closest("[data-k]"); if (!b) return;
     const k = b.dataset.k, el = $("numPadValue");
@@ -1285,6 +1372,10 @@ function bind() {
   $("toolFinish").onclick = () => { sketch.finishDraw(); renderProTools(); };
   $("toolCancel").onclick = () => { sketch.setTool(null); renderProTools(); };
   document.addEventListener("keydown", (e) => {
+    if (acctOverlayOpen()) {
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); closeAccountUi(); }
+      return;
+    }
     if (!$("numPad").classList.contains("hidden")) {
       if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); if ($("numPad")._apply) $("numPad")._apply(); }
       else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeNumPad(); }
@@ -1337,6 +1428,7 @@ function bind() {
   // step 4
   $("checklist").addEventListener("change", refresh);
   $("btnStart").onclick = () => {
+    if (!requireMachine("Link your machine to run jobs")) return;
     try {
       M.command({ cmd: "feed_override", step: "reset" });  // cut at exactly the speed chosen in step 2
       M.startJob(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(5);
@@ -1462,9 +1554,32 @@ async function init() {
   });
   const travel = machine.travel_mm || { x: 1300, y: 800 };
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
-  if (new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S };
+  if (new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S, account: Acc, openAccount, openClaim, openGate, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, machineAllowed, goStep, refreshGate };
   renderShapeTiles();
   bind();
+  await initAccountUi({
+    toast, esc,
+    applyMode: applyAccountMode,
+    refreshGate,
+    getDesign: () => (sketch && sketch.items) ? sketch.items : [],
+    fileName: () => S.fileName || "",
+    currentPart: () => S.currentPart,
+    rememberPart: (p) => { S.currentPart = p; S.fileName = (p && p.name) || S.fileName; },
+    loadDesign: (p) => {
+      if (!p || !p.data) return;
+      const items = p.data.items || p.data;
+      if (!Array.isArray(items)) return;
+      sketch.items = items.map((it) => sketch.sanitizeItem(it)).filter(Boolean);
+      sketch.nextId = Math.max(1, ...sketch.items.map((i) => i.id + 1), 1);
+      sketch.sel = { ids: [], hole: null };
+      sketch.commit();
+      S.currentPart = p;
+      S.fileName = p.name || S.fileName;
+      S.src = "shape";
+      if ($("partName")) $("partName").value = p.name || "";
+      useShape();
+    },
+  });
   const pi = await WiFiTransport.available();
   if (pi) {
     S.wifi = true;

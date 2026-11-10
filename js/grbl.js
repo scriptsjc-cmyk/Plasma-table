@@ -122,10 +122,11 @@ export function decodePins(pn = "") {
 // The Pi serves this page, passes commands to the controller and runs cut jobs itself,
 // so a Wi-Fi dropout or a phone going to sleep can't stall the torch mid-cut.
 export class WiFiTransport {
-  constructor(url, token) {
+  constructor(url, token, jwt) {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const q = token ? `?token=${encodeURIComponent(token)}` : "";
     this.url = url || `${proto}://${location.host}/ws${q}`;
+    this.jwt = jwt || "";
     this.onLine = null; this.onClose = null; this.onJob = null;
     this.remoteJobs = true; this.label = "Wi-Fi"; this.kept = null; this.hello = null;
   }
@@ -154,7 +155,16 @@ export class WiFiTransport {
             reject(new Error("The Pi is on, but it can't see the controller. Check the USB cable from the Pi to the controller."));
             return;
           }
+          if (m.need_account) {
+            ws.send(JSON.stringify({ t: "auth", jwt: this.jwt || "" }));
+            return;
+          }
           ready = true; resolve();
+        } else if (m.t === "auth_ok") {
+          if (!ready) { ready = true; resolve(); }
+        } else if (m.t === "auth_err") {
+          this.closing = true; ws.close();
+          reject(new Error(m.msg || "This account is not linked to this table."));
         } else if (m.t === "l") { if (this.onLine) this.onLine(m.d); }
         else if (m.t === "job") { if (this.onJob) this.onJob(m.job); }
         else if (m.t === "serial" && !m.ok) { if (this.onLine) this.onLine("[MSG:Controller unplugged from the Pi]"); this.closing = true; ws.close(); }

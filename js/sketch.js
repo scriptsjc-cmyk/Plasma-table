@@ -1105,7 +1105,7 @@ export class Sketch {
     window.addEventListener("keydown", (e) => {
       if (!this.active || !this.cv.offsetParent) return;
       const overlay = (id) => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); };
-      if (overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop")) return;
+      if (overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop") || document.querySelector(".acctdlg:not(.hidden)")) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };

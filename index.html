@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#18202a">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss:; script-src 'self' 'unsafe-inline'; worker-src 'self'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss: https://*.supabase.co; script-src 'self' 'unsafe-inline'; worker-src 'self'; base-uri 'self'; form-action 'self'">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' aria-hidden='true'><path d='M11 3h10l-2 12h-6z' fill='%23e3a73c'/><path d='M13.5 15h5l-1 3h-3z' fill='%23c8803a'/><path d='M16 18.5l-2 4 3 1-2.5 5.5' fill='none' stroke='%23a98bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/><path d='M4 29h24' stroke='%234f7fe0' stroke-width='2.5' stroke-linecap='round'/></svg>">
 <title>Plasma Table</title>
 <link rel="stylesheet" href="style.css">
@@ -15,6 +15,7 @@
 <!-- ============================================================ top bar -->
 <header class="topbar">
   <div class="brand"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M11 3h10l-2 12h-6z" fill="#e3a73c"/><path d="M13.5 15h5l-1 3h-3z" fill="#c8803a"/><path d="M16 18.5l-2 4 3 1-2.5 5.5" fill="none" stroke="#a98bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 29h24" stroke="#4f7fe0" stroke-width="2.5" stroke-linecap="round"/></svg><span id="machineName">Plasma Table</span></div>
+  <button id="acctPill" class="pill acct" title="Account">Sign in</button>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
   <span id="stateBadge" class="badge hidden"></span>
   <button id="btnStop" class="stop" title="Stop (Esc)">STOP</button>
@@ -41,6 +42,8 @@
 </div>
 
 <!-- ============================================================ connect screen -->
+<div id="demoAcctBar" class="banner amber hidden" role="status">Local demo accounts — nothing is sent to the cloud. Claim code <b>DEMO-0000</b> unlocks a practice machine.</div>
+
 <section id="connectView" class="view">
   <div class="hero">
     <svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true" class="arcmark"><path d="M11 3h10l-2 12h-6z" fill="#e3a73c"/><path d="M13.5 15h5l-1 3h-3z" fill="#c8803a"/><path d="M16 18.5l-2 4 3 1-2.5 5.5" fill="none" stroke="#a98bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 29h24" stroke="#4f7fe0" stroke-width="2.5" stroke-linecap="round"/></svg>
@@ -52,6 +55,8 @@
     <div class="row center">
       <button id="btnConnect" class="xl go">Connect</button>
       <button id="btnDemo" class="xl">Try the demo</button>
+      <button id="btnDesignOnly" class="xl">Design parts (free)</button>
+      <p id="connectLock" class="locknote hidden">🔒 Link your machine to run jobs</p>
     </div>
     <p id="connectHelp" class="muted">Works in Chrome or Edge on a computer. Close Mach3 or any other program using the table first. Got the Wi-Fi Pi fitted? Open <b>http://plasma.local</b> instead.</p>
   </div>
@@ -74,6 +79,10 @@
       <label class="showmach" id="showMachWrap"><input type="checkbox" id="showMach" checked> Show machine</label>
       <div id="fit" class="fit"></div>
       <div id="jobStats" class="stats"></div>
+      <div id="exportRow" class="row">
+        <button type="button" id="btnExport" class="small">Download G-code</button>
+        <button type="button" id="btnSavePartQuick" class="small">Save to account</button>
+      </div>
     </div>
 
     <nav id="quickBar" class="quickbar hidden" aria-label="Design tools"></nav>
@@ -219,7 +228,7 @@
         <h2>Ready to cut?</h2>
         <ul class="checklist" id="checklist"></ul>
         <div id="blockers" class="blockers"></div>
-        <div class="nav"><button class="back" data-go="3">← Back</button><button id="btnStart" class="xl go" disabled>▶ Start cutting</button></div>
+        <div class="nav"><button class="back" data-go="3">← Back</button><button id="btnStart" class="xl go" disabled>▶ Start cutting</button><p id="startLock" class="locknote hidden">🔒 Link your machine to run jobs</p></div>
       </div>
 
       <!-- step 5: running / done -->
@@ -331,7 +340,7 @@
       Torch test: fires the plasma for half a second over scrap.</p>
   </div>
 
-  <div class="card">
+  <div class="card pro-only" id="controllerCard">
     <h2>Controller</h2>
     <div class="row">
       <button data-cmd="pins">Show pins</button>
@@ -342,7 +351,7 @@
     <div id="log" class="log"></div>
     <form id="consoleForm" class="row">
       <input id="consoleIn" class="grow" placeholder="G-code or $ command" autocomplete="off" autocapitalize="characters">
-      <button>Send</button>
+      <button id="btnConsoleSend">Send</button>
     </form>
   </div>
 </section>
@@ -419,6 +428,216 @@
   <button type="button" id="toolFinish" class="go">Close outline</button>
   <button type="button" id="toolCancel">Cancel</button>
 </div>
+
+<!-- ============================================================ account / gating dialogs -->
+<div id="accountDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="acctTitle">
+  <div class="shapelib-card slim acctcard">
+    <div class="shapelib-head">
+      <h2 id="acctTitle">Account</h2>
+      <button type="button" class="acct-close">Close</button>
+    </div>
+    <div id="acctBody">
+
+      <div data-pane="in">
+        <p class="muted" id="acctDemoTag2">Sign in to save parts to your account. Designing is free. Running a real table needs a linked machine.</p>
+        <form id="formSignIn" class="col">
+          <label>Email<input id="inEmail" type="email" autocomplete="username" required></label>
+          <label>Login phrase<input id="inPin" type="password" autocomplete="current-password" required minlength="6"></label>
+          <button type="submit" class="xl go">Sign in</button>
+        </form>
+        <div class="row">
+          <button type="button" id="goSignUp" class="small">Create an account</button>
+          <button type="button" id="goLink" class="small">Email me a sign-in link</button>
+          <button type="button" id="goReset" class="small">Reset login phrase</button>
+        </div>
+      </div>
+
+      <div data-pane="up" class="hidden">
+        <h3>Create an account</h3>
+        <form id="formSignUp" class="col">
+          <label>Name<input id="upName" type="text" autocomplete="name" maxlength="80"></label>
+          <label>Email<input id="upEmail" type="email" autocomplete="username" required></label>
+          <label>Login phrase<input id="upPin" type="password" autocomplete="new-password" required minlength="6"></label>
+          <p class="muted small">At least 6 characters. You can change this later.</p>
+          <fieldset class="modepick">
+            <legend>How do you want the app?</legend>
+            <label class="modecard"><input type="radio" name="suMode" value="beginner" checked>
+              <b>Beginner</b>
+              <span>Simple tools and fewer settings. A good place to start.</span>
+            </label>
+            <label class="modecard"><input type="radio" name="suMode" value="pro">
+              <b>Pro</b>
+              <span>All settings and the CAD tools, so you can customise everything.</span>
+            </label>
+          </fieldset>
+          <button type="submit" class="xl go">Create account</button>
+        </form>
+        <button type="button" id="goSignIn" class="small">Already have an account? Sign in</button>
+      </div>
+
+      <div data-pane="confirm" class="hidden">
+        <h3>Check your email</h3>
+        <p>We sent a confirmation link to <b id="confirmEmail"></b>. Open it, then come back here and sign in. The link is needed because email confirmation is on for this project.</p>
+        <div class="row">
+          <button type="button" id="btnResendConfirm">Resend the email</button>
+          <button type="button" id="confirmGoIn" class="go">I have confirmed — sign in</button>
+        </div>
+      </div>
+
+      <div data-pane="link" class="hidden">
+        <h3>Email a sign-in link</h3>
+        <form id="formLink" class="col">
+          <label>Email<input id="linkEmail" type="email" autocomplete="username" required></label>
+          <button type="submit" class="xl go">Send link</button>
+        </form>
+        <button type="button" id="backIn1" class="small">Back</button>
+      </div>
+
+      <div data-pane="reset" class="hidden">
+        <h3>Reset login phrase</h3>
+        <form id="formReset" class="col">
+          <label>Email<input id="resetEmail" type="email" autocomplete="username" required></label>
+          <button type="submit" class="xl go">Send reset email</button>
+        </form>
+        <button type="button" id="backIn2" class="small">Back</button>
+      </div>
+
+      <div data-pane="newpin" class="hidden">
+        <h3>Choose a new login phrase</h3>
+        <form id="formNewPin" class="col">
+          <input id="newPinEmail" type="email" autocomplete="username" class="hidden">
+          <label>New login phrase<input id="newPin" type="password" autocomplete="new-password" required minlength="6"></label>
+          <button type="submit" class="xl go">Save</button>
+        </form>
+        <button type="button" id="backIn3" class="small">Back</button>
+      </div>
+
+      <div data-pane="home" class="hidden" id="acctSigned">
+        <p id="acctDemoTag" class="muted small hidden">Local demo account — stored only in this browser.</p>
+        <p id="acctWho"></p>
+        <div class="col">
+          <label>Display name<input id="acctName" type="text" maxlength="80"></label>
+          <fieldset class="modepick">
+            <legend>App mode (you can switch any time)</legend>
+            <label class="modecard"><input type="radio" name="acctMode" value="beginner">
+              <b>Beginner</b><span>Simple tools and fewer settings.</span>
+            </label>
+            <label class="modecard"><input type="radio" name="acctMode" value="pro">
+              <b>Pro</b><span>All settings and the CAD / Pro tools.</span>
+            </label>
+          </fieldset>
+          <button type="button" id="btnAcctSave" class="go">Save settings</button>
+        </div>
+        <h3>Linked machines</h3>
+        <div id="acctMachines"></div>
+        <div class="row">
+          <button type="button" id="btnOpenClaim">Link a machine</button>
+          <button type="button" id="acctAdminBtn" class="hidden">Admin</button>
+          <button type="button" id="acctDemoAdmin" class="hidden">Demo: make me admin</button>
+        </div>
+        <h3>Parts in this account</h3>
+        <div class="row">
+          <input id="partName" class="grow" placeholder="Part name" maxlength="120">
+          <button type="button" id="btnSavePart" class="accent">Save current drawing</button>
+        </div>
+        <div id="partsCard">
+          <button type="button" id="btnOpenParts" class="hidden">Parts</button>
+          <div id="partsList" class="partlist"></div>
+        </div>
+        <div class="row">
+          <button type="button" id="btnSignOut">Sign out</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="claimDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="claimTitle">
+  <div class="shapelib-card slim acctcard">
+    <div class="shapelib-head">
+      <h2 id="claimTitle">Link your machine</h2>
+      <button type="button" class="acct-close">Close</button>
+    </div>
+    <p id="claimHint" class="muted">Enter the one-off claim code from the sticker on the table.</p>
+    <form id="formClaim" class="col">
+      <label>Claim code<input id="claimCode" type="text" autocomplete="off" autocapitalize="characters" required placeholder="XXXX-XXXX"></label>
+      <label>Serial (optional)<input id="claimSerial" type="text" autocomplete="off" autocapitalize="characters" placeholder="If the sticker also has a serial"></label>
+      <button type="submit" class="xl go">Link machine</button>
+    </form>
+  </div>
+</div>
+
+<div id="gateDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="shapelib-card slim acctcard">
+    <div class="shapelib-head">
+      <h2 id="gateTitle">Machine needed</h2>
+      <button type="button" class="acct-close">Close</button>
+    </div>
+    <p id="gateWhy">Link your machine to run jobs</p>
+    <p class="muted">Anyone can design and save parts for free. Connect, jog, send and run are unlocked once a purchased table is linked to your account with the claim code on its sticker.</p>
+    <div class="row">
+      <button type="button" id="gateSignIn" class="xl">Sign in</button>
+      <button type="button" id="gateClaim" class="xl go">Link a machine</button>
+    </div>
+  </div>
+</div>
+
+<div id="migrateDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="migrateTitle">
+  <div class="shapelib-card slim acctcard">
+    <div class="shapelib-head">
+      <h2 id="migrateTitle">Parts on this device</h2>
+      <button type="button" class="acct-close">Close</button>
+    </div>
+    <p>There is a drawing already saved in this browser. Add it to your account?</p>
+    <div class="row">
+      <button type="button" id="migrateYes" class="xl go">Yes, save it to my account</button>
+      <button type="button" id="migrateNo" class="xl">Not now</button>
+    </div>
+  </div>
+</div>
+
+<div id="conflictDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="conflictTitle">
+  <div class="shapelib-card slim acctcard">
+    <div class="shapelib-head">
+      <h2 id="conflictTitle">This part changed in two places</h2>
+      <button type="button" class="acct-close">Close</button>
+    </div>
+    <p id="conflictText">The copy in your account is newer than the one on this device.</p>
+    <div class="col">
+      <button type="button" id="conflictMine" class="xl go">Keep mine (last write wins)</button>
+      <button type="button" id="conflictBoth" class="xl">Keep both</button>
+      <button type="button" id="conflictTheirs" class="xl">Open the other copy</button>
+    </div>
+  </div>
+</div>
+
+<div id="adminDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+  <div class="shapelib-card acctcard wide">
+    <div class="shapelib-head">
+      <h2 id="adminTitle">Machine admin</h2>
+      <button type="button" class="acct-close">Close</button>
+    </div>
+    <p class="muted small">Add a serial and a one-off claim code for each table. Codes are stored as a hash, not as plain text. Unlink or transfer a table if it changes hands.</p>
+    <form id="formAddMachine" class="col">
+      <div class="grid2">
+        <label>Serial<input id="admSerial" required autocomplete="off" autocapitalize="characters"></label>
+        <label>Claim code
+          <span class="row" style="margin-top:0">
+            <input id="admCode" class="grow" required autocomplete="off" minlength="4">
+            <button type="button" id="btnGenCode" class="small">Generate</button>
+          </span>
+        </label>
+      </div>
+      <label>Notes<input id="admNotes" maxlength="200"></label>
+      <button type="submit" class="go">Add / update machine</button>
+    </form>
+    <h3>Serials</h3>
+    <div id="adminTable"></div>
+    <h3>Recent claim attempts</h3>
+    <div id="adminLog"></div>
+  </div>
+</div>
+
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

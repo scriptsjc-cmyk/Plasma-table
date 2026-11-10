@@ -37,3 +37,33 @@ After you upload a new version to GitHub: `ssh yourname@plasma.local` then `plas
   Some Android phones don't do `.local` names – use the Pi's IP address from your router.
 - *"Can't see the controller"*: check the OTG cable is in the Pi's **USB** port, not PWR.
 - See what it's doing: `journalctl -u plasma -f`
+
+## Optional: check the operator's account before accepting G-code
+
+The pairing token (`?token=` / `bridge.token`) always applies. On top of that you can
+ask the bridge to confirm the connecting user owns *this* table, using the same
+Supabase project as the website.
+
+1. Put this table's serial, the project URL and the **anon** key (never the
+   service_role key) in `pi/bridge.account.json`:
+
+   ```json
+   {
+     "supabase_url": "https://xxxxxxxxxxxx.supabase.co",
+     "supabase_anon": "paste-the-anon-key",
+     "machine_serial": "TABLE-0001"
+   }
+   ```
+
+   Or pass `--machine-serial`, `--supabase-url` and `--supabase-anon-file`.
+
+2. Restart the bridge. The website then sends the user's signed-in session. The
+   Pi checks it at `/auth/v1/user` and that `machines.owner` matches this serial
+   *before* it will accept G-code (jog, send, run). Stop/reset still follow the
+   usual pairing-token path once the socket is up.
+
+If that file is missing, behaviour is unchanged (pairing token only). See
+`docs/ACCOUNTS-SETUP.md` for the full setup, and for why a **direct USB
+(Web Serial)** lead cannot be enforced the same way — only the app-side lock
+applies there, until a future firmware-level check.
+

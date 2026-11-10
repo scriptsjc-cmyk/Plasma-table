@@ -534,3 +534,45 @@ body:not(.short-land) .toolbar { bottom: calc(68px + env(safe-area-inset-bottom)
 }
 
 .varbox.flash { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+
+/* ------------------------------------------------------------------ accounts, mode, gating */
+.pill.acct { flex: none; background: #1e2a38; border-color: #3d4c5c; color: var(--text);
+  min-width: 44px; min-height: 38px; max-width: 36vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill.acct.in { background: #1e3a5f; border-color: #3b6ea8; color: #bfdbfe; }
+#exportRow button { min-height: 40px; }
+@media (max-width: 400px) {
+  .pill.acct { font-size: 13px; padding: 6px 10px; max-width: 30vw; }
+  #demoAcctBar { font-size: 13px; padding: 8px 12px; }
+}
+#demoAcctBar { cursor: pointer; }
+.locknote { margin: 10px 0 0; color: #fde68a; font-weight: 700; }
+button.locked { position: relative; }
+body.beginner .pro-only { display: none !important; }
+body.beginner #proTools { display: none !important; }
+body.beginner label.protoggle { display: none !important; }
+
+.acctdlg { z-index: 90; }
+.acctcard { width: min(520px, 100%); overflow: auto; }
+.acctcard.wide { width: min(860px, 100%); }
+.modepick { border: 0; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.modepick legend { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+.modecard { flex-direction: column; align-items: flex-start; gap: 4px; background: var(--well);
+  border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; color: var(--text); cursor: pointer; }
+.modecard b { font-size: 18px; }
+.modecard span { color: var(--muted); font-size: 15px; }
+.modecard:has(input:checked) { border-color: var(--accent); background: #2c2617; }
+.modecard input { position: absolute; opacity: 0; pointer-events: none; }
+.partlist { display: grid; gap: 8px; margin-top: 10px; max-height: 40vh; overflow: auto; }
+.partrow { display: flex; justify-content: space-between; gap: 10px; align-items: center;
+  background: var(--well); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.accttable { width: 100%; border-collapse: collapse; font-size: 15px; }
+.accttable th, .accttable td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.accttable th { color: var(--muted); font-weight: 700; font-size: 13px; }
+#exportRow { margin-top: 8px; }
+#connectLock { margin-top: 14px; }
+body.short-land .pill.acct { min-height: 34px; padding: 4px 10px; font-size: 13px; }
+@media (max-width: 520px) {
+  .brand { font-size: 16px; }
+  .pill.acct { padding: 6px 10px; }
+  .partrow { flex-direction: column; align-items: stretch; }
+}

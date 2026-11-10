@@ -12,7 +12,9 @@
 Run:  python3 bridge.py --site /home/pi/plasma --port 80
 """
 import argparse, asyncio, base64, glob, hashlib, json, mimetypes, os, re, secrets, ssl, struct, sys, termios, time, tty
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 
 RX_SIZE = 127                 # controller's receive buffer (grbl character counting)
 RT_RESET, RT_HOLD, RT_JOG_CANCEL = b"\x18", b"!", b"\x85"
@@ -191,6 +193,64 @@ class Serial:
         return self.fd is not None
 
 
+
+def load_account_cfg(args):
+    """Optional machine-account check (Supabase). Off unless URL, anon key and serial are set.
+    Pairing token still applies. Values come from flags, env, or pi/bridge.account.json."""
+    cfg = {}
+    path = args.account_file or os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge.account.json")
+    if os.path.isfile(path):
+        try:
+            cfg = json.loads(open(path, encoding="utf-8").read()) or {}
+        except Exception as e:
+            log("could not read account config", path, e)
+    url = args.supabase_url or os.environ.get("PLASMA_SUPABASE_URL") or cfg.get("supabase_url") or ""
+    serial = args.machine_serial or os.environ.get("PLASMA_MACHINE_SERIAL") or cfg.get("machine_serial") or ""
+    anon = os.environ.get("PLASMA_SUPABASE_ANON") or cfg.get("supabase_anon") or ""
+    if args.supabase_anon_file:
+        try:
+            anon = open(args.supabase_anon_file, encoding="utf-8").read().strip()
+        except Exception as e:
+            log("could not read anon key file", e)
+    url, serial, anon = url.strip(), serial.strip(), anon.strip()
+    if url and serial and anon:
+        return {"url": url.rstrip("/"), "serial": serial, "anon": anon}
+    if url or serial or anon:
+        log("account check incomplete (need supabase URL, anon key and machine serial) — left off")
+    return None
+
+
+def verify_machine_user(cfg, jwt, timeout=8):
+    """Return (ok, user_id, message). Uses the user's JWT against /auth/v1/user then machines?owner=eq."""
+    if not jwt:
+        return False, None, "Sign in and link this table to your account, then connect again."
+    headers = {"Authorization": "Bearer " + jwt, "apikey": cfg["anon"]}
+    try:
+        req = Request(cfg["url"] + "/auth/v1/user", headers=headers)
+        with urlopen(req, timeout=timeout) as r:
+            user = json.loads(r.read().decode())
+    except HTTPError as e:
+        log("account jwt rejected", e.code)
+        return False, None, "Sign-in expired. Sign in again, then reconnect."
+    except (URLError, TimeoutError, ValueError) as e:
+        log("account lookup failed", type(e).__name__)
+        return False, None, "Could not reach the account service. Try again in a moment."
+    uid = user.get("id")
+    if not uid:
+        return False, None, "Sign-in expired. Sign in again, then reconnect."
+    try:
+        q = cfg["url"] + "/rest/v1/machines?select=serial,owner&serial=eq." + quote(cfg["serial"]) + "&owner=eq." + quote(uid)
+        req = Request(q, headers=headers)
+        with urlopen(req, timeout=timeout) as r:
+            rows = json.loads(r.read().decode())
+    except Exception as e:
+        log("machine ownership check failed", type(e).__name__)
+        return False, uid, "Could not confirm this table is linked to your account."
+    if not rows:
+        return False, uid, "This account is not linked to this table. Ask the owner to transfer it, or claim it with the sticker code."
+    return True, uid, "ok"
+
+
 # ------------------------------------------------------------------ the bridge: one controller, one website at a time
 class Bridge:
     def __init__(self, args):
@@ -203,6 +263,7 @@ class Bridge:
         self.serial = Serial(args.serial, args.baud, self.on_line, self.on_serial_state)
         self.token = args.token
         self.origins = args.origins
+        self.account = getattr(args, "account", None)
 
     # ---- job streaming on the Pi
     def job_state(self):
@@ -335,6 +396,8 @@ class WSClient:
     def __init__(self, writer):
         self.w = writer
         self.closed = False
+        self.user_id = None
+        self.linked = False
 
     def send_text(self, text):
         if self.closed:
@@ -436,12 +499,33 @@ def make_handler(bridge: Bridge, site):
             client = WSClient(writer)
             bridge.client = client
             log("screen connected from", writer.get_extra_info("peername"))
-            client.send_text(json.dumps({"t": "hello", "serial": bridge.serial.ok, "job": bridge.job_state(),
-                                         "name": bridge.args.name, "keep": bridge.kept}))
+            hello = {"t": "hello", "serial": bridge.serial.ok, "job": bridge.job_state(),
+                     "name": bridge.args.name, "keep": bridge.kept,
+                     "need_account": bool(bridge.account)}
+            client.send_text(json.dumps(hello))
             try:
                 async for text in read_frames(reader, client):
                     try:
-                        bridge.from_web(json.loads(text))
+                        msg = json.loads(text)
+                    except Exception as e:
+                        log("bad message:", e)
+                        continue
+                    if msg.get("t") == "auth" and bridge.account:
+                        ok, uid, err = await asyncio.to_thread(verify_machine_user, bridge.account, msg.get("jwt") or "")
+                        client.user_id = uid
+                        client.linked = bool(ok)
+                        if ok:
+                            log("account linked", uid)
+                            client.send_text(json.dumps({"t": "auth_ok"}))
+                        else:
+                            log("account rejected", err)
+                            client.send_text(json.dumps({"t": "auth_err", "msg": err}))
+                        continue
+                    if bridge.account and not client.linked and msg.get("t") in ("w", "job"):
+                        client.send_text(json.dumps({"t": "auth_err", "msg": "This account is not linked to this table."}))
+                        continue
+                    try:
+                        bridge.from_web(msg)
                     except Exception as e:
                         log("bad message:", e)
             except (asyncio.IncompleteReadError, ConnectionError, ValueError):
@@ -502,10 +586,20 @@ async def main():
     # Optional TLS so the LAN can use HTTPS and WSS (a LAN-signed cert is fine).
     ap.add_argument("--tls", nargs=2, metavar=("CERT", "KEY"),
                     help="serve HTTPS and WSS with this certificate and key")
+    ap.add_argument("--machine-serial", default=None,
+                    help="this table's serial; with Supabase, require a linked account before G-code")
+    ap.add_argument("--supabase-url", default=None, help="Supabase project URL for account checks")
+    ap.add_argument("--supabase-anon-file", default=None,
+                    help="file containing the Supabase anon key (do not pass the key on the command line)")
+    ap.add_argument("--account-file", default=None,
+                    help="JSON with supabase_url, supabase_anon, machine_serial (default: pi/bridge.account.json)")
     args = ap.parse_args()
     token_file = args.token_file or os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge.token")
     args.token = load_or_create_token(token_file)
     args.origins = load_origin_allowlist(args.origins_file, args.origin)
+    args.account = load_account_cfg(args)
+    if args.account:
+        log("account check on for serial", args.account["serial"])
     bridge = Bridge(args)
     ssl_ctx = None
     if args.tls:
