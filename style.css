@@ -1333,7 +1333,7 @@ body[data-step="3"] #exportRow { display: none; }
    body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
 .turnoverlay { display: none; }
 @media (max-width: 599px) and (orientation: portrait) {
-  body.turn-on .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+  body.turn-on:not(.job-live) .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
   body.turn-on .turnoverlay .turnicon { font-size: 72px; line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
   body.turn-on .turnoverlay .turntext { font-size: 26px; font-weight: 700; }
 }
@@ -1346,3 +1346,69 @@ body[data-step="3"] #exportRow { display: none; }
   body.beginner .stepPane > .step[data-step="3"] .nav { position: static; }
   body[data-step="3"] .previewDock .fit { font-size: 12px; margin: 0; }
 }
+
+/* ================= ROUND 3: parts folders + batch DXF import ================= */
+.partlist { max-height: 52vh; }
+.pfolder { border: 1px solid var(--line); border-radius: var(--r); background: var(--well); }
+.pfhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 6px; }
+.pftoggle { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; text-align: left; min-height: var(--tap, 44px); background: transparent; border: 0; }
+.pftoggle .caret { width: 1em; display: inline-block; }
+.pfbody { display: grid; gap: 6px; padding: 0 6px 8px; }
+.pfolder.closed .pfbody { display: none; }
+.pfempty { margin: 4px 6px; }
+.partrow { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 6px 10px; align-items: center; justify-content: stretch; }
+.partrow > .row { grid-column: 1 / -1; flex-wrap: wrap; gap: 6px; }
+.partinfo { min-width: 0; overflow-wrap: anywhere; }
+.pthumb { width: 56px; height: 44px; color: var(--accent, #2a6cf0); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.pthumb.none { color: var(--muted); font-size: 20px; }
+.pthumb.sm { width: 34px; height: 26px; padding: 1px; vertical-align: middle; }
+.movesel { min-height: 36px; max-width: 150px; }
+.partstools { margin: 6px 0; }
+.batchbtn { margin-top: 8px; }
+body.beginner .batchbtn { min-height: var(--tap, 44px); }
+.addfolder { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; margin-bottom: 6px; }
+.savedrow.folderrow { font-weight: 600; }
+.impdlg { z-index: 125; }
+.impdrop { min-height: 70px !important; margin: 8px 0; }
+.implist { display: grid; gap: 6px; max-height: 38vh; overflow: auto; margin: 8px 0; }
+.improw { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.improw.bad { border-color: var(--danger, #c0392b); }
+.improw .grow { min-width: 0; overflow-wrap: anywhere; }
+.unitbtns { display: flex; gap: 4px; flex: none; }
+.unitbtns button.sel { background: var(--accent-weak); border-color: var(--accent); font-weight: 700; }
+.unitall { flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+.okchip { color: var(--go, #1e8e3e); font-weight: 650; }
+.errchip { color: var(--danger, #c0392b); font-weight: 650; }
+.warnchip { color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 1px 6px; }
+#impNote.bad { color: var(--danger, #c0392b); font-weight: 650; }
+#impBar { width: 100%; height: 14px; }
+@media (max-width: 640px) { .improw { flex-wrap: wrap; } .unitbtns { width: 100%; } .unitbtns button { flex: 1; min-height: 40px; } }
+@media (max-height: 520px) { .implist { max-height: 30vh; } .impdrop { min-height: 44px !important; padding: 6px !important; } }
+
+/* the import dialog always fits under the top bar: the file list scrolls, the Import button stays on screen */
+.impdlg { align-items: flex-start; padding: 6px; }
+.impdlg .shapelib-card { display: flex; flex-direction: column; max-height: calc(100dvh - var(--topbar-h, 56px) - 12px); overflow: hidden; }
+.impdlg .shapelib-card > * { flex: none; }
+.impdlg .shapelib-card > .implist { flex: 1 1 auto; min-height: 96px; max-height: none; }
+.impmeta { display: grid; gap: 6px; }
+@media (max-height: 520px) {
+  .impintro { display: none; }
+  .impmeta { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 10px; }
+  .impdlg .shapelib-head { margin-bottom: 2px; }
+  .impdlg .shapelib-head h2 { font-size: 18px; margin: 0; }
+  .impdlg .unitall { margin: 0; }
+  .impdlg .improw { padding: 3px 6px; }
+  .impdlg #impGo { min-height: 44px; }
+  .impdlg .implist { margin: 4px 0; }
+}
+@media (max-height: 520px) {
+  .impdlg .shapelib-card { overflow-y: auto; }
+  .impdlg .shapelib-card > .implist { flex: none; overflow: visible; min-height: 0; }
+  .impdlg .shapelib-head { position: sticky; top: 0; background: var(--well); z-index: 2; }
+  .impdlg .shapelib-card > .row:last-child { position: sticky; bottom: 0; background: var(--well); padding: 4px 0 2px; z-index: 2; }
+}
+.savedrow { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; margin: 0; }
+.savedrow input[type=checkbox] { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
+.addsaved { max-height: max(22dvh, 130px); }
+/* Add parts on a short landscape phone: the whole card scrolls, the saved list does not scroll inside it (its folder ticks stay reachable) */
+@media (max-height: 520px) { .addsaved { max-height: none; overflow: visible; } #addPartsDlg .shapelib-card { max-height: calc(100dvh - 70px); margin-top: 58px; } }

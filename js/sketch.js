@@ -115,6 +115,7 @@ export class Sketch {
     if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > max * 2 || Math.abs(y) > max * 2) return null;
     const rot = Number(it.rot) || 0;
     const out = { id: Number(it.id) || 0, type: it.type, p, x, y, rot: Number.isFinite(rot) ? rot : 0, holes: {}, lock: !!it.lock, fy: !!it.fy, fx: !!it.fx };
+    if (it.op === "score" || it.op === "mark") out.op = it.op;
     if (it.type === "custom") {
       const cs = it.shape && Array.isArray(it.shape.cs) ? it.shape.cs : null;
       if (!cs || !cs.length) return null;
@@ -790,7 +791,9 @@ export class Sketch {
   }
   canResize(it) { return it && !it.lock && (it.rot || 0) % 90 === 0 && !!(def(it.type).fit || it.type === "custom"); }
 
-  contours() { return this.items.flatMap((i) => this.contoursOf(i)); }
+  contours() { return this.items.filter((i) => !this.layerHidden(i)).flatMap((i) => this.contoursOf(i)); }
+  // layers = the operation label of a shape (cut / score / mark). A hidden layer is neither drawn nor cut.
+  layerHidden(it) { return !!(this.hiddenLayers && this.hiddenLayers.has(it.op || "cut")); }
   name() {
     if (this.items.length === 1) return def(this.items[0].type).name;
     return `Layout (${this.items.length} shapes)`;
@@ -890,7 +893,7 @@ export class Sketch {
     if (LY) LY.drawBg(this, ctx, S, C, w, h);
     const trace = (c) => { c.pts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.closePath(); };
     for (const it of this.order()) {
-      const cs = this.contoursOf(it); if (!cs.length) continue;
+      const cs = this.contoursOf(it); if (!cs.length || this.layerHidden(it)) continue;
       const hole = this.isHole(it), on = this.isPicked(it);
       ctx.beginPath(); cs.forEach(trace);
       const bad = !!(LI && LI.bad.has(it.id));

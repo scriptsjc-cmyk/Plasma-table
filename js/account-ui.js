@@ -3,6 +3,7 @@
 
 import * as A from "./account.js";
 import { CONFIG } from "./config.js";
+import { MY, folderOf, groupParts, thumbSvg, sizeText, moveParts, renameFolder, deleteFolder, addKnownFolder, cleanFolderName, openImport } from "./partsfolders.js";
 import { initAdminMachine, renderAdvancedMachine } from "./admin-machine.js";
 
 const $ = (id) => document.getElementById(id);
@@ -58,27 +59,61 @@ function fillSignedIn() {
   $("acctDemoTag").classList.toggle("hidden", !demo);
 }
 
+// ---- parts list, grouped in folders (a folder is just a name stored inside each part's data; no new SQL)
+const closedFolders = () => { try { return new Set(JSON.parse(localStorage.getItem("plasma.folders.closed") || "[]")); } catch { return new Set(); } };
+const setClosed = (set) => { try { localStorage.setItem("plasma.folders.closed", JSON.stringify([...set])); } catch { /* ignore */ } };
+let partsRows = [];
+const metaCache = new Map();
+function partRowHtml(p, folders) {
+  const when = p.updated_at ? new Date(p.updated_at).toLocaleString() : "";
+  const meta = p.meta || metaCache.get(p.id + "|" + p.updated_at) || null, cur = folderOf(p);
+  return `<div class="partrow" data-id="${esc(p.id)}" data-key="${esc(p.id + "|" + p.updated_at)}">
+    <span class="pthumbcell">${thumbSvg(meta)}</span>
+    <div class="partinfo"><b>${esc(p.name)}</b><div class="muted small"><span class="psize">${esc(sizeText(meta))}</span>${meta ? " · " : ""}${esc(when)}</div></div>
+    <div class="row">
+      <button type="button" class="small" data-act="load">Open</button>
+      <button type="button" class="small go" data-act="edit" title="Open it in the full-screen shape editor">Edit</button>
+      <button type="button" class="small" data-act="dup" title="Make a copy of this part in this folder">Duplicate</button>
+      <button type="button" class="small" data-act="rename">Rename</button>
+      <select class="small movesel" data-act="move" aria-label="Move ${esc(p.name)} to a folder"><option value="">Move to…</option>${folders.filter((f) => f !== cur).map((f) => `<option value="${esc(f)}">${esc(f)}</option>`).join("")}<option value="__new">＋ New folder…</option></select>
+      <button type="button" class="small warn" data-act="del">Delete</button>
+    </div>
+  </div>`;
+}
 async function refreshPartsList() {
   const box = $("partsList");
   if (!box) return;
   if (!A.isSignedIn()) { box.innerHTML = "<p class='muted'>Sign in to see saved parts.</p>"; return; }
   try {
-    const rows = await A.listParts();
-    if (!rows.length) { box.innerHTML = "<p class='muted'>No parts saved yet.</p>"; return; }
-    box.innerHTML = rows.map((p) => {
-      const when = p.updated_at ? new Date(p.updated_at).toLocaleString() : "";
-      return `<div class="partrow" data-id="${esc(p.id)}">
-        <div><b>${esc(p.name)}</b><div class="muted small">${esc(when)}</div></div>
-        <div class="row">
-          <button type="button" class="small" data-act="load">Open</button>
-          <button type="button" class="small go" data-act="edit" title="Open it in the full-screen shape editor">Edit</button>
-          <button type="button" class="small" data-act="dup" title="Make a copy of this part in this list">Duplicate</button>
-          <button type="button" class="small" data-act="rename">Rename</button>
-          <button type="button" class="small warn" data-act="del">Delete</button>
+    partsRows = await A.listParts();
+    const groups = groupParts(partsRows), names = groups.map((g) => g.name), closed = closedFolders();
+    if (!partsRows.length && groups.length === 1) { box.innerHTML = "<p class='muted'>No parts saved yet. Save a drawing, or use “Import DXFs”.</p>"; return; }
+    box.innerHTML = groups.map((g) => {
+      const isClosed = closed.has(g.name);
+      return `<section class="pfolder ${isClosed ? "closed" : ""}" data-folder="${esc(g.name)}">
+        <div class="pfhead">
+          <button type="button" class="pftoggle" data-fact="toggle" aria-expanded="${!isClosed}" title="${isClosed ? "Show" : "Hide"} this folder"><span class="caret">${isClosed ? "▸" : "▾"}</span> <b>📁 ${esc(g.name)}</b> <span class="muted small">${g.rows.length} part${g.rows.length === 1 ? "" : "s"}</span></button>
+          ${g.name === MY ? "" : `<button type="button" class="small" data-fact="frename">Rename</button><button type="button" class="small warn" data-fact="fdelete">Delete</button>`}
         </div>
-      </div>`;
+        <div class="pfbody">${g.rows.length ? g.rows.map((p) => partRowHtml(p, names)).join("") : "<p class='muted small pfempty'>Empty. Use “Move to…” on a part, or import DXFs into this folder.</p>"}</div>
+      </section>`;
     }).join("");
+    fillMissingMeta();
   } catch (e) { box.innerHTML = "<p class='muted'>" + esc(e.message) + "</p>"; }
+}
+// older parts have no preview stored yet: build one in the background (not saved, just shown)
+async function fillMissingMeta() {
+  const rows = partsRows.filter((p) => !p.meta && !metaCache.has(p.id + "|" + p.updated_at)).slice(0, 40);
+  for (const p of rows) {
+    try {
+      const full = await A.loadPart(p.id), items = full.data && (full.data.items || full.data);
+      const m = host && host.metaOfItems && Array.isArray(items) ? host.metaOfItems(items) : null;
+      if (!m) continue;
+      metaCache.set(p.id + "|" + p.updated_at, m);
+      const el = document.querySelector(`#partsList .partrow[data-key="${CSS.escape(p.id + "|" + p.updated_at)}"]`);
+      if (el) { el.querySelector(".pthumbcell").innerHTML = thumbSvg(m); const ps = el.querySelector(".psize"); if (ps && !ps.textContent) ps.textContent = sizeText(m) + " · "; }
+    } catch { /* leave it blank */ }
+  }
 }
 
 async function refreshAdmin() {
@@ -324,7 +359,9 @@ export function openClaim() {
 }
 
 export function openGate(why) {
-  $("gateWhy").textContent = why || "Locked: sign in, then link a machine to run jobs.";
+  const signed = A.isSignedIn();
+  $("gateWhy").textContent = why || (signed ? "Locked: link a machine to run jobs. You are signed in." : "Locked: sign in, then link a machine to run jobs.");
+  $("gateSignIn").classList.toggle("hidden", signed);       // no "Sign in" offer to someone who already is
   openDlg("gateDlg");
 }
 
@@ -500,6 +537,11 @@ function bind() {
   $("btnSignOut").onclick = async () => {
     await A.signOut();
     if (host && host.rememberPart) host.rememberPart(null);   // the next person must not save over this account's part id
+    // nothing of the previous (local demo) account may stay on screen: lists, name boxes, sign-in fields, cached previews
+    partsRows = []; metaCache.clear();
+    for (const id of ["partsList", "acctMachines"]) if ($(id)) $(id).innerHTML = "";
+    for (const id of ["partName", "acctName", "acctWho"]) if ($(id)) { if ("value" in $(id)) $(id).value = ""; else $(id).textContent = ""; }
+    document.querySelectorAll("#accountDlg form").forEach((f) => { try { f.reset(); } catch (e) { /* ignore */ } });
     toast("Signed out");
     fillSignedIn();
     if (host && host.applyMode) host.applyMode(null);
@@ -517,7 +559,38 @@ function bind() {
 
   $("btnSavePart").onclick = async () => { try { await saveCurrent(); } catch (err) { toast(err.message, true); } };
 
+  $("btnImportDxfs") && ($("btnImportDxfs").onclick = () => openImport());
+  $("btnNewFolder") && ($("btnNewFolder").onclick = async () => {
+    const n = cleanFolderName(prompt("Name for the new folder", ""));
+    if (!n) return;
+    addKnownFolder(n); await refreshPartsList(); toast("Folder “" + n + "” made. Use “Move to…” on a part to put it in.");
+  });
+  document.addEventListener("parts-changed", () => { refreshPartsList(); });
+  $("partsList").addEventListener("change", async (e) => {
+    const sel = e.target.closest("select[data-act='move']"); if (!sel || !sel.value) return;
+    const row = sel.closest(".partrow"), id = row && row.dataset.id; let to = sel.value;
+    try {
+      if (to === "__new") { to = cleanFolderName(prompt("Name for the new folder", "")); if (!to) { sel.value = ""; return; } }
+      await moveParts([id], to); await refreshPartsList(); toast("Moved to “" + to + "”");
+    } catch (err) { toast(err.message, true); }
+  });
   $("partsList").addEventListener("click", async (e) => {
+    const fb = e.target.closest("button[data-fact]");
+    if (fb) {
+      const folder = fb.closest(".pfolder").dataset.folder;
+      try {
+        if (fb.dataset.fact === "toggle") { const c = closedFolders(); c.has(folder) ? c.delete(folder) : c.add(folder); setClosed(c); await refreshPartsList(); }
+        else if (fb.dataset.fact === "frename") {
+          const n = cleanFolderName(prompt("New folder name", folder)); if (!n || n === folder) return;
+          await renameFolder(folder, n, partsRows); await refreshPartsList(); toast("Folder renamed to “" + n + "”");
+        } else if (fb.dataset.fact === "fdelete") {
+          const n = partsRows.filter((r) => folderOf(r) === folder).length;
+          if (!confirm(`Delete the folder “${folder}”${n ? ` and the ${n} part${n === 1 ? "" : "s"} in it` : ""}? This can't be undone.`)) return;
+          await deleteFolder(folder, partsRows); await refreshPartsList(); toast("Folder deleted");
+        }
+      } catch (err) { toast(err.message, true); }
+      return;
+    }
     const b = e.target.closest("button[data-act]");
     if (!b) return;
     const row = b.closest(".partrow");
@@ -562,8 +635,7 @@ function bind() {
       const r = await A.claimMachine($("claimCode").value, $("claimSerial").value);
       toast("Linked " + r.serial);
       closeAll();
-      fillSignedIn();
-      if (host && host.refreshGate) host.refreshGate();
+      paintAccountChrome();         // header, machine list and the Start / Connect lock notes, without a reload
     } catch (err) { toast(err.message, true); }
     finally { btn.disabled = false; }
   });
@@ -714,7 +786,8 @@ export async function saveCurrent(mode) {
   if (mode === "copy") {
     const base = String(name).replace(/ \(copy( \d+)?\)$/, "");
     const nm = name === (cur && cur.name) ? base + " (copy)" : name;
-    const p = await A.savePart({ name: nm, data: { items } });
+    const fold = cur && cur.data && cur.data.folder;     // a copy stays in the same folder as the original
+    const p = await A.savePart({ name: nm, data: { items, ...(fold ? { folder: fold } : {}), ...(host.designMeta && host.designMeta() ? { meta: host.designMeta() } : {}) } });
     if (host.rememberPart) host.rememberPart(p);
     if ($("partName")) $("partName").value = p.name;
     toast("Saved a copy: “" + p.name + "”");
@@ -724,7 +797,8 @@ export async function saveCurrent(mode) {
   let prev = null;
   if (mode === "over" && cur && cur.id) { try { prev = await A.loadPart(cur.id); } catch { prev = null; } }
   try {
-    const p = await A.savePart({ id: cur && cur.id, name, data: { items }, updated_at: cur && cur.updated_at });
+    const dm = host.designMeta && host.designMeta();
+    const p = await A.savePart({ id: cur && cur.id, name, data: { items, ...(dm ? { meta: dm } : {}) }, updated_at: cur && cur.updated_at });
     if (host.rememberPart) host.rememberPart(p);
     if ($("partName")) $("partName").value = p.name;
     toast("Saved “" + p.name + "”");

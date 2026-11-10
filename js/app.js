@@ -21,7 +21,10 @@ import { initSettings, bindSettings, openSettings, closeSettings, currentSetting
 import { bindHowto, openHowto, closeHowto } from "./howto.js";
 import * as R2 from "./r2ui.js";
 import * as Setup from "./setup.js";
+import { syncWhy, watchWhy } from "./whyoff.js";
+import { makeInspector } from "./inspector-api.js";
 import { contoursToEditable } from "./editable.js";
+import { initPartsFolders, openImport, metaFromContours } from "./partsfolders.js";
 
 const $ = (id) => document.getElementById(id);
 const themeColor = (name, fallback) => {
@@ -114,6 +117,8 @@ function machineAllowed() {
   if (S.demo) return true;
   return Acc.realControlAllowed();
 }
+// the wording has to match the account: never say "sign in" to someone who already is
+const lockText = (what = "run jobs") => Acc.isSignedIn() ? `Locked: link a machine to ${what}. You are signed in; use Link a machine.` : `Locked: sign in, then link a machine to ${what}.`;
 function requireMachine(why) {
   if (machineAllowed()) return true;
   if (Acc.hasLinkedMachine()) {
@@ -121,7 +126,7 @@ function requireMachine(why) {
     toast("Demo accounts can't control a real machine. Open the site normally and sign in.", true);
     return false;
   }
-  openGate(why || "Locked: sign in, then link a machine to run jobs.");
+  openGate(why || lockText());
   return false;
 }
 function isProMode() {
@@ -172,6 +177,34 @@ function applyAccountMode(mode) {
   if (mode === "pro" || mode === "beginner") setAppMode(mode, { persist: false });
   else setAppMode(isProMode() ? "pro" : "beginner", { persist: false, autoFs: false });
 }
+// ---- why a control is greyed (aria-disabled + data-why); see whyoff.js
+function whyOff(el) {
+  const id = el.id, busy = S.connected && S.status && S.status.state && !/^(Idle|Check)$/i.test(S.status.state);
+  const needConn = !S.connected ? "Connect to the table first." : null;
+  if (el.matches && el.matches(".j[data-axis], .steps button")) return needConn || (S.job && S.job.running ? "Not while a job is running." : /alarm/i.test((S.status && S.status.state) || "") ? "Clear the alarm first." : "Not available right now.");
+  if (el.hasAttribute && el.hasAttribute("data-mv")) return Number(el.dataset.mv) < 0 ? "Already first in the order." : "Already last in the order.";
+  switch (id) {
+    case "next1": return S.src === "shape" ? "Pick a shape first." : "Open a drawing or G-code file first.";
+    case "btnStart": {
+      if (!machineAllowed()) return Acc.isSignedIn() ? "Link a machine to run jobs." : "Sign in and link a machine to run jobs.";
+      try { const b = blockers(); if (b && b.length) return String(b[0]).replace(/\s+/g, " ").slice(0, 90); } catch (e) { /* fall through */ }
+      return "Not ready to start yet.";
+    }
+    case "btnZero": return needConn || (S.job && S.job.running ? "Not while a job is running." : "Wait until the machine is idle.");
+    case "btnTrace": return !S.prepared ? "Make a shape or open a file first." : needConn || "Wait until the machine is idle.";
+    case "btnGoStart": return needConn || (!S.zeroSet ? "Set the start point first." : "Wait until the machine is idle.");
+    case "skUndo": return "Nothing to undo.";
+    case "skRedo": return "Nothing to redo.";
+    case "skClear": return "There is nothing on the sheet to clear.";
+    case "skAll": return "There is nothing to select.";
+    case "rsKeep": return "Only for imported drawings.";
+    case "btnDemoEdges": return "The demo is finding the table edges now.";
+    default: return needConn || (busy ? "Wait until the machine stops moving." : (S.job && S.job.running ? "Not while a job is running." : "Not available right now."));
+  }
+}
+const padUnavailable = (el) => !!(el.matches && el.matches(".j[data-axis], .steps button")) && (!S.connected || !!(S.job && S.job.running));
+const paintWhy = () => syncWhy(whyOff, padUnavailable);
+
 function refreshGate() {
   const needLink = !Acc.hasLinkedMachine();
   $("btnConnect").classList.toggle("locked", needLink);
@@ -179,6 +212,8 @@ function refreshGate() {
   const runLocked = needLink && !S.demo;
   $("btnStart").classList.toggle("locked", runLocked);
   $("startLock").classList.toggle("hidden", !runLocked);
+  $("startLock").textContent = "🔒 " + lockText();
+  $("connectLock").textContent = "🔒 " + lockText();
   const send = $("btnConsoleSend");
   if (send) send.classList.toggle("locked", runLocked);
   document.body.classList.toggle("run-locked", runLocked);
@@ -209,7 +244,7 @@ function exportLineNumbers() {
 }
 function exportGcode() {
   if (!Acc.allowExportWithoutMachine() && !Acc.hasLinkedMachine()) {
-    openGate("Locked: sign in, then link a machine to download G-code");
+    openGate(lockText("download G-code"));
     return;
   }
   if (!S.prepared) loadJob();
@@ -338,6 +373,27 @@ function renderPos() {
 }
 
 // ------------------------------------------------------------------ step 1: file
+// Pro: a second drawing file asks whether it joins the sheet or replaces what is open (never silently throws work away)
+function askAddOrReplace(f) {
+  return new Promise((res) => {
+    $("importAskText").textContent = `You already have a drawing open. What should “${f.name}” do?`;
+    const dlg = $("importAskDlg"); dlg.classList.remove("hidden");
+    const done = (v) => { dlg.classList.add("hidden"); res(v); };
+    $("importAskAdd").onclick = () => done("add"); $("importAskReplace").onclick = () => done("replace"); $("importAskCancel").onclick = () => done("cancel");
+    setTimeout(() => $("importAskAdd").focus(), 30);
+  });
+}
+async function importOne(f) {
+  if (!f) return;
+  const ext = f.name.toLowerCase().split(".").pop();
+  const have = (S.design && S.src === "file") || (isProMode() && sketch.items.length);
+  if (isProMode() && have && (ext === "dxf" || ext === "svg") && !(S.job && S.job.running)) {
+    const a = await askAddOrReplace(f);
+    if (a === "cancel") return;
+    if (a === "add") { showTab("cut"); goStep(3); await Setup.addFilesToSheet([f]); return; }
+  }
+  readFile(f);
+}
 function readFile(f) {
   if (!f) return;
   const rd = new FileReader();
@@ -466,6 +522,7 @@ function beginnerPick(id) {
   if (sketch.items.length && !sketch.items.some((i) => i.lock)) sketch.clear();     // Beginner: tapping another shape swaps it (Undo brings it back)
   sketch.add(id);
   sketch.fitView();
+  useShape();      // build the job now, not 250 ms later: a shape that is picked must enable Next straight away
 }
 const GUIDE = [null,
   ["Pick a shape", "Tap a shape, type how big it should be, then press Next. Got a drawing file instead? Open it below."],
@@ -487,7 +544,7 @@ function paintGuide() {
   $("ghHelp").textContent = done ? "Lift the part out when it has cooled." : g[1];
   const n = S.cur;
   gh.style.setProperty("--prog", String((n - 1) / 3 * 100) + "%");
-  const nx = $("next1"); if (nx) nx.textContent = S.prepared ? "Next: choose the metal →" : "Pick a shape to continue";
+  const nx = $("next1"); if (nx) nx.textContent = S.prepared ? "Next: choose the metal →" : (S.src === "shape" && sketch && sketch.items.length ? "Getting it ready…" : "Pick a shape to continue");
   $$('.step[data-step="2"] .next')[0] && ($$('.step[data-step="2"] .next')[0].textContent = "Next: get set up →");
   const mt = $("matLine"); if (mt) mt.textContent = S.material ? `Cutting ${S.material.toLowerCase()}, ${S.thickness} mm thick. Not right? Tap a different one.` : "";
 }
@@ -1108,7 +1165,7 @@ function sendConsoleLine(raw, inputEl) {
   if (!l) return;
   // STOP / realtime bytes are never behind the account lock, the Idle check or a confirm
   const live = l === "!" || l === "?" || l === "~" || l === "\x18";
-  if (!live && !requireMachine("Locked: sign in, then link a machine to run jobs.")) return;
+  if (!live && !requireMachine(lockText())) return;
   let f = filterConsoleCommand(l);
   if (!live) {
     // Same rules as the admin console: nothing is queued behind a running cut, and anything that moves the machine,
@@ -1607,7 +1664,7 @@ function blockers() {
   const b = [];
   if (!S.connected) b.push("Not connected to the table.");
   if (!S.prepared) b.push("No drawing loaded (step 1).");
-  if (S.connected && !S.zeroSet) b.push("Start point has not been set. Press Start here (step 2 above).");
+  if (S.connected && !S.zeroSet) b.push("Start point has not been set. Press Start here in “Set the start point” above.");
   const st = S.status.state;
   if (S.connected && st === "Alarm") b.push("Machine is in alarm – press Unlock at the top.");
   else if (S.connected && st !== "Idle") b.push(`Machine is busy (${st}). Wait for it to stop.`);
@@ -1656,12 +1713,18 @@ function paintChrome() {
       zs.textContent = "Start point set at " + Number(w[0]).toFixed(1) + ", " + Number(w[1]).toFixed(1) + " mm.";
       zs.classList.remove("warntext");
     } else {
-      zs.textContent = "Start point is not set yet. Press Start here when the torch is where the cut should begin.";
+      zs.textContent = S.connected ? "Not set yet. Put the torch on the sheet's bottom-left corner, then press Start here." : "Connect to the table to set it. On the layout the sheet's bottom-left corner is the start point.";
       zs.classList.add("warntext");
     }
   }
   const running = !!(S.job && S.job.running);
+  for (const id of ["btnExport3", "btnExport4"]) if ($(id)) $(id).disabled = !S.prepared;
   document.body.classList.toggle("running-job", running);
+  // Round 3 safety: while a job runs / is paused / the machine is doing anything / the torch could be on, the portrait
+  // "turn sideways" overlay must stay away so STOP and pause are always on screen. It only shows when everything is idle.
+  const st0 = (S.status && S.status.state) || "";
+  const busyState = S.connected && !!st0 && !/^(Idle|Check|Sleep)$/i.test(st0);
+  document.body.classList.toggle("job-live", running || !!(S.job && S.job.paused) || busyState || !!(S.status && S.status.torch));
   const lost = S.lastAlarmCode != null && POSITION_LOST_ALARMS.has(S.lastAlarmCode);
   const again = $("btnAgain"), rezero = $("btnRezero");
   if (again && rezero) {
@@ -1671,6 +1734,8 @@ function paintChrome() {
 }
 function refresh() {
   paintChrome();
+  setTimeout(paintWhy, 0);
+  try { const lt = "🔒 " + lockText(); if ($("startLock").textContent !== lt) { $("startLock").textContent = lt; $("connectLock").textContent = lt; } } catch (e) { /* ignore */ }
   // stats + fit (preview pane)
   const f = fit();
   $("fit").className = "fit " + f.cls;
@@ -1680,7 +1745,7 @@ function refresh() {
   if (S.prepared) {
     const st = S.prepared.stats;
     $("jobStats").innerHTML = `<span><b>${esc(S.fileName)}</b></span><span>Size <b>${S.prepared.summary ? `${S.prepared.summary.width} × ${S.prepared.summary.height}` : `${st.width_mm} × ${st.height_mm}`} mm</b></span>
-      ${S.prepared.summary ? `<span>Parts <b>${S.prepared.summary.parts}</b> · holes <b>${S.prepared.summary.holes}</b></span>` : `<span>Cuts <b>${st.pierces}</b></span>`}<span>About <b>${fmtTime(st.estimated_seconds)}</b></span>${S.prepared.dry_run ? "<span><b>PRACTICE RUN</b></span>" : ""}`;
+      ${S.prepared.summary ? `<span>Parts <b>${(S.src !== "file" && sketch && sketch.items.length && Setup.partCount(sketch)) || S.prepared.summary.parts}</b> · holes <b>${S.prepared.summary.holes}</b></span>` : `<span>Cuts <b>${st.pierces}</b></span>`}<span>About <b>${fmtTime(st.estimated_seconds)}</b></span>${S.prepared.dry_run ? "<span><b>PRACTICE RUN</b></span>" : ""}`;
   } else $("jobStats").innerHTML = "";
   $("next1").disabled = !S.prepared;
   R2.updatePlayRow(); R2.paintRestart(); R2.paintDelay(); paintGuide();
@@ -1900,7 +1965,7 @@ function wifiWatch() {
   });
 }
 async function connectFluidNC() {
-  if (!requireMachine("Locked: sign in, then link a machine to run jobs.")) return;
+  if (!requireMachine(lockText())) return;
   const host = ($("fnHost") && $("fnHost").value.trim()) || "";
   const port = $("fnPort") ? $("fnPort").value : 81;
   const url = fluidncWsUrl(host, port);
@@ -2075,6 +2140,8 @@ function bind() {
   $("btnDemo").onclick = connectDemo;
   $("btnDesignOnly").onclick = enterDesignOnly;
   $("btnExport").onclick = exportGcode;
+  if ($("btnExport3")) $("btnExport3").onclick = exportGcode;      // Beginner has no Download button on the preview: it is here on Get set up, and on the run screen
+  if ($("btnExport4")) $("btnExport4").onclick = exportGcode;
   if ($("btnFluidNC")) $("btnFluidNC").onclick = connectFluidNC;
   if ($("btnLostOk")) $("btnLostOk").onclick = () => $("lostBar").classList.add("hidden");
   if ($("btnExportMenu")) $("btnExportMenu").onclick = (e) => {
@@ -2136,14 +2203,18 @@ function bind() {
   if ($("moveConsoleForm")) $("moveConsoleForm").onsubmit = (e) => { e.preventDefault(); sendConsoleLine($("moveConsoleIn").value, $("moveConsoleIn")); };
 
   // step 1
-  $("file").onchange = () => readFile($("file").files[0]);
+  $("file").onchange = () => { const fl = [...$("file").files]; if (fl.length > 1) { $("file").value = ""; openImport(fl); } else importOne(fl[0]); };   // several files = batch import into the parts list
+  if ($("btnBatchImport")) $("btnBatchImport").onclick = () => openImport();
   const drop = $("drop");
   ["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
   ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
   document.addEventListener("drop", (e) => {
+    if (!$("importDlg").classList.contains("hidden")) return;     // the Import DXFs dialog handles its own drops
     if (!S.connected || (S.job && S.job.running)) return;
-    const f = e.dataTransfer.files[0];
-    if (f) { showTab("cut"); goStep(1); readFile(f); }
+    const fl = [...e.dataTransfer.files];
+    if (fl.length > 1) { openImport(fl); return; }
+    const f = fl[0];
+    if (f) { showTab("cut"); goStep(1); importOne(f); }
   });
   $("recent").onclick = (e) => {
     const b = e.target.closest("[data-recent]");
@@ -2450,8 +2521,9 @@ async function init() {
     useStraight, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
   });
   try { if (new URLSearchParams(location.search).get("turn") !== "0" && localStorage.getItem("plasma.turnOverlay") !== "0") document.body.classList.add("turn-on"); } catch (e) { document.body.classList.add("turn-on"); }
+  initPartsFolders({ toast, esc, openSignIn: () => openAccount("in"), uiBlock: () => { S.uiBlockUntil = Date.now() + 450; } });
   Setup.initSetup({
-    S, sketch: () => sketch, toast, esc, refresh, loadJob, useShape, useShapeSoon, showSource, kerf: kerfNow, workArea: workAreaSheet,
+    S, sketch: () => sketch, toast, esc, refresh, loadJob, askSize: R2.askSize, sizeCheckWanted: R2.sizeCheckWanted, scaleContours: R2.scaleContours, useShape, useShapeSoon, showSource, kerf: kerfNow, workArea: workAreaSheet,
   });
   $("machineName").textContent = machine.name;
   try {
@@ -2479,6 +2551,7 @@ async function init() {
     paintAbout: R2.paintAbout,
   });
   bindSettings();
+  watchWhy(paintWhy);
   try { const s0 = currentSettings(); if (s0 && s0.bed && S.cfg && S.cfg.travel_mm) S.cfg.travel_mm = { x: s0.bed.x, y: s0.bed.y, z: s0.bed.z }; } catch (e) { /* defaults stay */ }   // a saved bed size also applies after a reload
   bindHowto();
   try {
@@ -2492,8 +2565,8 @@ async function init() {
   renderMaterials();
   renderRecent();
   sketch = new Sketch($("preview"), {
-    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } Setup.paint(!done); },
-    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); Setup.paint(true); },
+    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } Setup.paint(!done); if (done && window.ptInspector) window.ptInspector.emit(); },
+    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); Setup.paint(true); if (window.ptInspector) window.ptInspector.emit(); },
     onEdgeChange: () => { fillEdgePanel(); },
     onMessage: (t) => toast(t),
     onDimTap: (dim) => {
@@ -2521,7 +2594,15 @@ async function init() {
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, setAppMode, isProMode, checkAndRun, rememberJob, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, setAppMode, isProMode, checkAndRun, rememberJob, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  window.ptInspector = makeInspector({
+    sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),
+    ampsNow: () => { try { return S.cutAmps != null ? S.cutAmps : (row().amps ?? null); } catch (e) { return null; } },
+    setAmps: (v) => { S.cutAmps = v; },          // planning note only: the machine's amps are set on the power supply
+    setLead: (v) => { $("ovLead").value = String(v); },
+    setSpeed: (v) => setSpeed(v),
+    loadJob,
+  });
   renderShapeTiles();
   setAppMode(sketch.opts.pro ? "pro" : "beginner", { persist: false, autoFs: false });
   bind();
@@ -2597,6 +2678,8 @@ async function init() {
     },
     addPattern: addTestPattern,
     getDesign: () => (sketch && sketch.items) ? sketch.items : [],
+    designMeta: () => { try { return sketch && sketch.items.length ? metaFromContours(sketch.contours()) : null; } catch { return null; } },
+    metaOfItems: (items) => { try { const cs = items.map((i) => sketch.sanitizeItem(JSON.parse(JSON.stringify(i)))).filter(Boolean).flatMap((i) => sketch.contoursOf(i)); return metaFromContours(cs); } catch { return null; } },
     fileName: () => S.fileName || "",
     currentPart: () => S.currentPart,
     rememberPart: (p) => { S.currentPart = p; S.fileName = (p && p.name) || S.fileName; },

@@ -5,6 +5,7 @@
 import { segX, pointInPoly, bbox } from "./geom.js";
 import { shapeDef } from "./sketch.js";
 import { parseDXF } from "./dxf.js";
+import { groupParts, thumbSvg, sizeText, MY } from "./partsfolders.js";
 import { parseSVG } from "./svg.js";
 import { contoursToEditable } from "./editable.js";
 import * as Acc from "./account.js";
@@ -77,6 +78,9 @@ function pairInfo(A, B, gap) {
 }
 
 export function workArea() { return H && H.workArea ? H.workArea() : null; }
+
+// the part count shown everywhere (header and bottom bar) comes from here, so the two can never disagree
+export function partCount(sk) { return sk ? unitsOf(sk).length : 0; }
 
 export function analyze(sk) {
   const gap = gapMm(), units = unitsOf(sk), bad = new Set(), problems = [];
@@ -275,11 +279,35 @@ async function readFiles(files) {
   }
   return notes;
 }
+// "Is this size right?" for every file just chosen, one after the other (same dialog as a single import). One answer can be
+// applied to all the rest when it is a units answer (mm / inches); a scale-to-size answer only ever applies to its own file.
+async function checkSizes(from) {
+  if (!H.sizeCheckWanted || !H.sizeCheckWanted()) return;
+  let all = null;
+  for (let i = from; i < pending.length; i++) {
+    const p = pending[i]; if (!p.contours) continue;
+    let k = 1;
+    if (all !== null) k = all;
+    else {
+      const left = pending.slice(i + 1).filter((q) => q.contours).length;
+      const d = { name: p.name, contours: p.contours };
+      const r = await new Promise((res) => H.askSize(d, p.units, (kk, a) => res({ kk, a }), { left, name: p.name }));
+      k = r.kk; p.contours = d.contours;
+      if (r.a && (k === 1 || Math.abs(k - 25.4) < 1e-9 || Math.abs(k - 1 / 25.4) < 1e-9)) all = k;
+      if (k !== 1 && all === null) { /* own file only */ }
+      if (k !== 1) { const it = sketchItemsFromContours(p.contours, p.name); if (it) { p.items = it; const b = bbox(p.contours); p.size = [r1(b[2] - b[0]), r1(b[3] - b[1])]; } }
+      continue;
+    }
+    if (k !== 1) {
+      p.contours = H.scaleContours(p.contours, k);
+      const it = sketchItemsFromContours(p.contours, p.name); if (it) { p.items = it; const b = bbox(p.contours); p.size = [r1(b[2] - b[0]), r1(b[3] - b[1])]; }
+    }
+  }
+}
 function paintAdd() {
   const box = $("addList");
   box.innerHTML = pending.length ? pending.map((p, i) => `<div class="addrow" data-i="${i}">
       <div class="grow"><b>${H.esc(p.name)}</b><div class="muted small">${p.size ? p.size[0] + " × " + p.size[1] + " mm" : "saved part"}${p.units ? " · " + H.esc(p.units) : ""}${p.note ? " · " + H.esc(p.note) : ""}</div></div>
-      ${p.size ? `<label class="check small"><input type="checkbox" data-inch="${i}"> inches</label>` : ""}
       <label class="qty">Qty <input type="number" min="0" max="500" step="1" value="${p.qty}" data-qty="${i}" inputmode="numeric"></label>
       <button type="button" class="small" data-rm="${i}" aria-label="Remove">✕</button></div>`).join("")
     : `<p class="muted">Nothing chosen yet. Tick saved parts below, or choose drawing files.</p>`;
@@ -289,13 +317,24 @@ async function paintSaved() {
   if (!Acc.isSignedIn()) { box.innerHTML = `<p class="muted small">Sign in to pick from your saved parts.</p>`; return; }
   try {
     const rows = await Acc.listParts();
-    box.innerHTML = rows.length ? rows.map((p) => `<label class="savedrow"><input type="checkbox" data-saved="${H.esc(p.id)}" data-name="${H.esc(p.name)}"> ${H.esc(p.name)}</label>`).join("") : `<p class="muted small">No saved parts yet.</p>`;
+    const groups = groupParts(rows).filter((g) => g.rows.length);
+    box.innerHTML = groups.length ? groups.map((g) => `<div class="addfolder" data-folder="${H.esc(g.name)}">
+        <label class="savedrow folderrow"><input type="checkbox" data-folder-all="${H.esc(g.name)}"> <b>📁 ${H.esc(g.name)}</b> <span class="muted small">whole folder · ${g.rows.length} part${g.rows.length === 1 ? "" : "s"}</span></label>
+        ${g.rows.map((p) => `<label class="savedrow"><input type="checkbox" data-saved="${H.esc(p.id)}" data-name="${H.esc(p.name)}" data-folder="${H.esc(g.name)}"> ${thumbSvg(p.meta, "pthumb sm")} ${H.esc(p.name)} <span class="muted small">${H.esc(sizeText(p.meta))}</span></label>`).join("")}
+      </div>`).join("") : `<p class="muted small">No saved parts yet.</p>`;
   } catch (e) { box.innerHTML = `<p class="muted small">${H.esc(e.message)}</p>`; }
 }
 export function openAdd() {
   pending = []; paintAdd(); paintSaved();
   $("addFiles").value = "";
   $("addPartsDlg").classList.remove("hidden");
+}
+// a file chosen while a drawing is already open (Pro): open Add parts with it already read and size-checked
+export async function addFilesToSheet(files) {
+  openAdd();
+  const notes = await readFiles(files); paintAdd();
+  $("addNote").textContent = notes.join(" ");
+  await checkSizes(0); paintAdd();
 }
 const closeAdd = () => { $("addPartsDlg").classList.add("hidden"); H.S.uiBlockUntil = Date.now() + 450; };
 // put the chosen parts (qty copies each) on the sheet. `lists` = [{ items, qty, inches }]
@@ -374,12 +413,21 @@ function bind() {
   $("addCancel").onclick = closeAdd;
   $("addPartsDlg").addEventListener("click", (e) => { if (e.target === $("addPartsDlg")) closeAdd(); });
   $("addFiles").addEventListener("change", async (e) => {
+    const from = pending.length;
     const notes = await readFiles([...e.target.files]); paintAdd();
     $("addNote").textContent = notes.join(" ");
+    await checkSizes(from); paintAdd();
   });
   $("addList").addEventListener("input", (e) => { const q = e.target.dataset.qty; if (q != null) pending[Number(q)].qty = Math.max(0, Math.min(500, Math.floor(Number(e.target.value) || 0))); });
   $("addList").addEventListener("click", (e) => { const r = e.target.closest("[data-rm]"); if (r) { const i = Number(r.dataset.rm); const p = pending[i]; pending.splice(i, 1); if (p.savedId) { const c = document.querySelector(`#addSaved [data-saved="${p.savedId}"]`); if (c) c.checked = false; } paintAdd(); } });
   $("addSaved").addEventListener("change", async (e) => {
+    const all = e.target.closest("[data-folder-all]");
+    if (all) {     // a whole folder: tick every part in it (each one loads and is listed with its own quantity)
+      const boxes = [...all.closest(".addfolder").querySelectorAll("[data-saved]")];
+      for (const b of boxes) if (b.checked !== all.checked) { b.checked = all.checked; b.dispatchEvent(new Event("change", { bubbles: true })); }
+      await new Promise((r) => setTimeout(r, 0));
+      return;
+    }
     const c = e.target.closest("[data-saved]"); if (!c) return;
     const id = c.dataset.saved;
     if (!c.checked) { pending = pending.filter((p) => p.savedId !== id); paintAdd(); return; }
@@ -390,8 +438,7 @@ function bind() {
     } catch (err) { H.toast(err.message, true); c.checked = false; }
   });
   $("addOk").onclick = () => {
-    const inch = new Set([...document.querySelectorAll("#addList [data-inch]:checked")].map((c) => Number(c.dataset.inch)));
-    const lists = pending.map((p, i) => ({ items: p.items, qty: p.qty, inches: inch.has(i) }));
+    const lists = pending.map((p) => ({ items: p.items, qty: p.qty, inches: false }));      // sizes were checked when each file was chosen
     const total = lists.reduce((n, l) => n + l.qty, 0);
     if (!total) { H.toast("Choose at least one part (quantity 1 or more).", true); return; }
     const r = addToSheet(lists); closeAdd();

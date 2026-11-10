@@ -206,11 +206,12 @@
 
         <div id="srcFile">
           <label id="drop" class="drop">
-            <input type="file" id="file" accept=".dxf,.svg,.nc,.gcode,.ngc,.tap,.txt,.cnc,.g">
+            <input type="file" id="file" multiple accept=".dxf,.svg,.nc,.gcode,.ngc,.tap,.txt,.cnc,.g">
             <b id="dropTitle">Tap to choose a file</b>
             <span class="muted">or drag it here</span>
             <span class="muted small">DXF or SVG from your CAD · or ready-made G-code (.nc .gcode .tap)</span>
           </label>
+          <button type="button" id="btnBatchImport" class="small batchbtn" title="Pick up to 20 DXF files and save each as a part in a folder in your parts list">⇪ Import many DXFs into your parts list</button>
           <div id="recentWrap" class="hidden">
             <h3>Recent</h3>
             <div id="recent" class="chips"></div>
@@ -445,7 +446,7 @@
         </details>
 
         <details class="setupcard" id="zeroCard" open>
-          <summary><b>2 · Set the start point</b> <span id="zeroState" class="layoutstate muted small">Start point is not set yet.</span></summary>
+          <summary><b>2 · Set the start point</b> <span id="zeroState" class="layoutstate muted small">Not set yet.</span></summary>
           <div class="zerobody">
           <p class="muted small zerohelp">Put the sheet on the table. Move the torch over the sheet's <b>bottom-left corner</b> and press <b>Start here</b>. That corner is where the sheet picture's 0, 0 is.</p>
           <div class="jogmount"></div>
@@ -459,16 +460,17 @@
           <summary><b>3 · Check, then cut</b></summary>
           <p id="checkMat" class="checkmat"></p>
           <ul class="checklist" id="checklist"></ul>
-          <p id="zeroWarn" class="warntext hidden">Start point has not been set. Press Start here in step 2, or you may cut in the wrong place.</p>
+          <p id="zeroWarn" class="warntext hidden">Start point has not been set. Press Start here in “Set the start point” above, or you may cut in the wrong place.</p>
         <div id="startCutRow" class="startcut hidden">
           <label>Start from cut
             <select id="startCut" aria-label="Start from cut number"></select>
           </label>
+          <p id="resumeWhy" class="warntext small hidden" role="status"></p>
           <p class="muted small" id="startCutNote">Cuts before this one are skipped. The torch rapids there with the arc off and pierces fresh at that cut's start.</p>
         </div>
           <div id="blockers" class="blockers"></div>
         </details>
-        <div class="nav"><button class="back" data-go="2">← Back</button><button type="button" id="btnCheckRun2" class="xl go pro-only hidden">Check &amp; Run</button><button id="btnStart" class="xl go" disabled>▶ Start cutting</button><p id="startLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p></div>
+        <div class="nav"><button class="back" data-go="2">← Back</button><button type="button" id="btnCheckRun2" class="xl go pro-only hidden">Check &amp; Run</button><button id="btnStart" class="xl go" disabled>▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><p id="startLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p></div>
       </div>
 
       <!-- step 4: running / done -->
@@ -510,8 +512,9 @@
           <h2 id="doneTitle">Finished ✓</h2>
           <p id="doneInfo" class="muted"></p>
           <button id="btnSaveSpeed" class="wide accent hidden"></button>
+          <button type="button" id="btnExport4" class="wide">⬇ Download G-code</button>
           <div id="restartBox" class="restartbox hidden">
-            <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">Work zero is kept. The torch stays off until it is over the start of the cut.</span></p>
+            <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">After a stop the machine may have lost its position, so you will Home it and confirm work zero again in Get set up before the torch can fire. The torch stays off until it is over the start of the cut.</span></p>
             <div class="row">
               <label class="grow">Continue from cut <select id="restartCut" aria-label="Continue from cut number"></select></label>
               <button type="button" id="btnRestart" class="xl accent grow">Continue from cut 1</button>
@@ -824,6 +827,10 @@
           <input id="partName" class="grow" placeholder="Part name" maxlength="120">
           <button type="button" id="btnSavePart" class="accent">Save current drawing</button>
         </div>
+        <div class="row partstools">
+          <button type="button" id="btnImportDxfs" class="accent" title="Pick up to 20 DXF files. Each one is saved as a part in a new folder.">⇪ Import DXFs</button>
+          <button type="button" id="btnNewFolder">📁 New folder</button>
+        </div>
         <div id="partsCard">
           <button type="button" id="btnOpenParts" class="hidden">Parts</button>
           <div id="partsList" class="partlist"></div>
@@ -1050,6 +1057,25 @@
   </div>
 </div>
 
+<div id="importDlg" class="shapelib acctdlg impdlg hidden" role="dialog" aria-modal="true" aria-labelledby="impTitle">
+  <div class="shapelib-card">
+    <div class="shapelib-head"><h2 id="impTitle">Import DXFs</h2><button type="button" id="impCancel">Cancel</button></div>
+    <p class="muted small impintro">Pick up to 20 DXF files. Each one is saved as a part (named after the file) in the folder below. A file that can't be read is skipped and the rest still import.</p>
+    <div class="impmeta">
+      <label>Folder <input id="impFolder" list="impFolderList" maxlength="60" autocomplete="off"></label>
+      <datalist id="impFolderList"></datalist>
+      <label id="impDrop" class="drop impdrop"><input id="impFiles" type="file" accept=".dxf,.svg" multiple><b>Choose DXF files</b><span class="muted">or drop them here (up to 20)</span></label>
+    </div>
+    <p id="impNote" class="muted small"></p>
+    <div id="impAll" class="row hidden unitall"><span class="small">Size check for all files:</span>
+      <button type="button" class="small" data-all="1">All are mm</button><button type="button" class="small" data-all="25.4">All were inches (× 25.4)</button><button type="button" class="small" data-all="0.03937">All ÷ 25.4</button></div>
+    <div id="impList" class="implist"></div>
+    <progress id="impBar" class="hidden" value="0" max="1"></progress>
+    <p id="impSummary" class="hidden okchip"></p>
+    <div class="row"><button type="button" id="impGo" class="xl go grow" disabled>Import</button></div>
+  </div>
+</div>
+
 <div id="resizeDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="resizeTitle">
   <div class="numpad-card sizecard">
     <h3 id="resizeTitle">Exact width and height</h3>
@@ -1069,6 +1095,7 @@
     <h3 id="sizeTitle">Check the size</h3>
     <p id="sizeText" class="sizetext"></p>
     <p id="sizeUnits" class="muted small"></p>
+    <label id="sizeAllRow" class="check small hidden"><input type="checkbox" id="sizeAll"> <span id="sizeAllText">Same answer for the other files</span></label>
     <div class="col">
       <button type="button" id="sizeYes" class="xl go">Yes, that's right</button>
       <button type="button" id="sizeInch" class="xl">It was inches (× 25.4)</button>
@@ -1079,6 +1106,17 @@
         </label>
         <button type="button" id="sizeScale" class="small">Scale to this</button>
       </div>
+    </div>
+  </div>
+</div>
+<div id="importAskDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="importAskTitle">
+  <div class="numpad-card">
+    <h3 id="importAskTitle">Add to the sheet, or replace?</h3>
+    <p id="importAskText" class="muted small">You already have a drawing open.</p>
+    <div class="col">
+      <button type="button" id="importAskAdd" class="xl go">Add to the sheet</button>
+      <button type="button" id="importAskReplace" class="xl">Replace what is open</button>
+      <button type="button" id="importAskCancel" class="small">Cancel</button>
     </div>
   </div>
 </div>

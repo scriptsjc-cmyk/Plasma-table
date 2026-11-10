@@ -1,3 +1,4 @@
+import { POSITION_LOST_ALARMS } from "./machine.js";
 // Round 2 screen features, kept out of app.js so that file stays readable:
 //   new-version banner + About, playable preview, Pro cut list / tabs / start points, restart from cut N,
 //   live pierce delay, size check after DXF/SVG import, straight cut, demo "set up the edges" and Pro shortcuts.
@@ -12,8 +13,13 @@ const $ = (id) => document.getElementById(id);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// The version this page is running. The deploy writes version.json (commit id) next to the files, so the page reads the id
+// from there when it starts (js/version.js is only the fallback). That way the footer/About always show the deployed commit
+// and the "New version" banner only appears when version.json changes AFTER this page loaded.
+let RUN = VERSION;
 export function initR2(host) {
   H = host;
+  fetchLatest().then((j) => { if (j) { RUN = { id: j.id, commit: j.commit || VERSION.commit, built: j.built || VERSION.built }; paintVersionLines(); paintAbout(); } });
   bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy();
   paintVersionLines();
 }
@@ -31,7 +37,7 @@ function showUpdate(info) {
   const bar = $("updateBar"); if (!bar) return;
   $("updateText").textContent = `Version ${info.id} is ready${H.jobRunning() ? ". Finish the cut first, then reload." : ". Reload to get it."}`;
   bar.classList.remove("hidden");
-  if ($("aboutNote")) $("aboutNote").textContent = `A newer version (${info.id}) is available. You are on ${VERSION.id}.`;
+  if ($("aboutNote")) $("aboutNote").textContent = `A newer version (${info.id}) is available. You are on ${RUN.id}.`;
 }
 function doReload() {
   if (H.jobRunning()) { H.toast("A job is running. Reload after it finishes.", true); return; }
@@ -42,18 +48,18 @@ function doReload() {
 }
 export async function checkVersion(manual) {
   const j = await fetchLatest();
-  if (j && j.id !== VERSION.id) { showUpdate(j); return "new"; }
-  if (manual && $("aboutNote")) $("aboutNote").textContent = j ? `You are on the latest version (${VERSION.id}).` : "Couldn't check right now (offline?). You are on " + VERSION.id + ".";
+  if (j && j.id !== RUN.id) { showUpdate(j); return "new"; }
+  if (manual && $("aboutNote")) $("aboutNote").textContent = j ? `You are on the latest version (${RUN.id}).` : "Couldn't check right now (offline?). You are on " + RUN.id + ".";
   return j ? "same" : "offline";
 }
-function versionText() { return `Version ${VERSION.id}${VERSION.commit && VERSION.commit !== "pending" ? " · " + VERSION.commit : ""}`; }
+function versionText() { return `Version ${RUN.id}${RUN.commit && RUN.commit !== "pending" && !String(RUN.id).includes(RUN.commit) ? " · " + RUN.commit : ""}`; }
 function paintVersionLines() {
   const t = versionText();
   if ($("verLine")) $("verLine").textContent = t;
   if ($("footVer")) $("footVer").textContent = t;
 }
 export function paintAbout() {
-  if ($("aboutVer")) $("aboutVer").innerHTML = `<b>${VERSION.id}</b><br><span class="muted small">commit ${VERSION.commit} · built ${VERSION.built}</span>`;
+  if ($("aboutVer")) $("aboutVer").innerHTML = `<b>${RUN.id}</b><br><span class="muted small">commit ${RUN.commit} · built ${RUN.built}</span>`;
 }
 function bindVersion() {
   window.addEventListener("pt-new-version", (e) => showUpdate((e && e.detail) || { id: "new" }));
@@ -344,7 +350,7 @@ export function sizeCheckWanted() {
 }
 let sizePending = null;
 const r1 = (v) => Math.round(v * 10) / 10;
-export function askSize(design, unitsNote, done) {
+export function askSize(design, unitsNote, done, opts = {}) {
   const sz = designSize(design.contours);
   const dlg = $("sizeDlg");
   sizePending = { design, done, sz, k: 1 };
@@ -355,6 +361,12 @@ export function askSize(design, unitsNote, done) {
   if (sz.w > 1500 || sz.h > 1500) hint.push("That is bigger than most tables. If it came from a program that uses inches by mistake, try ÷ 25.4.");
   $("sizeUnits").textContent = hint.join(" ");
   $("sizeTo").value = "";
+  if ($("sizeAllRow")) {      // several files: one answer can cover the rest
+    $("sizeAll").checked = false;
+    $("sizeAllRow").classList.toggle("hidden", !(opts.left > 0));
+    if (opts.name) $("sizeText").innerHTML = `<b>${String(opts.name).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))}</b> is <b>${r1(sz.w)} × ${r1(sz.h)} mm</b>. Is that right?`;
+    if (opts.left > 0) $("sizeAllText").textContent = `Use the same answer for the other ${opts.left} file${opts.left === 1 ? "" : "s"} (apply to all)`;
+  }
   dlg.classList.remove("hidden");
   setTimeout(() => $("sizeYes").focus(), 30);
 }
@@ -362,7 +374,8 @@ function sizeFinish(k) {
   const pend = sizePending; if (!pend) return;
   sizePending = null; $("sizeDlg").classList.add("hidden");
   if (k !== 1) pend.design.contours = scaleContours(pend.design.contours, k);
-  pend.done(k);
+  const all = !!($("sizeAll") && $("sizeAll").checked && !$("sizeAllRow").classList.contains("hidden"));
+  pend.done(k, all);
 }
 function bindSize() {
   $("sizeYes").onclick = () => sizeFinish(1);
@@ -436,16 +449,37 @@ export function paintStartCut() {
   const sel = $("startCut");
   if (sel.dataset.n !== String(total)) { sel.innerHTML = Array.from({ length: total }, (_, i) => `<option value="${i + 1}">${i + 1} of ${total}</option>`).join(""); sel.dataset.n = String(total); }
   sel.value = String(Math.min(total, S.startCut || 1));
+  const why = $("resumeWhy");
+  if (why) {
+    const need = (S.startCut || 1) > 1 || S.resume ? resumeNeeds() : [];
+    why.classList.toggle("hidden", !need.length);
+    why.textContent = need.length ? `The machine was stopped, so it may have lost its place. Before you continue: ${need.join(", then ")}. Start stays locked until then.` : "";
+  }
 }
 function bindRestart() {
   $("restartCut").onchange = () => { $("btnRestart").textContent = `Continue from cut ${$("restartCut").value}`; };
   $("btnRestart").onclick = () => {
     const n = Number($("restartCut").value) || 1, S = H.S;
-    S.startCut = n; S.zeroSet = true;     // work zero is kept on purpose: the machine was only stopped, never moved by us
+    S.startCut = n;
+    // Round 3 safety: Continue NEVER marks work zero as set. A STOP (soft reset), an alarm (ALARM 3 too) or a lost reference means the
+    // controller may no longer know where it is, so work zero has to be confirmed again (and the machine homed if edges are on).
+    // Work zero is only kept when the machine is still homed with edges on and no position-lost alarm has come in since.
+    if (!positionStillKnown()) S.zeroSet = false;
     H.goStep(3);
-    H.toast(`Ready to continue from cut ${n}. Check the boxes, then press Start.`);
+    H.toast(S.zeroSet ? `Ready to continue from cut ${n}. Check the boxes, then press Start.` : `Before continuing from cut ${n}: ${resumeNeeds().join(", then ")}.`, !S.zeroSet);
   };
   $("startCut").onchange = () => { H.S.startCut = Number($("startCut").value) || 1; H.drawPreview(); };
+}
+export function positionStillKnown() {
+  const S = H.S;
+  return !!(S.safety && S.safety.limits && S.safety.referenced) && !(S.lastAlarmCode != null && POSITION_LOST_ALARMS.has(S.lastAlarmCode)) && !!S.zeroSet;
+}
+// what still has to happen before a resumed cut may start, in plain words (empty = nothing)
+export function resumeNeeds() {
+  const S = H.S, need = [];
+  if (S.safety && S.safety.limits && !S.safety.referenced) need.push("press Home so the table finds its edges again");
+  if (!S.zeroSet) need.push("move the torch over the start of the work and press Start here to confirm work zero");
+  return need;
 }
 export function startCut() { return Math.max(1, Math.trunc(H.S.startCut || 1)); }
 export function afterStart() { H.S.startCut = 1; H.S.resume = null; paintStartCut(); }
