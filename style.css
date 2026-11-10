@@ -1891,3 +1891,8 @@ body.short-land #btnStop.estop .estop-label { font-size: 10px; margin-top: -5px;
 /* Saving and downloading are part of making a part, in both modes */
 body[data-screen="make"].beginner #btnSavePartQuick, body[data-screen="make"].beginner #btnExport { display: inline-flex; }
 @media (min-width: 900px) { #btnStop.estop { min-width: 84px; min-height: 84px; } #btnStop.estop .estop-svg { width: 72px; height: 72px; } }
+/* phone on its side: every pixel of height goes to the bed and the buttons */
+body.short-land[data-screen="cut"] #stepper { display: none; }
+body.short-land .tabs .tab { min-height: 30px; padding-top: 2px; padding-bottom: 2px; font-size: 13px; }
+body.short-land[data-screen="cut"] #torchPill, body.short-land[data-screen="cut"] #stateBadge { display: none !important; }
+body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
