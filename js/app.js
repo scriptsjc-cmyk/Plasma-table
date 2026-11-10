@@ -276,12 +276,13 @@ function renderMaterials() {
   const ph = o.pierce_height_mm || (r.pierce_height_mm ?? S.chart.pierce_height_mm);
   const ch = o.cut_height_mm || (r.cut_height_mm ?? S.chart.cut_height_mm);
   $("ovDelay").placeholder = r.pierce_delay_s;
-  $("ovKerf").placeholder = r.kerf_mm ?? S.chart.kerf_mm ?? 1.5; $("ovLead").placeholder = S.chart.lead_in_mm ?? 3;
+  $("ovKerf").placeholder = r.kerf_mm ?? S.chart.kerf_mm ?? 1.5; $("ovLead").placeholder = r.lead_in_mm ?? S.chart.lead_in_mm ?? 3;
   $("ovPierce").placeholder = r.pierce_height_mm ?? S.chart.pierce_height_mm; $("ovCut").placeholder = r.cut_height_mm ?? S.chart.cut_height_mm;
   $("ampsCard").innerHTML = `
     <div>Set the plasma to</div>
     <div class="big">${r.amps} A</div>
-    <div class="sub"><span>Air <b>${S.chart.air_bar} bar</b></span><span>Pierce <b>${o.pierce_delay_s || r.pierce_delay_s} s</b> at <b>${ph} mm</b></span><span>Cut height <b>${ch} mm</b></span></div>`;
+    <div class="sub"><span>Air <b>${r.air_bar ?? S.chart.air_bar} bar</b></span><span>Pierce <b>${o.pierce_delay_s || r.pierce_delay_s} s</b> at <b>${ph} mm</b></span><span>Cut height <b>${ch} mm</b></span></div>
+    ${r.note ? `<div class="ampsnote">⚠ ${esc(r.note)}</div>` : ""}`;
   try { localStorage.setItem("plasma.material", JSON.stringify({ m: S.material, t: S.thickness })); } catch (e) { /* ignore */ }
   renderSpeed();
 }
@@ -326,7 +327,7 @@ function setSpeed(v) {
 
 // ------------------------------------------------------------------ job prepare + preview
 function kerfNow() { const v = Number($("ovKerf").value); return v > 0 ? v : (row().kerf_mm ?? S.chart.kerf_mm ?? 1.5); }
-function leadNow() { const v = $("ovLead").value.trim(); return v !== "" && Number(v) >= 0 ? Number(v) : (S.chart.lead_in_mm ?? 3); }
+function leadNow() { const v = $("ovLead").value.trim(); return v !== "" && Number(v) >= 0 ? Number(v) : (row().lead_in_mm ?? S.chart.lead_in_mm ?? 3); }
 function loadJob() {
   if (!S.gcode && !S.design) return;
   try {
@@ -563,7 +564,7 @@ function drawGantry(ctx, T, X, Y, sc) {
 function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;
   const items = dry ? ["Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
-    : [`Plasma ON and set to ${row().amps} A`, `Air on (${S.chart.air_bar} bar)`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
+    : [...(row().check ? [row().check] : []), `Plasma ON and set to ${row().amps} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
   $("checklist").innerHTML = items.map((t, i) => `<li><label><input type="checkbox" data-chk="${i}"> ${esc(t)}</label></li>`).join("");
   refresh();
 }

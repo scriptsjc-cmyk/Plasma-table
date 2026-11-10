@@ -1,5 +1,5 @@
 {
-  "note": "Starting points for a ~40A air plasma (Reboot 60A with PT-31 torch, max 40A). Test on scrap and edit these values to suit your machine.",
+  "note": "Starting points for a Reboot 60A air plasma. Up to 40A suits the PT-31 torch; the thick stainless rows need the full 60A and a 60A-rated torch. Test on scrap and edit these values to suit your machine. Air pressure: read it at the plasma's own gauge with air flowing (press the torch test/purge), not at the compressor.",
   "air_bar": "4.5-5",
   "pierce_height_mm": 1.5,
   "cut_height_mm": 1.5,
@@ -13,50 +13,58 @@
           "thickness_mm": 1.0,
           "amps": 25,
           "pierce_delay_s": 0.1,
-          "feed_mm_min": 4000
+          "feed_mm_min": 4000,
+          "air_bar": "4-4.5"
         },
         {
           "thickness_mm": 1.5,
           "amps": 30,
           "pierce_delay_s": 0.2,
-          "feed_mm_min": 3500
+          "feed_mm_min": 3500,
+          "air_bar": "4-4.5"
         },
         {
           "thickness_mm": 2.0,
           "amps": 30,
           "pierce_delay_s": 0.3,
-          "feed_mm_min": 2800
+          "feed_mm_min": 2800,
+          "air_bar": "4-4.5"
         },
         {
           "thickness_mm": 3.0,
           "amps": 40,
           "pierce_delay_s": 0.4,
-          "feed_mm_min": 2000
+          "feed_mm_min": 2000,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 4.0,
           "amps": 40,
           "pierce_delay_s": 0.5,
-          "feed_mm_min": 1400
+          "feed_mm_min": 1400,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 5.0,
           "amps": 40,
           "pierce_delay_s": 0.7,
-          "feed_mm_min": 1000
+          "feed_mm_min": 1000,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 6.0,
           "amps": 40,
           "pierce_delay_s": 0.9,
-          "feed_mm_min": 750
+          "feed_mm_min": 750,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 8.0,
           "amps": 40,
           "pierce_delay_s": 1.2,
           "feed_mm_min": 450,
-          "pierce_height_mm": 2.5
+          "pierce_height_mm": 2.5,
+          "air_bar": "4.5-5"
         }
       ]
     },
@@ -67,43 +75,89 @@
           "thickness_mm": 1.0,
           "amps": 25,
           "pierce_delay_s": 0.1,
-          "feed_mm_min": 3500
+          "feed_mm_min": 3500,
+          "air_bar": "4-4.5"
         },
         {
           "thickness_mm": 1.5,
           "amps": 30,
           "pierce_delay_s": 0.2,
-          "feed_mm_min": 3000
+          "feed_mm_min": 3000,
+          "air_bar": "4-4.5"
         },
         {
           "thickness_mm": 2.0,
           "amps": 35,
           "pierce_delay_s": 0.3,
-          "feed_mm_min": 2300
+          "feed_mm_min": 2300,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 3.0,
           "amps": 40,
           "pierce_delay_s": 0.5,
-          "feed_mm_min": 1600
+          "feed_mm_min": 1600,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 4.0,
           "amps": 40,
           "pierce_delay_s": 0.6,
-          "feed_mm_min": 1100
+          "feed_mm_min": 1100,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 5.0,
           "amps": 40,
           "pierce_delay_s": 0.8,
-          "feed_mm_min": 800
+          "feed_mm_min": 800,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 6.0,
           "amps": 40,
           "pierce_delay_s": 1.0,
-          "feed_mm_min": 600
+          "feed_mm_min": 600,
+          "air_bar": "4.5-5"
+        },
+        {
+          "thickness_mm": 8.0,
+          "amps": 55,
+          "pierce_delay_s": 1.0,
+          "feed_mm_min": 650,
+          "pierce_height_mm": 3.0,
+          "cut_height_mm": 1.5,
+          "kerf_mm": 1.9,
+          "lead_in_mm": 5,
+          "note": "Needs a 60 A torch \u2013 the PT-31 is only rated 40 A.",
+          "check": "60 A torch fitted (the PT-31 is only rated 40 A)",
+          "air_bar": "5-5.5"
+        },
+        {
+          "thickness_mm": 10.0,
+          "amps": 60,
+          "pierce_delay_s": 1.4,
+          "feed_mm_min": 450,
+          "pierce_height_mm": 3.5,
+          "cut_height_mm": 2.0,
+          "kerf_mm": 2.1,
+          "lead_in_mm": 6,
+          "note": "Near the limit of a 60 A plasma. Needs a 60 A torch, dry air and fresh consumables.",
+          "check": "60 A torch fitted (the PT-31 is only rated 40 A)",
+          "air_bar": "5-5.5"
+        },
+        {
+          "thickness_mm": 12.0,
+          "amps": 60,
+          "pierce_delay_s": 1.8,
+          "feed_mm_min": 300,
+          "pierce_height_mm": 4.0,
+          "cut_height_mm": 2.0,
+          "kerf_mm": 2.3,
+          "lead_in_mm": 7,
+          "note": "At the limit of a 60 A plasma. Needs a 60 A torch, dry air and fresh consumables. Piercing 12 mm throws a lot of molten metal back at the nozzle \u2013 if it struggles, start cuts from the sheet edge instead. Expect some bevel and dross; test on scrap first.",
+          "check": "60 A torch fitted (the PT-31 is only rated 40 A)",
+          "air_bar": "5-5.5"
         }
       ]
     },
@@ -114,37 +168,43 @@
           "thickness_mm": 1.0,
           "amps": 30,
           "pierce_delay_s": 0.1,
-          "feed_mm_min": 4000
+          "feed_mm_min": 4000,
+          "air_bar": "4-4.5"
         },
         {
           "thickness_mm": 1.5,
           "amps": 30,
           "pierce_delay_s": 0.2,
-          "feed_mm_min": 3500
+          "feed_mm_min": 3500,
+          "air_bar": "4-4.5"
         },
         {
           "thickness_mm": 2.0,
           "amps": 35,
           "pierce_delay_s": 0.2,
-          "feed_mm_min": 3000
+          "feed_mm_min": 3000,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 3.0,
           "amps": 40,
           "pierce_delay_s": 0.3,
-          "feed_mm_min": 2200
+          "feed_mm_min": 2200,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 4.0,
           "amps": 40,
           "pierce_delay_s": 0.4,
-          "feed_mm_min": 1500
+          "feed_mm_min": 1500,
+          "air_bar": "4.5-5"
         },
         {
           "thickness_mm": 5.0,
           "amps": 40,
           "pierce_delay_s": 0.6,
-          "feed_mm_min": 1000
+          "feed_mm_min": 1000,
+          "air_bar": "4.5-5"
         }
       ]
     }
