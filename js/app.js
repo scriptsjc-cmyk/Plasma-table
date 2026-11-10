@@ -25,6 +25,7 @@ import { syncWhy, watchWhy } from "./whyoff.js";
 import { makeInspector } from "./inspector-api.js";
 import { contoursToEditable } from "./editable.js";
 import { initPartsFolders, openImport, metaFromContours } from "./partsfolders.js";
+import { initFlow, showScreen, screen, navLocked, estopOn, estopPaint, estopReset, estopPress, paintLock } from "./flow.js";
 
 const $ = (id) => document.getElementById(id);
 const themeColor = (name, fallback) => {
@@ -34,7 +35,7 @@ const themeColor = (name, fallback) => {
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 const S = {
   cfg: null, chart: null, jogStep: 10, status: { state: "Disconnected" }, job: null, prepared: null,
-  gcode: null, design: null, fileName: "", safety: {}, src: "file", showMachine: true, cur: 1, material: null, thickness: null, connected: false, designOnly: false, currentPart: null,
+  gcode: null, design: null, fileName: "", safety: {}, src: "file", showMachine: true, cur: 1, material: null, thickness: null, connected: false, currentPart: null, cutStep: 1,
   lastAlarm: null, lastAlarmCode: null, speed: null, lastFeedOv: 100,
   zeroSet: false, fluidnc: false, shapeFs: false,
   cam: { tabs: 0, tabW: 3, leadOut: 0, over: 0, starts: {}, tabOver: {} }, cutOrder: null, cutSkip: [], startCut: 1, resume: null, jobSeq: 0,
@@ -132,40 +133,34 @@ function requireMachine(why) {
 function isProMode() {
   return !!(sketch && sketch.opts.pro);
 }
+// Beginner / Pro only styles the Make-a-part screen. The cutting screen is the same for everyone, so it has neither class.
+function applyBodyMode() {
+  const cutting = screen() === "cut", pro = !!(sketch && sketch.opts.pro);
+  document.body.classList.toggle("beginner", !cutting && !pro);
+  document.body.classList.toggle("pro-mode", !cutting && pro);
+}
 function syncModeSwitch() {
-  const pro = isProMode() || document.body.classList.contains("pro-mode");
+  const pro = isProMode();
   const mode = pro ? "pro" : "beginner";
   $$("#modeSwitch [data-mode], .acct-modesw [data-mode]").forEach((b) => b.classList.toggle("sel", b.dataset.mode === mode));
   $$('input[name="acctMode"], input[name="suMode"]').forEach((r) => { r.checked = r.value === mode; });
-  const adj = document.querySelector("details.adjust");
-  if (adj) adj.open = !!pro;
-  ["btnCheckRun", "btnCheckRun2"].forEach((id) => { const el = $(id); if (el) el.classList.toggle("hidden", !pro); });
 }
 function setAppMode(mode, opts) {
   const persist = !opts || opts.persist !== false;
   const autoFs = !opts || opts.autoFs !== false;
   const pro = mode === "pro";
-  if (mode === "pro" || mode === "beginner") {
-    if (sketch) sketch.setPro(pro);
-    document.body.classList.toggle("beginner", !pro);
-    document.body.classList.toggle("pro-mode", pro);
-  } else {
-    const localPro = !!(sketch && sketch.opts.pro);
-    document.body.classList.toggle("beginner", !localPro);
-    document.body.classList.toggle("pro-mode", localPro);
-  }
+  if ((mode === "pro" || mode === "beginner") && sketch) sketch.setPro(pro);
+  applyBodyMode();
   syncModeSwitch();
   if (sketch) {
     renderProTools(); renderShapeForm(); renderQuickBar();
-    if (autoFs) {
+    if (autoFs && screen() === "make") {
       const dlgOpen = !!document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden)");
       if (isProMode() && S.src === "shape" && !dlgOpen) setShapeFs(true);
       else if (!isProMode() && S.shapeFs) setShapeFs(false);
     }
   }
   renderMatPreset();
-  renderRecentJobs();
-  if (typeof M !== "undefined" && M && S.design && !(S.job && S.job.running)) loadJob();   // Beginner and Pro build the job differently (tabs, order…)
   paintGuide(); R2.paintCutList(); R2.paintStartCut();
   try { paintSettings(); } catch (e) { /* settings not ready */ }
   if (persist && Acc.isSignedIn() && (mode === "pro" || mode === "beginner")) {
@@ -184,7 +179,7 @@ function whyOff(el) {
   if (el.matches && el.matches(".j[data-axis], .steps button")) return needConn || (S.job && S.job.running ? "Not while a job is running." : /alarm/i.test((S.status && S.status.state) || "") ? "Clear the alarm first." : "Not available right now.");
   if (el.hasAttribute && el.hasAttribute("data-mv")) return Number(el.dataset.mv) < 0 ? "Already first in the order." : "Already last in the order.";
   switch (id) {
-    case "next1": return S.src === "shape" ? "Pick a shape first." : "Open a drawing or G-code file first.";
+    case "next1": return screen() === "make" ? "Pick a shape first." : "Upload a file or pick saved parts first.";
     case "btnStart": {
       if (!machineAllowed()) return Acc.isSignedIn() ? "Link a machine to run jobs." : "Sign in and link a machine to run jobs.";
       try { const b = blockers(); if (b && b.length) return String(b[0]).replace(/\s+/g, " ").slice(0, 90); } catch (e) { /* fall through */ }
@@ -218,19 +213,6 @@ function refreshGate() {
   if (send) send.classList.toggle("locked", runLocked);
   document.body.classList.toggle("run-locked", runLocked);
   $$(".jogwrap, .jogmount").forEach((el) => el.classList.toggle("locked", runLocked && !S.connected));
-}
-function enterDesignOnly() {
-  S.designOnly = true;
-  S.demo = null;
-  $("connectView").classList.add("hidden");
-  $$(".tabs").forEach((t) => t.classList.remove("hidden"));
-  $("cutView").classList.remove("hidden");
-  $("moveView").classList.add("hidden");
-  $("setupView").classList.add("hidden");
-  showTab("cut");
-  goStep(1);
-  refreshGate();
-  toast("Design and save freely. Link a machine when you want to cut.");
 }
 function exportDialect() {
   const sel = $("exportDialect");
@@ -266,14 +248,63 @@ function exportGcode() {
   toast("Downloaded " + dialect.toUpperCase() + " file");
 }
 
+// ------------------------------------------------------------------ screens (login -> menu -> make | cut)
+// body[data-screen] is owned by flow.js; this is what each screen shows.
+const testBypass = () => ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname) && new URLSearchParams(location.search).has("test") && !new URLSearchParams(location.search).has("gate");
+function paintMenu() {
+  const u = Acc.currentUser();
+  const nm = u && (u.display_name || (u.email || "").split("@")[0]);
+  $("menuHello").textContent = nm ? `Hi ${nm}. What do you want to do?` : "What do you want to do?";
+  $("menuMachine").textContent = Acc.hasLinkedMachine() ? "Your machine is linked." : (Acc.isSignedIn() ? "No machine linked yet. You can make parts now; linking a machine is needed to cut." : "");
+}
+function onScreen(name, prev) {
+  if (prev === "cut") S.cutStep = S.cur;
+  $("menuView").classList.toggle("hidden", name !== "menu");
+  if (name !== "cut" && name !== "make") { $("cutView").classList.add("hidden"); $("setupView").classList.add("hidden"); }
+  applyBodyMode();
+  const gate = $("accountDlg");
+  gate.classList.toggle("loginpage", name === "login");
+  if (name === "login") openAccount("in");
+  else if (prev === "login") closeAccountUi();
+  if (name === "menu") paintMenu();
+  if (name === "make") {
+    S.tab = "cut"; showTab("cut");
+    S.src = "shape";
+    showSource("shape");
+    goStep(1);
+    syncModeSwitch(); renderProTools(); renderShapeForm(); renderQuickBar();
+  } else if (name === "cut") {
+    setShapeFs(false);
+    showTab(S.tab === "setup" ? "setup" : "cut");
+    goStep(S.prepared && S.cutStep >= 3 ? Math.min(S.cutStep, S.job ? 4 : 3) : 1);
+    renderMaterials();
+  }
+  try { paintChrome(); refresh(); } catch (e) { /* ignore */ }
+  window.scrollTo(0, 0);
+}
+// Make a part -> the cutting screen, straight onto the bed
+function sendToCutting() {
+  if (S.src === "shape" && sketch) useShape();
+  if (!S.prepared) { toast("Pick or draw a part first.", true); return; }
+  if (!showScreen("cut")) return;
+  goStep(3);
+}
+// signed in -> menu; signed out -> the sign-in page
+function routeAuth() {
+  const signed = Acc.isSignedIn();
+  if (testBypass()) { if (screen() === "boot") showScreen("menu", { force: true }); return; }
+  if (signed && (screen() === "login" || screen() === "boot")) showScreen("menu", { force: true });
+  else if (!signed && screen() !== "login") { S.cutStep = 1; showScreen("login", { force: true }); }
+}
+
 // ------------------------------------------------------------------ tabs & steps
 function showTab(name) {
-  if (!S.connected && S.designOnly && name !== "cut") {
-    openGate("Link your machine to run jobs");
-    name = "cut";
-  }
+  if (name !== "setup") name = "cut";
+  if (name !== S.tab && screen() === "cut" && navLocked()) { toast("Not while the machine is cutting. Press the red E-STOP first.", true); return; }
+  const scr = screen();
   $$(".tab").forEach((t) => t.classList.toggle("sel", t.dataset.tab === name));
-  ["cut", "move", "setup"].forEach((v) => $(v + "View").classList.toggle("hidden", v !== name || (!S.connected && !S.designOnly)));
+  $("cutView").classList.toggle("hidden", !(scr === "make" || (scr === "cut" && name === "cut")));
+  $("setupView").classList.toggle("hidden", !(scr === "cut" && name === "setup"));
   S.tab = name;
   if (name === "cut") drawPreview();
 }
@@ -283,6 +314,8 @@ function canGo(n) {
   return true;
 }
 function goStep(n) {
+  if (screen() === "make") n = 1;                // Make a part is one page; the numbered steps belong to the cutting screen
+  if (n === 2) n = 3;                            // (the old Material step now lives on step 1)
   if (!canGo(n)) return;
   if (S.job && S.job.running && n !== 4) { toast("A job is running. Pause or stop it first.", true); return; }
   if (n !== 1 && S.shapeFs) setShapeFs(false);
@@ -294,9 +327,10 @@ function goStep(n) {
     li.classList.toggle("done", k < n);
   });
   if (n !== 3) Setup.leave();
-  if (n === 3) { Setup.enter(); renderChecklist(); }
+  if (n === 3 && screen() === "cut") { Setup.enter(); renderChecklist(); }
   refresh();
   window.scrollTo({ top: 0, behavior: "smooth" });
+  const sp = document.querySelector(".stepPane"); if (sp) sp.scrollTop = 0;
 }
 
 // ------------------------------------------------------------------ jog pad (one template, used on 3 screens)
@@ -361,36 +395,52 @@ function jogRelease(id) {
 function jogReleaseAll() { for (const id of [...J.held.keys()]) jogRelease(id); }
 function renderPos() {
   const w = S.status.WPos || [0, 0, 0];
-  const m = S.status.MPos || [0, 0, 0];
   const html = `<div><span>X</span><b>${Number(w[0]).toFixed(1)}</b></div><div><span>Y</span><b>${Number(w[1]).toFixed(1)}</b></div><div><span>Z</span><b>${Number(w[2]).toFixed(1)}</b></div>`;
   $$(".small-pos").forEach((el) => (el.innerHTML = html));
-  const dro = $("moveDro");
-  if (dro) {
-    dro.innerHTML = ["X", "Y", "Z"].map((ax, i) =>
-      `<div><span>${ax} work</span><b>${Number(w[i]).toFixed(2)}</b><div class="dro-sub">M ${Number(m[i]).toFixed(2)}</div></div>`
-    ).join("");
-  }
 }
 
 // ------------------------------------------------------------------ step 1: file
-// Pro: a second drawing file asks whether it joins the sheet or replaces what is open (never silently throws work away)
+// A drawing is already on the bed: a second DXF/SVG asks whether it joins the sheet or replaces what is there (never silently throws work away)
 function askAddOrReplace(f) {
   return new Promise((res) => {
-    $("importAskText").textContent = `You already have a drawing open. What should “${f.name}” do?`;
+    $("importAskText").textContent = `You already have parts on the bed. What should “${f.name}” do?`;
     const dlg = $("importAskDlg"); dlg.classList.remove("hidden");
     const done = (v) => { dlg.classList.add("hidden"); res(v); };
     $("importAskAdd").onclick = () => done("add"); $("importAskReplace").onclick = () => done("replace"); $("importAskCancel").onclick = () => done("cancel");
     setTimeout(() => $("importAskAdd").focus(), 30);
   });
 }
+const bedHasParts = () => !!((sketch && sketch.items.length) || (S.design && S.src === "file" && S.prepared) || (S.gcode && S.prepared));
+// Everything that arrives on the cutting screen (file picker, drag-drop) comes through here.
+async function handleFiles(list) {
+  const fl = [...list].filter(Boolean);
+  if (!fl.length || (S.job && S.job.running)) return;
+  if (fl.length === 1) { await importOne(fl[0]); return; }
+  const ok = fl.filter((f) => /\.(dxf|svg)$/i.test(f.name));
+  if (ok.length < fl.length) toast("Only DXF or SVG files can be laid out together. G-code goes one file at a time.", true);
+  if (ok.length) await addPartsFlow(ok);
+}
+// put more parts on the bed (saved parts and/or several drawing files, each with a quantity)
+async function addPartsFlow(files) {
+  if ((S.gcode && !S.design) || (S.design && S.design.straight)) { toast("A G-code file or a straight cut can't be mixed with drawings. Tap “Start over” first.", true); return; }
+  if (S.prepared) goStep(3); else { S.src = "shape"; }          // step 3 turns a loaded drawing into movable parts first
+  if (files) await Setup.addFilesToSheet(files); else Setup.openAdd();
+}
+function startOver() {
+  S.job = null; S.prepared = null; S.gcode = null; S.design = null; S.currentPart = null; S.fileName = ""; S.startCut = 1; S.resume = null;
+  if (sketch && sketch.items.length) { sketch.layout = null; sketch.remember(); sketch.items = []; sketch.pick([]); sketch.commit(); }
+  S.src = "file"; $("file").value = "";
+  $("dropTitle").textContent = "Upload a file"; $("drop").classList.remove("loaded");
+  $("warnings").innerHTML = "";
+  goStep(1); refresh();
+}
 async function importOne(f) {
   if (!f) return;
   const ext = f.name.toLowerCase().split(".").pop();
-  const have = (S.design && S.src === "file") || (isProMode() && sketch.items.length);
-  if (isProMode() && have && (ext === "dxf" || ext === "svg") && !(S.job && S.job.running)) {
+  if (bedHasParts() && (ext === "dxf" || ext === "svg") && !(S.job && S.job.running) && !(S.design && S.design.straight) && !(S.gcode && !S.design)) {
     const a = await askAddOrReplace(f);
     if (a === "cancel") return;
-    if (a === "add") { showTab("cut"); goStep(3); await Setup.addFilesToSheet([f]); return; }
+    if (a === "add") { await addPartsFlow([f]); return; }
   }
   readFile(f);
 }
@@ -421,6 +471,7 @@ function openText(name, text, remember, scale) {
     return;
   }
   S.fileName = name;
+  S.src = "file";                                          // a freshly opened file: step 3 turns it into parts on the bed
   S.design && (S.design.straight = false);
   R2.designChanged(-1);                                    // a new file: forget old cut order, tabs and start points
   const finish = (k) => {
@@ -428,7 +479,7 @@ function openText(name, text, remember, scale) {
     $("drop").classList.add("loaded");
     if (remember) saveRecent(name, text, k);
     loadJob();
-    if (S.prepared) goStep(2);
+    if (S.prepared) goStep(3);                             // straight onto the bed
   };
   if (S.design && scale && scale !== 1) { S.design.contours = R2.scaleContours(S.design.contours, scale); }
   // "This drawing is W x H mm. Is that right?" – only for a file the person just opened (not a recent one with its scale remembered)
@@ -454,6 +505,7 @@ function editDrawing() {
   S.fileName = String(d.name || "Imported drawing").replace(/\.[^.]+$/, "");
   if ($("partName")) $("partName").value = S.fileName;
   S.src = "shape";
+  if (!showScreen("make")) return;
   showSource("shape");
   useShape();
   setShapeFs(true);
@@ -491,7 +543,7 @@ function bindResize() {
     close(); useShapeSoon(); toast("Resized");
   };
 }
-function openEditor() { S.src = "shape"; showSource("shape"); useShape(); setShapeFs(true); }
+function openEditor() { S.src = "shape"; if (screen() !== "make") showScreen("make"); showSource("shape"); useShape(); setShapeFs(true); }
 
 // ------------------------------------------------------------------ shape maker (drag-and-drop editor)
 let sketch = null, shapeTimer = null, editBefore = null;
@@ -524,33 +576,20 @@ function beginnerPick(id) {
   sketch.fitView();
   useShape();      // build the job now, not 250 ms later: a shape that is picked must enable Next straight away
 }
-const GUIDE = [null,
-  ["Pick a shape", "Tap a shape, type how big it should be, then press Next. Got a drawing file instead? Open it below."],
-  ["What are you cutting?", "Tap the metal and how thick it is. The speed and power are set for you."],
-  ["Get set up", "Arrange the parts on the sheet, press Start here at the sheet's bottom-left corner, tick the checks, then Start cutting."],
-  ["Cutting", "Keep clear of the table. Press the big red STOP if anything looks wrong."]];
+// Make a part: one page. Beginner gets a plain two-line guide on top; Pro gets none.
 function paintGuide() {
-  const beg = document.body.classList.contains("beginner");
-  $$(".srcTab").forEach((b) => {
-    const t = b.dataset.src === "file" ? (beg ? "Open a drawing file" : "Open a drawing") : (beg ? "Draw your own" : "Make a shape");
-    const icon = b.dataset.src === "file" ? "folder" : "pencil";
-    if (b.dataset.face !== t) {
-      b.dataset.face = t;
-      b.innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-${icon}"></use></svg> ${t}`;
-    }
-  });
-  document.body.classList.toggle("bg-picked", !!(beg && S.src === "shape" && sketch && sketch.items.length && !S.bgChoosing && S.cur === 1));
-  const gh = $("guideHead"); if (!gh || !beg) return;
-  const g = GUIDE[S.cur] || GUIDE[1];
-  const done = S.job && !S.job.running && S.job.result === "done" && S.cur === 4;
-  $("ghStep").textContent = `Step ${S.cur} of 4`;
-  $("ghTitle").textContent = done ? "All done" : g[0];
-  $("ghHelp").textContent = done ? "Lift the part out when it has cooled." : g[1];
-  const n = S.cur;
-  gh.style.setProperty("--prog", String((n - 1) / 3 * 100) + "%");
-  const nx = $("next1"); if (nx) nx.textContent = S.prepared ? "Next: choose the metal →" : (S.src === "shape" && sketch && sketch.items.length ? "Getting it ready…" : "Pick a shape to continue");
-  $$('.step[data-step="2"] .next')[0] && ($$('.step[data-step="2"] .next')[0].textContent = "Next: get set up →");
+  const mk = screen() === "make", beg = document.body.classList.contains("beginner");
+  const has = !!(sketch && sketch.items.length);
+  document.body.classList.toggle("bg-picked", !!(mk && beg && S.src === "shape" && has && !S.bgChoosing && S.cur === 1));
+  const nx = $("next1");
+  if (nx) nx.textContent = mk ? (S.prepared ? "✂ Cut this part →" : (has ? "Getting it ready…" : "Pick a shape to continue")) : "Next: bed and start →";
   const mt = $("matLine"); if (mt) mt.textContent = S.material ? `Cutting ${S.material.toLowerCase()}, ${S.thickness} mm thick. Not right? Tap a different one.` : "";
+  const t = $("step1Title"); if (t) t.textContent = mk ? "Make a part" : "What do you want to cut?";
+  const gh = $("guideHead"); if (!gh || !mk || !beg) return;
+  $("ghStep").textContent = "Make a part";
+  $("ghTitle").textContent = has ? "Set the size" : "Pick a shape";
+  $("ghHelp").textContent = has ? "Type how big it should be, turn it, add holes. When it looks right, press Cut this part." : "Tap a shape, or draw your own.";
+  gh.style.setProperty("--prog", has ? "100%" : "0%");
 }
 const ALIGN = [["left", "⇤ Left"], ["centre", "↔ Centre"], ["right", "⇥ Right"], ["both", "◎ Dead centre"],
   ["bottom", "⤓ Bottom"], ["middle", "↕ Middle"], ["top", "⤒ Top"]];
@@ -712,7 +751,7 @@ const PALETTE = [
 let paletteQ = "";
 function renderQuickBar() {
   const qb = $("quickBar"); if (!qb || !sketch) return;
-  const on = S.src === "shape" && ((S.cur === 1 && isProMode()) || S.shapeFs);
+  const on = screen() === "make" && S.src === "shape" && ((S.cur === 1 && isProMode()) || S.shapeFs);
   qb.classList.toggle("hidden", !on);
   const grid = qb.closest(".cutgrid"); if (grid) grid.classList.toggle("with-qb", on);
   if (!on) { qb.innerHTML = ""; return; }
@@ -1027,16 +1066,14 @@ function useStraight(dir, L, sx, sy) {
       if (cmd("set_origin", { x: mx, y: my })) { S.zeroSet = true; toast(`Start point set at X ${Math.round(X)}, Y ${Math.round(Y)} mm. The torch did not move.`); }
     }
   }
-  goStep(2);
+  goStep(3);
 }
 function showSource(src, opts) {
   S.src = src; S.bgChoosing = false;
-  $$(".srcTab").forEach((b) => b.classList.toggle("sel", b.dataset.src === src));
-  $("srcFile").classList.toggle("hidden", src !== "file");
   $("srcShape").classList.toggle("hidden", src !== "shape");
   if (src === "shape") {
     renderShapeForm(); useShape();
-    if (isProMode() && !S.shapeFs && !(opts && opts.noFs)) setShapeFs(true);
+    if (isProMode() && screen() === "make" && !S.shapeFs && !(opts && opts.noFs)) setShapeFs(true);
   }
   drawPreview();
 }
@@ -1057,39 +1094,6 @@ function renderRecent() {
   const list = recentList();
   $("recentWrap").classList.toggle("hidden", !list.length);
   $("recent").innerHTML = list.map((r, i) => `<button data-recent="${i}">${esc(r.name)}</button>`).join("");
-}
-function jobList() {
-  try { return JSON.parse(localStorage.getItem("plasma.recentJobs") || "[]"); } catch (e) { return []; }
-}
-function rememberJob(extra) {
-  try {
-    const rec = {
-      name: (S.fileName || "Job"), material: S.material, thickness: S.thickness,
-      dry: !!(S.prepared && S.prepared.dry_run), at: Date.now(), ...(extra || {}),
-    };
-    const list = jobList().filter((j) => !(j.name === rec.name && j.material === rec.material && Number(j.thickness) === Number(rec.thickness)));
-    list.unshift(rec);
-    while (list.length > 8) list.pop();
-    localStorage.setItem("plasma.recentJobs", JSON.stringify(list));
-  } catch (e) { /* ignore */ }
-  renderRecentJobs();
-}
-function renderRecentJobs() {
-  const wrap = $("recentJobsWrap"), box = $("recentJobs");
-  if (!wrap || !box) return;
-  const list = jobList();
-  wrap.classList.toggle("hidden", !(isProMode() && list.length));
-  box.innerHTML = list.map((j, i) => `<button type="button" data-job="${i}">${esc(j.name)} · ${esc(j.material)} ${j.thickness} mm</button>`).join("");
-}
-function applyRecentJob(i) {
-  const j = jobList()[Number(i)];
-  if (!j) return;
-  if (j.material) S.material = j.material;
-  if (j.thickness != null) S.thickness = Number(j.thickness);
-  applyMatchingPreset();
-  renderMaterials();
-  loadJob();
-  toast("Loaded settings for " + j.name);
 }
 function chartPresetOptions() {
   const out = [];
@@ -1134,35 +1138,6 @@ function applyMatPreset(id) {
     p = { material: mat, thickness_mm: Number(th) };
   }
   applyPresetRow(p);
-}
-function checkAndRun() {
-  if (S.src === "shape" && sketch) useShape();
-  if (!S.prepared) loadJob();
-  if (!S.prepared) { toast("Draw or load a part first.", true); goStep(1); return; }
-  goStep(3);
-  renderChecklist();
-  refresh();
-  // everything except the tick boxes (not connected, no start point, alarm, doesn't fit...) must already be fine
-  const hard = blockers().filter((x) => x !== "Tick every box above.");
-  if (hard.length || !machineAllowed()) {
-    toast((hard[0] || "Can't start yet — check the list."), true);
-    return;
-  }
-  // the physical checks (plasma on, air, earth clamp, hands clear) must never be ticked FOR the operator: ask, in words
-  const todo = $$("#checklist input").filter((i) => !i.disabled && !i.checked).map((i) => i.closest("label").textContent.trim());
-  if (todo.length && !confirm("Before the torch lights, check each of these yourself:\n\n" + todo.map((x) => "  • " + x).join("\n") + "\n\nAre all of them true?")) {
-    toast("Not started. Tick each box when you have checked it.", true);
-    return;
-  }
-  $$("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; });
-  refresh();
-  const b = blockers();
-  if (b.length || !machineAllowed()) {
-    toast((b[0] || "Can't start yet — check the list."), true);
-    return;
-  }
-  if ($("btnStart") && !$("btnStart").disabled) $("btnStart").click();
-  else toast("Can't start yet — check the list.", true);
 }
 function sendConsoleLine(raw, inputEl) {
   const l = String(raw || "").trim();
@@ -1297,10 +1272,10 @@ function runCheck(contours) {
 function renderCutCheck() {
   const chk = S.check, mat = `${(S.material || "").toLowerCase()} ${S.thickness} mm`;
   const html = !chk ? "" : `
-    <div class="cchead">Cut check <span>· ${esc(mat)}${S.cur === 1 ? " (change it in step 2)" : ""}</span></div>
+    <div class="cchead">Cut check <span>· ${esc(mat)}</span></div>
     ${chk.groups.length ? `<ol>${chk.groups.map((g) => `<li class="${g.level}"><b>${g.n}</b><span>${g.spots.length > 1 ? `<i>${g.spots.length} places:</i> ` : ""}${esc(g.text)}</span></li>`).join("")}</ol>`
       : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${esc(mat)}.</p>`}`;
-  const tabBtn = chk && isProMode() && !S.cam.tabs && chk.groups.some((g) => /slats|tip/i.test(g.text))
+  const tabBtn = chk && !S.cam.tabs && chk.groups.some((g) => /slats|tip/i.test(g.text))
     ? `<div class="row"><button type="button" class="small" data-r2act="tabs">Add 2 hold-down tabs per part</button></div>` : "";
   $("cutCheck").innerHTML = S.src === "shape" ? html + tabBtn : "";
   $("cutCheck2").innerHTML = html + tabBtn;
@@ -1339,7 +1314,6 @@ function loadJob() {
     const ws = [...pre, ...S.prepared.warnings.filter((w) => !(cam && /zero point/.test(w)))];
     $("warnings").innerHTML = ws.map((w) => `<li>${esc(w)}</li>`).join("");
     renderCutCheck();
-    rememberJob();
   } catch (e) {
     S.prepared = null;
     $("warnings").innerHTML = `<li>${esc(e.message)}</li>`;
@@ -1348,7 +1322,7 @@ function loadJob() {
   refresh();
 }
 // where the start point is, in table view coordinates (the one being dragged wins)
-function originView() { if (S.dragOrigin) return S.dragOrigin; const w = wcoNow(); return toView(w[0], w[1]); }
+function originView() { const w = wcoNow(); return toView(w[0], w[1]); }
 function fromView(vx, vy) { return S.safety.referenced ? [vx + S.safety.ref[0], vy + S.safety.ref[1]] : [vx, vy]; }
 function wcoNow() {
   const st = S.status;
@@ -1369,9 +1343,9 @@ function viewArea() {
 }
 function fit() {
   if (!S.prepared) return { cls: "", text: "" };
-  if (!S.safety.limits) return { cls: "unknown", text: S.demo ? "Demo: tap here and the edges are set up for you." : "Edges not set up – can't check it fits (Setup tab)." };
+  if (!S.safety.limits) return { cls: "unknown", text: S.demo ? "Demo: tap here and the edges are set up for you." : "Edges not set up – can't check it fits (Machine setup tab)." };
   if (!S.safety.referenced) return { cls: "unknown", text: "Home the machine to check it fits." };
-  const b = S.prepared.stats.bounds, w = S.dragOrigin ? fromView(...S.dragOrigin) : wcoNow(), ref = S.safety.ref, L = S.safety.limits;
+  const b = S.prepared.stats.bounds, w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
   const x0 = b[0] + w[0] - ref[0], x1 = b[2] + w[0] - ref[0], y0 = b[1] + w[1] - ref[1], y1 = b[3] + w[1] - ref[1];
   const over = [];
   if (x0 < L.x[0] - 0.05) over.push(`${Math.ceil(L.x[0] - x0)} mm too far left`);
@@ -1384,10 +1358,9 @@ function fit() {
 function drawPreview() {
   const cv = $("preview");
   const grid = cv && cv.closest(".cutgrid");
-  if (grid) grid.classList.toggle("nofile", S.cur === 1 && S.src === "file" && !S.prepared);
-  drawCanvas($("moveMap"), false);
+  if (grid) grid.classList.toggle("nofile", screen() === "cut" && S.cur === 1 && !S.prepared);
   if (!cv || !cv.offsetParent) return;
-  const editing = !!sketch && S.src === "shape" && (S.cur === 1 || (S.cur === 3 && Setup.layoutActive()));
+  const editing = !!sketch && S.src === "shape" && (screen() === "make" ? S.cur === 1 : (S.cur === 3 && Setup.layoutActive()));
   if (sketch) renderQuickBar();
   if (sketch && sketch.active !== editing) sketch.setActive(editing);
   $("showMachWrap").classList.toggle("hidden", editing || (!!S.prepared && S.cur <= 2));
@@ -1440,24 +1413,12 @@ function drawCanvas(cv, main) {
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
   const X = (x) => offX + (x - A.x[0]) * sc, Y = (y) => h - offY - (y - A.y[0]) * sc;
-  if (main) cv.classList.toggle("placing", !zoom && canPlace());
   cv._zmap = main && zoom ? { toMm: (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc], toPx: (x, y) => [X(x), Y(y)] } : null;
   cv._map = zoom ? null : { toMm: (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc], toPx: (x, y) => [X(x), Y(y)], sc, T: A.table };
   if (!zoom) drawMachineBed(ctx, A.table, X, Y, sc);
   if (S.prepared) {
     const pv = S.prepared.preview;
     const path = (p) => { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(X(x + ox), Y(y + oy)) : ctx.moveTo(X(x + ox), Y(y + oy)))); ctx.stroke(); };
-    if (!zoom && main && canPlace() && !placeBlock()) {          // draggable: show the part's footprint
-      const b = S.prepared.stats.bounds;
-      ctx.fillStyle = S.dragging ? "rgba(0,120,212,.22)" : "rgba(0,120,212,.10)";
-      ctx.strokeStyle = "rgba(0,120,212,.75)"; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
-      ctx.fillRect(X(b[0] + ox), Y(b[3] + oy), (b[2] - b[0]) * sc, (b[3] - b[1]) * sc);
-      ctx.strokeRect(X(b[0] + ox), Y(b[3] + oy), (b[2] - b[0]) * sc, (b[3] - b[1]) * sc); ctx.setLineDash([]);
-      if (S.dragging) {
-        ctx.font = "600 13px Barlow, system-ui"; ctx.fillStyle = C.sel;
-        ctx.fillText(`start point X ${Math.round(ox)}  Y ${Math.round(oy)} mm`, X(b[0] + ox), Y(b[3] + oy) - 8);
-      }
-    }
     if (S.prepared.outline) { ctx.strokeStyle = C.partLine; ctx.lineWidth = 1; S.prepared.outline.forEach((p) => path([...p, p[0]])); }
     if (pv && Array.isArray(pv.rapids)) {
       ctx.setLineDash([4, 4]); ctx.strokeStyle = C.label; ctx.lineWidth = 1; pv.rapids.forEach(path);
@@ -1485,73 +1446,6 @@ function drawCanvas(cv, main) {
   ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(X(ox) - 9, Y(oy)); ctx.lineTo(X(ox) + 9, Y(oy)); ctx.moveTo(X(ox), Y(oy) - 9); ctx.lineTo(X(ox), Y(oy) + 9); ctx.stroke();
   if (!zoom) drawGantry(ctx, A.table, X, Y, sc);
-}
-
-// ---- (old) drag the part around the table; now off: step 3 lays the parts out on a sheet: drop it = new start point, torch doesn't move
-function placeBlock() {      // why the part can't be dragged right now (null = it can)
-  if (!S.connected) return "Connect to the table first.";
-  if (S.job && S.job.running) return "A job is running.";
-  const st = S.status.state || "";
-  if (st.startsWith("Alarm")) return "The machine is in alarm. Press Unlock at the top, then drag the part.";
-  if (["Run", "Jog", "Home"].some((x) => st.startsWith(x))) return "Wait for the machine to stop moving, then drag the part.";
-  if (st.startsWith("Hold") || st.startsWith("Door")) return "The machine is paused. Press Stop or Resume first.";
-  return null;
-}
-function canPlace() {
-  return false;   // the part is placed on the sheet in step 3 (the sheet layout), not by dragging the start point
-}
-function bindPlacing() {
-  const cv = $("preview");
-  let drag = null;
-  const at = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  const where = (px, py) => {        // "part" | "table" | null
-    const m = cv._map; if (!m || !canPlace()) return null;
-    const [x, y] = m.toMm(px, py), [ox, oy] = originView(), b = S.prepared.stats.bounds, pad = 14 / m.sc;
-    if (x > b[0] + ox - pad && x < b[2] + ox + pad && y > b[1] + oy - pad && y < b[3] + oy + pad) return "part";
-    return null;
-  };
-  const clampOrigin = (ox, oy) => {
-    const b = S.prepared.stats.bounds, T = cv._map.T;
-    if (b[2] - b[0] <= T.x[1] - T.x[0]) ox = Math.min(Math.max(ox, T.x[0] - b[0]), T.x[1] - b[2]);
-    if (b[3] - b[1] <= T.y[1] - T.y[0]) oy = Math.min(Math.max(oy, T.y[0] - b[1]), T.y[1] - b[3]);
-    return [Math.round(ox), Math.round(oy)];
-  };
-  cv.addEventListener("pointerdown", (e) => {
-    if (sketch && sketch.active) return;
-    const [px, py] = at(e), hit = where(px, py);
-    if (!hit) return;
-    const why = placeBlock();
-    if (why) { toast(why, true); return; }
-    e.preventDefault(); cv.setPointerCapture(e.pointerId);
-    drag = { start: cv._map.toMm(px, py), o0: originView(), moved: false };
-    S.dragging = true; refresh();
-  });
-  cv.addEventListener("pointermove", (e) => {
-    if (sketch && sketch.active) return;
-    const [px, py] = at(e);
-    if (!drag) { const h = where(px, py); cv.style.cursor = h === "part" ? "grab" : ""; return; }
-    cv.style.cursor = "grabbing";
-    const [x, y] = cv._map.toMm(px, py);
-    const [ox, oy] = clampOrigin(drag.o0[0] + x - drag.start[0], drag.o0[1] + y - drag.start[1]);
-    if (ox !== drag.o0[0] || oy !== drag.o0[1]) drag.moved = true;
-    S.dragOrigin = [ox, oy];
-    refresh();
-  });
-  const end = () => {
-    if (!drag) return;
-    const d = drag; drag = null; S.dragging = false; cv.style.cursor = "";
-    if (!d.moved || !S.dragOrigin) { S.dragOrigin = null; refresh(); return; }
-    const [mx, my] = fromView(...S.dragOrigin);
-    if (cmd("set_origin", { x: mx, y: my })) {
-      toast("Start point moved ✓");
-      const want = S.dragOrigin;
-      clearTimeout(S.dragTimer);
-      S.dragTimer = setTimeout(() => { if (S.dragOrigin === want) { S.dragOrigin = null; refresh(); } }, 3000);
-    } else S.dragOrigin = null;
-    refresh();
-  };
-  cv.addEventListener("pointerup", end);
-  cv.addEventListener("pointercancel", end);
 }
 
 // ---- bird's-eye view of the machine (HMM-style: X beam along the front, Y arm cantilevered across the table,
@@ -1649,10 +1543,8 @@ function renderChecklist() {
   const w = wcoNow();
   const zeroLine = S.zeroSet
     ? `Start point set at ${Number(w[0]).toFixed(1)}, ${Number(w[1]).toFixed(1)} mm`
-    : "Start point set (press Start here in step 2 above)";
-  const items = (S.designOnly && !S.connected)
-    ? [zeroLine, "This is a design-only session — link a machine to run a real cut"]
-    : dry ? [zeroLine, "Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
+    : "Start point set (press Start here in “Connect, home and set the start point” above)";
+  const items = dry ? [zeroLine, "Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
     : [zeroLine, ...(row().check ? [row().check] : []), `Plasma ON and set to ${row().amps} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
   $("checklist").innerHTML = items.map((t, i) => {
     const auto = i === 0 && S.zeroSet;
@@ -1667,8 +1559,9 @@ function renderChecklist() {
 function blockers() {
   const b = [];
   if (!S.connected) b.push("Not connected to the table.");
-  if (!S.prepared) b.push("No drawing loaded (step 1).");
-  if (S.connected && !S.zeroSet) b.push("Start point has not been set. Press Start here in “Set the start point” above.");
+  if (!S.prepared) b.push("No part chosen yet (step 1).");
+  if (estopOn()) b.push("E-STOP is ON – tap the red button to reset it first.");
+  if (S.connected && !S.zeroSet) b.push("Start point has not been set. Press Start here in “Connect, home and set the start point” above.");
   const st = S.status.state;
   if (S.connected && st === "Alarm") b.push("Machine is in alarm – press Unlock at the top.");
   else if (S.connected && st !== "Idle") b.push(`Machine is busy (${st}). Wait for it to stop.`);
@@ -1684,13 +1577,27 @@ function blockers() {
 }
 
 // ------------------------------------------------------------------ refresh everything that depends on state
+// r3: nothing may cover STOP while this is true (job running or paused, machine doing anything, torch possibly on)
+function overlayLive() {
+  const st0 = (S.status && S.status.state) || "";
+  const busyState = S.connected && !!st0 && !/^(Idle|Check|Sleep)$/i.test(st0);
+  return !!(S.job && (S.job.running || S.job.paused)) || busyState || !!(S.status && S.status.torch);
+}
+// r4: the cutting screen can't be left while this is true: a job running or paused, the machine moving, the torch on,
+// or the connection lost mid-cut (the lost-connection banner must be acknowledged first). An alarm alone does not lock it.
+function navBusy() {
+  const st = (S.status && S.status.state) || "";
+  const moving = S.connected && /^(Run|Jog|Home|Cycle|Hold|Door)/i.test(st);
+  const lost = $("lostBar") && !$("lostBar").classList.contains("hidden");
+  return !!(S.job && (S.job.running || S.job.paused)) || moving || !!(S.connected && S.status && S.status.torch) || !!lost;
+}
 function paintChrome() {
   const b = document.querySelector(".topbar");
   if (b) document.documentElement.style.setProperty("--topbar-h", Math.ceil(b.getBoundingClientRect().height) + "px");
   const torch = !!(S.status && S.status.torch);
   const pill = $("torchPill");
   if (pill) {
-    pill.hidden = !(S.connected || S.designOnly);       // no TORCH OFF on the connect screen (nothing is connected yet)
+    pill.hidden = !S.connected;       // no TORCH OFF until a machine is connected
     pill.textContent = torch ? "TORCH ON" : "TORCH OFF";
     pill.classList.toggle("on", torch);
     pill.classList.toggle("off", !torch);
@@ -1701,7 +1608,6 @@ function paintChrome() {
     if (S.connected && S.demo) label = "";
     else if (S.connected && S.fluidnc) label = "FluidNC";
     else if (S.connected) label = "Connected";
-    else if (S.designOnly) label = "Design only";
     mode.textContent = label;
     mode.classList.toggle("hidden", !label);
   }
@@ -1726,9 +1632,9 @@ function paintChrome() {
   document.body.classList.toggle("running-job", running);
   // Round 3 safety: while a job runs / is paused / the machine is doing anything / the torch could be on, the portrait
   // "turn sideways" overlay must stay away so STOP and pause are always on screen. It only shows when everything is idle.
-  const st0 = (S.status && S.status.state) || "";
-  const busyState = S.connected && !!st0 && !/^(Idle|Check|Sleep)$/i.test(st0);
-  document.body.classList.toggle("job-live", running || !!(S.job && S.job.paused) || busyState || !!(S.status && S.status.torch));
+  document.body.classList.toggle("job-live", overlayLive());
+  document.body.classList.toggle("is-admin", !!Acc.isAdmin());
+  paintLock(); estopPaint();
   const lost = S.lastAlarmCode != null && POSITION_LOST_ALARMS.has(S.lastAlarmCode);
   const again = $("btnAgain"), rezero = $("btnRezero");
   if (again && rezero) {
@@ -1745,7 +1651,7 @@ function refresh() {
   $("fit").className = "fit " + f.cls;
   $("fit").textContent = f.text;
   $("fit").style.cursor = f.cls === "unknown" ? "pointer" : "";
-  $("fit").title = f.cls === "unknown" ? "Open the Setup tab" : "";
+  $("fit").title = f.cls === "unknown" ? "Open Machine setup" : "";
   if (S.prepared) {
     const st = S.prepared.stats;
     $("jobStats").innerHTML = `<span><b>${esc(S.fileName)}</b></span><span>Size <b>${S.prepared.summary ? `${S.prepared.summary.width} × ${S.prepared.summary.height}` : `${st.width_mm} × ${st.height_mm}`} mm</b></span>
@@ -1754,6 +1660,7 @@ function refresh() {
   $("next1").disabled = !S.prepared;
   R2.updatePlayRow(); R2.paintRestart(); R2.paintDelay(); paintGuide();
   if ($("btnEditDrawing")) $("btnEditDrawing").classList.toggle("hidden", !(S.design && !S.design.straight && S.src === "file" && S.design.contours && S.design.contours.length));
+  paintBedStatus();
   $$("#stepper li").forEach((li) => (li.style.opacity = canGo(Number(li.dataset.step)) ? 1 : 0.4));
 
   // start button + reasons
@@ -1816,13 +1723,16 @@ function refresh() {
   drawPreview();
 }
 
+function paintBedStatus() {
+  const box = $("bedStatus"); if (!box) return;
+  const n = (sketch && S.src === "shape") ? Setup.partCount(sketch) : 0;
+  const what = S.prepared ? (S.src === "file" ? (S.design && S.design.straight ? "a straight cut" : "1 file loaded") : (n ? `${n} part${n === 1 ? "" : "s"} on the bed` : "a file loaded")) : "";
+  box.classList.toggle("hidden", !what || screen() !== "cut");
+  if (what) $("bedStatusText").textContent = "On the bed now: " + what + ".";
+}
 function onStatus(st) {
   S.status = st;
   trackProgress(st);
-  if (S.dragOrigin && !S.dragging) {
-    const [vx, vy] = (() => { const w = wcoNow(); return toView(w[0], w[1]); })();
-    if (Math.abs(vx - S.dragOrigin[0]) < 0.05 && Math.abs(vy - S.dragOrigin[1]) < 0.05) S.dragOrigin = null;
-  }
   const badge = $("stateBadge");
   const words = { Idle: "Ready", Run: "Moving", Jog: "Moving", Home: "Homing", Hold: "Paused", Alarm: "Alarm", Disconnected: "" };
   badge.textContent = words[st.state] ?? st.state;
@@ -1916,19 +1826,16 @@ function onEvent(kind, d) {
 function setConnected(on, label = "") {
   S.connected = on;
   if (on && $("lostBar")) $("lostBar").classList.add("hidden");
-  if (on) S.designOnly = false;
-  const work = on || S.designOnly;
-  $("connectView").classList.toggle("hidden", work);
-  $$(".tabs").forEach((t) => t.classList.toggle("hidden", !work));
-  const connLabel = on ? (S.fluidnc ? "FluidNC" : S.demo ? "Demo, nothing moves" : "Connected") : "Not connected";
+  const connLabel = on ? (S.fluidnc ? "FluidNC" : S.demo ? "Practice, nothing moves" : "Connected") : "Not connected";
   $("connPill").innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-dot"></use></svg> ${connLabel}`;
   document.body.classList.toggle("demo-on", !!(on && S.demo));
   $("connPill").className = "pill " + (on ? "on" : "off");
   if (!on) { S.fluidnc = false; S.zeroSet = false; }
   $("stateBadge").classList.toggle("hidden", !on);
-  if (on) { showTab(S.tab || "cut"); if (label) toast("Connected to " + label); }
-  else if (S.designOnly) { showTab("cut"); }
-  else ["cut", "move", "setup"].forEach((v) => $(v + "View").classList.add("hidden"));
+  if (on && label) toast("Connected to " + label);
+  // the connect card (step "Connect, home and set the start point"): connect buttons while disconnected, Disconnect once connected
+  for (const id of ["btnConnect", "btnDemo", "fnBox", "connectHelp"]) if ($(id)) $(id).classList.toggle("hidden", on || (id === "btnConnect" && S.noUsb));
+  if ($("btnDisconnect")) $("btnDisconnect").classList.toggle("hidden", !on);
   $("demoInputs").classList.toggle("hidden", !(on && S.demo));
   refreshGate();
   refresh();
@@ -2108,11 +2015,9 @@ function adminMayTalk(needsIdle) {
 function addTestPattern(kind) {
   if (!sketch) return;
   if (M && M.jobRunning()) { toast("A job is running. Add test patterns after it finishes.", true); return; }
-  if (!S.designOnly && !S.connected) enterDesignOnly();
+  if (!showScreen("cut")) return;                 // test patterns are for cutting: they land on the bed
   showTab("cut");
   S.src = "shape";
-  $$(".srcTab").forEach((b) => b.classList.toggle("sel", b.dataset.src === "shape"));
-  $("srcFile").classList.add("hidden");
   $("srcShape").classList.remove("hidden");
   goStep(1);
   if (kind === "square") {
@@ -2140,6 +2045,7 @@ function addTestPattern(kind) {
     sketch.commit(); sketch.onSelect();
     toast("Added a kerf / speed ladder (five 80×8 mm bars). Cut each at a different speed.");
   }
+  useShape(); goStep(3);
 }
 
 function bind() {
@@ -2148,7 +2054,13 @@ function bind() {
   $$("[data-go]").forEach((b) => (b.onclick = () => goStep(Number(b.dataset.go))));
   $("btnConnect").onclick = connectUSB;
   $("btnDemo").onclick = connectDemo;
-  $("btnDesignOnly").onclick = enterDesignOnly;
+  $("next1").onclick = () => (screen() === "make" ? sendToCutting() : goStep(3));
+  $("btnChangeMat").onclick = () => goStep(1);
+  $("btnEditParts").onclick = () => { showScreen("make"); };
+  $("btnClearBed").onclick = () => { if (!bedHasParts() || confirm("Take everything off the bed and start over?")) startOver(); };
+  $("btnPickSaved").onclick = () => addPartsFlow(null);
+  $("layAdd").addEventListener("click", () => { /* Setup opens the Add parts dialog itself */ });
+  if ($("bgDraw")) $("bgDraw").onclick = () => { if (S.src !== "shape") showSource("shape"); setShapeFs(true); };
   $("btnExport").onclick = exportGcode;
   if ($("btnExport3")) $("btnExport3").onclick = exportGcode;      // Beginner has no Download button on the preview: it is here on Get set up, and on the run screen
   if ($("btnExport4")) $("btnExport4").onclick = exportGcode;
@@ -2176,7 +2088,7 @@ function bind() {
   if ($("fit")) $("fit").addEventListener("click", () => {
     if (!$("fit").classList.contains("unknown")) return;
     if (S.demo && S.connected) { R2.demoEdges(); return; }
-    if (S.connected || !S.designOnly) showTab("setup");
+    if (screen() === "cut") showTab("setup");
   });
   if ($("fsDone")) $("fsDone").onclick = () => setShapeFs(false);
   if ($("fsSave")) $("fsSave").onclick = () => saveCurrent().catch((e) => toast(e.message, true));
@@ -2193,7 +2105,6 @@ function bind() {
   $("startLock").onclick = () => openGate("Link your machine to run jobs");
   $("connPill").onclick = () => (S.connected ? showTab("setup") : connectUSB());
   $("btnDisconnect").onclick = disconnect;
-  $("btnStop").onclick = () => { if (M.grbl) cmd("stop"); };
   $("btnUnlock").onclick = () => cmd("unlock");
   $("btnUnlock2").onclick = () => {
     if (S.status.inputs && S.status.inputs.estop) { toast("Release the e-stop first (twist it), then press Unlock.", true); return; }
@@ -2213,29 +2124,23 @@ function bind() {
   if ($("moveConsoleForm")) $("moveConsoleForm").onsubmit = (e) => { e.preventDefault(); sendConsoleLine($("moveConsoleIn").value, $("moveConsoleIn")); };
 
   // step 1
-  $("file").onchange = () => { const fl = [...$("file").files]; if (fl.length > 1) { $("file").value = ""; openImport(fl); } else importOne(fl[0]); };   // several files = batch import into the parts list
-  if ($("btnBatchImport")) $("btnBatchImport").onclick = () => openImport();
+  $("file").onchange = () => { const fl = [...$("file").files]; $("file").value = ""; handleFiles(fl); };   // several files = they all go on the bed, each with a quantity
   const drop = $("drop");
-  ["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+  const cutDrop = () => screen() === "cut" && S.tab === "cut" && !navBusy();
+  ["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); if (cutDrop()) drop.classList.add("over"); }));
   ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
   document.addEventListener("drop", (e) => {
     if (!$("importDlg").classList.contains("hidden")) return;     // the Import DXFs dialog handles its own drops
-    if (!S.connected || (S.job && S.job.running)) return;
-    const fl = [...e.dataTransfer.files];
-    if (fl.length > 1) { openImport(fl); return; }
-    const f = fl[0];
-    if (f) { showTab("cut"); goStep(1); importOne(f); }
+    if (!cutDrop() || !e.dataTransfer) return;
+    if (document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden), .numpad:not(.hidden)")) return;   // a dialog open: its own drop zone (if any) handles it
+    handleFiles(e.dataTransfer.files);
   });
   $("recent").onclick = (e) => {
     const b = e.target.closest("[data-recent]");
     if (b) { const r = recentList()[Number(b.dataset.recent)]; if (r) setFile(r.name, r.text, false, r.scale); }
   };
 
-  // step 1: drawing or shape
-  $$(".srcTab").forEach((b) => (b.onclick = () => {
-    showSource(b.dataset.src);
-    if (b.dataset.src === "shape" && !isProMode() && sketch && !sketch.items.length) setShapeFs(true);   // "Draw your own": straight into the big editor
-  }));
+  // step 1: Make a part
   if ($("bgShapes")) $("bgShapes").onclick = (e) => { const b = e.target.closest("[data-bshape]"); if (b) beginnerPick(b.dataset.bshape); };
   if ($("bgMore")) $("bgMore").onclick = () => openLibrary();
   if ($("bgChange")) $("bgChange").onclick = () => { S.bgChoosing = true; paintGuide(); };
@@ -2322,9 +2227,6 @@ function bind() {
     setAppMode(b.dataset.mode);
   });
   if ($("matPreset")) $("matPreset").onchange = () => applyMatPreset($("matPreset").value);
-  if ($("recentJobs")) $("recentJobs").onclick = (e) => { const b = e.target.closest("[data-job]"); if (b) applyRecentJob(b.dataset.job); };
-  if ($("btnCheckRun")) $("btnCheckRun").onclick = () => checkAndRun();
-  if ($("btnCheckRun2")) $("btnCheckRun2").onclick = () => checkAndRun();
   $("numPadKeys").addEventListener("click", (e) => {
     const b = e.target.closest("[data-k]"); if (!b) return;
     const k = b.dataset.k, el = $("numPadValue");
@@ -2344,8 +2246,7 @@ function bind() {
   $("toolCancel").onclick = () => { sketch.setTool(null); renderProTools(); };
   document.addEventListener("keydown", (e) => {
     if (acctOverlayOpen()) {
-      // Esc is STOP. An account / admin dialog must never swallow it while the machine is moving or the torch is on.
-      if (e.key === "Escape" && M && M.grbl && ((S.status && S.status.torch) || ["Run", "Jog", "Home", "Cycle"].includes(S.status && S.status.state) || (S.job && S.job.running))) cmd("stop");
+      // (Esc is STOP: flow.js handles it first, whatever dialog is open, while a job is live)
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); closeAccountUi(); }
       return;
     }
@@ -2408,7 +2309,6 @@ function bind() {
   // step 3
   $("btnZero").onclick = () => { if (cmd("zero_xy")) { S.zeroSet = true; toast("Start point set ✓"); refresh(); } };
   $("btnTrace").onclick = () => cmd("trace_outline");
-  bindPlacing();
 
   // step 4
   $("checklist").addEventListener("change", refresh);
@@ -2428,26 +2328,18 @@ function bind() {
 
   // step 5
   $("btnPause").onclick = () => cmd(S.status.state === "Hold" ? "resume" : "hold");
-  if ($("btnStopRun")) $("btnStopRun").onclick = () => cmd("stop");
   $("btnAgain").onclick = () => { S.job = null; S.zeroSet = false; goStep(3); toast("Move to the next spot and press Start here."); };
   if ($("btnRezero")) $("btnRezero").onclick = () => { S.job = null; S.zeroSet = false; goStep(3); toast("Position was lost. Set a new start point before cutting again."); };
-  $("btnNewFile").onclick = () => {
-    S.job = null; S.prepared = null; S.gcode = null; S.design = null; $("file").value = "";
-    $("dropTitle").textContent = "Tap to choose a file"; $("drop").classList.remove("loaded"); goStep(1);
-  };
+  $("btnNewFile").onclick = () => startOver();
 
   // keyboard + on-screen pad: tap = one step, hold = glide until released (diagonals too).
   // Arrows = X/Y, Page Up/Down = Z, hold Shift for slow.
   const KEYS = { ArrowLeft: ["X", -1], ArrowRight: ["X", 1], ArrowUp: ["Y", 1], ArrowDown: ["Y", -1], PageUp: ["Z", 1], PageDown: ["Z", -1] };
   document.addEventListener("keydown", (e) => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
-    if (e.key === "Escape") { if (M.grbl) cmd("stop"); return; }
-    if (e.key === "Shift") { J.slow = true; return; }
-    if (!S.connected) return;
-    if (S.job && S.job.running) {
-      if (e.key === " ") { e.preventDefault(); cmd(S.status.state === "Hold" ? "resume" : "hold"); }
-      return;
-    }
+    if (e.key === "Shift") { J.slow = true; return; }                     // (Esc and Space are the E-stop: see flow.js)
+    if (!S.connected || screen() !== "cut") return;
+    if (S.job && S.job.running) return;
     const k = KEYS[e.key];
     if (!k) return;
     e.preventDefault();
@@ -2526,14 +2418,15 @@ async function init() {
   document.title = machine.name;
   R2.initR2({
     S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, drawPreview, loadJob, goStep, showSource, setShapeFs, row,
-    isPro: isProMode, jobRunning: () => !!(M && M.jobRunning()), sketchActive: () => !!(sketch && sketch.active),
-    dirtyDesign: () => !!(sketch && sketch.items.length && !S.currentPart), checkAndRun,
+    isPro: () => true, camHandles: () => screen() === "cut" && !!$("advCut").open, jobRunning: () => !!(M && M.jobRunning()), sketchActive: () => !!(sketch && sketch.active),
+    dirtyDesign: () => !!(sketch && sketch.items.length && !S.currentPart),
     useStraight, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
   });
   try { if (new URLSearchParams(location.search).get("turn") !== "0" && localStorage.getItem("plasma.turnOverlay") !== "0") document.body.classList.add("turn-on"); } catch (e) { document.body.classList.add("turn-on"); }
   initPartsFolders({ toast, esc, openSignIn: () => openAccount("in"), uiBlock: () => { S.uiBlockUntil = Date.now() + 450; } });
   Setup.initSetup({
     S, sketch: () => sketch, toast, esc, refresh, loadJob, askSize: R2.askSize, sizeCheckWanted: R2.sizeCheckWanted, scaleContours: R2.scaleContours, useShape, useShapeSoon, showSource, kerf: kerfNow, workArea: workAreaSheet,
+    afterAdd: () => { if (screen() === "cut" && S.cur === 1) { useShape(); goStep(3); } },   // parts picked on step 1 land straight on the bed
   });
   $("machineName").textContent = machine.name;
   try {
@@ -2544,6 +2437,13 @@ async function init() {
   try { S.showMachine = localStorage.getItem("plasma.showMachine") !== "0"; } catch (e) { /* ignore */ }
   $("showMach").checked = S.showMachine;
   mountJogPads();
+  initFlow({
+    signedIn: () => Acc.isSignedIn(), bypass: testBypass(),
+    stop: () => { if (M && M.grbl) cmd("stop"); },       // the same STOP path as always: soft reset, torch off
+    jobLive: navBusy, dialogOpen: () => !!document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden), .numpad:not(.hidden)"),
+    hardwareEstop: () => !!(S.connected && S.status && S.status.inputs && S.status.inputs.estop),
+    toast, refresh, onScreen,
+  });
   initSettings({
     toast,
     isPro: () => !!(Acc.isPro() || Acc.isAdmin() || (sketch && sketch.opts.pro)),
@@ -2604,7 +2504,7 @@ async function init() {
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, setAppMode, isProMode, checkAndRun, rememberJob, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
   window.ptInspector = makeInspector({
     sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),
     ampsNow: () => { try { return S.cutAmps != null ? S.cutAmps : (row().amps ?? null); } catch (e) { return null; } },
@@ -2621,7 +2521,7 @@ async function init() {
     applyMode: applyAccountMode,
     refreshGate,
     confirm: (msg) => confirm(msg),
-    startDesigning: () => { if (!S.connected) enterDesignOnly(); else showTab("cut"); goStep(1); },
+    startDesigning: () => { showScreen("make"); },
     sendAdvanced: (line, meta) => {
       if (!(Acc.isAdmin() || Acc.isPro())) { toast("Pro or admin only", true); return; }
       if (!M.grbl) { toast("Connect the table first.", true); return; }
@@ -2728,6 +2628,7 @@ async function init() {
       : phone
         ? "Phones can't plug into the table. Run it from a computer in <b>Chrome or Edge</b>. You can still look around with the demo here."
         : "This browser can't talk to USB. Open this page in <b>Chrome or Edge on a computer</b>. You can still try the demo.";
+    S.noUsb = true;
     $("btnConnect").classList.add("hidden");
     $("btnDemo").classList.add("go");
     const steps = document.querySelector(".hero ol.plain"); if (steps) steps.classList.add("hidden");
@@ -2735,6 +2636,8 @@ async function init() {
   onSafety(M.safety.state());
   setConnected(false);
   goStep(1);
+  Acc.onAccountChange(routeAuth);
+  routeAuth();
   refreshPublishedPresets().then(() => { applyMatchingPreset(); renderMaterials(); }).catch(() => {});
 }
 init().catch((e) => toast("Couldn't start: " + e.message, true));

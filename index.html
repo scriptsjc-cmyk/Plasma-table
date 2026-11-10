@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="style.css">
 <script src="js/sw-register.js"></script>
 </head>
-<body class="app-shell">
+<body class="app-shell" data-screen="boot">
 <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
   <defs>
     <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"/></g></symbol>
@@ -85,15 +85,12 @@
     <path fill="currentColor" d="M21.75 17.4h3.5v10.8h-3.5z"/>
     <path d="M1.6 16h28.8" stroke="var(--accent)" stroke-width="2" stroke-linecap="square"/>
   </svg><span id="machineName">Plasma Table</span></div>
+  <button type="button" id="btnHome" class="pill iconbtn homebtn" title="Back to the main menu" aria-label="Back to the main menu"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Menu</span></button>
   <button type="button" id="btnTopMenu" class="pill iconbtn" aria-expanded="false" aria-controls="topMenu" aria-label="Menu">
     <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
   </button>
   <div id="topMenu" class="topmenu">
   <button id="acctPill" class="pill acct" title="Account">Sign in</button>
-  <div id="modeSwitch" class="modesw" role="group" aria-label="App mode">
-    <button type="button" class="modesw-btn sel" data-mode="beginner" title="Guided beginner mode">Beginner</button>
-    <button type="button" class="modesw-btn" data-mode="pro" title="Professional mode">Pro</button>
-  </div>
   <button type="button" id="btnHowto" class="pill iconbtn" title="How to use" aria-label="How to use">?</button>
   <button type="button" id="btnSettings" class="pill iconbtn" title="Settings" aria-label="Settings">⚙</button>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
@@ -103,13 +100,32 @@
   </div>
   <span id="torchPill" class="pill torch off" hidden>TORCH OFF</span>
     </div>
-  <button id="btnStop" class="stop" title="Stop (Esc)">STOP</button>
+  <button id="btnStop" type="button" class="stop estop" title="Emergency stop (Esc or Space)" aria-label="Emergency stop. Esc or Space also stop the machine." aria-pressed="false">
+    <svg class="estop-svg" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+      <defs>
+        <radialGradient id="esCap" cx="36%" cy="28%" r="80%"><stop offset="0" stop-color="#ff8b7a"/><stop offset=".38" stop-color="#e8261d"/><stop offset="1" stop-color="#8a0d0a"/></radialGradient>
+        <radialGradient id="esCapOn" cx="40%" cy="34%" r="80%"><stop offset="0" stop-color="#d9362b"/><stop offset=".5" stop-color="#b3150f"/><stop offset="1" stop-color="#6e0805"/></radialGradient>
+        <linearGradient id="esPlate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd93a"/><stop offset="1" stop-color="#e0a800"/></linearGradient>
+        <radialGradient id="esWell" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#3a3a3f"/><stop offset="1" stop-color="#101012"/></radialGradient>
+      </defs>
+      <circle cx="60" cy="60" r="57" fill="url(#esPlate)" stroke="#7a5f00" stroke-width="2.5"/>
+      <circle cx="60" cy="60" r="46" fill="url(#esWell)" stroke="#000" stroke-width="2"/>
+      <ellipse class="es-shadow" cx="60" cy="70" rx="35" ry="10" fill="#000" opacity=".5"/>
+      <circle class="es-side" cx="60" cy="63" r="34" fill="#7a0b08"/>
+      <g class="es-top">
+        <circle cx="60" cy="56" r="34" fill="url(#esCap)" stroke="#650807" stroke-width="2"/>
+        <circle class="es-on" cx="60" cy="56" r="34" fill="url(#esCapOn)" opacity="0"/>
+        <circle cx="60" cy="56" r="23" fill="none" stroke="#000" stroke-opacity=".16" stroke-width="2"/>
+        <ellipse class="es-hi" cx="47" cy="40" rx="15" ry="8" fill="#fff" opacity=".5" transform="rotate(-28 47 40)"/>
+      </g>
+    </svg>
+    <span class="estop-label" id="estopLabel">STOP</span>
+  </button>
 </header>
 
-<nav class="tabs">
+<nav class="tabs" aria-label="Cutting screen">
   <button class="tab sel" data-tab="cut">✂ Cut</button>
-  <button class="tab" data-tab="move">✥ Move</button>
-  <button class="tab" data-tab="setup">⚙ Setup</button>
+  <button class="tab" data-tab="setup">⚙ Machine setup</button>
 </nav>
 
 <!-- ============================================================ banners -->
@@ -144,11 +160,11 @@
   </div>
 </div>
 
-<!-- ============================================================ connect screen -->
+<!-- ============================================================ MAIN MENU (after sign-in) -->
 <div id="demoAcctBar" class="banner amber hidden" role="status">Local demo accounts — nothing is sent to the cloud. Claim code <b>DEMO-0000</b> unlocks a practice machine.</div>
 
-<section id="connectView" class="view">
-  <div class="hero">
+<section id="menuView" class="view hidden" aria-label="Main menu">
+  <div class="menuwrap">
     <svg width="56" height="56" viewBox="0 0 32 32" fill="none" aria-hidden="true" class="arcmark brand-mark">
       <path fill="currentColor" d="M2.8 3.6h3.5V14.6H2.8z"/>
       <path fill="currentColor" d="M2.8 17.4h3.5v10.8H2.8z"/>
@@ -160,49 +176,35 @@
       <path fill="currentColor" d="M21.75 17.4h3.5v10.8h-3.5z"/>
       <path d="M1.6 16h28.8" stroke="var(--accent)" stroke-width="2" stroke-linecap="square"/>
     </svg>
-    <h1>Connect to the plasma table</h1>
-    <ol class="plain">
-      <li>Plug the table's USB cable into this computer.</li>
-      <li>Press <b>Connect</b> and pick the port (often "USB Serial Device").</li>
-    </ol>
-    <div class="row center">
-      <button id="btnConnect" class="xl go">Connect with USB</button>
-      <button id="btnDemo" class="xl">Try the demo</button>
-      <button id="btnDesignOnly" class="xl">Design parts (free)</button>
-      <p id="connectLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p>
+    <h1 id="menuHello">What do you want to do?</h1>
+    <div class="menubtns">
+      <button type="button" id="menuMake" class="menubig">
+        <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 20l1.2-4.2L16.5 4.5a1.8 1.8 0 0 1 2.5 2.5L7.8 18.3z"/></svg>
+        <b>Make a part</b><span>Draw a shape, change it, save it.</span>
+      </button>
+      <button type="button" id="menuCut" class="menubig go">
+        <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-cut"></use></svg>
+        <b>Go to cutting</b><span>Upload a file or pick saved parts, put them on the bed, cut.</span>
+      </button>
     </div>
-    <details id="fnBox" class="fnbox">
-      <summary>FluidNC (Wi-Fi)</summary>
-      <p class="muted small">ESP32 running FluidNC on the same Wi-Fi. Default socket is <code>ws://&lt;ip&gt;:81</code>.</p>
-      <div class="grid2">
-        <label>IP or hostname<input id="fnHost" type="text" placeholder="192.168.1.50 or fluidnc.local" autocomplete="off" autocorrect="off" spellcheck="false"></label>
-        <label>WebSocket port<input id="fnPort" type="number" value="81" min="1" max="65535" inputmode="numeric"></label>
-      </div>
-      <button type="button" id="btnFluidNC" class="xl">Connect to FluidNC</button>
-      <p id="fnMixed" class="warntext hidden"></p>
-    </details>
-    <p id="verLine" class="muted small verline"></p>
-    <p id="connectHelp" class="muted">USB works in Chrome or Edge on a computer. Close Mach3 or any other program using the port first. Got the Wi-Fi Pi fitted? Open <b>http://plasma.local</b> instead. FluidNC from the live https site is blocked by the browser — serve a local http copy, or use USB. See How to use → FluidNC.</p>
+    <p id="menuMachine" class="muted small"></p>
   </div>
 </section>
 
 <!-- ============================================================ CUT -->
 <section id="cutView" class="view hidden">
-  <ol class="stepper" id="stepper">
-    <li data-step="1"><span>1</span>File</li>
-    <li data-step="2"><span>2</span>Material</li>
-    <li data-step="3"><span>3</span>Get set up</li>
-    <li data-step="4"><span>4</span>Cut</li>
-  </ol>
-
-  <div id="proBar" class="probar pro-only" role="toolbar" aria-label="Pro toolbar">
-    <button type="button" id="pbOpen" class="small">Open <kbd>file</kbd></button>
-    <button type="button" id="pbShape" class="small">Shape editor</button>
-    <button type="button" id="pbStraight" class="small">Straight cut</button>
-    <button type="button" id="pbPlay" class="small">Play <kbd>Space</kbd></button>
-    <button type="button" id="pbRun" class="small go">Check &amp; Run <kbd>Ctrl+Enter</kbd></button>
-    <span class="probar-keys muted small">Alt+1…5 jump to a step · Esc = STOP · R turn · M mirror · Ctrl+Z undo</span>
+  <div id="makeBar" class="makebar">
+    <h2>Make a part</h2>
+    <div id="modeSwitch" class="modesw" role="group" aria-label="Design mode">
+      <button type="button" class="modesw-btn sel" data-mode="beginner" title="Guided, step by step">Beginner</button>
+      <button type="button" class="modesw-btn" data-mode="pro" title="Dense workspace with every tool">Pro</button>
+    </div>
   </div>
+  <ol class="stepper" id="stepper">
+    <li data-step="1"><span>1</span>Part</li>
+    <li data-step="3"><span>2</span>Bed &amp; start</li>
+    <li data-step="4"><span>3</span>Cut</li>
+  </ol>
 
   <div id="guideHead" class="guidehead beginner-only" aria-live="polite">
     <b id="ghStep">Step 1 of 5</b><span id="ghTitle">Pick a shape</span>
@@ -222,13 +224,12 @@
         <button type="button" id="playBtn" class="small" aria-label="Play the cut preview">▶ Play</button>
         <input type="range" id="playSlider" min="0" max="1000" value="0" aria-label="Scrub through the cut preview">
         <span id="playTime" class="playtime">0:00 / 0:00</span>
-        <button type="button" id="playSpeed" class="small pro-only" title="Playback speed">×20</button>
+        <button type="button" id="playSpeed" class="small" title="Playback speed">×20</button>
       </div>
       <div id="exportRow" class="row exportrow">
+        <button type="button" id="btnSavePartQuick" class="small">Save to account</button>
         <button type="button" id="btnExport" class="small">Download G-code</button>
         <button type="button" id="btnExportMenu" class="small" aria-expanded="false" aria-controls="exportPop">Dialect ▾</button>
-        <button type="button" id="btnEditDrawing" class="small hidden" title="Turn this imported drawing into a shape you can change: set lengths, square corners, curve edges, move, resize, add holes">✏ Edit this drawing</button>
-        <button type="button" id="btnSavePartQuick" class="small">Save to account</button>
         <div id="exportPop" class="exportpop hidden" hidden>
           <label>G-code dialect
             <select id="exportDialect">
@@ -249,33 +250,91 @@
     <div class="stepPane">
       <!-- step 1 -->
       <div class="step" data-step="1">
-        <h2 id="step1Title">What do you want to cut?</h2>
+        <h2 id="step1Title">Make a part</h2>
         <div id="bgPick" class="bgpick beginner-only">
           <button type="button" id="bgChange" class="xl">↺ Choose a different shape</button>
           <div id="bgShapes" class="bgshapes"></div>
           <div class="bgmore">
             <button type="button" id="bgMore" class="xl">More shapes…</button>
-            <button type="button" id="bgStraight" class="xl">➖ A straight cut</button>
+            <button type="button" id="bgDraw" class="xl">✏ Draw your own</button>
           </div>
         </div>
-        <div class="srcTabs">
-          <button class="srcTab sel" data-src="file">📂 Open a drawing</button>
-          <button class="srcTab" data-src="shape">✏ Make a shape</button>
-        </div>
-        <div class="row wrap straightrow"><button type="button" id="btnStraight" class="small" title="Cut a straight line (sheet trim) with no drawing">➖ Straight cut / sheet trim</button></div>
 
-        <div id="srcFile">
+        <!-- CUTTING SCREEN: choose what to cut -->
+        <div id="pickPane" class="pickpane">
+          <h3>Choose the part</h3>
+          <p id="bedStatus" class="bedstatus hidden"><span id="bedStatusText"></span> <button type="button" id="btnClearBed" class="small">Start over</button></p>
           <label id="drop" class="drop">
             <input type="file" id="file" multiple accept=".dxf,.svg,.nc,.gcode,.ngc,.tap,.txt,.cnc,.g">
-            <b id="dropTitle">Tap to choose a file</b>
-            <span class="muted">or drag it here</span>
+            <b id="dropTitle">Upload a file</b>
+            <span class="muted">or drag it here · several DXF or SVG files at once is fine</span>
             <span class="muted small">DXF or SVG from your CAD · or ready-made G-code (.nc .gcode .tap)</span>
           </label>
-          <button type="button" id="btnBatchImport" class="small batchbtn" title="Pick up to 20 DXF files and save each as a part in a folder in your parts list">⇪ Import many DXFs into your parts list</button>
+          <div class="row wrap pickrow">
+            <button type="button" id="btnPickSaved" class="xl">📁 Saved parts &amp; folders</button>
+            <button type="button" id="btnStraight" class="xl" title="Cut a straight line (sheet trim) with no drawing">➖ Straight cut</button>
+            <button type="button" id="btnEditDrawing" class="xl hidden" title="Open this drawing in Make a part to change lengths, square corners, curve edges, add holes">✏ Edit in Make a part</button>
+          </div>
           <div id="recentWrap" class="hidden">
             <h3>Recent</h3>
             <div id="recent" class="chips"></div>
           </div>
+          <h3>Material and thickness</h3>
+          <p id="matLine" class="matline"></p>
+          <div class="s2cols">
+            <div class="s2a">
+              <label class="matpreset-wrap">Preset
+                <select id="matPreset" aria-label="Material preset"></select>
+              </label>
+              <div id="materials" class="choice"></div>
+              <h3>Thickness</h3>
+              <div id="thicknesses" class="choice small"></div>
+              <p id="matTip" class="mattip"></p>
+              <div id="ampsCard" class="amps"></div>
+              <label class="check prominent"><input type="checkbox" id="dryRun"> Practice run – move only, torch stays off</label>
+            </div>
+            <div class="s2b">
+              <div id="cutCheck2" class="cutcheck"></div>
+            </div>
+          </div>
+          <details class="adjust" id="advCut">
+            <summary>More cut options</summary>
+            <div class="speed">
+              <div class="speedhead"><b>Cut speed</b><button id="spReset" class="small">Use recommended</button></div>
+              <div class="speedrow">
+                <button id="spDown" class="xl" aria-label="Slower">−</button>
+                <div class="speedval"><b id="spVal">0</b><span>mm/min</span></div>
+                <button id="spUp" class="xl" aria-label="Faster">+</button>
+              </div>
+              <input type="range" id="spSlider" aria-label="Cut speed">
+              <div class="speedscale"><span>slower</span><span id="spRange"></span><span>faster</span></div>
+              <p id="spNote" class="spnote"></p>
+            </div>
+            <p class="muted small autohint">Leave a box empty to use the recommended value shown in it as “Auto”.</p>
+            <div class="grid2">
+              <label>Cut width / kerf (mm)<input id="ovKerf" type="number" step="0.1" inputmode="decimal"></label>
+              <label>Lead-in (mm)<input id="ovLead" type="number" step="0.5" inputmode="decimal"></label>
+              <label>Pierce delay (s)<input id="ovDelay" type="number" step="0.1" inputmode="decimal"></label>
+              <label>Pierce height (mm)<input id="ovPierce" type="number" step="0.1" inputmode="decimal"></label>
+              <label>Cut height (mm)<input id="ovCut" type="number" step="0.1" inputmode="decimal"></label>
+            </div>
+            <div id="camPanel" class="campanel">
+              <h3>Tabs, run-out and start points</h3>
+              <div class="grid2">
+                <label>Hold-down tabs per part<input id="camTabs" type="number" min="0" max="12" step="1" value="0" inputmode="numeric"></label>
+                <label>Tab width (mm)<input id="camTabW" type="number" min="1" max="30" step="0.5" value="3" inputmode="decimal"></label>
+                <label>Lead-out (mm)<input id="camOut" type="number" min="0" max="30" step="0.5" value="0" inputmode="decimal"></label>
+                <label>Overcut (mm)<input id="camOver" type="number" min="0" max="30" step="0.5" value="0" inputmode="decimal"></label>
+              </div>
+              <p class="muted small">Drag the green start dot or the orange tab dots on the picture to move them.</p>
+              <div class="row wrap"><button type="button" id="camReset" class="small">Reset starts and tabs</button></div>
+            </div>
+            <div id="cutListCard" class="cutlistcard hidden">
+              <h3>Cut order <span class="muted small">drag the handle or the arrows to reorder · untick to skip</span></h3>
+              <ol id="cutList" class="cutlist"></ol>
+              <div class="row wrap"><button type="button" id="cutAuto" class="small">Back to automatic order</button></div>
+            </div>
+          </details>
         </div>
 
         <div id="srcShape" class="hidden">
@@ -356,7 +415,7 @@
               <li><b>Move</b> – drag it. Guide lines appear when it lines up with another shape. Hold <b>Alt</b> to move freely.</li>
               <li><b>Size</b> – tap the millimetre label above or beside the shape and type the exact size (you can use 100/2 or 50+12.5). Or drag a corner, or use the boxes below.</li>
               <li><b>Versions</b> – tap a shape, then pick a version (rounded, chamfered, corner holes, flange, gusset…). It keeps the size and place.</li>
-              <li><b>Pro mode</b> – switch to Pro in the header (or your account) for a dense layout, the full-screen editor, arrays, subtract, offset and a Check &amp; Run button.</li>
+              <li><b>Pro mode</b> – switch to Pro with the Beginner / Pro switch at the top of this screen for a dense layout, the full-screen editor, arrays, subtract, offset and every tool in one place.</li>
               <li><b>Edit a drawn outline</b> – after <b>Draw outline</b>, click an edge to type an exact length, square it up, set an angle, or turn it into a curve (drag the midpoint handle). Drag corners, double-click an edge to add a corner, Delete removes one. Undo still works.</li>
               <li><b>Holes</b> – drag a hole to move it. The numbers show how far its middle is from the part's left and bottom edges.</li>
               <li><b>Several at once</b> – Shift-click them, or drag a box round them on empty space. Then move, copy, turn, mirror or delete them together.</li>
@@ -376,107 +435,28 @@
           <p class="muted small">All sizes in mm and are the finished part – the cut width is allowed for automatically.</p>
         </div>
 
-        <div id="recentJobsWrap" class="recentjobs hidden">
-          <h3>Recent jobs</h3>
-          <div id="recentJobs" class="chips"></div>
-        </div>
         <ul id="warnings" class="warnings"></ul>
         <div class="nav">
           <span></span>
-          <button type="button" id="btnCheckRun" class="xl go pro-only hidden">Check &amp; Run</button>
-          <button class="next xl" data-go="2" id="next1" disabled>Next →</button>
+          <button class="next xl" data-go="3" id="next1" disabled>Next →</button>
         </div>
-      </div>
-
-      <!-- step 2 -->
-      <div class="step hidden" data-step="2">
-        <h2>What are you cutting?</h2>
-        <p id="matLine" class="matline beginner-only"></p>
-        <div class="s2cols">
-<div class="s2a">
-        <label class="matpreset-wrap">Preset
-          <select id="matPreset" aria-label="Material preset"></select>
-        </label>
-        <div id="materials" class="choice"></div>
-        <h3>Thickness</h3>
-        <div id="thicknesses" class="choice small"></div>
-        <div id="ampsCard" class="amps"></div>
-        <div class="speed advanced-only">
-          <div class="speedhead"><b>Cut speed</b><button id="spReset" class="small">Use recommended</button></div>
-          <div class="speedrow">
-            <button id="spDown" class="xl" aria-label="Slower">−</button>
-            <div class="speedval"><b id="spVal">0</b><span>mm/min</span></div>
-            <button id="spUp" class="xl" aria-label="Faster">+</button>
-          </div>
-          <input type="range" id="spSlider" aria-label="Cut speed">
-          <div class="speedscale"><span>slower</span><span id="spRange"></span><span>faster</span></div>
-          <p id="spNote" class="spnote"></p>
-        </div>
-
-        <label class="check prominent"><input type="checkbox" id="dryRun"> Practice run – move only, torch stays off</label>
-        <p class="muted small beginner-help">Use this for the first job on a new setup. A PRACTICE RUN chip appears in the header.</p>
-</div>
-<div class="s2b">
-        <div id="cutCheck2" class="cutcheck"></div>
-        <details class="guide"><summary>What this machine can cut at this thickness</summary><div class="limitsBody"></div></details>
-
-        <details class="guide" id="guide">
-          <summary>How do I know the speed is right?</summary>
-          <ul>
-            <li class="ok"><b>Right:</b> sparks come out the bottom, trailing back a little (about 15°). Clean edge.</li>
-            <li class="fast"><b>Too fast:</b> sparks spray up out of the top, or it doesn't cut through. Hard bead under the edge. → <b>slower</b></li>
-            <li class="slow"><b>Too slow:</b> sparks drop straight down or forward. Big bubbly dross, wide cut. → <b>faster</b></li>
-          </ul>
-          <p id="matTip" class="mattip"></p>
-          <p class="muted small">You can also change speed while it cuts, then save the speed that worked.</p>
-        </details>
-
-        <details class="adjust">
-          <summary>More settings</summary>
-          <p class="muted small autohint">Leave a box empty to use the recommended value shown in it as “Auto”.</p>
-          <div class="grid2">
-            <label>Cut width / kerf (mm)<input id="ovKerf" type="number" step="0.1" inputmode="decimal"></label>
-            <label>Lead-in (mm)<input id="ovLead" type="number" step="0.5" inputmode="decimal"></label>
-            <label>Pierce delay (s)<input id="ovDelay" type="number" step="0.1" inputmode="decimal"></label>
-            <label>Pierce height (mm)<input id="ovPierce" type="number" step="0.1" inputmode="decimal"></label>
-            <label>Cut height (mm)<input id="ovCut" type="number" step="0.1" inputmode="decimal"></label>
-          </div>
-        </details>
-        <div id="camPanel" class="campanel pro-only">
-          <h3>CAM <span class="muted small">hold-down tabs, run-out, start points</span></h3>
-          <div class="grid2">
-            <label>Hold-down tabs per part<input id="camTabs" type="number" min="0" max="12" step="1" value="0" inputmode="numeric"></label>
-            <label>Tab width (mm)<input id="camTabW" type="number" min="1" max="30" step="0.5" value="3" inputmode="decimal"></label>
-            <label>Lead-out (mm)<input id="camOut" type="number" min="0" max="30" step="0.5" value="0" inputmode="decimal"></label>
-            <label>Overcut (mm)<input id="camOver" type="number" min="0" max="30" step="0.5" value="0" inputmode="decimal"></label>
-          </div>
-          <p class="muted small">Drag the green start dot or the orange tab dots on the preview to move them. Beginner mode keeps today's defaults.</p>
-          <div class="row wrap"><button type="button" id="camReset" class="small">Reset starts and tabs</button></div>
-        </div>
-        <div id="cutListCard" class="cutlistcard pro-only hidden">
-          <h3>Cut list <span class="muted small">drag the handle or the arrows to reorder · untick to skip</span></h3>
-          <ol id="cutList" class="cutlist"></ol>
-          <div class="row wrap"><button type="button" id="cutAuto" class="small">Back to automatic order</button></div>
-        </div>
-</div>
-</div>
-        <div class="nav"><button class="back" data-go="1">← Back</button><button class="next xl" data-go="3">Next →</button></div>
       </div>
 
       <!-- step 3: Get set up = lay the parts out on the sheet + work zero + final checks -->
       <div class="step hidden" data-step="3">
-        <h2>Get set up</h2>
+        <h2>Place the parts, then get set up</h2>
         <details class="setupcard" id="layoutCard" open>
-          <summary><b>1 · Arrange the parts on the sheet</b> <span id="layoutState" class="layoutstate"></span></summary>
+          <summary><b>1 · Put the parts on the bed</b> <span id="layoutState" class="layoutstate"></span></summary>
           <div class="sheetrow">
             <label>Sheet width <input id="sheetW" type="number" min="50" step="any" inputmode="decimal"> mm</label>
             <label>Height <input id="sheetH" type="number" min="50" step="any" inputmode="decimal"> mm</label>
-            <label class="pro-only">Clearance <input id="sheetClr" type="number" min="0" step="0.5" inputmode="decimal" value="2"> mm</label>
+            <label>Clearance <input id="sheetClr" type="number" min="0" step="0.5" inputmode="decimal" value="2"> mm</label>
           </div>
           <p class="muted small" id="sheetNote"></p>
           <div class="skbtns bigbtns laybtns">
             <button type="button" id="layAdd" class="accent">＋ Add parts…</button>
             <button type="button" id="layAuto" title="Pack every part onto the sheet with the right gaps">⊞ Arrange for me</button>
+            <button type="button" id="btnEditParts" title="Change lengths, corners, holes in Make a part, then come back here">✏ Edit parts</button>
           </div>
           <p class="muted small layhelp beginner-help">Drag a part to move it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet.</p>
           <div id="layoutSel" class="layoutsel hidden">
@@ -492,7 +472,7 @@
               <label class="grow">Angle ° <input id="layAngle" type="number" step="any" inputmode="decimal" aria-label="Free angle in degrees"></label>
               <button type="button" id="layAngleSet" class="small">Turn to this</button>
             </div>
-            <div class="row layfine pro-only">
+            <div class="row layfine">
               <label>Nudge <select id="layNudge"><option value="0.5">0.5 mm</option><option value="1" selected>1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option></select></label>
               <button type="button" data-nudge="-1,0" aria-label="Nudge left">←</button><button type="button" data-nudge="0,1" aria-label="Nudge up">↑</button><button type="button" data-nudge="0,-1" aria-label="Nudge down">↓</button><button type="button" data-nudge="1,0" aria-label="Nudge right">→</button>
               <span class="muted small">or the arrow keys</span>
@@ -506,8 +486,32 @@
         </details>
 
         <details class="setupcard" id="zeroCard" open>
-          <summary><b>2 · Set the start point</b> <span id="zeroState" class="layoutstate muted small">Not set yet.</span></summary>
+          <summary><b>2 · Connect, home and set the start point</b> <span id="zeroState" class="layoutstate muted small">Not set yet.</span></summary>
           <div class="zerobody">
+          <div id="connectCard" class="connectcard">
+            <div class="row wrap">
+              <button id="btnConnect" class="xl go">Connect with USB</button>
+              <button id="btnDemo" class="xl">Practice (no machine)</button>
+              <button type="button" id="btnDisconnect" class="xl hidden">Disconnect</button>
+            </div>
+            <p id="connectLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p>
+            <details id="fnBox" class="fnbox">
+              <summary>FluidNC (Wi-Fi)</summary>
+              <p class="muted small">ESP32 running FluidNC on the same Wi-Fi. Default socket is <code>ws://&lt;ip&gt;:81</code>.</p>
+              <div class="grid2">
+                <label>IP or hostname<input id="fnHost" type="text" placeholder="192.168.1.50 or fluidnc.local" autocomplete="off" autocorrect="off" spellcheck="false"></label>
+                <label>WebSocket port<input id="fnPort" type="number" value="81" min="1" max="65535" inputmode="numeric"></label>
+              </div>
+              <button type="button" id="btnFluidNC" class="xl">Connect to FluidNC</button>
+              <p id="fnMixed" class="warntext hidden"></p>
+            </details>
+            <p id="connectHelp" class="muted small">USB works in Chrome or Edge on a computer. Close Mach3 or any other program using the port first. Got the Wi-Fi Pi fitted? Open <b>http://plasma.local</b> instead. FluidNC from the live https site is blocked by the browser — serve a local http copy, or use USB.</p>
+          </div>
+          <div class="row wrap homerow">
+            <button class="do-home">⌂ Home</button>
+            <button class="do-raise">⤒ Raise torch</button>
+            <button id="btnGoStart">Go to start point</button>
+          </div>
           <p class="muted small zerohelp">Put the sheet on the table. Move the torch over the sheet's <b>bottom-left corner</b> and press <b>Start here</b>. That corner is where the sheet picture's 0, 0 is.</p>
           <div class="jogmount"></div>
           <p class="muted small keyhint">Keyboard: arrows move, Page Up / Page Down raise and lower. Tap for one step, hold to glide. Two arrows go diagonal, add Shift to go slow.</p>
@@ -518,7 +522,7 @@
 
         <details class="setupcard" id="checkCard" open>
           <summary><b>3 · Check, then cut</b></summary>
-          <p id="checkMat" class="checkmat"></p>
+          <p class="checkmat"><span id="checkMat"></span> <button type="button" id="btnChangeMat" class="small">Change material or part</button></p>
           <ul class="checklist" id="checklist"></ul>
           <p id="zeroWarn" class="warntext hidden">Start point has not been set. Press Start here in “Set the start point” above, or you may cut in the wrong place.</p>
         <div id="startCutRow" class="startcut hidden">
@@ -530,7 +534,7 @@
         </div>
           <div id="blockers" class="blockers"></div>
         </details>
-        <div class="nav"><button class="back" data-go="2">← Back</button><button type="button" id="btnCheckRun2" class="xl go pro-only hidden">Check &amp; Run</button><button id="btnStart" class="xl go" disabled>▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><p id="startLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p></div>
+        <div class="nav"><button class="back" data-go="1">← Back</button><button id="btnStart" class="xl go" disabled>▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><p id="startLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p></div>
       </div>
 
       <!-- step 4: running / done -->
@@ -550,8 +554,8 @@
               <button id="lsDown" class="xl grow">− Slower</button>
               <button id="lsUp" class="xl grow">+ Faster</button>
             </div>
-            <p class="muted small beginner-help">Sparks spraying up out of the top = too fast. Dripping straight down = too slow.</p>
-            <div id="delayRow" class="delayrow pro-only">
+            <p class="muted small">Sparks spraying up out of the top = too fast. Dripping straight down = too slow.</p>
+            <div id="delayRow" class="delayrow">
               <div>Pierce delay <b id="liveDelay">–</b></div>
               <div class="row">
                 <button type="button" id="delDown" class="grow" aria-label="Pierce delay 0.1 seconds shorter">− 0.1 s</button>
@@ -563,10 +567,9 @@
           </div>
           <div class="row runctl">
             <button id="btnPause" class="xl">⏸ Pause</button>
-            <button type="button" id="btnStopRun" class="xl stop runstop" title="Stop (Esc)">STOP</button>
           </div>
-          <p class="muted small">Pause stops the machine and the torch. Press STOP or Esc to cancel the job.
-            Keep this tab open and the computer awake.</p>
+          <p class="muted small">Pause stops the machine and the torch. Press the red E-STOP (or Esc, or the space bar) to cancel the job.
+            Keep this tab open and the computer awake. You can't leave this screen while it is cutting.</p>
         </div>
         <div id="done" class="hidden">
           <h2 id="doneTitle">Finished ✓</h2>
@@ -583,41 +586,11 @@
           <div class="col">
             <button id="btnAgain" class="xl go">Cut another one</button>
             <button id="btnRezero" class="xl accent hidden">Set a new start point first</button>
-            <button id="btnNewFile" class="xl">Cut a different file</button>
+            <button id="btnNewFile" class="xl">Cut a different part</button>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ============================================================ MOVE -->
-<section id="moveView" class="view hidden">
-  <div class="card movegrid">
-   <div>
-    <div class="jogmount"></div>
-    <div class="row">
-      <button class="do-home">⌂ Home</button>
-      <button class="do-raise">⤒ Raise torch</button>
-      <button id="btnGoStart">Go to start point</button>
-    </div>
-    <p class="muted small">Keyboard: arrows move, Page Up / Page Down raise and lower. Tap for one step, hold to glide. Two arrows go diagonal, add Shift to go slow. Esc stops everything.</p>
-   </div>
-   <canvas id="moveMap" class="map" aria-label="Live view of the table from above"></canvas>
-   <div id="movePro" class="movepro">
-     <div>
-       <h3>DRO</h3>
-       <div id="moveDro" class="dro" aria-label="Digital read-out"></div>
-     </div>
-     <div>
-       <h3>Console</h3>
-       <form id="moveConsoleForm" class="row">
-         <input id="moveConsoleIn" class="grow" placeholder="G-code or $ command" autocomplete="off" autocapitalize="characters">
-         <button type="submit" id="btnMoveConsoleSend">Send</button>
-       </form>
-       <p class="muted small">Same filter and confirms as the Setup console. Hardware writes only when Idle.</p>
-     </div>
-   </div>
   </div>
 </section>
 
@@ -676,13 +649,12 @@
       Torch test: fires the plasma for half a second over scrap.</p>
   </div>
 
-  <div class="card pro-only" id="controllerCard">
+  <div class="card admin-only" id="controllerCard">
     <h2>Controller</h2>
     <div class="row">
       <button data-cmd="pins">Show pins</button>
       <button data-cmd="settings_list">Show settings</button>
       <button id="btnPushSettings">Send settings</button>
-      <button id="btnDisconnect">Disconnect</button>
     </div>
     <div id="log" class="log"></div>
     <form id="consoleForm" class="row">
@@ -769,6 +741,13 @@
 <!-- ============================================================ account / gating dialogs -->
 <div id="accountDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="acctTitle">
   <div class="shapelib-card slim acctcard">
+    <div class="loginbrand">
+      <svg width="56" height="56" viewBox="0 0 32 32" fill="none" aria-hidden="true" class="arcmark brand-mark">
+        <path fill="currentColor" d="M2.8 3.6h3.5V14.6H2.8z"/><path fill="currentColor" d="M2.8 17.4h3.5v10.8H2.8z"/><path fill="currentColor" d="M2.8 3.6h12.2v3.5H2.8z"/><path fill="currentColor" d="M11.5 3.6h3.5v10.1h-3.5z"/><path fill="currentColor" d="M2.8 10.2h12.2v3.5H2.8z"/><path fill="currentColor" d="M17.4 3.6H29.2v3.5H17.4z"/><path fill="currentColor" d="M21.75 3.6h3.5V14.6h-3.5z"/><path fill="currentColor" d="M21.75 17.4h3.5v10.8h-3.5z"/><path d="M1.6 16h28.8" stroke="var(--accent)" stroke-width="2" stroke-linecap="square"/>
+      </svg>
+      <h1>Plasma Table</h1>
+      <p class="muted">Sign in or create an account to get started.</p>
+    </div>
     <div class="shapelib-head">
       <h2 id="acctTitle">Account</h2>
       <button type="button" class="acct-close">Close</button>
@@ -776,7 +755,7 @@
     <div id="acctBody">
 
       <div data-pane="in">
-        <p class="muted" id="acctDemoTag2">Sign in to save parts to your account. Designing is free. Running a real table needs a linked machine.</p>
+        <p class="muted" id="acctDemoTag2">Sign in or create an account to use Plasma Table. Running a real table also needs a linked machine.</p>
         <form id="formSignIn" class="col">
           <label>Email<input id="inEmail" type="email" autocomplete="username" required></label>
           <label>Password<input id="inPin" type="password" autocomplete="current-password" required minlength="6"></label>
@@ -796,21 +775,6 @@
           <label>Email<input id="upEmail" type="email" autocomplete="username" required></label>
           <label>Password<input id="upPin" type="password" autocomplete="new-password" required minlength="6"></label>
           <p class="muted small">At least 6 characters. You can change this later.</p>
-          <fieldset class="modepick">
-            <legend>How do you want the app?</legend>
-            <div class="modesw acct-modesw" role="group" aria-label="App mode">
-              <button type="button" class="modesw-btn sel" data-mode="beginner">Beginner</button>
-              <button type="button" class="modesw-btn" data-mode="pro">Pro</button>
-            </div>
-            <label class="modecard"><input type="radio" name="suMode" value="beginner" checked>
-              <b>Beginner</b>
-              <span>Simple tools and fewer settings. A good place to start.</span>
-            </label>
-            <label class="modecard"><input type="radio" name="suMode" value="pro">
-              <b>Pro</b>
-              <span>All settings and the CAD tools, so you can customise everything.</span>
-            </label>
-          </fieldset>
           <div class="signup-submit">
             <button type="submit" class="xl go">Create account</button>
           </div>
@@ -860,21 +824,8 @@
         <p id="acctWho"></p>
         <div class="col">
           <label>Display name<input id="acctName" type="text" maxlength="80"></label>
-          <fieldset class="modepick">
-            <legend>App mode (syncs with the Beginner / Pro switch in the header)</legend>
-            <div class="modesw acct-modesw" role="group" aria-label="App mode">
-              <button type="button" class="modesw-btn" data-mode="beginner">Beginner</button>
-              <button type="button" class="modesw-btn" data-mode="pro">Pro</button>
-            </div>
-            <label class="modecard"><input type="radio" name="acctMode" value="beginner">
-              <b>Beginner</b><span>Simple tools and fewer settings.</span>
-            </label>
-            <label class="modecard"><input type="radio" name="acctMode" value="pro">
-              <b>Pro</b><span>All settings and the CAD / Pro tools.</span>
-            </label>
-          </fieldset>
           <button type="button" id="btnAcctSave" class="go">Save settings</button>
-          <button type="button" id="btnStartDesign" class="xl accent">Start designing</button>
+          <button type="button" id="btnStartDesign" class="xl accent">Make a part</button>
         </div>
         <h3>Linked machines</h3>
         <div id="acctMachines"></div>

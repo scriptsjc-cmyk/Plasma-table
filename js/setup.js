@@ -442,7 +442,8 @@ function bind() {
     const total = lists.reduce((n, l) => n + l.qty, 0);
     if (!total) { H.toast("Choose at least one part (quantity 1 or more).", true); return; }
     const r = addToSheet(lists); closeAdd();
-    H.toast(r.failed ? `Added ${r.added}; ${r.failed} didn't fit on the sheet (shown red off the corner).` : `Added ${r.added} part${r.added === 1 ? "" : "s"} to the sheet.`, !!r.failed);
+    H.toast(r.failed ? `Added ${r.added}; ${r.failed} didn't fit on the sheet (shown red off the corner).` : `Added ${r.added} part${r.added === 1 ? "" : "s"} to the bed.`, !!r.failed);
+    if (H.afterAdd) H.afterAdd(r);
   };
 }
 export { LAYOUT };

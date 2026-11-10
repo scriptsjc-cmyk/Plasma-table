@@ -20,7 +20,7 @@ let RUN = VERSION;
 export function initR2(host) {
   H = host;
   fetchLatest().then((j) => { if (j) { RUN = { id: j.id, commit: j.commit || VERSION.commit, built: j.built || VERSION.built }; paintVersionLines(); paintAbout(); } });
-  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy(); bindDemoFit(); bindTopMenu(); bindPierceJump(); installLabelGuard(); installIcons();
+  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindWhy(); bindDemoFit(); bindTopMenu(); bindPierceJump(); installLabelGuard(); installIcons();
   paintVersionLines();
 }
 
@@ -175,10 +175,9 @@ export function drawNumbers(ctx, X, Y, ox, oy, C) {
   ctx.restore();
 }
 
-// ================================================================ Pro CAM: tabs, lead-out, overcut, start points
-export function camOpts() {            // what the job builder gets. Beginner always gets the plain defaults.
+// ================================================================ CAM: tabs, lead-out, overcut, start points (under "More cut options"; every default is off)
+export function camOpts() {            // what the job builder gets
   const S = H.S;
-  if (!H.isPro()) return {};
   const c = S.cam;
   return {
     order: S.cutOrder || null, skip: S.cutSkip || [], starts: c.starts || {},
@@ -216,10 +215,10 @@ function bindCam() {
   });
   bindHandles();
 }
-// handles on the zoomed preview (step 2): green dot = where each cut starts, orange squares = hold-down tabs
+// handles on the zoomed preview (cutting screen step 1, "More cut options" open): green dot = where each cut starts, orange squares = hold-down tabs
 function handleList() {
   const S = H.S, p = S.prepared;
-  if (!H.isPro() || !p || !p.cutInfo || S.cur !== 2 || !p.shift) return [];
+  if (!p || !p.cutInfo || S.cur !== 1 || !p.shift || !H.camHandles()) return [];
   const out = [];
   for (const c of p.cutInfo) {
     if (c.open) continue;
@@ -285,7 +284,7 @@ function fullOrder(p) {
 export function paintCutList() {
   const card = $("cutListCard"), S = H.S, p = S.prepared;
   if (!card) return;
-  const show = H.isPro() && !!p && !!p.allCuts && p.allCuts.length > 1;
+  const show = !!p && !!p.allCuts && p.allCuts.length > 1;
   card.classList.toggle("hidden", !show);
   if (!show) return;
   const order = fullOrder(p), skipped = new Set(S.cutSkip || []);
@@ -351,8 +350,7 @@ export function scaleContours(contours, k) {
     return o;
   });
 }
-export function sizeCheckWanted() {
-  if (!H.isPro()) return true;                   // Beginner always gets asked; Pro can switch it off in Settings
+export function sizeCheckWanted() {            // everyone is asked "is this the right size?"; Settings can switch it off
   try { return currentSettings().sizeCheck !== false; } catch (e) { return true; }
 }
 let sizePending = null;
@@ -450,7 +448,7 @@ export function paintRestart() {
 export function paintStartCut() {
   const S = H.S, row = $("startCutRow"); if (!row) return;
   const total = pierceCount();
-  const show = total > 1 && (H.isPro() || !!S.resume);
+  const show = total > 1;
   row.classList.toggle("hidden", !show);
   if (!show) return;
   const sel = $("startCut");
@@ -556,22 +554,6 @@ export async function demoEdges() {
     H.toast("Demo edges set up ✓ (nothing real moved)");
   } catch (e) { H.toast(e.message, true); }
   finally { if (btn) btn.disabled = false; }
-}
-
-// ================================================================ Pro keyboard shortcuts + toolbar
-function bindKeys() {
-  const pro = { pbOpen: () => { H.showSource("file"); $("file").click(); }, pbShape: () => { H.showSource("shape"); H.setShapeFs(true); },
-    pbPlay: togglePlay, pbRun: () => H.checkAndRun() };
-  for (const [id, fn] of Object.entries(pro)) if ($(id)) $(id).onclick = fn;
-  document.addEventListener("keydown", (e) => {
-    if (!H.isPro() || e.defaultPrevented) return;
-    const tag = (document.activeElement && document.activeElement.tagName) || "";
-    const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(tag);
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !H.jobRunning()) { e.preventDefault(); H.checkAndRun(); return; }
-    if (typing || e.ctrlKey || e.metaKey) return;
-    if (e.altKey && /^[1-4]$/.test(e.key)) { e.preventDefault(); H.goStep(Number(e.key)); return; }
-    if (e.key === " " && !H.jobRunning() && !H.sketchActive() && !$("playRow").classList.contains("hidden")) { e.preventDefault(); togglePlay(); }
-  });
 }
 
 // ================================================================ greyed-out controls say why (tap anywhere)

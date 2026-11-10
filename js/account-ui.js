@@ -19,7 +19,10 @@ export function acctOverlayOpen() {
   return $$(".acctdlg").some((el) => !el.classList.contains("hidden"));
 }
 
+// Round 4: the sign-in page is the first screen and can't be dismissed until someone is signed in.
+const loginGate = () => document.body.dataset.screen === "login" && !A.isSignedIn();
 function closeAll() {
+  if (loginGate()) return;
   const shouldMigrate = pendingMigrate;
   pendingMigrate = false;
   $$(".acctdlg").forEach((el) => el.classList.add("hidden"));
@@ -49,7 +52,6 @@ function fillSignedIn() {
   if (!u) return;
   $("acctWho").textContent = (u.display_name ? u.display_name + " · " : "") + (u.email || "");
   $("acctName").value = u.display_name || "";
-  $$('input[name="acctMode"]').forEach((r) => { r.checked = r.value === (u.mode === "pro" ? "pro" : "beginner"); });
   const serials = A.linkedSerials();
   $("acctMachines").innerHTML = serials.length
     ? "<ul>" + serials.map((s) => "<li>" + esc(s) + "</li>").join("") + "</ul>"
@@ -454,8 +456,7 @@ function bind() {
     const btn = e.target.querySelector("[type=submit]");
     btn.disabled = true;
     try {
-      const mode = ($$('input[name="suMode"]').find((r) => r.checked) || {}).value;
-      const r = await A.signUp({ email: $("upEmail").value, pin: $("upPin").value, display_name: $("upName").value, mode });
+      const r = await A.signUp({ email: $("upEmail").value, pin: $("upPin").value, display_name: $("upName").value, mode: "beginner" });
       if (r.confirm) {
         $("confirmEmail").textContent = r.email || $("upEmail").value;
         $("confirmEmail").dataset.email = r.email || $("upEmail").value;
@@ -516,21 +517,11 @@ function bind() {
     };
   }
 
-  $$('input[name="acctMode"]').forEach((r) => {
-    r.addEventListener("change", () => {
-      if (r.checked && host && host.applyMode) host.applyMode(r.value);
-      if (r.checked) A.setMode(r.value).catch(() => {});
-    });
-  });
-
   $("btnAcctSave").onclick = async () => {
     try {
       await A.setDisplayName($("acctName").value);
-      const mode = ($$('input[name="acctMode"]').find((r) => r.checked) || {}).value;
-      await A.setMode(mode);
       toast("Saved");
       fillSignedIn();
-      if (host && host.applyMode) host.applyMode(A.accountMode());
     } catch (err) { toast(err.message, true); }
   };
 
