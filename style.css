@@ -1362,7 +1362,7 @@ body[data-step="3"] #exportRow { display: none; }
 .ico { width: 1.25em; height: 1.25em; display: inline-block; vertical-align: -0.2em; flex: none; }
 #btnTopMenu { display: none; }
 #btnTopMenu .ico { width: 22px; height: 22px; display: block; }
-.topmenu { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; flex-wrap: wrap; }
+.topmenu { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; flex-wrap: nowrap; }
 @media (max-width: 560px) {
   .topbar { flex-wrap: nowrap; align-items: center; }
   .topbar-main { flex-wrap: nowrap !important; align-items: center; overflow: visible; gap: 8px; }

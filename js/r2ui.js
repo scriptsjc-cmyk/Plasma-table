@@ -680,20 +680,20 @@ let mapSheetY = null, mapMachineY = null;
 function nudgePreviewLabel(text, x, y, w, h) {
   if (typeof text !== "string" || !(w > 0)) return { x, y };
   if (/^grid /.test(text)) { mapSheetY = null; mapMachineY = null; return { x, y }; }
-  if (/shape/.test(text) && /overall/.test(text) && w < 480) return { x: 8, y: Math.max(14, h - 22) };
+  if (/shape/.test(text) && /overall/.test(text) && w < 560) return { x: 8, y: Math.max(14, h - 22) };
   if (text.startsWith("Sheet ")) { mapSheetY = y; return { x, y }; }
   if (text === "Machine work area") {
     let yy = y;
-    if (mapSheetY != null && Math.abs(yy - mapSheetY) < 16) yy = mapSheetY + 16;
-    if (w < 480 && yy > h - 32) yy = Math.max(14, h - 32);
+    if (mapSheetY != null && Math.abs(yy - mapSheetY) < 22) yy = mapSheetY + 22;
+    if ((w < 560 || h < 220) && yy > h - 32) yy = Math.max(14, h - 32);
     mapMachineY = yy;
     return { x, y: yy };
   }
   if (text.startsWith("Start point")) {
     let yy = y;
     const block = Math.max(mapSheetY || 0, mapMachineY || 0);
-    if (block && yy < block + 15) yy = block + 16;
-    if (w < 480 && yy > h - 36) yy = Math.max(14, h - 36);
+    if (block && yy < block + 22) yy = block + 22;
+    if ((w < 560 || h < 220) && yy > h - 36) yy = Math.max(14, h - 36);
     const moved = yy !== y;
     const xx = moved ? Math.max(4, Math.min(x, Math.max(4, w - 130))) : x;
     return { x: xx, y: yy };
