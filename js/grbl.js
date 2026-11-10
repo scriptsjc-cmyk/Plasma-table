@@ -265,6 +265,9 @@ export class GrblLink {
   }
   resume() { this.realtime(RT.RESUME); }
   stop(reason = "Stopped by operator.") {
+    // Drop everything still queued NOW. Before, the 250 ms between feed-hold and reset let each 'ok' pump more
+    // job lines (even M3) into the controller after STOP had been pressed; reset flushed them, but nothing should be sent.
+    this.pending = [];
     this.realtime(RT.HOLD);
     setTimeout(() => this.reset(reason), 250);
   }

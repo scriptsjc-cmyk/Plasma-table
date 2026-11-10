@@ -1,0 +1,7 @@
+# never commit the bridge pairing token or other secrets
+*.token
+.plasma-bridge-token
+*.pem
+*.key
+.env
+__pycache__/

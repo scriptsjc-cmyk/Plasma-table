@@ -2,7 +2,7 @@
 // Guided flow: File -> Material -> Position -> Check -> Cut.
 // Machine logic lives in machine.js; this file is only the screen.
 import { Machine } from "./machine.js";
-import { WebSerialTransport, WiFiTransport } from "./grbl.js";
+import { WebSerialTransport, WiFiTransport, RT } from "./grbl.js";
 import { SimTransport } from "./sim.js";
 import { parseDXF } from "./dxf.js";
 import { parseSVG } from "./svg.js";
@@ -102,10 +102,15 @@ function cmd(name, extra = {}) {
 function machineAllowed() {
   // The on-screen demo controller is free so people can look around and design.
   if (S.demo) return true;
-  return Acc.hasLinkedMachine();
+  return Acc.realControlAllowed();
 }
 function requireMachine(why) {
   if (machineAllowed()) return true;
+  if (Acc.hasLinkedMachine()) {
+    // A demo/test-mode "link" is browser-only: it never unlocks real hardware on a site with accounts.
+    toast("Demo accounts can't control a real machine. Open the site normally and sign in.", true);
+    return false;
+  }
   openGate(why || "Link your machine to run jobs");
   return false;
 }
@@ -394,7 +399,7 @@ function openLibrary() {
   renderLibrary();
   setTimeout(() => { if (matchMedia("(pointer: fine)").matches) $("libSearch").focus(); }, 30);
 }
-function closeLibrary() { $("shapeLib").classList.add("hidden"); }
+function closeLibrary() { $("shapeLib").classList.add("hidden"); S.uiBlockUntil = Date.now() + 450; }
 function renderLibrary() {
   const q = $("libSearch").value.trim().toLowerCase();
   const cats = [{ id: "all", name: "All" }, ...SHAPE_GROUPS];
@@ -418,7 +423,7 @@ function openVersions() {
   $("verBody").innerHTML = vs.map((v) => { const d = shapeDef(v.id); return `<button type="button" data-var="${esc(variantKey(v))}" class="${variantKey(v) === cur ? "sel" : ""}">${d ? shapeThumb(d, 40, 28) : ""}<span>${esc(v.label || (d ? d.name : v.id))}</span></button>`; }).join("");
   $("verPop").classList.remove("hidden");
 }
-function closeVersions() { $("verPop").classList.add("hidden"); }
+function closeVersions() { $("verPop").classList.add("hidden"); S.uiBlockUntil = Date.now() + 450; }
 
 function sizeDimForSelection() {
   const it = sketch.selected(); if (!it) return null;
@@ -519,7 +524,7 @@ function openNumPad(dim) {
   pad._ghost = setTimeout(() => { pad.style.pointerEvents = ""; }, 350);
 }
 
-function closeNumPad() { $("numPad").classList.add("hidden"); $("numPad")._apply = null; }
+function closeNumPad() { $("numPad").classList.add("hidden"); $("numPad")._apply = null; S.uiBlockUntil = Date.now() + 450; }
 
 function openCad(title, fields, onOk) {
   $("cadTitle").textContent = title;
@@ -1213,7 +1218,7 @@ async function connectWiFi(quiet = false) {
   if (S.wifiBusy) return;
   S.wifiBusy = true;
   try {
-    const t = new WiFiTransport(null, S.wifiToken, Acc.accessToken());
+    const t = new WiFiTransport(null, S.wifiToken, await Acc.freshAccessToken());
     await t.open();
     await M.connect(t);
     S.demo = null; S.wifi = true; S.wifiUsed = true; S.userDisconnected = false;
@@ -1241,7 +1246,7 @@ async function connectDemo() {
   setConnected(true, "the demo (nothing real moves)");
 }
 async function disconnect() {
-  if (M.jobRunning() && !S.wifi && !confirm("A job is running. Disconnect anyway?")) return;
+  if (M.jobRunning() && !confirm(S.wifi ? "A job is running on the Pi. Disconnecting stops it. Disconnect anyway?" : "A job is running. Disconnect anyway?")) return;
   S.userDisconnected = true;
   await M.disconnect();
   setConnected(false);
@@ -1304,11 +1309,12 @@ function bind() {
   // step 1: drawing or shape
   $$(".srcTab").forEach((b) => (b.onclick = () => showSource(b.dataset.src)));
   const addTile = (e) => {
+    if (Date.now() < (S.uiBlockUntil || 0)) return;      // a second tap just after a sheet closed would hit whatever is under it
     if (e.target.closest("[data-lib]")) { openLibrary(); return; }
     const b = e.target.closest("[data-shape]"); if (b) sketch.add(b.dataset.shape);
   };
   $("shapeTiles").onclick = addTile; $("holeTiles").onclick = addTile;
-  $("quickBar").addEventListener("click", (e) => { const b = e.target.closest("[data-qb]"); if (b && !b.disabled) quickAction(b.dataset.qb); });
+  $("quickBar").addEventListener("click", (e) => { if (Date.now() < (S.uiBlockUntil || 0)) return; const b = e.target.closest("[data-qb]"); if (b && !b.disabled) quickAction(b.dataset.qb); });
   $("libClose").onclick = closeLibrary;
   $("shapeLib").addEventListener("click", (e) => {
     if (e.target === $("shapeLib")) { closeLibrary(); return; }
@@ -1397,7 +1403,7 @@ function bind() {
       if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); if ($("numPad")._apply) $("numPad")._apply(); }
       else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeNumPad(); }
       else if (e.key === "Backspace") { e.preventDefault(); e.stopPropagation(); const el = $("numPadValue"); if ($("numPad")._cur) { el.textContent = ""; $("numPad")._cur = false; } else el.textContent = el.textContent.slice(0, -1); }
-      else if (/^[0-9.+\-*/]$/.test(e.key)) { e.preventDefault(); e.stopPropagation(); const el = $("numPadValue"); if ($("numPad")._cur) { el.textContent = ""; $("numPad")._cur = false; } el.textContent += e.key; }
+      else if (/^[0-9.+\-*/()]$/.test(e.key)) { e.preventDefault(); e.stopPropagation(); const el = $("numPadValue"); if ($("numPad")._cur) { el.textContent = ""; $("numPad")._cur = false; } el.textContent += e.key; }
       else e.stopPropagation();
       return;
     }
@@ -1524,7 +1530,18 @@ function bind() {
   relayout();
   window.addEventListener("beforeunload", (e) => { if (M.jobRunning()) { e.preventDefault(); e.returnValue = ""; } });
   window.addEventListener("pagehide", () => {
-    try { if (M && M.grbl) M.grbl.stop("Page closed."); } catch (e) { /* best effort */ }
+    // The page is going away, so a delayed reset (stop() waits 250 ms) would never be sent and the controller would be
+    // left in Hold with the torch lit. Send hold + reset back to back. Exception: a job the Pi is running by itself
+    // carries on by design (reconnect and you see it again).
+    try {
+      const g = M && M.grbl; if (!g) return;
+      if (g.t && g.t.remoteJobs && g.job && g.job.running) return;
+      // only when something is actually moving or lit: a reset on an idle controller would make the next visit re-home
+      const busy = (g.job && g.job.running) || g.status.torch || ["Run", "Jog", "Hold", "Home"].includes(g.status.state);
+      if (!busy) return;
+      g.pending = []; g.inflight = [];
+      g.realtime(RT.HOLD); g.realtime(RT.RESET);
+    } catch (e) { /* best effort */ }
   });
 }
 
@@ -1571,7 +1588,9 @@ async function init() {
   });
   const travel = machine.travel_mm || { x: 1300, y: 800 };
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
-  if (new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S, account: Acc, openAccount, openClaim, openGate, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, machineAllowed, goStep, refreshGate };
+  // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
+  const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S, account: Acc, openAccount, openClaim, openGate, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, machineAllowed, goStep, refreshGate };
   renderShapeTiles();
   bind();
   await initAccountUi({

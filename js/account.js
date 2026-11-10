@@ -48,15 +48,49 @@ function normEmail(s) { return String(s || "").trim().toLowerCase(); }
 function normCode(s) { return String(s || "").trim().toUpperCase(); }
 function okEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normEmail(s)); }
 
-export async function sha256hex(text) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(text)));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+// crypto.subtle only exists on https / localhost. The Pi serves this page over plain http
+// (http://plasma.local), where demo mode used to die at start-up with "Couldn't start".
+const K256 = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+function sha256Plain(bytes) {
+  const l = bytes.length, total = (((l + 9 + 63) >> 6) << 6), m = new Uint8Array(total);
+  m.set(bytes); m[l] = 0x80;
+  const dv = new DataView(m.buffer); dv.setUint32(total - 4, (l * 8) >>> 0); dv.setUint32(total - 8, Math.floor((l * 8) / 4294967296));
+  const H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19], w = new Uint32Array(64);
+  const rr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let o = 0; o < total; o += 64) {
+    for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const s0 = rr(w[i - 15], 7) ^ rr(w[i - 15], 18) ^ (w[i - 15] >>> 3), s1 = rr(w[i - 2], 17) ^ rr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) >>> 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const t1 = (h + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & f) ^ (~e & g)) + K256[i] + w[i]) >>> 0;
+      const t2 = ((rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) >>> 0;
+      h = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+    }
+    [a, b, c, d, e, f, g, h].forEach((v, i) => { H[i] = (H[i] + v) >>> 0; });
+  }
+  return H.map((v) => v.toString(16).padStart(8, "0")).join("");
 }
+export async function sha256hex(text) {
+  const bytes = new TextEncoder().encode(String(text));
+  if (globalThis.crypto && crypto.subtle) {
+    const buf = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return sha256Plain(bytes);
+}
+export const _sha256Plain = (text) => sha256Plain(new TextEncoder().encode(String(text)));
 
 export function makeClaimCode() {
+  // 32-letter alphabet, so one random byte & 31 is unbiased. Claim codes protect machine
+  // ownership: they must come from the CSPRNG, never Math.random().
   const abc = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const pick = (n) => Array.from({ length: n }, () => abc[Math.floor(Math.random() * abc.length)]).join("");
-  return pick(4) + "-" + pick(4);
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  const pick = (from, n) => Array.from(bytes.slice(from, from + n), (b) => abc[b & 31]).join("");
+  return pick(0, 4) + "-" + pick(4, 4);
 }
 
 function notify() { for (const fn of LISTENERS) try { fn(api.snapshot()); } catch (e) { /* ignore */ } }
@@ -195,7 +229,10 @@ async function parseHashSession() {
   const typ = q.get("type") || "";
   if (!access) return;
   try {
-    const data = await fetch(rootUrl() + "/auth/v1/user", { headers: authHeaders(access) }).then((r) => r.json());
+    const resp = await fetch(rootUrl() + "/auth/v1/user", { headers: authHeaders(access) });
+    const data = await resp.json().catch(() => null);
+    // A junk or expired token in the URL must not leave a half-signed-in session behind.
+    if (!resp.ok || !data || !data.id) return;
     saveCloudSess(fromAuthPayload({ access_token: access, refresh_token: refresh, expires_in: 3600, user: data }));
     await loadCloudProfile();
     writeJson(META_KEY, { ...(readJson(META_KEY, {}) || {}), recovery: typ === "recovery" });
@@ -245,14 +282,33 @@ export function snapshot() {
 }
 
 export function hasLinkedMachine() {
-  if (cloudOn()) return !!(readJson(META_KEY, {}) || {}).linked;
+  if (cloudOn()) {
+    // The cached flag only counts for the account it was fetched for (shared devices).
+    const m = readJson(META_KEY, {}) || {};
+    const s = cloudSess();
+    return !!(m.linked && s && s.user && s.user.id && m.uid === s.user.id);
+  }
   const u = demoSession();
   if (!u) return false;
   return demoState().machines.some((m) => m.owner === u.id);
 }
 
+// May this page drive a REAL machine (USB or the Wi-Fi bridge)? Demo accounts live only in this
+// browser, so on a site that has a cloud backend (?demo=1 / ?test=1 on the real site) they must
+// never unlock real hardware; the on-screen practice table is always free. A site with no backend
+// configured at all (self-hosted, offline) keeps the old behaviour.
+export function realControlAllowed() {
+  if (!hasLinkedMachine()) return false;
+  if (cloudOn()) return true;
+  return !CONFIG.SUPABASE_URL;
+}
+
 export function linkedSerials() {
-  if (cloudOn()) return (readJson(META_KEY, {}) || {}).serials || [];
+  if (cloudOn()) {
+    const m = readJson(META_KEY, {}) || {};
+    const s = cloudSess();
+    return s && s.user && m.uid === s.user.id ? (m.serials || []) : [];
+  }
   const u = demoSession();
   if (!u) return [];
   return demoState().machines.filter((m) => m.owner === u.id).map((m) => m.serial);
@@ -262,6 +318,14 @@ export function accessToken() {
   if (!cloudOn()) return null;
   const s = cloudSess();
   return s && s.access ? s.access : null;
+}
+
+// Access token for the Wi-Fi bridge: refreshed first, so a token that expired while the
+// page sat open does not lock the operator out of a job that is running on the Pi.
+export async function freshAccessToken() {
+  if (!cloudOn()) return null;
+  try { await refreshIfNeeded(); } catch (e) { /* offline: use what we have */ }
+  return accessToken();
 }
 
 export async function initAccount() {
@@ -283,7 +347,7 @@ export async function initAccount() {
 async function refreshLinked() {
   if (!cloudOn() || !cloudSess()) {
     const meta = readJson(META_KEY, {}) || {};
-    meta.linked = false; meta.serials = [];
+    meta.linked = false; meta.serials = []; meta.uid = null;
     writeJson(META_KEY, meta);
     return;
   }
@@ -293,6 +357,7 @@ async function refreshLinked() {
     const meta = readJson(META_KEY, {}) || {};
     meta.linked = serials.length > 0;
     meta.serials = serials;
+    meta.uid = (cloudSess() && cloudSess().user && cloudSess().user.id) || null;
     writeJson(META_KEY, meta);
   } catch (e) { /* keep last known */ }
 }
@@ -424,9 +489,7 @@ export async function signOut() {
   if (cloudOn()) {
     try { await authFetch("/auth/v1/logout", { method: "POST", body: "{}" }); } catch (e) { /* ignore */ }
     saveCloudSess(null);
-    const meta = readJson(META_KEY, {}) || {};
-    meta.linked = false; meta.serials = [];
-    writeJson(META_KEY, meta);
+    writeJson(META_KEY, {});            // linked flag, serials, recovery marker: nothing survives sign-out
   } else {
     try { localStorage.removeItem(SESS_KEY); } catch (e) { /* ignore */ }
   }
@@ -547,12 +610,14 @@ export async function savePart({ id, name, data, updated_at, keepBoth }) {
         });
         return Array.isArray(copy) ? copy[0] : copy;
       }
-      const rows = await authFetch("/rest/v1/parts?id=eq." + encodeURIComponent(id), {
+      const rows = await authFetch("/rest/v1/parts?id=eq." + encodeURIComponent(id) + "&owner=eq." + encodeURIComponent(u.id), {
         method: "PATCH",
         headers: { Prefer: "return=representation" },
         body: JSON.stringify({ name, data, updated_at: stamp }),
       });
-      return Array.isArray(rows) ? rows[0] : rows;
+      const row = Array.isArray(rows) ? rows[0] : rows;
+      if (!row) throw new Error("That part is not on this account any more. Save it as a new part.");
+      return row;
     }
     const rows = await authFetch("/rest/v1/parts", {
       method: "POST",
@@ -623,6 +688,8 @@ export async function claimMachine(code, serial) {
     const body = { p_code: c };
     if (serial) body.p_serial = serial;
     const r = await authFetch("/rest/v1/rpc/claim_machine", { method: "POST", body: JSON.stringify(body) });
+    // The server answers wrong codes with {ok:false,error} (so the attempt is logged and counted).
+    if (!r || r.ok !== true) throw new Error((r && r.error) || "That code is not recognised.");
     await refreshLinked();
     notify();
     return r;
@@ -674,7 +741,7 @@ export async function adminAddMachine(serial, code, notes) {
   if (!isAdmin()) throw new Error("Admin only");
   const ser = normCode(serial);
   const c = normCode(code);
-  if (!ser || c.length < 4) throw new Error("Serial and a claim code of at least 4 characters are required.");
+  if (!ser || c.length < 8) throw new Error("A serial and a claim code of at least 8 characters are required (use Generate).");
   if (cloudOn()) {
     await refreshIfNeeded();
     const r = await authFetch("/rest/v1/rpc/admin_add_machine", { method: "POST", body: JSON.stringify({ p_serial: ser, p_code: c, p_notes: notes || "" }) });

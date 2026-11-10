@@ -406,7 +406,8 @@ canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px s
 /* toast */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text);
   color: #fff; font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: 100;
-  box-shadow: 0 8px 24px rgba(16, 24, 40, .2); max-width: min(92vw, 480px); }
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .2); max-width: min(92vw, 480px);
+  pointer-events: none; /* a toast must never swallow a tap meant for STOP or the quick bar */ }
 .toast.err { background: var(--alarm); color: #fff; }
 
 /* phones: choices first until a drawing exists */
@@ -609,3 +610,19 @@ body.beginner label.protoggle { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .placeways { margin: 0 0 6px; padding-left: 20px; display: grid; gap: 4px; }
+
+/* Phones: a long display name in the Account pill must never push STOP off the screen (name is clipped with an ellipsis). */
+@media (max-width: 520px) { .pill.acct { max-width: 20vw; } }
+
+/* phone in landscape: the keypad was ~500px tall on a 360-390px screen (Done key off-screen).
+   Same keys, same sizes: label/value/Cancel/Enter go in a left column, the keys in a right column. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .numpad { padding: 6px; padding-bottom: max(6px, env(safe-area-inset-bottom)); align-items: center; }
+  .numpad-card { padding: 10px 12px; }
+  #numPad .numpad-card { width: min(640px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); grid-template-rows: auto auto 1fr; column-gap: 12px; align-content: start; }
+  #numPad .numpad-label { grid-column: 1; grid-row: 1; }
+  #numPad .numpad-value { grid-column: 1; grid-row: 2; }
+  #numPad .numpad-keys { grid-column: 2; grid-row: 1 / 4; margin: 0; gap: 6px; }
+  #numPad .numpad-keys button { min-height: 44px; }
+  #numPad .numpad-row { grid-column: 1; grid-row: 3; align-self: end; margin-top: 8px; }
+}

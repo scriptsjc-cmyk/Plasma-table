@@ -7,6 +7,7 @@
 //  * After every M5: lift clear for the next rapid.
 
 export class JobError extends Error {}
+const MAX_COORD_MM = 100000;   // 100 m: far beyond any table, still safe to print with toFixed()
 
 const WORD_RE = /([A-Z])\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:E[-+]?\d+)?)/gi;
 
@@ -75,6 +76,10 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
     const mcodes = words.filter(([k]) => k === "M").map(([, v]) => Math.trunc(parseFloat(v)));
     const axes = {};
     for (const [k, v] of words) if ("XYIJ".includes(k)) axes[k] = parseFloat(v);
+    for (const [k, v] of Object.entries(axes)) {
+      // X1e999 parses to Infinity and 1e300 is printed as "1e+300": neither may ever reach the controller
+      if (!Number.isFinite(v) || Math.abs(v) > MAX_COORD_MM) throw new JobError(`Line ${lineno}: ${k}${v} is not a sensible position (limit ±${MAX_COORD_MM} mm).`);
+    }
 
     for (const g of gcodes) {
       if (g === 20) throw new JobError("This file is in inches (G20). Export it in millimetres.");

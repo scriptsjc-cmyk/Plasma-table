@@ -62,8 +62,16 @@ Supabase project as the website.
    *before* it will accept G-code (jog, send, run). Stop/reset still follow the
    usual pairing-token path once the socket is up.
 
-If that file is missing, behaviour is unchanged (pairing token only). See
+If that file is missing, behaviour is unchanged (pairing token only). If any of the three
+settings is present but the others are missing, the file can't be read, or the URL isn't
+`https://`, the bridge refuses to start instead of quietly turning the check off. Until a
+signed-in owner is confirmed, only STOP (reset, feed hold, jog cancel) is accepted. See
 `docs/ACCOUNTS-SETUP.md` for the full setup, and for why a **direct USB
 (Web Serial)** lead cannot be enforced the same way — only the app-side lock
 applies there, until a future firmware-level check.
 
+
+## Security notes
+- The bridge makes a random **pairing token** the first time it runs and keeps it in `~/.plasma-bridge-token` (on the Pi, mode 600, **outside** the website folder). The page fetches it from `/bridge.json` and uses it for the WebSocket. Delete the file and restart (`sudo systemctl restart plasma`) to issue a new one.
+- The bridge only answers requests whose `Host` is the Pi itself (an IP address, `localhost`, `plasma.local` or another bare/.local name). If you reach it through some other DNS name, add it with `--origin http://that.name` (repeatable) in the service file.
+- One screen at a time: a second screen gets "409 busy". A screen that has been silent for 6 s (phone dropped off Wi-Fi) is dropped so you can reconnect.

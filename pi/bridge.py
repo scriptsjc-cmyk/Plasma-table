@@ -11,7 +11,7 @@
 
 Run:  python3 bridge.py --site /home/pi/plasma --port 80
 """
-import argparse, asyncio, base64, glob, hashlib, json, mimetypes, os, re, secrets, ssl, struct, sys, termios, time, tty
+import argparse, asyncio, base64, glob, hashlib, hmac, ipaddress, json, mimetypes, os, re, secrets, ssl, struct, sys, termios, time, tty
 from urllib.parse import urlparse, parse_qs, quote
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -19,10 +19,23 @@ from urllib.error import URLError, HTTPError
 RX_SIZE = 127                 # controller's receive buffer (grbl character counting)
 RT_RESET, RT_HOLD, RT_JOG_CANCEL = b"\x18", b"!", b"\x85"
 WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+STALE_SECONDS = 6.0           # no frame from the screen for this long = dead connection (the app sends '?' every 100 ms)
+MAX_LINE = 255                # longest typed line passed on (grblHAL's line buffer is 256)
+NEVER_SERVE_DIRS = ("pi", "supabase", "scripts")    # bridge code / token / account config / database schema are not part of the website
+NEVER_SERVE_EXT = (".py", ".sh", ".sql", ".token", ".pyc", ".log", ".env", ".pem", ".key")
 
 
 def log(*a):
     print(time.strftime("%H:%M:%S"), *a, flush=True)
+
+
+def default_token_path():
+    """Keep the token OUTSIDE the folder the website is served from (it used to be pi/bridge.token, which the
+    static file server handed out to anyone)."""
+    home = os.path.expanduser("~")
+    if not home or home == "~" or not os.path.isdir(home):
+        home = "/var/tmp"
+    return os.path.join(home, ".plasma-bridge-token")
 
 
 def load_or_create_token(path):
@@ -59,8 +72,37 @@ def load_origin_allowlist(path, extra):
     return out
 
 
+def host_ok(hdr, allowlist):
+    """DNS-rebinding guard: the Host header must name the Pi itself (an IP address, localhost, a .local / bare
+    LAN name, or something on the allowlist). A web page on evil.example that re-points its DNS at the Pi sends
+    Host: evil.example, so Origin == Host would otherwise pass."""
+    host = (hdr.get("host") or "").strip().lower()
+    if not host:
+        return False
+    if host.startswith("["):                        # [::1]:80
+        name = host[1:].split("]", 1)[0]
+    else:
+        name = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+    if name.endswith("."):
+        name = name[:-1]
+    if not name:
+        return False
+    for a in allowlist:
+        a = a.strip().lower()
+        if a and (a == host or a == name or urlparse(a if "//" in a else "//" + a).netloc.lower() in (host, name)):
+            return True
+    try:
+        ipaddress.ip_address(name)
+        return True
+    except ValueError:
+        pass
+    return name == "localhost" or name.endswith(".local") or ("." not in name and name.isascii())
+
+
 def origin_ok(hdr, allowlist):
-    """Require Origin to match the Host header, or to be on the allowlist."""
+    """Require Origin to match the Host header, or to be on the allowlist. Host must itself be the Pi."""
+    if not host_ok(hdr, allowlist):
+        return False
     origin = (hdr.get("origin") or "").strip()
     host = (hdr.get("host") or "").strip()
     if origin:
@@ -80,7 +122,7 @@ def origin_ok(hdr, allowlist):
 # Realtime bytes pass straight through; line-oriented commands must look like g-code / $ settings.
 _RT = set(b"?!~\x18\x84\x85\x9e") | set(range(0x80, 0xA0))
 _LINE = re.compile(
-    r"^\s*(\?|!|~|\$J=|\$X\b|\$H\b|\$\$|\$#|\$I|\$G|\$N|\$\d+=|[A-Za-z];|;|\(|%|[GgMmFfSsTtPpXxYyZzIiJjKkRrNnHh])"
+    r"^\s*(\?|!|~|\$J=|\$X\b|\$H\b|\$\$|\$#|\$I|\$G|\$N|\$\d+=|;|\(|%|[GgMmFfSsTtPpXxYyZzIiJjKkRrNnHh]\s*[-+.\d])"
 )
 
 
@@ -89,21 +131,19 @@ def filter_web_bytes(data: bytes) -> bytes:
     buf = bytearray()
     for b in data:
         if b in _RT:
-            if buf:
-                buf.clear()
-            out.append(b)
+            out.append(b)            # realtime bytes go straight through; grbl itself strips them from a half-typed line
             continue
         if b in (10, 13):
             line = bytes(buf).decode("latin-1", "replace")
-            if line.strip() and _LINE.match(line):
+            if line.strip() and len(buf) <= MAX_LINE and _LINE.match(line):   # grblHAL's line buffer is 256: longer is never valid
                 out.extend(buf)
                 out.append(10)
             buf.clear()
-        elif b >= 32 or b == 9:
+        elif 32 <= b < 127 or b == 9:
             buf.append(b)
     if buf:
         line = bytes(buf).decode("latin-1", "replace")
-        if _LINE.match(line):
+        if len(buf) <= MAX_LINE and _LINE.match(line):
             out.extend(buf)
     return bytes(out)
 
@@ -129,13 +169,17 @@ class Serial:
         if not path or not os.path.exists(path):
             return False
         fd = os.open(path, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
-        tty.setraw(fd)
-        attrs = termios.tcgetattr(fd)
-        speed = getattr(termios, f"B{self.baud}", termios.B115200)
-        attrs[4] = attrs[5] = speed
-        attrs[2] |= termios.CLOCAL | termios.CREAD
-        attrs[2] &= ~termios.HUPCL
-        termios.tcsetattr(fd, termios.TCSANOW, attrs)
+        try:
+            tty.setraw(fd)
+            attrs = termios.tcgetattr(fd)
+            speed = getattr(termios, f"B{self.baud}", termios.B115200)
+            attrs[4] = attrs[5] = speed
+            attrs[2] |= termios.CLOCAL | termios.CREAD
+            attrs[2] &= ~termios.HUPCL
+            termios.tcsetattr(fd, termios.TCSANOW, attrs)
+        except Exception:
+            os.close(fd)             # don't leak the descriptor if the port is half-gone / not a tty
+            raise
         self.fd, self.buf = fd, b""
         asyncio.get_running_loop().add_reader(fd, self._readable)
         log("controller connected on", path)
@@ -194,16 +238,30 @@ class Serial:
 
 
 
+def _account_fatal(msg):
+    """The account check is a safety gate: if it was asked for but can't be set up, refuse to start
+    rather than silently falling back to 'pairing token only'."""
+    print("plasma bridge: ACCOUNT CHECK MISCONFIGURED -", msg, file=sys.stderr, flush=True)
+    sys.exit(2)
+
+
 def load_account_cfg(args):
-    """Optional machine-account check (Supabase). Off unless URL, anon key and serial are set.
-    Pairing token still applies. Values come from flags, env, or pi/bridge.account.json."""
+    """Optional machine-account check (Supabase). OFF by default: it is only on when a Supabase URL, the
+    anon key and this table's serial are ALL set (flags, env, or pi/bridge.account.json). Pairing token and
+    Origin checks always apply. Half-configured, or an unreadable/invalid config file, is a fatal error
+    (fail closed) so a typo can't quietly turn the check off. Values come from flags, env, or the file."""
     cfg = {}
+    explicit = bool(args.account_file)
     path = args.account_file or os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge.account.json")
     if os.path.isfile(path):
         try:
-            cfg = json.loads(open(path, encoding="utf-8").read()) or {}
+            cfg = json.loads(open(path, encoding="utf-8").read())
         except Exception as e:
-            log("could not read account config", path, e)
+            _account_fatal(f"could not read {path}: {e}")
+        if not isinstance(cfg, dict):
+            _account_fatal(f"{path} must contain a JSON object")
+    elif explicit:
+        _account_fatal(f"--account-file {path} does not exist")
     url = args.supabase_url or os.environ.get("PLASMA_SUPABASE_URL") or cfg.get("supabase_url") or ""
     serial = args.machine_serial or os.environ.get("PLASMA_MACHINE_SERIAL") or cfg.get("machine_serial") or ""
     anon = os.environ.get("PLASMA_SUPABASE_ANON") or cfg.get("supabase_anon") or ""
@@ -211,19 +269,44 @@ def load_account_cfg(args):
         try:
             anon = open(args.supabase_anon_file, encoding="utf-8").read().strip()
         except Exception as e:
-            log("could not read anon key file", e)
-    url, serial, anon = url.strip(), serial.strip(), anon.strip()
+            _account_fatal(f"could not read anon key file: {e}")
+    url, serial, anon = str(url).strip(), str(serial).strip(), str(anon).strip()
     if url and serial and anon:
-        return {"url": url.rstrip("/"), "serial": serial, "anon": anon}
+        host = urlparse(url).hostname or ""
+        if not (url.startswith("https://") or (url.startswith("http://") and host in ("127.0.0.1", "localhost"))):
+            _account_fatal("supabase_url must be https:// (the user's session token is sent to it)")
+        if anon.count(".") == 2 and "service_role" in _jwt_role(anon):
+            _account_fatal("that is a service_role key. Use the anon / publishable key, never the service key.")
+        # machines.serial is stored upper-case by admin_add_machine
+        return {"url": url.rstrip("/"), "serial": serial.upper(), "anon": anon}
     if url or serial or anon:
-        log("account check incomplete (need supabase URL, anon key and machine serial) — left off")
+        _account_fatal("account check incomplete (need supabase URL, anon key and machine serial). "
+                       "Set all three, or none to leave it off.")
     return None
 
 
+def _jwt_role(tok):
+    """Best-effort read of the (unverified) role claim, only to refuse a service_role key at start-up."""
+    try:
+        body = tok.split(".")[1]
+        body += "=" * (-len(body) % 4)
+        return str(json.loads(base64.urlsafe_b64decode(body)).get("role", ""))
+    except Exception:
+        return ""
+
+
+_JWT_RE = re.compile(r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$")
+
+
 def verify_machine_user(cfg, jwt, timeout=8):
-    """Return (ok, user_id, message). Uses the user's JWT against /auth/v1/user then machines?owner=eq."""
-    if not jwt:
+    """Return (ok, user_id, message). The bridge never parses or trusts the token itself: Supabase Auth
+    verifies signature, expiry and session at /auth/v1/user (so alg=none / key confusion can't work),
+    then machines is read with the USER's token, so row-level security has to agree this user owns
+    this serial."""
+    if not jwt or not isinstance(jwt, str):
         return False, None, "Sign in and link this table to your account, then connect again."
+    if len(jwt) > 4096 or not _JWT_RE.match(jwt):
+        return False, None, "Sign-in expired. Sign in again, then reconnect."
     headers = {"Authorization": "Bearer " + jwt, "apikey": cfg["anon"]}
     try:
         req = Request(cfg["url"] + "/auth/v1/user", headers=headers)
@@ -235,18 +318,19 @@ def verify_machine_user(cfg, jwt, timeout=8):
     except (URLError, TimeoutError, ValueError) as e:
         log("account lookup failed", type(e).__name__)
         return False, None, "Could not reach the account service. Try again in a moment."
-    uid = user.get("id")
-    if not uid:
+    uid = user.get("id") if isinstance(user, dict) else None
+    if not uid or not isinstance(uid, str) or user.get("is_anonymous") or user.get("aud") not in (None, "authenticated"):
         return False, None, "Sign-in expired. Sign in again, then reconnect."
     try:
-        q = cfg["url"] + "/rest/v1/machines?select=serial,owner&serial=eq." + quote(cfg["serial"]) + "&owner=eq." + quote(uid)
+        q = cfg["url"] + "/rest/v1/machines?select=serial,owner&serial=eq." + quote(cfg["serial"], safe="") + "&owner=eq." + quote(uid, safe="")
         req = Request(q, headers=headers)
         with urlopen(req, timeout=timeout) as r:
             rows = json.loads(r.read().decode())
     except Exception as e:
         log("machine ownership check failed", type(e).__name__)
         return False, uid, "Could not confirm this table is linked to your account."
-    if not rows:
+    if not (isinstance(rows, list) and any(isinstance(x, dict) and x.get("owner") == uid
+                                           and str(x.get("serial", "")).upper() == cfg["serial"] for x in rows)):
         return False, uid, "This account is not linked to this table. Ask the owner to transfer it, or claim it with the sticker code."
     return True, uid, "ok"
 
@@ -260,6 +344,7 @@ class Bridge:
         self.queue = []                    # job lines still to send
         self.job = None
         self.kept = None                   # what the website asked us to remember (where home is)
+        self.torch_web = False             # a typed M3/M4 has no matching M5 yet (not a bridge-run job)
         self.serial = Serial(args.serial, args.baud, self.on_line, self.on_serial_state)
         self.token = args.token
         self.origins = args.origins
@@ -272,10 +357,27 @@ class Bridge:
             return None
         return {k: j[k] for k in ("total", "sent", "acked", "errors", "running", "result", "message", "started")}
 
+    @staticmethod
+    def clean_job_lines(lines):
+        """Job lines get the same treatment as typed input: one controller line per entry, printable ASCII only,
+        no realtime characters (? ! ~ would hold/reset the controller from inside a comment), and nothing that
+        doesn't look like g-code or a $ command."""
+        out = []
+        if not isinstance(lines, list):
+            return out
+        for entry in lines:
+            if not isinstance(entry, str):
+                continue
+            for l in re.split(r"[\r\n]+", entry):
+                l = re.sub(r"[^\x20-\x7e\t]|[?!~]", "", l).strip()
+                if l and not l.startswith(";") and _LINE.match(l):
+                    out.append(l)
+        return out
+
     def start_job(self, lines):
         if self.job and self.job["running"]:
             return self.say_job()
-        body = [l.strip() for l in lines if l.strip() and not l.strip().startswith(";")]
+        body = self.clean_job_lines(lines)
         self.job = {"total": len(body), "sent": 0, "acked": 0, "errors": 0, "running": True, "result": None,
                     "message": "", "started": time.time()}
         self.queue = list(body)
@@ -355,7 +457,14 @@ class Bridge:
                 return
             if RT_RESET in data:
                 self.inflight, self.queue = [], []
+                self.torch_web = False
                 self.finish_job("stopped", "Stopped by operator.")
+            for ln in data.split(b"\n"):
+                u = bytes(c for c in ln if c < 0x80 and c not in b"?!~").upper()
+                if re.search(rb"\bM0*5\b|\bM0*2\b|\bM30\b", u):
+                    self.torch_web = False
+                elif re.search(rb"\bM0*[34]\b", u):
+                    self.torch_web = True      # torch lit by a typed command (torch test); cleared by M5 / reset
             # complete lines go into the shared buffer accounting so 'ok's reach the right owner
             for line in data.split(b"\n")[:-1]:
                 clean = bytes(c for c in line if c < 0x80 and c not in b"?!~\x18").strip()
@@ -386,7 +495,7 @@ class Bridge:
             if not self.serial.ok:
                 try:
                     self.serial.open()
-                except OSError as e:
+                except (OSError, termios.error) as e:       # termios.error is NOT an OSError: it used to kill this loop for good
                     log("can't open the controller port:", e)
             await asyncio.sleep(2)
 
@@ -398,6 +507,9 @@ class WSClient:
         self.closed = False
         self.user_id = None
         self.linked = False
+        self.auth_tries = 0
+        self.last_rx = time.time()
+        self.peer = writer.get_extra_info("peername")
 
     def send_text(self, text):
         if self.closed:
@@ -423,6 +535,7 @@ async def read_frames(reader, client):
     parts, opcode0 = [], None
     while True:
         b1, b2 = await reader.readexactly(2)
+        client.last_rx = time.time()
         fin, op, masked, n = b1 & 0x80, b1 & 0x0F, b2 & 0x80, b2 & 0x7F
         if n == 126:
             n = struct.unpack(">H", await reader.readexactly(2))[0]
@@ -476,7 +589,7 @@ def make_handler(bridge: Bridge, site):
 
         if path == "/ws" and hdr.get("upgrade", "").lower() == "websocket":
             tok = (qs.get("token") or [""])[0]
-            if not origin_ok(hdr, bridge.origins) or tok != bridge.token:
+            if not origin_ok(hdr, bridge.origins) or not hmac.compare_digest(tok.encode("utf-8", "replace"), bridge.token.encode("utf-8", "replace")):
                 log("ws rejected: origin or token", hdr.get("origin"), hdr.get("host"))
                 writer.write(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
                 try:
@@ -484,6 +597,12 @@ def make_handler(bridge: Bridge, site):
                 finally:
                     writer.close()
                 return
+            if bridge.client and time.time() - bridge.client.last_rx > STALE_SECONDS:
+                # the app polls the controller every 100 ms, so a socket that has been silent this long is a phone that
+                # dropped off Wi-Fi without a goodbye. Let the operator back in instead of locking them out.
+                log("dropping stale screen connection", bridge.client.peer)
+                old, bridge.client = bridge.client, None
+                old.close()
             if bridge.client:                            # single-client lock: never silently take over
                 log("ws busy: operator already connected")
                 writer.write(b"HTTP/1.1 409 Conflict\r\nContent-Length: 0\r\n\r\n")
@@ -510,7 +629,13 @@ def make_handler(bridge: Bridge, site):
                     except Exception as e:
                         log("bad message:", e)
                         continue
+                    if not isinstance(msg, dict):
+                        continue
                     if msg.get("t") == "auth" and bridge.account:
+                        client.auth_tries += 1
+                        if client.auth_tries > 10:                      # each try costs two calls to Supabase
+                            client.send_text(json.dumps({"t": "auth_err", "msg": "Too many sign-in attempts. Reconnect to try again."}))
+                            break
                         ok, uid, err = await asyncio.to_thread(verify_machine_user, bridge.account, msg.get("jwt") or "")
                         client.user_id = uid
                         client.linked = bool(ok)
@@ -521,7 +646,14 @@ def make_handler(bridge: Bridge, site):
                             log("account rejected", err)
                             client.send_text(json.dumps({"t": "auth_err", "msg": err}))
                         continue
-                    if bridge.account and not client.linked and msg.get("t") in ("w", "job"):
+                    if bridge.account and not client.linked and msg.get("t") in ("w", "job", "keep"):
+                        # Not (yet) linked: no g-code, no jobs, no remembered position. But STOP must always
+                        # work (e.g. the sign-in token expired while a job runs on the Pi): pass on only the
+                        # realtime reset (0x18), feed hold (!) and jog cancel (0x85) bytes, nothing else.
+                        if msg.get("t") == "w":
+                            stop = "".join(c for c in str(msg.get("d", "")) if c in ("\x18", "!", "\x85"))
+                            if stop:
+                                bridge.from_web({"t": "w", "d": stop})
                         client.send_text(json.dumps({"t": "auth_err", "msg": "This account is not linked to this table."}))
                         continue
                     try:
@@ -536,10 +668,17 @@ def make_handler(bridge: Bridge, site):
                     log("screen disconnected")
                     if not (bridge.job and bridge.job["running"]):
                         bridge.serial.write(RT_JOG_CANCEL)      # never leave a jog gliding
+                        if bridge.torch_web:                    # typed M3 with no M5 yet: don't leave the torch lit
+                            bridge.torch_web = False
+                            log("screen lost with the torch on: hold + reset")
+                            bridge.serial.write(RT_HOLD)
+                            asyncio.get_running_loop().call_later(0.25, lambda: bridge.serial.write(RT_RESET))
                 client.close()
             return
 
-        if method not in ("GET", "HEAD"):
+        if not host_ok(hdr, bridge.origins):                # DNS-rebinding guard for every request
+            writer.write(b"HTTP/1.1 421 Misdirected Request\r\nContent-Length: 0\r\n\r\n")
+        elif method not in ("GET", "HEAD"):
             writer.write(b"HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n")
         elif path == "/bridge.json":
             if not origin_ok(hdr, bridge.origins):
@@ -554,7 +693,9 @@ def make_handler(bridge: Bridge, site):
             if rel.endswith("/"):
                 rel += "index.html"
             full = os.path.realpath(os.path.join(site, rel))
-            if not full.startswith(site + os.sep) or not os.path.isfile(full) or "/." in full[len(site):]:
+            relp = full[len(site):].lstrip(os.sep)
+            if (not full.startswith(site + os.sep) or not os.path.isfile(full) or "/." in full[len(site):]
+                    or relp.split(os.sep)[0].lower() in NEVER_SERVE_DIRS or relp.lower().endswith(NEVER_SERVE_EXT)):
                 writer.write(b"HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nNot found")
             else:
                 with open(full, "rb") as f:
@@ -594,7 +735,7 @@ async def main():
     ap.add_argument("--account-file", default=None,
                     help="JSON with supabase_url, supabase_anon, machine_serial (default: pi/bridge.account.json)")
     args = ap.parse_args()
-    token_file = args.token_file or os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge.token")
+    token_file = args.token_file or default_token_path()
     args.token = load_or_create_token(token_file)
     args.origins = load_origin_allowlist(args.origins_file, args.origin)
     args.account = load_account_cfg(args)

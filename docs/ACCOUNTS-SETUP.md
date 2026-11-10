@@ -89,7 +89,7 @@ modest). The Account dialog has a **Resend the email** button.
 In the Admin page:
 
 1. Type the serial (the one on the table / sticker).
-2. Press **Generate** for a random one-off code (or type your own, at least 4
+2. Press **Generate** for a random one-off code (or type your own, at least 8
    characters). Codes look like `K7MQ-4NPD` (no 0/O/1/I, so they are easy to
    read off a sticker).
 3. Add an optional note, then **Add / update machine**.

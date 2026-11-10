@@ -5,18 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#E8EAED">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss: https://*.supabase.co; script-src 'self' 'unsafe-inline'; worker-src 'self'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss: https://sjtjgumbsnakipkgskxt.supabase.co; script-src 'self'; object-src 'none'; worker-src 'self'; base-uri 'self'; form-action 'self'">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>Plasma Table</title>
 <link rel="stylesheet" href="style.css">
-<script>
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js").catch(function () {});
-}
-</script>
+<script src="js/sw-register.js"></script>
 </head>
 <body>
 

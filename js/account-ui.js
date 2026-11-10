@@ -274,6 +274,7 @@ function bind() {
 
   $("btnSignOut").onclick = async () => {
     await A.signOut();
+    if (host && host.rememberPart) host.rememberPart(null);   // the next person must not save over this account's part id
     toast("Signed out");
     fillSignedIn();
     if (host && host.applyMode) host.applyMode(null);

@@ -345,7 +345,9 @@ export const SHAPES = [
     fit: (p, W, H) => ({ ...p, d: Math.min(W, H), slot: Math.max(H, W) }),
     params: [["d", "Round end Ø", 16], ["slotWid", "Slot width", 8], ["slotLen", "Slot length", 20]],
     make: (p) => {
-      const R = p.d / 2, w = Math.max(1, Math.min(p.slotWid, p.d - 0.4)), L = Math.max(w, p.slotLen);
+      const R = p.d / 2, w = Math.max(1, Math.min(p.slotWid, p.d - 0.4));
+      // the slot must reach below the point where its walls meet the round end, or the outline folds back on itself
+      const L = Math.max(w, p.slotLen, Math.sqrt(Math.max(0, R * R - (w / 2) * (w / 2))));
       const half = w / 2, cx = R, cy = R;
       const ang = Math.acos(Math.max(-1, Math.min(1, half / R)));
       // circle on top, slot hanging down; outline around both
@@ -496,8 +498,10 @@ export const SHAPES = [
         const ins = Math.max(p.hole / 2 + 1, p.inset);
         c.push(circleContour(Math.min(p.a - ins, p.a - t / 2), t / 2, p.hole / 2));
         c.push(circleContour(t / 2, Math.min(p.b - ins, p.b - t / 2), p.hole / 2));
-        if (p.a > 80) c.push(circleContour(t + (p.a - t) * 0.45, t / 2, p.hole / 2));
-        if (p.b > 80) c.push(circleContour(t / 2, t + (p.b - t) * 0.45, p.hole / 2));
+        // the extra middle holes are skipped when they would overlap the end hole (double-cut)
+        const gap = 2 * p.hole;
+        if (p.a > 80 && Math.abs((t + (p.a - t) * 0.45) - Math.min(p.a - ins, p.a - t / 2)) > gap) c.push(circleContour(t + (p.a - t) * 0.45, t / 2, p.hole / 2));
+        if (p.b > 80 && Math.abs((t + (p.b - t) * 0.45) - Math.min(p.b - ins, p.b - t / 2)) > gap) c.push(circleContour(t / 2, t + (p.b - t) * 0.45, p.hole / 2));
       }
       return c;
     },

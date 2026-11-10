@@ -671,12 +671,9 @@ export class Sketch {
   size() {
     const w = this.cv.clientWidth || 600;
     if (typeof document !== "undefined" && document.body && document.body.classList.contains("short-land")) {
-      const pane = this.cv.closest(".previewPane");
-      let h = this.cv.clientHeight || 0;
-      if (pane) {
-        const extra = [...pane.children].filter((el) => el !== this.cv && el.offsetParent).reduce((s, el) => s + (el.offsetHeight || 0), 0);
-        h = Math.max(h, (pane.clientHeight || 0) - extra);
-      }
+      // in side-rail landscape the canvas fills whatever the flex layout leaves it, so its own height IS the answer
+      // (the old "pane minus siblings" sum ignored gaps and borders: the backing store ended up ~6px taller than the box)
+      const h = this.cv.clientHeight || 0;
       return [w, Math.round(Math.max(120, h || ((window.innerHeight || 400) * 0.6)))];
     }
     return [w, Math.round(Math.max(260, Math.min(640, w * 0.7, (window.innerHeight || 800) * 0.62)))];
@@ -721,7 +718,7 @@ export class Sketch {
     if (!this.view) { this.view = { s: 1, vx: 0, vy: 0 }; this.fitView(); return; }
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
     if (document.body && document.body.classList.contains("short-land")) cv.style.height = "";
-    else cv.style.height = h + "px";
+    else cv.style.height = (h + (cv.offsetHeight - cv.clientHeight)) + "px";   // border-box: add the 1px borders so the content box is exactly h (else the picture is squashed ~2px)
     const ctx = cv.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
