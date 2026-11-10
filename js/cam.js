@@ -36,6 +36,12 @@ export function designToGcode(contours, { kerf = 1.5, leadIn = 3, name = "design
     c.hole = c.depth % 2 === 1;
   }
 
+  const inMaterial = (p) => {
+    let n = 0;
+    for (const o of closed) if (pointInPoly(p, o.pts)) n++;
+    return n % 2 === 1;
+  };
+
   // build each cut path (kerf offset + direction + start point + lead-in)
   const cuts = [];
   let tooSmall = 0, pinched = 0;
@@ -52,7 +58,7 @@ export function designToGcode(contours, { kerf = 1.5, leadIn = 3, name = "design
       if (pts.length < 3 || (c.hole && signedArea(pts) <= 0.01)) { tooSmall++; continue; }
       if (selfIntersects(pts)) pinched++;
     }
-    cuts.push({ ...makeCut(c, pts, circle, leadIn, warnings), src: c });
+    cuts.push({ ...makeCut(c, pts, circle, leadIn, warnings, inMaterial), src: c });
   }
   if (tooSmall) warnings.push(`${tooSmall} hole(s) are smaller than the cut width and were left out.`);
   if (pinched) warnings.push(`${pinched} shape(s) have details narrower than the cut width – those bits won't cut cleanly.`);
@@ -115,44 +121,73 @@ export function designToGcode(contours, { kerf = 1.5, leadIn = 3, name = "design
   };
 }
 
-function makeCut(c, pts, circle, leadIn, warnings) {
+function makeCut(c, pts, circle, leadIn, warnings, inMaterial) {
+  const scrap = (p) => (inMaterial ? !inMaterial(p) : (c.hole ? pointInPoly(p, pts) : !pointInPoly(p, pts)));
   if (circle) {
     const { cx, cy, r } = circle;
-    // start on the right-hand side of the circle
-    const start = [cx + r, cy];
-    let lead;
-    if (c.hole) {
-      const L = Math.min(leadIn, r * 0.8);
-      lead = r < leadIn * 1.25 ? [cx, cy] : [cx + r - L, cy];   // small holes: pierce in the middle
-    } else lead = [cx + r + leadIn, cy];
-    // part edge clockwise (G2), hole anticlockwise (G3); I,J from the start point to the centre
+    let best = null;
+    const angles = [];
+    for (let k = 0; k < 24; k++) angles.push((k / 24) * 2 * Math.PI);
+    for (const ang of angles) {
+      const start = [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
+      const inward = [-Math.cos(ang), -Math.sin(ang)], outward = [Math.cos(ang), Math.sin(ang)];
+      const dir = c.hole ? inward : outward;
+      if (c.hole && r < leadIn * 1.25 && scrap([cx, cy])) {
+        best = { start, lead: [cx, cy] };
+        break;
+      }
+      for (let L = leadIn; L > 0.3; L /= 2) {
+        const cand = [start[0] + dir[0] * L, start[1] + dir[1] * L];
+        const inside = Math.hypot(cand[0] - cx, cand[1] - cy) < r;
+        if ((c.hole ? inside : !inside) && scrap(cand)) { best = { start, lead: cand }; break; }
+      }
+      if (best) break;
+    }
+    if (!best) {
+      const start = [cx + r, cy];
+      best = { start, lead: c.hole ? (r < leadIn * 1.25 ? [cx, cy] : [cx + r - Math.min(leadIn, r * 0.8), cy]) : [cx + r + leadIn, cy] };
+    }
+    const { start, lead } = best;
     return { depth: c.depth, start, lead, path: [[c.hole ? "G3" : "G2", start, [cx - start[0], cy - start[1]]]],
       pathPts: circlePts(cx, cy, r) };
   }
-  // polygon: start in the middle of the longest straight edge
-  let bi = 0, bl = -1;
+  // polygon: try every edge, longest first, and pick a lead that lands in scrap
+  const edges = [];
   for (let i = 0; i < pts.length; i++) {
     const a = pts[i], b = pts[(i + 1) % pts.length], l = Math.hypot(b[0] - a[0], b[1] - a[1]);
-    if (l > bl) { bl = l; bi = i; }
+    if (l > 0.4) edges.push({ i, a, b, l });
   }
-  const a = pts[bi], b = pts[(bi + 1) % pts.length];
-  const start = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-  const ex = (b[0] - a[0]) / bl, ey = (b[1] - a[1]) / bl;
-  const outward = [ey, -ex];                 // CCW polygon: outward normal is to the right
-  const dir = c.hole ? [-outward[0], -outward[1]] : outward;   // towards the scrap
-  let lead = start;
-  for (let L = leadIn; L > 0.3; L /= 2) {
-    const cand = [start[0] + dir[0] * L, start[1] + dir[1] * L];
-    const inside = pointInPoly(cand, pts);
-    if (c.hole ? inside : !inside) { lead = cand; break; }
+  edges.sort((x, y) => y.l - x.l);
+  let chosen = null;
+  for (const e of edges) {
+    const { a, b, l, i: bi } = e;
+    const fracs = [0.5, 0.35, 0.65, 0.2, 0.8];
+    for (const f of fracs) {
+      const start = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+      const ex = (b[0] - a[0]) / l, ey = (b[1] - a[1]) / l;
+      const outward = [ey, -ex];
+      const dir = c.hole ? [-outward[0], -outward[1]] : outward;
+      for (let L = leadIn; L > 0.3; L /= 2) {
+        const cand = [start[0] + dir[0] * L, start[1] + dir[1] * L];
+        const inside = pointInPoly(cand, pts);
+        if ((c.hole ? inside : !inside) && scrap(cand)) { chosen = { start, lead: cand, bi, a, b }; break; }
+      }
+      if (chosen) break;
+    }
+    if (chosen) break;
   }
-  if (lead === start && leadIn > 0) warnings.push("A shape was too small for a lead-in – it will pierce on the line.");
-  // walk the outline from the start point: CCW order for holes, reversed (clockwise) for part edges
+  if (!chosen) {
+    const e = edges[0] || { a: pts[0], b: pts[1] || pts[0], l: 1, i: 0 };
+    const start = [(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2];
+    chosen = { start, lead: start, bi: e.i || 0, a: e.a, b: e.b };
+    if (leadIn > 0) warnings.push("A shape was too small for a lead-in – it will pierce on the line.");
+  }
+  const { start, lead, bi, a } = chosen;
   const ring = [];
-  for (let k = 1; k <= pts.length; k++) ring.push(pts[(bi + k) % pts.length]);  // b ... a
+  for (let k = 1; k <= pts.length; k++) ring.push(pts[(bi + k) % pts.length]);
   let seq;
-  if (c.hole) seq = [...ring];                         // start -> b -> ... -> a -> start (CCW)
-  else seq = [a, ...[...ring].reverse().slice(1)];     // start -> a -> ... -> b -> start (CW)
+  if (c.hole) seq = [...ring];
+  else seq = [a, ...[...ring].reverse().slice(1)];
   seq.push(start);
   return { depth: c.depth, start, lead, path: seq.map((p) => ["G1", p]), pathPts: [start, ...seq] };
 }

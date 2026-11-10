@@ -4,10 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#18202a">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss:; script-src 'self' 'unsafe-inline'; worker-src 'self'; base-uri 'self'; form-action 'self'">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' aria-hidden='true'><path d='M11 3h10l-2 12h-6z' fill='%23e3a73c'/><path d='M13.5 15h5l-1 3h-3z' fill='%23c8803a'/><path d='M16 18.5l-2 4 3 1-2.5 5.5' fill='none' stroke='%23a98bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/><path d='M4 29h24' stroke='%234f7fe0' stroke-width='2.5' stroke-linecap='round'/></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
 <title>Plasma Table</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -77,6 +76,8 @@
       <div id="jobStats" class="stats"></div>
     </div>
 
+    <nav id="quickBar" class="quickbar hidden" aria-label="Design tools"></nav>
+
     <div class="stepPane">
       <!-- step 1 -->
       <div class="step" data-step="1">
@@ -122,7 +123,8 @@
           <details class="guide howto">
             <summary>How to use the shape maker</summary>
             <ul>
-              <li><b>Add</b> – tap a part. Tap a hole with a part picked and it drops into the middle of it.</li>
+              <li><b>Add</b> – use the bar under the drawing for a rectangle, circle or triangle, or tap <b>More</b> for the full shape library. Tap a hole with a part picked and it drops into the middle of it.</li>
+              <li><b>Rotate your phone</b> – landscape gives you a bigger drawing, with the tools down the side. Portrait still works as before.</li>
               <li><b>Move</b> – drag it. Orange guide lines appear when it lines up with another shape. Hold <b>Alt</b> to move freely.</li>
               <li><b>Size</b> – tap the blue millimetre label above or beside the shape and type the exact size (you can use 100/2 or 50+12.5). Or drag a corner, or use the boxes below.</li>
               <li><b>Versions</b> – tap a shape, then pick a version (rounded, chamfered, corner holes, flange, gusset…). It keeps the size and place.</li>
@@ -369,6 +371,28 @@
 </template>
 
 <div id="toast" class="toast hidden"></div>
+
+<div id="shapeLib" class="shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="libTitle">
+  <div class="shapelib-card">
+    <div class="shapelib-head">
+      <h2 id="libTitle">Shape library</h2>
+      <button type="button" id="libClose">Close</button>
+    </div>
+    <input id="libSearch" type="search" placeholder="Search shapes" enterkeyhint="search" autocomplete="off">
+    <div id="libCats" class="libcats"></div>
+    <div id="libGrid" class="libgrid"></div>
+  </div>
+</div>
+<div id="verPop" class="shapelib hidden" role="dialog" aria-modal="true">
+  <div class="shapelib-card slim">
+    <div class="shapelib-head">
+      <h2 id="verTitle">Versions</h2>
+      <button type="button" id="verClose">Close</button>
+    </div>
+    <div id="verBody" class="varrow wrap"></div>
+  </div>
+</div>
+
 
 <div id="numPad" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="numPadLabel">
   <div class="numpad-card">

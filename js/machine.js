@@ -29,7 +29,7 @@ export class Machine {
   }
 
   async connect(transport) {
-    await this.disconnect();
+    await this.disconnect(false);
     this.safety.clearReference();
     this.emit("safety", this.safety.state());
     this.grbl = new GrblLink(transport, this.cfg.rx_buffer_size || 127, (k, d) => this.onGrbl(k, d));
@@ -39,7 +39,13 @@ export class Machine {
     }
     this.emit("log", { text: `Connected to ${transport.label || "controller"}`, level: "info" });
   }
-  async disconnect() {
+  async disconnect(stopFirst = true) {
+    if (this.grbl && stopFirst) {
+      try {
+        this.grbl.stop("Disconnected.");
+        await new Promise((r) => setTimeout(r, 400));
+      } catch (e) { /* already gone */ }
+    }
     if (this.grbl) { await this.grbl.close(); this.grbl = null; }
   }
 

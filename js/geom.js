@@ -290,9 +290,9 @@ function ghDifference(A, B) {
     let inside = pointInPoly([start.x, start.y], other), n = start;
     do { if (n.inter) { n.entry = invert ? !inside : inside; inside = !inside; } n = n.next; } while (n !== start);
   };
-  // A: entry when going into B is a departure for A−B (leave A along B)
-  mark(LA[0], B, true);
-  mark(LB[0], A, false);
+  // A−B: walk A *outside* B (entry when leaving B), and walk B *inside* A in reverse.
+  mark(LA[0], B, false);
+  mark(LB[0], A, true);
   const loops = [];
   for (;;) {
     let start = null, n = LA[0];

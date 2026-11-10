@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Plasma table Wi-Fi bridge. Auth: a per-install pairing token (?token=) and an Origin check
+# (Origin must match Host, or be on the allowlist). Optional --tls CERT KEY serves HTTPS/WSS.
 """Plasma table Wi-Fi bridge for a Raspberry Pi (no extra packages needed).
 
 * Serves the plasma website over Wi-Fi (http://plasma.local).
@@ -9,7 +11,8 @@
 
 Run:  python3 bridge.py --site /home/pi/plasma --port 80
 """
-import argparse, asyncio, base64, glob, hashlib, json, mimetypes, os, struct, sys, termios, time, tty
+import argparse, asyncio, base64, glob, hashlib, json, mimetypes, os, re, secrets, ssl, struct, sys, termios, time, tty
+from urllib.parse import urlparse, parse_qs
 
 RX_SIZE = 127                 # controller's receive buffer (grbl character counting)
 RT_RESET, RT_HOLD, RT_JOG_CANCEL = b"\x18", b"!", b"\x85"
@@ -18,6 +21,89 @@ WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 def log(*a):
     print(time.strftime("%H:%M:%S"), *a, flush=True)
+
+
+def load_or_create_token(path):
+    """Per-install pairing token: required as ?token= on the WebSocket."""
+    try:
+        if os.path.isfile(path):
+            tok = open(path, encoding="utf-8").read().strip()
+            if tok:
+                return tok
+    except OSError:
+        pass
+    tok = secrets.token_urlsafe(24)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(tok + "\n")
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+        log("pairing token saved to", path)
+    except OSError as e:
+        log("could not write token file", path, e)
+    return tok
+
+
+def load_origin_allowlist(path, extra):
+    out = list(extra or [])
+    try:
+        if path and os.path.isfile(path):
+            with open(path, encoding="utf-8") as f:
+                out.extend(l.strip() for l in f if l.strip() and not l.strip().startswith("#"))
+    except OSError:
+        pass
+    return out
+
+
+def origin_ok(hdr, allowlist):
+    """Require Origin to match the Host header, or to be on the allowlist."""
+    origin = (hdr.get("origin") or "").strip()
+    host = (hdr.get("host") or "").strip()
+    if origin:
+        net = urlparse(origin).netloc
+        if host and net.lower() == host.lower():
+            return True
+        if origin in allowlist or net in allowlist:
+            return True
+        return False
+    # no Origin: allow same-host navigations via Referer (token still required for /ws)
+    ref = (hdr.get("referer") or "").strip()
+    if ref and host and urlparse(ref).netloc.lower() == host.lower():
+        return True
+    return False
+
+
+# Realtime bytes pass straight through; line-oriented commands must look like g-code / $ settings.
+_RT = set(b"?!~\x18\x84\x85\x9e") | set(range(0x80, 0xA0))
+_LINE = re.compile(
+    r"^\s*(\?|!|~|\$J=|\$X\b|\$H\b|\$\$|\$#|\$I|\$G|\$N|\$\d+=|[A-Za-z];|;|\(|%|[GgMmFfSsTtPpXxYyZzIiJjKkRrNnHh])"
+)
+
+
+def filter_web_bytes(data: bytes) -> bytes:
+    out = bytearray()
+    buf = bytearray()
+    for b in data:
+        if b in _RT:
+            if buf:
+                buf.clear()
+            out.append(b)
+            continue
+        if b in (10, 13):
+            line = bytes(buf).decode("latin-1", "replace")
+            if line.strip() and _LINE.match(line):
+                out.extend(buf)
+                out.append(10)
+            buf.clear()
+        elif b >= 32 or b == 9:
+            buf.append(b)
+    if buf:
+        line = bytes(buf).decode("latin-1", "replace")
+        if _LINE.match(line):
+            out.extend(buf)
+    return bytes(out)
 
 
 # ------------------------------------------------------------------ serial (USB) port, raw mode via termios
@@ -115,6 +201,8 @@ class Bridge:
         self.job = None
         self.kept = None                   # what the website asked us to remember (where home is)
         self.serial = Serial(args.serial, args.baud, self.on_line, self.on_serial_state)
+        self.token = args.token
+        self.origins = args.origins
 
     # ---- job streaming on the Pi
     def job_state(self):
@@ -201,7 +289,9 @@ class Bridge:
     def from_web(self, msg):
         t = msg.get("t")
         if t == "w":                                     # raw bytes/lines from the website
-            data = msg.get("d", "").encode("latin-1", "replace")
+            data = filter_web_bytes(msg.get("d", "").encode("latin-1", "replace"))
+            if not data:
+                return
             if RT_RESET in data:
                 self.inflight, self.queue = [], []
                 self.finish_job("stopped", "Stopped by operator.")
@@ -317,17 +407,33 @@ def make_handler(bridge: Bridge, site):
             if ":" in l:
                 k, v = l.split(":", 1)
                 hdr[k.strip().lower()] = v.strip()
-        path = target.split("?", 1)[0]
+        qparts = target.split("?", 1)
+        path = qparts[0]
+        qs = parse_qs(qparts[1], keep_blank_values=True) if len(qparts) > 1 else {}
 
         if path == "/ws" and hdr.get("upgrade", "").lower() == "websocket":
+            tok = (qs.get("token") or [""])[0]
+            if not origin_ok(hdr, bridge.origins) or tok != bridge.token:
+                log("ws rejected: origin or token", hdr.get("origin"), hdr.get("host"))
+                writer.write(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
+                try:
+                    await writer.drain()
+                finally:
+                    writer.close()
+                return
+            if bridge.client:                            # single-client lock: never silently take over
+                log("ws busy: operator already connected")
+                writer.write(b"HTTP/1.1 409 Conflict\r\nContent-Length: 0\r\n\r\n")
+                try:
+                    await writer.drain()
+                finally:
+                    writer.close()
+                return
             key = hdr.get("sec-websocket-key", "")
             accept = base64.b64encode(hashlib.sha1((key + WS_MAGIC).encode()).digest()).decode()
             writer.write(("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
                           f"Sec-WebSocket-Accept: {accept}\r\n\r\n").encode())
             client = WSClient(writer)
-            if bridge.client:                            # newest screen takes over
-                bridge.client.send_text(json.dumps({"t": "taken"}))
-                bridge.client.close()
             bridge.client = client
             log("screen connected from", writer.get_extra_info("peername"))
             client.send_text(json.dumps({"t": "hello", "serial": bridge.serial.ok, "job": bridge.job_state(),
@@ -352,9 +458,13 @@ def make_handler(bridge: Bridge, site):
         if method not in ("GET", "HEAD"):
             writer.write(b"HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n")
         elif path == "/bridge.json":
-            body = json.dumps({"bridge": True, "name": bridge.args.name, "serial": bridge.serial.ok}).encode()
-            writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nCache-Control: no-store\r\n"
-                         + f"Content-Length: {len(body)}\r\n\r\n".encode() + body)
+            if not origin_ok(hdr, bridge.origins):
+                writer.write(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
+            else:
+                body = json.dumps({"bridge": True, "name": bridge.args.name, "serial": bridge.serial.ok,
+                                   "token": bridge.token}).encode()
+                writer.write(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nCache-Control: no-store\r\n"
+                             + f"Content-Length: {len(body)}\r\n\r\n".encode() + body)
         else:
             rel = path.lstrip("/") or "index.html"
             if rel.endswith("/"):
@@ -386,9 +496,23 @@ async def main():
     ap.add_argument("--serial", default="auto", help="controller port, e.g. /dev/ttyACM0 (default: find it)")
     ap.add_argument("--baud", type=int, default=115200)
     ap.add_argument("--name", default="Plasma table")
+    ap.add_argument("--token-file", default=None, help="file holding the pairing token (created if missing)")
+    ap.add_argument("--origin", action="append", default=[], help="extra allowed Origin (repeatable allowlist)")
+    ap.add_argument("--origins-file", default=None, help="file of extra allowed Origins, one per line")
+    # Optional TLS so the LAN can use HTTPS and WSS (a LAN-signed cert is fine).
+    ap.add_argument("--tls", nargs=2, metavar=("CERT", "KEY"),
+                    help="serve HTTPS and WSS with this certificate and key")
     args = ap.parse_args()
+    token_file = args.token_file or os.path.join(os.path.dirname(os.path.abspath(__file__)), "bridge.token")
+    args.token = load_or_create_token(token_file)
+    args.origins = load_origin_allowlist(args.origins_file, args.origin)
     bridge = Bridge(args)
-    server = await asyncio.start_server(make_handler(bridge, args.site), "0.0.0.0", args.port)
+    ssl_ctx = None
+    if args.tls:
+        ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ssl_ctx.load_cert_chain(args.tls[0], args.tls[1])
+        log(f"TLS enabled (wss) with cert {args.tls[0]}")
+    server = await asyncio.start_server(make_handler(bridge, args.site), "0.0.0.0", args.port, ssl=ssl_ctx)
     log(f"serving {args.site} on port {args.port}")
     asyncio.create_task(bridge.keep_serial())
     async with server:

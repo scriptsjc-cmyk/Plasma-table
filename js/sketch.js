@@ -6,7 +6,7 @@
 //  * scroll / pinch to zoom, drag with the right or middle button (or a finger, or Space) to pan
 // The layout is kept in the browser so it's still there after a reload. Everything is undoable.
 import { SHAPES, makeShape } from "./shapes.js";
-import { pointInPoly, bbox, signedArea, unionOutlines, differenceOutlines, offsetPolygon } from "./geom.js";
+import { pointInPoly, bbox, signedArea, unionOutlines, differenceOutlines, offsetPolygon, selfIntersects } from "./geom.js";
 import { variantsFor, variantKey } from "./variants.js";
 
 const KEY = "plasma.sketch", KEY_OPTS = "plasma.sketch.opts";
@@ -43,7 +43,14 @@ export class Sketch {
     this.drag = null; this.pointers = new Map(); this.label = null; this.guides = []; this.marks = [];
     this.dimHits = []; this.tool = null; this.drawPts = []; this.measure = null;
     this.opts = { snap: 1, guides: true, pro: false, pointSnap: true };
-    try { Object.assign(this.opts, JSON.parse(localStorage.getItem(KEY_OPTS) || "{}")); } catch (e) { /* ignore */ }
+    this.maxMm = 2600; // 2× typical table travel; app may tighten from machine.json
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY_OPTS) || "{}") || {};
+      if (typeof saved.snap === "number" && Number.isFinite(saved.snap) && saved.snap >= 0) this.opts.snap = saved.snap;
+      if (typeof saved.guides === "boolean") this.opts.guides = saved.guides;
+      if (typeof saved.pro === "boolean") this.opts.pro = saved.pro;
+      if (typeof saved.pointSnap === "boolean") this.opts.pointSnap = saved.pointSnap;
+    } catch (e) { /* ignore */ }
     this.load();
     if (!this.items.length) { this.add("rect", true); this.sel = { ids: [], hole: null }; }
     this.past = [];
@@ -55,11 +62,47 @@ export class Sketch {
     try {
       const d = JSON.parse(localStorage.getItem(KEY) || "null");
       if (d && Array.isArray(d.items)) {
-        this.items = d.items.filter((it) => def(it.type));
-        for (const it of this.items) { it.rot = it.rot || 0; it.holes = it.holes || {}; it.lock = !!it.lock; it.fy = !!it.fy; }
-        this.nextId = Math.max(1, ...this.items.map((i) => i.id + 1));
+        this.items = d.items.map((it) => this.sanitizeItem(it)).filter(Boolean);
+        this.nextId = Math.max(1, ...this.items.map((i) => i.id + 1), 1);
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) { this.items = []; }
+  }
+  sanitizeItem(it) {
+    if (!it || !def(it.type)) return null;
+    const d = def(it.type);
+    const p = {};
+    for (const [k, , defv] of d.params) {
+      let v = Number(it.p && it.p[k]);
+      if (!Number.isFinite(v)) v = defv;
+      p[k] = v;
+    }
+    const max = this.maxMm || 2600;
+    const sizeKeys = ["w", "h", "d", "a", "b", "len", "wid", "s"];
+    for (const k of Object.keys(p)) {
+      if (["n", "cols", "rows", "scale"].includes(k)) continue;
+      if (!Number.isFinite(p[k])) p[k] = 0;
+    }
+    // keep the item even if the size is out of range (it simply won't cut); drop only unplaceable ones
+    if ("n" in p) p.n = Math.max(0, Math.min(64, Math.round(p.n)));
+    if ("cols" in p) p.cols = Math.max(1, Math.min(50, Math.round(p.cols)));
+    if ("rows" in p) p.rows = Math.max(1, Math.min(50, Math.round(p.rows)));
+    const x = Number(it.x), y = Number(it.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > max * 2 || Math.abs(y) > max * 2) return null;
+    const rot = Number(it.rot) || 0;
+    const out = { id: Number(it.id) || 0, type: it.type, p, x, y, rot: Number.isFinite(rot) ? rot : 0, holes: {}, lock: !!it.lock, fy: !!it.fy, fx: !!it.fx };
+    if (it.type === "custom") {
+      const cs = it.shape && Array.isArray(it.shape.cs) ? it.shape.cs : null;
+      if (!cs || !cs.length) return null;
+      const ok = cs.every((c) => c && Array.isArray(c.pts) && c.pts.length >= 3 && c.pts.every((q) => Number.isFinite(q[0]) && Number.isFinite(q[1]) && Math.abs(q[0]) <= max * 2 && Math.abs(q[1]) <= max * 2));
+      if (!ok) return null;
+      out.shape = { cs };
+    }
+    if (it.holes && typeof it.holes === "object") {
+      for (const [k, v] of Object.entries(it.holes)) {
+        if (Array.isArray(v) && v.length >= 2 && Number.isFinite(+v[0]) && Number.isFinite(+v[1])) out.holes[k] = [+v[0], +v[1]];
+      }
+    }
+    return out;
   }
   save() { try { localStorage.setItem(KEY, JSON.stringify({ items: this.items })); } catch (e) { /* ignore */ } }
   saveOpts() { try { localStorage.setItem(KEY_OPTS, JSON.stringify(this.opts)); } catch (e) { /* ignore */ } }
@@ -77,6 +120,7 @@ export class Sketch {
 
   item(id) { return this.items.find((i) => i.id === id); }
   picked() { return this.sel.ids.map((id) => this.item(id)).filter(Boolean); }
+  canMutate(it) { return !!(it && !it.lock); }
   selected() { return this.sel.ids.length === 1 ? this.item(this.sel.ids[0]) : null; }
   isPicked(it) { return this.sel.ids.includes(it.id); }
   pick(ids, hole = null) { this.sel = { ids: [...ids], hole: ids.length === 1 ? hole : null }; }
@@ -166,10 +210,10 @@ export class Sketch {
     if (!quiet) { this.ensureVisible(); this.commit(); this.onSelect(); } else this.save();
   }
   remove() {
-    const list = this.picked(); if (!list.length) return;
+    const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();
     this.items = this.items.filter((i) => !list.includes(i));
-    this.pick([]); this.commit(); this.onSelect();
+    this.pick(this.sel.ids.filter((id) => this.item(id))); this.commit(); this.onSelect();
   }
   // copies of everything picked, keeping their layout, placed beside them
   duplicate() { this.copy(); this.paste(true); }
@@ -199,9 +243,9 @@ export class Sketch {
   pickAll() { this.pick(this.items.map((i) => i.id)); this.draw(); this.onSelect(); }
   // turn the picked shapes about their middle
   rotateBy(deg) {
-    const list = this.picked(); if (!list.length) return;
+    const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();
-    const g = this.pickedBox(), gc = [(g[0] + g[2]) / 2, (g[1] + g[3]) / 2];
+    const g = unionBox(list.map((i) => this.boxOf(i))), gc = [(g[0] + g[2]) / 2, (g[1] + g[3]) / 2];
     for (const it of list) {
       const b = this.boxOf(it), c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
       const nc = list.length > 1 ? (([x, y]) => [gc[0] + x, gc[1] + y])(rot([c[0] - gc[0], c[1] - gc[1]], deg)) : c;
@@ -212,7 +256,7 @@ export class Sketch {
     this.commit(); this.onSelect();
   }
   setAngle(deg) {
-    const it = this.selected(); if (!it || !Number.isFinite(deg)) return;
+    const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(deg)) return;
     this.remember();
     const b = this.boxOf(it), c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
     it.rot = ((deg % 360) + 360) % 360;
@@ -222,9 +266,9 @@ export class Sketch {
   }
   // mirror left-right about the middle of the picked shapes
   mirror() {
-    const list = this.picked(); if (!list.length) return;
+    const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();
-    const g = this.pickedBox();
+    const g = unionBox(list.map((i) => this.boxOf(i)));
     for (const it of list) {
       const b = this.boxOf(it);
       it.fx = !it.fx; it.rot = ((360 - (it.rot || 0)) % 360);
@@ -240,6 +284,7 @@ export class Sketch {
   }
   clear() {
     if (!this.items.length) return;
+    if (this.items.some((i) => i.lock)) { this.onMessage("Unlock locked parts before clearing the drawing."); return; }
     this.remember(); this.items = []; this.pick([]); this.commit(); this.onSelect();
   }
   // line the picked shapes up with the biggest one of them
@@ -307,18 +352,26 @@ export class Sketch {
 
   // switch the selected part to a related version, keeping its size and place
   applyVariant(spec) {
-    const it = this.selected(); if (!it || it.type === "custom") return;
+    const it = this.selected(); if (!this.canMutate(it) || it.type === "custom") return;
     const d = def(spec.id); if (!d) return;
     const b = this.boxOf(it), W = Math.max(MIN, b[2] - b[0]), H = Math.max(MIN, b[3] - b[1]);
     this.remember();
     const p = {};
     for (const [k, , v] of d.params) p[k] = v;
-    for (const k of Object.keys(it.p || {})) if (k in p) p[k] = it.p[k];
     Object.assign(p, spec.p || {});
     it.type = spec.id;
     it.p = d.fit ? d.fit(p, d.uniform ? Math.max(W, H) : W, H) : p;
     for (const k of Object.keys(it.p)) if (Number.isFinite(it.p[k])) it.p[k] = r1(it.p[k]);
     it.holes = {};
+    this.resizeTo(it, W, H);
+    // cut-offs and rounding can shrink the box; add the shortfall so overall size stays put
+    for (let i = 0; i < 8; i++) {
+      it._key = undefined;
+      const nb = this.boxOf(it), cw = nb[2] - nb[0], ch = nb[3] - nb[1];
+      if (!(cw > 0.5 && ch > 0.5)) break;
+      if (Math.abs(cw - W) < 0.05 && Math.abs(ch - H) < 0.05) break;
+      this.resizeTo(it, Math.max(MIN, W + (W - cw)), Math.max(MIN, H + (H - ch)));
+    }
     const nb = this.boxOf(it);
     it.x = r1(it.x + b[0] - nb[0]); it.y = r1(it.y + b[1] - nb[1]);
     this.commit(); this.onSelect();
@@ -326,19 +379,22 @@ export class Sketch {
   variants() { const it = this.selected(); return it && it.type !== "custom" ? variantsFor(it.type) : []; }
   currentVariantKey() {
     const it = this.selected(); if (!it) return "";
+    let best = null, bestN = -1;
     for (const v of variantsFor(it.type)) {
-      const ok = v.id === it.type && Object.entries(v.p || {}).every(([k, val]) => val == null || Math.abs((it.p[k] ?? 0) - val) < 0.05 || (k === "r" && (it.p.r || 0) > 0.5 && val > 0) || (k === "mid" && (it.p.mid || 0) > 0 && val > 0) || (k === "hole" && (it.p.hole || 0) > 0 && val > 0));
-      if (v.id === it.type && (!v.p || !Object.keys(v.p).length)) return variantKey(v);
+      if (v.id !== it.type) continue;
+      const ents = Object.entries(v.p || {});
+      const ok = ents.every(([k, val]) => val == null || Math.abs((Number(it.p[k]) || 0) - val) < 0.2 || (k === "r" && (it.p.r || 0) > 0.5 && val > 0) || (k === "mid" && (it.p.mid || 0) > 0 && val > 0) || (k === "hole" && (it.p.hole || 0) > 0 && val > 0));
+      if (!ok) continue;
+      if (ents.length > bestN) { best = v; bestN = ents.length; }
     }
-    const exact = variantsFor(it.type).find((v) => v.id === it.type && Object.entries(v.p || {}).every(([k, val]) => Math.abs((Number(it.p[k]) || 0) - val) < 0.2));
-    return exact ? variantKey(exact) : (it.type);
+    return best ? variantKey(best) : it.type;
   }
 
-  setWidth(v) { const it = this.selected(); if (!it || !(v > 0)) return; const b = this.boxOf(it); this.remember(); this.resizeTo(it, v, b[3] - b[1]); this.commit(); this.onSelect(); }
-  setHeight(v) { const it = this.selected(); if (!it || !(v > 0)) return; const b = this.boxOf(it); this.remember(); this.resizeTo(it, b[2] - b[0], v); this.commit(); this.onSelect(); }
-  setDiameter(v) { const it = this.selected(); if (!it || !(v > 0)) return; this.remember(); this.resizeTo(it, v, v); this.commit(); this.onSelect(); }
+  setWidth(v) { const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v) || v < MIN || v > this.maxMm) { if (this.canMutate(it) && Number.isFinite(v)) this.onMessage("Size must be between 2 mm and the table limit."); return; } const b = this.boxOf(it); this.remember(); this.resizeTo(it, v, b[3] - b[1]); this.commit(); this.onSelect(); }
+  setHeight(v) { const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v) || v < MIN || v > this.maxMm) { if (this.canMutate(it) && Number.isFinite(v)) this.onMessage("Size must be between 2 mm and the table limit."); return; } const b = this.boxOf(it); this.remember(); this.resizeTo(it, b[2] - b[0], v); this.commit(); this.onSelect(); }
+  setDiameter(v) { const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v) || v < MIN || v > this.maxMm) { if (this.canMutate(it) && Number.isFinite(v)) this.onMessage("Size must be between 2 mm and the table limit."); return; } this.remember(); this.resizeTo(it, v, v); this.commit(); this.onSelect(); }
   setPos(axis, v) {
-    const it = this.selected(); if (!it || !Number.isFinite(v)) return;
+    const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v) || Math.abs(v) > this.maxMm * 2) return;
     this.remember();
     const b = this.boxOf(it);
     if (axis === "x") it.x = r1(it.x + v - b[0]);
@@ -371,9 +427,9 @@ export class Sketch {
     this.commit(); this.onSelect();
   }
   flipV() {
-    const list = this.picked(); if (!list.length) return;
+    const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();
-    const g = this.pickedBox();
+    const g = unionBox(list.map((i) => this.boxOf(i)));
     for (const it of list) {
       const b = this.boxOf(it);
       it.fy = !it.fy; it.rot = ((360 - (it.rot || 0)) % 360);
@@ -404,8 +460,10 @@ export class Sketch {
     n = Math.max(2, Math.min(50, Math.round(n || 2)));
     gapX = Number(gapX); gapY = Number(gapY);
     if (!Number.isFinite(gapX)) gapX = 10; if (!Number.isFinite(gapY)) gapY = 0;
+    if (Math.abs(gapX) > this.maxMm || Math.abs(gapY) > this.maxMm) { this.onMessage("That array gap is bigger than the table."); return; }
     const box = this.pickedBox();
     const dx = (box[2] - box[0]) + gapX, dy = (box[3] - box[1]) + gapY;
+    if (Math.abs((n - 1) * dx) > this.maxMm || Math.abs((n - 1) * dy) > this.maxMm) { this.onMessage("That array wouldn't fit on the table."); return; }
     this.remember();
     const ids = [...this.sel.ids];
     for (let k = 1; k < n; k++) {
@@ -419,10 +477,14 @@ export class Sketch {
   }
   polarArray(n, pcd) {
     const list = this.picked(); if (!list.length) return;
+    if (list.some((i) => i.lock)) { this.onMessage("Unlock the part before making a polar array."); return; }
     n = Math.max(2, Math.min(36, Math.round(n || 4)));
     const box = this.pickedBox();
     const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
-    let R = Number(pcd) > 0 ? Number(pcd) / 2 : Math.max(box[2] - box[0], box[3] - box[1]) / 2 + 10;
+    const pcdN = Number(pcd);
+    if (Number.isFinite(pcdN) && (pcdN > this.maxMm || pcdN < 0)) { this.onMessage("That bolt-circle is bigger than the table."); return; }
+    let R = Number.isFinite(pcdN) && pcdN > 0 ? pcdN / 2 : Math.max(box[2] - box[0], box[3] - box[1]) / 2 + 10;
+    if (!(R <= this.maxMm)) { this.onMessage("That bolt-circle is bigger than the table."); return; }
     this.remember();
     const ids = [...this.sel.ids];
     const atCentre = list.length === 1 && Math.hypot((box[0] + box[2]) / 2 - cx, (box[1] + box[3]) / 2 - cy) < 0.05;
@@ -447,7 +509,9 @@ export class Sketch {
   }
   offsetBy(d) {
     const it = this.selected(); if (!it) { this.onMessage("Pick one part to offset."); return; }
+    if (!this.canMutate(it)) return;
     d = Number(d); if (!Number.isFinite(d) || !d) return;
+    if (Math.abs(d) > this.maxMm) { this.onMessage("That offset is bigger than the table."); return; }
     const cs = this.contoursOf(it); if (!cs.length) return;
     this.remember();
     const outer = cs[0].pts, sa = signedArea(outer);
@@ -494,8 +558,10 @@ export class Sketch {
   }
   nest(gap, sheetW, sheetH) {
     if (!this.items.length) return;
+    if (this.items.some((i) => i.lock)) { this.onMessage("Unlock locked parts before nesting."); return; }
     gap = Math.max(0, Number(gap) || 10);
     sheetW = Number(sheetW) || 0; sheetH = Number(sheetH) || 0;
+    if (gap > this.maxMm || sheetW > this.maxMm * 4 || sheetH > this.maxMm * 4) { this.onMessage("Those nest sizes are bigger than the table."); return; }
     const parts = this.items.filter((it) => !this.isHole(it));
     const holes = this.items.filter((it) => this.isHole(it));
     if (!parts.length) return;
@@ -523,11 +589,20 @@ export class Sketch {
   }
   finishDraw() {
     if (this.drawPts.length < 3) { this.onMessage("Tap at least three points, then Close."); return; }
-    const pts = this.drawPts.map((p) => [r1(p[0]), r1(p[1])]);
-    const b = bbox([{ pts }]);
+    const pts = this.drawPts.map((p) => [r1(p[0]), r1(p[1])]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    const uniq = [];
+    for (const p of pts) if (!uniq.length || Math.hypot(p[0] - uniq[uniq.length - 1][0], p[1] - uniq[uniq.length - 1][1]) > 0.05) uniq.push(p);
+    if (uniq.length >= 2 && Math.hypot(uniq[0][0] - uniq[uniq.length - 1][0], uniq[0][1] - uniq[uniq.length - 1][1]) < 0.05) uniq.pop();
+    if (uniq.length < 3) { this.onMessage("That outline is too small or isn't a closed shape."); this.drawPts = []; this.tool = null; this.draw(); return; }
+    if (uniq.some((p) => Math.abs(p[0]) > this.maxMm || Math.abs(p[1]) > this.maxMm)) { this.onMessage("That outline goes further than the table."); return; }
+    const crossed = selfIntersects(uniq);
+    const area = Math.abs(signedArea(uniq));
+    if (!crossed && !(area > 0.05)) { this.onMessage("That outline has no area – add more points, or draw a closed shape."); this.drawPts = []; this.tool = null; this.draw(); return; }
+    if (crossed) this.onMessage("That outline crosses itself – the cut check will flag it. Redraw it so the path doesn't cross.");
+    const b = bbox([{ pts: uniq }]);
     this.remember();
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
-      shape: { cs: [{ pts: pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true }] } };
+      shape: { cs: [{ pts: uniq.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true }] } };
     this.items.push(it);
     this.pick([it.id]); this.tool = null; this.drawPts = [];
     this.commit(); this.onSelect();
@@ -544,11 +619,15 @@ export class Sketch {
     return best;
   }
   setParam(k, v) {
-    const it = this.selected(); if (!it || !Number.isFinite(v)) return;
+    const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v)) return;
+    const sizeKeys = ["w", "h", "d", "a", "b", "len", "wid", "s"];
+    if (sizeKeys.includes(k) && (v < MIN || v > this.maxMm)) return;
+    if (["n", "cols", "rows"].includes(k)) v = Math.max(0, Math.min(64, v));
+    if (Math.abs(v) > this.maxMm * 4) return;
     it.p[k] = v; this.save(); this.draw();
   }
   nudge(dx, dy) {
-    const list = this.picked(); if (!list.length) return;
+    const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();
     if (this.sel.hole != null && list.length === 1) this.moveHole(list[0], this.sel.hole, dx, dy);
     else for (const it of list) { it.x = r1(it.x + dx); it.y = r1(it.y + dy); }
@@ -563,7 +642,7 @@ export class Sketch {
   }
   resizeTo(it, W, H) {
     const d = def(it.type);
-    W = Math.max(MIN, W); H = Math.max(MIN, H);
+    W = Math.min(this.maxMm, Math.max(MIN, W)); H = Math.min(this.maxMm, Math.max(MIN, H));
     if (d.uniform) W = H = Math.max(W, H);
     const odd = (it.rot || 0) % 180 !== 0;
     if (it.type === "custom") {
@@ -587,7 +666,16 @@ export class Sketch {
   // ---------------------------------------------------------------- view
   size() {
     const w = this.cv.clientWidth || 600;
-    return [w, Math.round(Math.max(300, Math.min(640, w * 0.7, (window.innerHeight || 800) * 0.72)))];
+    if (typeof document !== "undefined" && document.body && document.body.classList.contains("short-land")) {
+      const pane = this.cv.closest(".previewPane");
+      let h = this.cv.clientHeight || 0;
+      if (pane) {
+        const extra = [...pane.children].filter((el) => el !== this.cv && el.offsetParent).reduce((s, el) => s + (el.offsetHeight || 0), 0);
+        h = Math.max(h, (pane.clientHeight || 0) - extra);
+      }
+      return [w, Math.round(Math.max(120, h || ((window.innerHeight || 400) * 0.6)))];
+    }
+    return [w, Math.round(Math.max(260, Math.min(640, w * 0.7, (window.innerHeight || 800) * 0.62)))];
   }
   fitView() {
     const [w, h] = this.size(), b = this.allBox();
@@ -628,7 +716,8 @@ export class Sketch {
     const cv = this.cv, [w, h] = this.size(), dpr = window.devicePixelRatio || 1;
     if (!this.view) { this.view = { s: 1, vx: 0, vy: 0 }; this.fitView(); return; }
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-    cv.style.height = h + "px";
+    if (document.body && document.body.classList.contains("short-land")) cv.style.height = "";
+    else cv.style.height = h + "px";
     const ctx = cv.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
@@ -873,7 +962,10 @@ export class Sketch {
       const [wx, wy] = this.toWorld(sx, sy);
       if (this.tool === "draw" && !panBtn) {
         const step = this.opts.snap || 0.1;
-        this.drawPts.push([Math.round(wx / step) * step, Math.round(wy / step) * step]);
+        const px = Math.round(wx / step) * step, py = Math.round(wy / step) * step;
+        if (!Number.isFinite(px) || !Number.isFinite(py)) return;
+        if (Math.abs(px) > this.maxMm || Math.abs(py) > this.maxMm) { this.onMessage("That point is off the table."); return; }
+        this.drawPts.push([px, py]);
         this.draw(); return;
       }
       if (this.tool === "measure" && !panBtn) {
@@ -1012,6 +1104,8 @@ export class Sketch {
     // keys win over the machine jog keys while the editor is on screen and nothing's being typed
     window.addEventListener("keydown", (e) => {
       if (!this.active || !this.cv.offsetParent) return;
+      const overlay = (id) => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); };
+      if (overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop")) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };

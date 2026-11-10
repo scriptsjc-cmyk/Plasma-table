@@ -7,7 +7,7 @@ import { SimTransport } from "./sim.js";
 import { parseDXF } from "./dxf.js";
 import { parseSVG } from "./svg.js";
 import { designToGcode } from "./cam.js";
-import { SHAPES, copies } from "./shapes.js";
+import { SHAPES, copies, SHAPE_GROUPS, shapeThumb } from "./shapes.js";
 import { Sketch, shapeDef } from "./sketch.js";
 import { variantsFor, variantKey } from "./variants.js";
 import { evalExpr } from "./expr.js";
@@ -222,9 +222,11 @@ function setFile(name, text, remember) { openText(name, text, remember); }
 
 // ------------------------------------------------------------------ shape maker (drag-and-drop editor)
 let sketch = null, shapeTimer = null, editBefore = null;
+const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
 function renderShapeTiles() {
-  const tile = (sh) => `<button data-shape="${sh.id}" title="${esc(sh.tip || "Add " + sh.name)}"><i>${sh.icon}</i>${esc(sh.name)}</button>`;
-  $("shapeTiles").innerHTML = SHAPES.filter((sh) => !sh.hole).map(tile).join("");
+  const tile = (sh) => `<button data-shape="${esc(sh.id)}" title="${esc(sh.tip || "Add " + sh.name)}"><i>${shapeThumb(sh, 40, 28) || esc(sh.icon)}</i>${esc(sh.name)}</button>`;
+  $("shapeTiles").innerHTML = QUICK_PARTS.map((id) => SHAPES.find((s) => s.id === id)).filter(Boolean).map(tile).join("")
+    + `<button data-lib="1" class="libmore" title="Every shape, by category"><i>⋯</i>More shapes (${SHAPES.filter((s) => !s.hole).length})</button>`;
   $("holeTiles").innerHTML = SHAPES.filter((sh) => sh.hole).map(tile).join("");
   $("skSnap").value = String(sketch.opts.snap);
   $("skGuides").checked = !!sketch.opts.guides;
@@ -289,7 +291,7 @@ function renderShapeForm() {
     ${varBox}
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
     <div class="grid2">${sh.params.map(([k, label]) =>
-      `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${it.p[k]}"></label>`).join("")}
+      `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}
       <label>Position X (left edge)<input type="number" step="any" inputmode="decimal" data-pos="x" value="${Math.round(b[0] * 10) / 10}"></label>
       <label>Position Y (bottom edge)<input type="number" step="any" inputmode="decimal" data-pos="y" value="${Math.round(b[1] * 10) / 10}"></label>
       <label>Angle °<input type="number" step="any" inputmode="decimal" data-angle="1" value="${Math.round((it.rot || 0) * 10) / 10}"></label>
@@ -304,6 +306,87 @@ function renderShapeForm() {
     </div>${proOne}`;
 }
 // keep the boxes in step while dragging, without rebuilding them
+
+
+let libCat = "all";
+function openLibrary() {
+  $("shapeLib").classList.remove("hidden");
+  $("libSearch").value = "";
+  renderLibrary();
+  setTimeout(() => { if (matchMedia("(pointer: fine)").matches) $("libSearch").focus(); }, 30);
+}
+function closeLibrary() { $("shapeLib").classList.add("hidden"); }
+function renderLibrary() {
+  const q = $("libSearch").value.trim().toLowerCase();
+  const cats = [{ id: "all", name: "All" }, ...SHAPE_GROUPS];
+  $("libCats").innerHTML = cats.map((c) => `<button type="button" data-cat="${esc(c.id)}" class="${c.id === libCat ? "on" : ""}">${esc(c.name)}</button>`).join("");
+  let ids;
+  if (libCat === "all") { const seen = new Set(); ids = SHAPE_GROUPS.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id)); }
+  else ids = (SHAPE_GROUPS.find((g) => g.id === libCat) || { ids: [] }).ids;
+  const list = ids.map((id) => SHAPES.find((s) => s.id === id)).filter(Boolean)
+    .filter((s) => !q || (s.name + " " + (s.tip || "") + " " + s.id).toLowerCase().includes(q));
+  $("libGrid").innerHTML = list.length ? list.map((s) => `<button type="button" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 64, 44)}<span class="libname">${esc(s.name)}</span></button>`).join("")
+    : `<p class="muted">No shapes match “${esc(q)}”.</p>`;
+}
+
+function openVersions() {
+  const it = sketch.selected();
+  if (!it) { toast("Tap a shape first, then Versions."); return; }
+  const vs = variantsFor(it.type);
+  if (!vs.length) { toast("This shape has no other versions."); return; }
+  const cur = sketch.currentVariantKey();
+  $("verTitle").textContent = "Versions of " + shapeDef(it.type).name.toLowerCase();
+  $("verBody").innerHTML = vs.map((v) => { const d = shapeDef(v.id); return `<button type="button" data-var="${esc(variantKey(v))}" class="${variantKey(v) === cur ? "sel" : ""}">${d ? shapeThumb(d, 40, 28) : ""}<span>${esc(v.label || (d ? d.name : v.id))}</span></button>`; }).join("");
+  $("verPop").classList.remove("hidden");
+}
+function closeVersions() { $("verPop").classList.add("hidden"); }
+
+function sizeDimForSelection() {
+  const it = sketch.selected(); if (!it) return null;
+  sketch.draw();
+  return sketch.dimHits.find((h) => h.kind === "w") || sketch.dimHits.find((h) => h.kind === "d") || null;
+}
+
+function renderQuickBar() {
+  const qb = $("quickBar"); if (!qb || !sketch) return;
+  const on = S.src === "shape" && S.cur === 1;
+  qb.classList.toggle("hidden", !on);
+  const grid = qb.closest(".cutgrid"); if (grid) grid.classList.toggle("with-qb", on);
+  if (!on) return;
+  const one = sketch.selected(), any = sketch.picked().length > 0;
+  const locked = sketch.picked().some((i) => i.lock);
+  const hasVer = !!(one && variantsFor(one.type).length);
+  const B = (id, icon, label, opts = {}) => `<button type="button" data-qb="${id}" class="${opts.cls || ""}" ${opts.dis ? "disabled" : ""} title="${esc(opts.title || label)}" aria-label="${esc(opts.title || label)}"><i>${icon}</i>${esc(label)}</button>`;
+  qb.innerHTML = [
+    B("rect", "▭", "Rect"), B("disc", "◯", "Circle"), B("triangle", "△", "Triangle"), B("lib", "⋯", "More", { title: "Shape library" }),
+    `<span class="qb-sep"></span>`,
+    B("undo", "↶", "Undo", { dis: !sketch.past.length }), B("redo", "↷", "Redo", { dis: !sketch.future.length }),
+    B("dup", "⧉", "Copy", { dis: !any }), B("del", "🗑", "Delete", { dis: !any || locked, cls: "danger" }),
+    B("rot", "⟳", "Turn 90°", { dis: !any || locked }), B("mir", "⇋", "Mirror", { dis: !any || locked }),
+    B("size", "↔", "Size", { dis: !one || locked, cls: one ? "on" : "", title: "Type an exact size" }),
+    B("ver", "◈", "Versions", { dis: !hasVer || locked }),
+    `<span class="qb-sep"></span>`,
+    B("fit", "⤢", "Fit"), B("pro", "★", "Pro", { cls: sketch.opts.pro ? "on" : "", title: "Pro mode on/off" }),
+  ].join("");
+}
+
+function quickAction(a) {
+  switch (a) {
+    case "rect": case "disc": case "triangle": sketch.add(a); break;
+    case "lib": openLibrary(); break;
+    case "undo": sketch.undo(); break;
+    case "redo": sketch.redo(); break;
+    case "dup": sketch.duplicate(); break;
+    case "del": sketch.remove(); break;
+    case "rot": sketch.rotateBy(90); break;
+    case "mir": sketch.mirror(); break;
+    case "size": { const d = sizeDimForSelection(); if (d) openNumPad(d); else toast("Tap one shape first."); break; }
+    case "ver": openVersions(); break;
+    case "fit": sketch.fitView(); break;
+    case "pro": sketch.setPro(!sketch.opts.pro); $("skPro").checked = !!sketch.opts.pro; renderProTools(); renderShapeForm(); break;
+  }
+  renderQuickBar();
+}
 
 function renderProTools() {
   const box = $("proTools");
@@ -334,12 +417,14 @@ function openNumPad(dim) {
   $("numPadValue").textContent = "";
   $("numPadValue").dataset.seed = seed ? String(Math.round(seed() * 1000) / 1000) : "";
   if (!cur) $("numPadValue").textContent = $("numPadValue").dataset.seed;
-  const keys = [["7","7"],["8","8"],["9","9"],["/","/"],["4","4"],["5","5"],["6","6"],["*","*"],["1","1"],["2","2"],["3","3"],["-","-"],["0","0"],[".","."],["⌫","DEL"],["+","+"]];
-  $("numPadKeys").innerHTML = keys.map(([k, lab]) => `<button type="button" data-k="${k}" class="${"+-*/⌫".includes(k) ? "op" : ""}">${lab}</button>`).join("");
+  const keys = [["7","7"],["8","8"],["9","9"],["/","/"],["4","4"],["5","5"],["6","6"],["*","*"],["1","1"],["2","2"],["3","3"],["-","-"],["0","0"],[".","."],["(","("],[")",")"],["⌫","DEL"],["+","+"]];
+  $("numPadKeys").innerHTML = keys.map(([k, lab]) => `<button type="button" data-k="${k}" class="${"+-*/⌫()".includes(k) ? "op" : ""}">${lab}</button>`).join("");
   const apply = () => {
     const raw = $("numPadValue").textContent.trim();
     const v = evalExpr(raw);
-    if (!Number.isFinite(v)) { toast("Use a number, or something like 100/2 or 50+12.5", true); return; }
+    if (!Number.isFinite(v)) { toast("Use a number, or something like 100/2 or (30+10)/2", true); return; }
+    const isSize = dim.kind === "w" || dim.kind === "h" || dim.kind === "d";
+    if (isSize && (v < 2 || v > (sketch.maxMm || 2600))) { toast("Size must be at least 2 mm and no bigger than the table.", true); return; }
     if (dim.kind === "w") sketch.setWidth(v);
     else if (dim.kind === "h") sketch.setHeight(v);
     else if (dim.kind === "d") sketch.setDiameter(v);
@@ -349,13 +434,17 @@ function openNumPad(dim) {
   };
   pad._apply = apply;
   pad._cur = true; // first key replaces the seed
+  // iPhone: the tap that opened the pad can fall through onto a key — ignore keys briefly
+  pad.style.pointerEvents = "none";
+  clearTimeout(pad._ghost);
+  pad._ghost = setTimeout(() => { pad.style.pointerEvents = ""; }, 350);
 }
 
 function closeNumPad() { $("numPad").classList.add("hidden"); $("numPad")._apply = null; }
 
 function openCad(title, fields, onOk) {
   $("cadTitle").textContent = title;
-  $("cadFields").innerHTML = fields.map((f) => `<label>${esc(f.label)}<input id="cad_${f.id}" type="${f.type || "number"}" inputmode="decimal" step="any" value="${f.value ?? ""}"></label>`).join("");
+  $("cadFields").innerHTML = fields.map((f) => `<label>${esc(f.label)}<input id="cad_${f.id}" type="${f.type || "number"}" inputmode="decimal" step="any" value="${esc(String(f.value ?? ""))}"></label>`).join("");
   $("cadDialog").classList.remove("hidden");
   $("cadDialog")._ok = () => {
     const vals = {};
@@ -616,6 +705,7 @@ function drawPreview() {
   drawCanvas($("moveMap"), false);
   if (!cv || !cv.offsetParent) return;
   const editing = !!sketch && S.src === "shape" && S.cur === 1;
+  if (sketch) renderQuickBar();
   if (sketch && sketch.active !== editing) sketch.setActive(editing);
   $("showMachWrap").classList.toggle("hidden", editing || (!!S.prepared && S.cur <= 2));
   if (editing) { sketch.draw(); return; }
@@ -638,9 +728,14 @@ function drawCanvas(cv, main) {
     [ox, oy] = originView();
   }
   const ax = A.x[1] - A.x[0], ay = A.y[1] - A.y[0];
-  const h = Math.max(180, Math.min(520, Math.round(w * (ay / ax))));
+  let h = Math.max(180, Math.min(520, Math.round(w * (ay / ax))));
+  if (document.body.classList.contains("short-land")) {
+    const box = cv.closest(".previewPane") || cv.parentElement;
+    h = Math.max(120, (box && box.clientHeight) || cv.clientHeight || 200);
+  }
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-  cv.style.height = h + "px";
+  if (document.body.classList.contains("short-land")) cv.style.height = "";
+  else cv.style.height = h + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
@@ -1019,7 +1114,7 @@ async function connectWiFi(quiet = false) {
   if (S.wifiBusy) return;
   S.wifiBusy = true;
   try {
-    const t = new WiFiTransport();
+    const t = new WiFiTransport(null, S.wifiToken);
     await t.open();
     await M.connect(t);
     S.demo = null; S.wifi = true; S.wifiUsed = true; S.userDisconnected = false;
@@ -1104,8 +1199,27 @@ function bind() {
 
   // step 1: drawing or shape
   $$(".srcTab").forEach((b) => (b.onclick = () => showSource(b.dataset.src)));
-  const addTile = (e) => { const b = e.target.closest("[data-shape]"); if (b) sketch.add(b.dataset.shape); };
+  const addTile = (e) => {
+    if (e.target.closest("[data-lib]")) { openLibrary(); return; }
+    const b = e.target.closest("[data-shape]"); if (b) sketch.add(b.dataset.shape);
+  };
   $("shapeTiles").onclick = addTile; $("holeTiles").onclick = addTile;
+  $("quickBar").addEventListener("click", (e) => { const b = e.target.closest("[data-qb]"); if (b && !b.disabled) quickAction(b.dataset.qb); });
+  $("libClose").onclick = closeLibrary;
+  $("shapeLib").addEventListener("click", (e) => {
+    if (e.target === $("shapeLib")) { closeLibrary(); return; }
+    const c = e.target.closest("[data-cat]"); if (c) { libCat = c.dataset.cat; renderLibrary(); return; }
+    const b = e.target.closest("[data-shape]"); if (b) { closeLibrary(); sketch.add(b.dataset.shape); }
+  });
+  $("libSearch").addEventListener("input", renderLibrary);
+  $("verClose").onclick = closeVersions;
+  $("verPop").addEventListener("click", (e) => {
+    if (e.target === $("verPop")) { closeVersions(); return; }
+    const v = e.target.closest("[data-var]"); if (!v) return;
+    const it = sketch.selected(); if (!it) return;
+    const spec = variantsFor(it.type).find((x) => variantKey(x) === v.dataset.var);
+    if (spec) { sketch.applyVariant(spec); openVersions(); }
+  });
   $("skAll").onclick = () => sketch.pickAll();
   $("skSnap").onchange = () => { sketch.setSnap(Number($("skSnap").value)); sketch.draw(); };
   $("skGuides").onchange = () => sketch.setGuides($("skGuides").checked);
@@ -1115,7 +1229,16 @@ function bind() {
     if (i.value.trim() === "" || !Number.isFinite(v)) return;
     const it = sketch.selected(); if (!it) return;
     if (i.dataset.angle) return;                     // applied on change
-    if (i.dataset.p) { if (v < 0) return; it.p[i.dataset.p] = v; }
+    if (i.dataset.p) {
+      if (it.lock) return;
+      const k = i.dataset.p;
+      const sizeKeys = ["w", "h", "d", "a", "b", "len", "wid", "s"];
+      if (v < 0) return;
+      if (sizeKeys.includes(k) && (v < 2 || v > (sketch.maxMm || 2600))) return;
+      if (["n", "cols", "rows"].includes(k) && (v < 0 || v > 64)) return;
+      if (v > (sketch.maxMm || 2600) * 4) return;
+      it.p[k] = v;
+    }
     else if (i.dataset.pos) {                // position = bottom-left corner of the shape
       const b = sketch.boxOf(it);
       if (i.dataset.pos === "x") it.x += v - b[0]; else it.y += v - b[1];
@@ -1143,7 +1266,7 @@ function bind() {
   $("proTools").addEventListener("click", (e) => {
     const b = e.target.closest("[data-pro]"); if (b) runPro(b.dataset.pro);
   });
-  $("skPro").onchange = () => { sketch.setPro($("skPro").checked); renderProTools(); renderShapeForm(); };
+  $("skPro").onchange = () => { sketch.setPro($("skPro").checked); renderProTools(); renderShapeForm(); renderQuickBar(); };
   $("numPadKeys").addEventListener("click", (e) => {
     const b = e.target.closest("[data-k]"); if (!b) return;
     const k = b.dataset.k, el = $("numPadValue");
@@ -1170,7 +1293,13 @@ function bind() {
       else e.stopPropagation();
       return;
     }
-    if (!$("cadDialog").classList.contains("hidden") && e.key === "Escape") { e.preventDefault(); closeCad(); }
+    if (!$("cadDialog").classList.contains("hidden") && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); closeCad(); return; }
+    if ((!$("shapeLib").classList.contains("hidden") || !$("verPop").classList.contains("hidden")) && e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      if (!$("shapeLib").classList.contains("hidden")) closeLibrary();
+      if (!$("verPop").classList.contains("hidden")) closeVersions();
+      return;
+    }
   }, true);
   $("skUndo").onclick = () => sketch.undo();
   $("skRedo").onclick = () => sketch.redo();
@@ -1269,8 +1398,25 @@ function bind() {
     try { localStorage.setItem("plasma.showMachine", S.showMachine ? "1" : "0"); } catch (e) { /* ignore */ }
     drawPreview();
   });
-  window.addEventListener("resize", drawPreview);
+  let layoutTimer = null, lastShort = null;
+  const relayout = () => {
+    clearTimeout(layoutTimer);
+    layoutTimer = setTimeout(() => {
+      const short = matchMedia("(orientation: landscape) and (max-height: 540px)").matches;
+      document.body.classList.toggle("short-land", short);
+      const changed = short !== lastShort; lastShort = short;
+      drawPreview();
+      if (sketch && sketch.active && changed) sketch.fitView();
+    }, 60);
+  };
+  window.addEventListener("resize", relayout);
+  window.addEventListener("orientationchange", relayout);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", relayout);
+  relayout();
   window.addEventListener("beforeunload", (e) => { if (M.jobRunning()) { e.preventDefault(); e.returnValue = ""; } });
+  window.addEventListener("pagehide", () => {
+    try { if (M && M.grbl) M.grbl.stop("Page closed."); } catch (e) { /* best effort */ }
+  });
 }
 
 async function init() {
@@ -1296,8 +1442,8 @@ async function init() {
   renderMaterials();
   renderRecent();
   sketch = new Sketch($("preview"), {
-    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); } },
-    onSelect: () => { renderShapeForm(); renderProTools(); },
+    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } },
+    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); },
     onMessage: (t) => toast(t),
     onDimTap: (dim) => {
       if (dim.kind === "hx" || dim.kind === "hy") {
@@ -1311,17 +1457,18 @@ async function init() {
           dim._v = dim.kind === "hx" ? (cb[0] + cb[2]) / 2 - hb[0] : (cb[1] + cb[3]) / 2 - hb[1];
         }
       }
-      openNumPad(dim);
+      setTimeout(() => openNumPad(dim), 280);
     },
   });
+  const travel = machine.travel_mm || { x: 1300, y: 800 };
+  sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   if (new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S };
-
-  window.plasmaSketch = sketch;   // handy for testing from the console
   renderShapeTiles();
   bind();
   const pi = await WiFiTransport.available();
   if (pi) {
     S.wifi = true;
+    S.wifiToken = pi.token;
     $("btnConnect").textContent = "Connect over Wi-Fi";
     $("btnConnect").onclick = () => { S.userDisconnected = false; connectWiFi(); };
     $("connectHelp").innerHTML = pi.serial

@@ -8,7 +8,7 @@
 
 export class JobError extends Error {}
 
-const WORD_RE = /([A-Z])\s*([-+]?(?:\d+\.?\d*|\.\d+))/g;
+const WORD_RE = /([A-Z])\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:E[-+]?\d+)?)/gi;
 
 function stripComments(line) {
   return line.replace(/\(.*?\)/g, "").split(";")[0].trim().toUpperCase();
@@ -88,12 +88,16 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
       torchOn = false;
       current = null;
       out.push(dryRun ? "; dry run: torch off" : "M5");
-      out.push("G91", `G0 Z${fmt(torch.safe_lift_mm)}`, "G90");
+      if (!dryRun) out.push("G91", `G0 Z${fmt(torch.safe_lift_mm)}`, "G90");
     }
 
     if ("X" in axes || "Y" in axes) {
       const nx = "X" in axes ? axes.X : x;
       const ny = "Y" in axes ? axes.Y : y;
+      if (torchOn && motion === 0) {
+        warnings.push(`Line ${lineno}: a rapid (G0) with the torch on – treated as a cutting move (G1) so the torch isn't raked across the sheet.`);
+        motion = 1;
+      }
       const parts = [`G${motion}`];
       if ("X" in axes) parts.push(`X${fmt(nx)}`);
       if ("Y" in axes) parts.push(`Y${fmt(ny)}`);
@@ -146,7 +150,8 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
 
   if (torchOn) {
     warnings.push("File ended with the torch still on; added torch off.");
-    out.push("M5", "G91", `G0 Z${fmt(torch.safe_lift_mm)}`, "G90");
+    out.push("M5");
+    if (!dryRun) out.push("G91", `G0 Z${fmt(torch.safe_lift_mm)}`, "G90");
   }
   out.push("M5");
   if (park !== null && park !== undefined) out.push(`G53 G0 Z${fmt(park)}`);

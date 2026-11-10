@@ -2,7 +2,7 @@
 // Looks for holes that are too small, strips of metal too thin between cuts, parts too close together,
 // parts too small for the slats, and parts too big for the table. Each problem has a spot so it can be
 // marked on the drawing.
-import { signedArea, pointInPoly, bbox, cleanPts } from "./geom.js";
+import { signedArea, pointInPoly, bbox, cleanPts, selfIntersects } from "./geom.js";
 
 // what the machine + plasma can do at this thickness (shown to the operator, and used by the check)
 export function machineLimits({ thickness = 3, kerf = 1.5, leadIn = 3, table = [1300, 800], accuracy = 0.5, slatPitch = 100 } = {}) {
@@ -24,7 +24,8 @@ function closedOutlines(contours) {
     const pts = cleanPts(c.pts, c.closed !== false);
     if (c.closed === false || pts.length < 3) continue;
     const area = Math.abs(signedArea(pts));
-    if (area < 0.01) continue;
+    const crossed = selfIntersects(pts);
+    if (area < 0.01 && !crossed) continue;
     out.push({ pts, area, circle: c.circle, box: bbox([{ pts }]) });
   }
   for (const c of out) {
@@ -36,10 +37,19 @@ function closedOutlines(contours) {
 }
 
 // points along the outline no more than `step` mm apart
-function densify(pts, step) {
-  const out = [];
+function densify(pts, step, cap = 800) {
+  const segs = [];
+  let total = 0;
   for (let i = 0; i < pts.length; i++) {
-    const a = pts[i], b = pts[(i + 1) % pts.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(L / step));
+    const a = pts[i], b = pts[(i + 1) % pts.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const n = Math.max(1, Math.ceil(L / Math.max(step, 1e-6)));
+    segs.push([a, b, L, n]);
+    total += n;
+  }
+  const scale = total > cap ? total / cap : 1;
+  const out = [];
+  for (const [a, b, L, raw] of segs) {
+    const n = Math.max(1, Math.round(raw / scale));
     for (let k = 0; k < n; k++) out.push([a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n]);
   }
   return out;
@@ -104,6 +114,43 @@ export function checkDesign(contours, opts = {}) {
     add("error", small.circle || small.area < B.area * 0.25 || small.area < A.area * 0.25
       ? "A hole or shape runs over the edge of a part – move it fully inside (to cut a hole) or fully outside."
       : "Two shapes overlap – they'd be cut through each other. Move them apart, or join them into one part.", at);
+  }
+
+  for (const c of list) {
+    if (selfIntersects(c.pts)) {
+      const mid = [(c.box[0] + c.box[2]) / 2, (c.box[1] + c.box[3]) / 2];
+      add("error", "An outline crosses itself – redraw it so the path doesn't cross.", mid);
+      crossed.add(c);
+    }
+  }
+
+  // a small cut that sits on or outside a neighbouring part (stray hole / slot)
+  for (const c of list) {
+    if (crossed.has(c)) continue;
+    const mid = [(c.box[0] + c.box[2]) / 2, (c.box[1] + c.box[3]) / 2];
+    if (c.hole) {
+      for (const o of list) {
+        if (o === c || o.area <= c.area) continue;
+        if (!pointInPoly(c.pts[0], o.pts)) continue;
+        if (c.pts.some((q) => !pointInPoly(q, o.pts))) {
+          add("error", "A hole or shape runs over the edge of a part – move it fully inside (to cut a hole) or fully outside.", mid);
+          crossed.add(c);
+          break;
+        }
+      }
+      continue;
+    }
+    for (const o of list) {
+      if (o === c || o.hole || o.area <= c.area * 1.2) continue;
+      const someIn = c.pts.some((q) => pointInPoly(q, o.pts));
+      const allIn = someIn && c.pts.every((q) => pointInPoly(q, o.pts));
+      const g = boxGap(c.box, o.box);
+      if ((someIn && !allIn) || (g < 2 && !allIn && c.area < o.area * 0.25)) {
+        add("error", "A hole or shape runs over the edge of a part – move it fully inside (to cut a hole) or fully outside.", mid);
+        crossed.add(c);
+        break;
+      }
+    }
   }
 
   const flagged = new Set();

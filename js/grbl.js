@@ -122,8 +122,10 @@ export function decodePins(pn = "") {
 // The Pi serves this page, passes commands to the controller and runs cut jobs itself,
 // so a Wi-Fi dropout or a phone going to sleep can't stall the torch mid-cut.
 export class WiFiTransport {
-  constructor(url) {
-    this.url = url || `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`;
+  constructor(url, token) {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const q = token ? `?token=${encodeURIComponent(token)}` : "";
+    this.url = url || `${proto}://${location.host}/ws${q}`;
     this.onLine = null; this.onClose = null; this.onJob = null;
     this.remoteJobs = true; this.label = "Wi-Fi"; this.kept = null; this.hello = null;
   }
