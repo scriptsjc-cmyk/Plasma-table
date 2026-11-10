@@ -14,7 +14,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export function initR2(host) {
   H = host;
-  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy(); bindDemoFit(); bindTopMenu(); installLabelGuard(); installIcons();
+  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy(); bindDemoFit(); bindTopMenu(); bindPierceJump(); installLabelGuard(); installIcons();
   paintVersionLines();
 }
 
@@ -288,10 +288,12 @@ export function paintCutList() {
     const c = p.allCuts.find((x) => x.key === k); if (!c) return "";
     const off = skipped.has(k); if (!off) n++;
     const name = c.open ? "Line" : c.hole ? "Hole" : "Part";
+    const up = `<svg class="ico" aria-hidden="true"><use href="#i-arrow-up"></use></svg>`;
+    const dn = `<svg class="ico" aria-hidden="true"><use href="#i-arrow-down"></use></svg>`;
     return `<li draggable="true" data-key="${k}" class="${off ? "off" : ""}">
       <span class="grip" aria-hidden="true">≡</span>
-      <label><input type="checkbox" data-cutkey="${k}" ${off ? "" : "checked"} aria-label="Cut ${name} ${k + 1}"> <b>${off ? "–" : n}</b> ${name} ${c.size[0]} × ${c.size[1]} mm</label>
-      <span class="mv"><button type="button" data-mv="-1" data-key="${k}" aria-label="Move earlier" ${i === 0 ? "disabled" : ""}>▲</button><button type="button" data-mv="1" data-key="${k}" aria-label="Move later" ${i === order.length - 1 ? "disabled" : ""}>▼</button></span></li>`;
+      <label class="cuttick"><input type="checkbox" data-cutkey="${k}" ${off ? "" : "checked"} aria-label="Cut ${name} ${k + 1}"><b>${off ? "–" : n}</b><span class="cutname">${name} ${c.size[0]} × ${c.size[1]} mm</span></label>
+      <span class="mv"><button type="button" data-mv="-1" data-key="${k}" aria-label="Move earlier" ${i === 0 ? "disabled" : ""}>${up}</button><button type="button" data-mv="1" data-key="${k}" aria-label="Move later" ${i === order.length - 1 ? "disabled" : ""}>${dn}</button></span></li>`;
   }).join("");
   // status updates call this many times a second; touching the DOM when nothing changed would swallow a click half-way through
   if ($("cutList")._html !== html) { $("cutList")._html = html; $("cutList").innerHTML = html; }
@@ -615,6 +617,25 @@ function dressDemoFit() {
   b.setAttribute("aria-label", "Set up the edges for me. Demo only, nothing real moves.");
   el.appendChild(b);
   fitDressing = false;
+}
+function bindPierceJump() {
+  const toTorch = $("btnPierceJump");
+  if (toTorch) toTorch.onclick = () => {
+    const tab = document.querySelector('#settingsTabs [data-settab="torch"]');
+    if (tab) tab.click();
+    const el = $("setPierceH");
+    if (el) { el.scrollIntoView({ block: "center" }); el.focus(); }
+  };
+  const toSpeed = $("btnPierceSpeed");
+  if (toSpeed) toSpeed.onclick = () => {
+    const dlg = $("settingsDlg");
+    if (dlg) dlg.classList.add("hidden");
+    const cut = document.querySelector('.tab[data-tab="cut"]');
+    if (cut) cut.click();
+    if (H && H.goStep) H.goStep(2);
+    const el = $("spSlider");
+    if (el) setTimeout(() => { el.scrollIntoView({ block: "center" }); el.focus(); }, 60);
+  };
 }
 function bindDemoFit() {
   const el = $("fit"); if (!el) return;

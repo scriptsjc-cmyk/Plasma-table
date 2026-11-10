@@ -37,7 +37,7 @@ const STEPS = [
   { id: "materials", title: "Materials and settings", body: [
     "Pick a material and thickness. If the admin has published cut presets, those become the default pierce delay, height, speed and kerf — the cut flow uses them.",
     "You can override speed on the slider, and save a speed that worked. Settings → Material library keeps your own presets on this device.",
-    "Pierce height, cut height and delay live under Settings → Pierce & cut (and on step 2 under More settings).",
+    "Pierce height, cut height and delay are edited under Settings → Torch & THC. The Pierce & cut tab jumps straight to those fields. Cut speed is on the Material step.",
   ]},
   { id: "editor", title: "The full-screen shape editor", body: [
     "On Make a shape, press Full-screen editor. The canvas fills the screen. The toolbar has draw outline, rectangle, circle, slot, arc, holes, join, subtract, mirror, rotate, array, fillet/chamfer, offset, align, dimensions, snap, undo/redo, zoom/fit and edit-edge.",

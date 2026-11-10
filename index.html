@@ -453,7 +453,7 @@
           <div class="row wrap"><button type="button" id="camReset" class="small">Reset starts and tabs</button></div>
         </div>
         <div id="cutListCard" class="cutlistcard pro-only hidden">
-          <h3>Cut list <span class="muted small">drag ≡ or use ▲▼ to reorder · untick to skip</span></h3>
+          <h3>Cut list <span class="muted small">drag the handle or the arrows to reorder · untick to skip</span></h3>
           <ol id="cutList" class="cutlist"></ol>
           <div class="row wrap"><button type="button" id="cutAuto" class="small">Back to automatic order</button></div>
         </div>
@@ -808,7 +808,7 @@
               <span>All settings and the CAD tools, so you can customise everything.</span>
             </label>
           </fieldset>
-          <div class="acct-sticky">
+          <div class="signup-submit">
             <button type="submit" class="xl go">Create account</button>
           </div>
         </form>
@@ -1214,7 +1214,11 @@
     <div class="setpane hidden" data-setpane="pierce">
       <h3>Pierce and cut</h3>
       <p class="muted small">These same values appear on the Material step under More settings and are written into the G-code for each pierce. The selected material preset fills them automatically.</p>
-      <p class="muted">Use Torch &amp; THC for pierce height, cut height and delay. Use the Material step for cut speed.</p>
+      <p class="muted">Pierce height, cut height and delay are on Torch &amp; THC. Cut speed is on the Material step.</p>
+      <div class="row wrap">
+        <button type="button" id="btnPierceJump" class="secondary">Open Torch &amp; THC</button>
+        <button type="button" id="btnPierceSpeed" class="secondary">Open cut speed</button>
+      </div>
     </div>
 
     <div class="setpane hidden" data-setpane="materials">
