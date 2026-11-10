@@ -14,7 +14,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export function initR2(host) {
   H = host;
-  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy(); bindDemoFit();
+  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy(); bindDemoFit(); bindTopMenu(); installLabelGuard();
   paintVersionLines();
 }
 
@@ -615,4 +615,75 @@ function bindDemoFit() {
   const el = $("fit"); if (!el) return;
   new MutationObserver(() => dressDemoFit()).observe(el, { childList: true, attributes: true, attributeFilter: ["class"] });
   dressDemoFit();
+}
+
+// Narrow header: pills collapse into one menu. STOP and a lit torch stay on the bar.
+function closeTopMenu() {
+  const bar = document.querySelector(".topbar");
+  const btn = $("btnTopMenu");
+  if (bar) bar.classList.remove("menu-open");
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+function bindTopMenu() {
+  const btn = $("btnTopMenu");
+  const bar = document.querySelector(".topbar");
+  const menu = $("topMenu");
+  if (!btn || !bar || !menu) return;
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const on = !bar.classList.contains("menu-open");
+    bar.classList.toggle("menu-open", on);
+    btn.setAttribute("aria-expanded", on ? "true" : "false");
+  });
+  document.addEventListener("click", (e) => {
+    if (!bar.classList.contains("menu-open")) return;
+    if (e.target.closest("#btnTopMenu")) return;
+    if (e.target.closest("#topMenu")) {
+      if (e.target.closest("button, a")) closeTopMenu();
+      return;
+    }
+    closeTopMenu();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTopMenu(); });
+}
+
+// Sheet-map captions are drawn in sketch.js / setup.js. On a narrow canvas the footer
+// pair shares one baseline and the start-point caption sits on the sheet title.
+// Nudge only those known strings; leave every other canvas label where it was drawn.
+let mapSheetY = null, mapMachineY = null;
+function nudgePreviewLabel(text, x, y, w, h) {
+  if (typeof text !== "string" || !(w > 0)) return { x, y };
+  if (/^grid /.test(text)) { mapSheetY = null; mapMachineY = null; return { x, y }; }
+  if (/shape/.test(text) && /overall/.test(text) && w < 480) return { x: 8, y: Math.max(14, h - 22) };
+  if (text.startsWith("Sheet ")) { mapSheetY = y; return { x, y }; }
+  if (text === "Machine work area") {
+    let yy = y;
+    if (mapSheetY != null && Math.abs(yy - mapSheetY) < 16) yy = mapSheetY + 16;
+    if (w < 480 && yy > h - 32) yy = Math.max(14, h - 32);
+    mapMachineY = yy;
+    return { x, y: yy };
+  }
+  if (text.startsWith("Start point")) {
+    let yy = y;
+    const block = Math.max(mapSheetY || 0, mapMachineY || 0);
+    if (block && yy < block + 15) yy = block + 16;
+    if (w < 480 && yy > h - 36) yy = Math.max(14, h - 36);
+    const moved = yy !== y;
+    const xx = moved ? Math.max(4, Math.min(x, Math.max(4, w - 130))) : x;
+    return { x: xx, y: yy };
+  }
+  return { x, y };
+}
+function installLabelGuard() {
+  const orig = CanvasRenderingContext2D.prototype.fillText;
+  if (orig.__ptLabel) return;
+  function wrapped(text, x, y, maxWidth) {
+    const cv = this.canvas;
+    if (!cv || cv.id !== "preview") return maxWidth == null ? orig.call(this, text, x, y) : orig.call(this, text, x, y, maxWidth);
+    const w = cv.clientWidth || 0, h = cv.clientHeight || 0;
+    const p = nudgePreviewLabel(String(text), x, y, w, h);
+    return maxWidth == null ? orig.call(this, text, p.x, p.y) : orig.call(this, text, p.x, p.y, maxWidth);
+  }
+  wrapped.__ptLabel = true;
+  CanvasRenderingContext2D.prototype.fillText = wrapped;
 }
