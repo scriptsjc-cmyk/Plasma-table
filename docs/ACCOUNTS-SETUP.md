@@ -74,7 +74,7 @@ open the link in your inbox, then come back and sign in. Then run this in
 the SQL editor (change the email):
 
 ```sql
-update public.profiles set role = 'admin' where id = (select id from auth.users where lower(email) = lower('you@example.com'));
+update public.profiles set role = 'admin' where id = (select id from auth.users where lower(email) = lower('jchappell2003@gmail.com'));
 ```
 
 That one-liner also lives in `supabase/make-admin.sql`. Reload the site,
@@ -182,6 +182,6 @@ and point `SUPABASE_URL` at it. No licence fee, and you keep the data.
 - [x] Email auth on, Confirm email on
 - [x] `js/config.js` has the Project URL, publishable key and anon JWT (no service_role key)
 - [ ] `supabase/schema.sql` ran cleanly in the SQL Editor
-- [ ] Your account exists, is confirmed, and `role = 'admin'` (see the one-liner above)
+- [ ] Your account (`jchappell2003@gmail.com`) exists, is confirmed, and is the only admin (`supabase/make-admin.sql`, or `select public.set_admin('jchappell2003@gmail.com');`). Then run `supabase/admin-powers.sql` after `schema-fixes.sql` if those have not been applied yet, and then `supabase/admin-powers-fixes.sql` (idempotent; a fresh `schema.sql` already contains all of it). The admin account must have a **confirmed** email: `is_admin()` is false until it is.
 - [ ] Five (or however many) serials added, codes written on the stickers
 - [ ] Optional: `pi/bridge.account.json` on each Pi

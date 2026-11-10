@@ -13,7 +13,8 @@ import { variantsFor, variantKey } from "./variants.js";
 import { evalExpr } from "./expr.js";
 import { checkDesign, machineLimits } from "./check.js";
 import * as Acc from "./account.js";
-import { initAccountUi, openAccount, openClaim, openGate, closeAccountUi, acctOverlayOpen, saveCurrent } from "./account-ui.js";
+import { initAccountUi, openAccount, openClaim, openGate, closeAccountUi, acctOverlayOpen, saveCurrent, openAdmin, paintAnnouncements } from "./account-ui.js";
+import { fillSettingsFromText, setFirmwareText, appendConsole, filterConsoleCommand } from "./admin-machine.js";
 
 const $ = (id) => document.getElementById(id);
 const themeColor = (name, fallback) => {
@@ -496,7 +497,8 @@ function openNumPad(dim) {
     h: () => { const b = sketch.boxOf(dim.it); return b[3] - b[1]; },
     d: () => { const b = sketch.boxOf(dim.it); return b[2] - b[0]; },
     x: () => sketch.boxOf(dim.it)[0], y: () => sketch.boxOf(dim.it)[1],
-    hx: () => dim._v, hy: () => dim._v }[dim.kind];
+    hx: () => dim._v, hy: () => dim._v,
+    "edge-len": () => dim._v }[dim.kind];
   let cur = "";
   $("numPadValue").textContent = "";
   $("numPadValue").dataset.seed = seed ? String(Math.round(seed() * 1000) / 1000) : "";
@@ -514,6 +516,7 @@ function openNumPad(dim) {
     else if (dim.kind === "d") sketch.setDiameter(v);
     else if (dim.kind === "x" || dim.kind === "y") sketch.setPos(dim.kind, v);
     else if (dim.kind === "hx" || dim.kind === "hy") sketch.setHoleOffset(dim.kind === "hx" ? "x" : "y", v);
+    else if (dim.kind === "edge-len") sketch.setEdgeLength(v, ($("edgeFixed") && $("edgeFixed").value) || "start");
     closeNumPad();
   };
   pad._apply = apply;
@@ -1170,12 +1173,47 @@ function onSafety(sf) {
   $("wzZ").textContent = d.z !== undefined ? `(${Math.abs(d.z).toFixed(0)} mm down)` : "";
   refresh();
 }
+async function maybeLogJob(j) {
+  if (!j || !Acc.isSignedIn()) return;
+  const serial = (Acc.linkedSerials() || [])[0] || null;
+  const stats = S.prepared && S.prepared.stats;
+  const parts = (sketch && sketch.items && sketch.items.length) || 1;
+  if (j.running) {
+    // Job progress events arrive many times a second. Log the start ONCE per job (a request still in flight, or a
+    // failed one, must not be retried on every event: that flooded job_events with duplicate 'started' rows).
+    if (!S.jobLogP && !S.jobLogId) {
+      S.jobLoggedEnd = false;
+      S.jobLogP = Acc.logJobEvent({ status: "started", serial, partCount: parts, cutLengthMm: stats && stats.cut_length_mm })
+        .then((r) => { S.jobLogId = r && r.id; })
+        .catch(() => { /* privacy: never block a cut */ });
+    }
+  } else if (j.result && !S.jobLoggedEnd) {
+    S.jobLoggedEnd = true;
+    try { if (S.jobLogP) await S.jobLogP; } catch (e) { /* ignore */ }
+    try {
+      await Acc.logJobEvent({
+        status: j.result === "done" ? "finished" : "aborted",
+        serial,
+        durationS: j.elapsed,
+        cutLengthMm: stats && stats.cut_length_mm,
+        partCount: parts,
+        eventId: S.jobLogId,
+      });
+    } catch (e) { /* ignore */ }
+    S.jobLogId = null; S.jobLogP = null;
+  }
+}
+
 function onEvent(kind, d) {
   if (kind === "status") {
     onStatus(d);
     if (d.state === "Disconnected") setConnected(false);
-  } else if (kind === "log") log(d.text, d.level);
-  else if (kind === "job") { S.job = d; if (!d.running) keepAwake(false); refresh(); }
+  } else if (kind === "log") {
+    log(d.text, d.level);
+    if (S._settingsCapture) S._settingsCapture.push(d.text || "");
+    if ($("advConsoleLog")) appendConsole(d.text || "");
+  }
+  else if (kind === "job") { S.job = d; if (!d.running) keepAwake(false); maybeLogJob(d); refresh(); }
   else if (kind === "alarm") { S.lastAlarm = d.message; $("alarmTitle").textContent = "Alarm"; $("alarmText").textContent = d.message; refresh(); }
   else if (kind === "safety") onSafety(d);
 }
@@ -1260,6 +1298,87 @@ async function keepAwake(on) {
 }
 
 // ------------------------------------------------------------------ wiring
+
+function fillEdgePanel() {
+  const box = $("edgePanel");
+  if (!box || !sketch) return;
+  const info = sketch.edgeInfo && sketch.edgeInfo();
+  const show = !!(info && sketch.isEditableCustom && sketch.isEditableCustom(info.it));
+  box.classList.toggle("hidden", !show);
+  if (show) box.removeAttribute("hidden"); else box.setAttribute("hidden", "");
+  if (!show) return;
+  if ($("edgeLen")) $("edgeLen").value = String(Math.round(info.length * 100) / 100);
+  if ($("edgeAng")) $("edgeAng").value = String(Math.round((($("edgeAngMode") && $("edgeAngMode").value === "rel" ? info.relAngle : info.angle) || 0) * 10) / 10);
+  if ($("edgeBulge")) $("edgeBulge").value = String(Math.round(info.bulge * 1000) / 1000);
+  if ($("edgeRad")) $("edgeRad").value = info.radius && Number.isFinite(info.radius) ? String(Math.round(info.radius * 10) / 10) : "";
+  if ($("edgeHint")) $("edgeHint").textContent = info.vi != null
+    ? "Corner selected. Drag it, or press Delete to remove it (an outline needs at least three corners)."
+    : "Edge selected. Set a length, square it up, type an angle, or turn it into a curve. Double-click to add a corner.";
+}
+
+function bindEdgePanel() {
+  if (!$("edgePanel") || $("edgePanel")._bound) return;
+  $("edgePanel")._bound = true;
+  $("edgeLenApply") && ($("edgeLenApply").onclick = () => { sketch.setEdgeLength(Number($("edgeLen").value), $("edgeFixed").value); fillEdgePanel(); });
+  $("edgeSquare") && ($("edgeSquare").onclick = () => { sketch.squareUpEdge("cardinal"); fillEdgePanel(); });
+  $("edgeSquarePrev") && ($("edgeSquarePrev").onclick = () => { sketch.squareUpEdge("prev"); fillEdgePanel(); });
+  $("edgeAngApply") && ($("edgeAngApply").onclick = () => { sketch.setEdgeAngle(Number($("edgeAng").value), $("edgeAngMode").value === "rel"); fillEdgePanel(); });
+  $("edgeCurve") && ($("edgeCurve").onclick = () => {
+    const r = Number($("edgeRad").value), b = Number($("edgeBulge").value);
+    if (r > 0) sketch.setEdgeCurve({ radius: r });
+    else if (Number.isFinite(b) && $("edgeBulge").value !== "") sketch.setEdgeCurve({ bulge: b });
+    else sketch.setEdgeCurve({});
+    fillEdgePanel();
+  });
+  $("edgeStraight") && ($("edgeStraight").onclick = () => { sketch.straightenEdge(); fillEdgePanel(); });
+  $("edgeAddV") && ($("edgeAddV").onclick = () => { const e = sketch.edgeSel; if (e) sketch.addVertexOnEdge(e.ci, e.ei); fillEdgePanel(); });
+  $("edgeDelV") && ($("edgeDelV").onclick = () => { sketch.deleteVertex(); fillEdgePanel(); });
+}
+
+// Admin console / settings: never while a job is cutting (a G-code line or $ write must not interleave with the job),
+// and anything that moves the machine or writes a setting only when it is Idle.
+function adminMayTalk(needsIdle) {
+  if (M.jobRunning()) { toast("A job is running. Press STOP, or wait until it finishes.", true); return false; }
+  if (needsIdle && M.state() !== "Idle") { toast("The machine must be Idle (it is " + M.state() + ").", true); return false; }
+  return true;
+}
+function addTestPattern(kind) {
+  if (!sketch) return;
+  if (M && M.jobRunning()) { toast("A job is running. Add test patterns after it finishes.", true); return; }
+  if (!S.designOnly && !S.connected) enterDesignOnly();
+  showTab("cut");
+  S.src = "shape";
+  $$(".srcTab").forEach((b) => b.classList.toggle("sel", b.dataset.src === "shape"));
+  $("srcFile").classList.add("hidden");
+  $("srcShape").classList.remove("hidden");
+  goStep(1);
+  if (kind === "square") {
+    sketch.add("rect");
+    const it = sketch.selected(); if (it) { it.p.w = 100; it.p.h = 100; it._key = null; sketch.commit(); sketch.onSelect(); }
+    toast("Added a 100 mm calibration square.");
+  } else if (kind === "circle") {
+    sketch.add("circle");
+    const it = sketch.selected();
+    if (it) {
+      if ("d" in (it.p || {})) it.p.d = 50;
+      else if ("r" in (it.p || {})) it.p.r = 25;
+      it._key = null; sketch.commit(); sketch.onSelect();
+    }
+    toast("Added a 50 mm calibration circle.");
+  } else if (kind === "kerf") {
+    for (let i = 0; i < 5; i++) {
+      sketch.add("rect");
+      const it = sketch.selected();
+      if (!it) continue;
+      it.p.w = 80; it.p.h = 8;
+      it.x = 10; it.y = 10 + i * 20;
+      it._key = null;
+    }
+    sketch.commit(); sketch.onSelect();
+    toast("Added a kerf / speed ladder (five 80×8 mm bars). Cut each at a different speed.");
+  }
+}
+
 function bind() {
   $$(".tab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
   $$("#stepper li").forEach((li) => (li.onclick = () => goStep(Number(li.dataset.step))));
@@ -1396,6 +1515,8 @@ function bind() {
   $("toolCancel").onclick = () => { sketch.setTool(null); renderProTools(); };
   document.addEventListener("keydown", (e) => {
     if (acctOverlayOpen()) {
+      // Esc is STOP. An account / admin dialog must never swallow it while the machine is moving or the torch is on.
+      if (e.key === "Escape" && M && M.grbl && ((S.status && S.status.torch) || ["Run", "Jog", "Home", "Cycle"].includes(S.status && S.status.state) || (S.job && S.job.running))) cmd("stop");
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); closeAccountUi(); }
       return;
     }
@@ -1454,7 +1575,7 @@ function bind() {
     if (!requireMachine("Link your machine to run jobs")) return;
     try {
       M.command({ cmd: "feed_override", step: "reset" });  // cut at exactly the speed chosen in step 2
-      M.startJob(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(5);
+      S.jobLogId = null; S.jobLoggedEnd = false; M.startJob(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(5); maybeLogJob(S.job);
       $("btnSaveSpeed").classList.add("hidden");
     }
     catch (e) { toast(e.message, true); }
@@ -1543,6 +1664,7 @@ function bind() {
       g.realtime(RT.HOLD); g.realtime(RT.RESET);
     } catch (e) { /* best effort */ }
   });
+  bindEdgePanel();
 }
 
 async function init() {
@@ -1569,7 +1691,8 @@ async function init() {
   renderRecent();
   sketch = new Sketch($("preview"), {
     onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } },
-    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); },
+    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); },
+    onEdgeChange: () => { fillEdgePanel(); },
     onMessage: (t) => toast(t),
     onDimTap: (dim) => {
       if (dim.kind === "hx" || dim.kind === "hy") {
@@ -1583,20 +1706,75 @@ async function init() {
           dim._v = dim.kind === "hx" ? (cb[0] + cb[2]) / 2 - hb[0] : (cb[1] + cb[3]) / 2 - hb[1];
         }
       }
+      if (dim.kind === "edge-len") {
+        const info = sketch.edgeInfo(); if (info) dim._v = info.length;
+      }
       setTimeout(() => openNumPad(dim), 280);
     },
   });
+  // keep STOP (in the top bar) above every dialog and keep dialogs from covering the bar
+  const fitBar = () => { const b = document.querySelector(".topbar"); if (b) document.documentElement.style.setProperty("--topbar-h", Math.ceil(b.getBoundingClientRect().height) + "px"); };
+  fitBar(); window.addEventListener("resize", fitBar); window.addEventListener("orientationchange", () => setTimeout(fitBar, 200));
   const travel = machine.travel_mm || { x: 1300, y: 800 };
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S, account: Acc, openAccount, openClaim, openGate, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, machineAllowed, goStep, refreshGate };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand };
   renderShapeTiles();
   bind();
   await initAccountUi({
     toast, esc,
     applyMode: applyAccountMode,
     refreshGate,
+    confirm: (msg) => confirm(msg),
+    sendAdvanced: (line) => {
+      if (!Acc.isAdmin()) { toast("Admin only", true); return; }
+      if (!M.grbl) { toast("Connect the table first.", true); return; }
+      const f = filterConsoleCommand(line);
+      if (!f.ok) { toast(f.reason, true); return; }
+      if (f.send === "!") { M.command({ cmd: "stop" }); return; }                  // STOP is never held back
+      if (f.send === "\x18") { M.command({ cmd: "reset" }); return; }
+      if (f.send === "?" || f.send === "~") { M.grbl.realtime(f.send); return; }
+      if (!adminMayTalk(f.moves || /^\$\d/.test(f.send) || f.send === "$H")) return;
+      M.grbl.send(f.send);
+    },
+    readSettings: async () => {
+      if (!Acc.isAdmin()) { toast("Admin only", true); return; }
+      if (!M.grbl) { toast("Connect the table first.", true); return; }
+      if (!adminMayTalk(false)) return;
+      S._settingsCapture = [];
+      M.grbl.send("$$");
+      M.grbl.send("$I");
+      setTimeout(() => {
+        const lines = S._settingsCapture || [];
+        S._settingsCapture = null;
+        fillSettingsFromText(lines.join("\n"));
+        const fw = lines.filter((l) => /grbl|hal|ver/i.test(l)).join(" ");
+        if (fw) setFirmwareText(fw);
+        toast("Read $ settings");
+      }, 1200);
+    },
+    writeSettings: (map) => {
+      if (!Acc.isAdmin()) { toast("Admin only", true); return; }
+      if (!M.grbl) { toast("Connect the table first.", true); return; }
+      if (!adminMayTalk(true)) return;
+      const bad = [];
+      const lines = Object.keys(map).sort((a,b)=>a-b).map((k) => {
+        const r = filterConsoleCommand("$" + k + "=" + map[k]);
+        if (!r.ok) { bad.push("$" + k); return null; }
+        return r.send;
+      }).filter(Boolean);
+      if (bad.length) { toast("Not sent (outside the allowed range): " + bad.join(", "), true); return; }
+      if (!lines.length) { toast("Nothing to write.", true); return; }
+      M.grbl.sendLines(lines);
+      toast("Wrote " + lines.length + " settings. Check the console for ok/error.");
+    },
+    calMove: (axis, mm) => {
+      if (!requireMachine("Link your machine to run calibration moves")) return;
+      try { M.command({ cmd: "jog", axis, dist: mm }); }
+      catch (e) { toast(e.message, true); }
+    },
+    addPattern: addTestPattern,
     getDesign: () => (sketch && sketch.items) ? sketch.items : [],
     fileName: () => S.fileName || "",
     currentPart: () => S.currentPart,

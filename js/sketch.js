@@ -6,7 +6,7 @@
 //  * scroll / pinch to zoom, drag with the right or middle button (or a finger, or Space) to pan
 // The layout is kept in the browser so it's still there after a reload. Everything is undoable.
 import { SHAPES, makeShape } from "./shapes.js";
-import { pointInPoly, bbox, signedArea, unionOutlines, differenceOutlines, offsetPolygon, selfIntersects } from "./geom.js";
+import { pointInPoly, bbox, signedArea, unionOutlines, differenceOutlines, offsetPolygon, selfIntersects, polysCross, splitBulge, expandContour, bulgeMidpoint, bulgeFromPoint, bulgeFromRadius, bulgeFromSagitta, bulgeRadius } from "./geom.js";
 import { variantsFor, variantKey } from "./variants.js";
 
 const KEY = "plasma.sketch", KEY_OPTS = "plasma.sketch.opts";
@@ -25,10 +25,31 @@ const themeColor = (name, fallback) => {
   catch { return fallback; }
 };
 const clone = (o) => JSON.parse(JSON.stringify(o));
+const MAX_BULGE = 4;   // tan(1/4 of the included angle): 4 is a 304 degree arc; anything bigger is a hostile / corrupt value
+const clampBulge = (b) => (Number.isFinite(+b) ? Math.max(-MAX_BULGE, Math.min(MAX_BULGE, +b)) : 0);
 function mapC(c, f) {
   const o = { ...c, pts: c.pts.map(f) };
   if (c.circle) { const [cx, cy] = f([c.circle.cx, c.circle.cy]); o.circle = { ...c.circle, cx, cy }; }
+  if (c.bulges) o.bulges = c.bulges.slice();
   return o;
+}
+function distToSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  if (l2 < 1e-18) return Math.hypot(px - ax, py - ay);
+  let t = ((px - ax) * dx + (py - ay) * dy) / l2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function distToEdge(px, py, p, q, bulge) {
+  const b = Number(bulge) || 0;
+  if (Math.abs(b) < 1e-9) return distToSeg(px, py, p[0], p[1], q[0], q[1]);
+  const exp = expandContour({ pts: [p, q], closed: false, bulges: [b] });
+  let best = Infinity;
+  for (let i = 0; i < exp.pts.length - 1; i++) {
+    const a = exp.pts[i], c = exp.pts[i + 1];
+    best = Math.min(best, distToSeg(px, py, a[0], a[1], c[0], c[1]));
+  }
+  return best;
 }
 const rot = ([x, y], deg) => {
   if (!deg) return [x, y];
@@ -39,9 +60,9 @@ const boxOverlap = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] <
 const unionBox = (bs) => bs.reduce((u, b) => [Math.min(u[0], b[0]), Math.min(u[1], b[1]), Math.max(u[2], b[2]), Math.max(u[3], b[3])], [Infinity, Infinity, -Infinity, -Infinity]);
 
 export class Sketch {
-  constructor(canvas, { onChange = () => {}, onSelect = () => {}, onMessage = () => {}, onDimTap = () => {} } = {}) {
-    this.cv = canvas; this.onChange = onChange; this.onSelect = onSelect; this.onMessage = onMessage; this.onDimTap = onDimTap;
-    this.items = []; this.nextId = 1; this.sel = { ids: [], hole: null };
+  constructor(canvas, { onChange = () => {}, onSelect = () => {}, onMessage = () => {}, onDimTap = () => {}, onEdgeChange = () => {} } = {}) {
+    this.cv = canvas; this.onChange = onChange; this.onSelect = onSelect; this.onMessage = onMessage; this.onDimTap = onDimTap; this.onEdgeChange = onEdgeChange;
+    this.items = []; this.nextId = 1; this.sel = { ids: [], hole: null }; this.edgeSel = null;
     this.view = null; this.active = false;
     this.past = []; this.future = []; this.clip = null;
     this.drag = null; this.pointers = new Map(); this.label = null; this.guides = []; this.marks = [];
@@ -99,7 +120,12 @@ export class Sketch {
       if (!cs || !cs.length) return null;
       const ok = cs.every((c) => c && Array.isArray(c.pts) && c.pts.length >= 3 && c.pts.every((q) => Number.isFinite(q[0]) && Number.isFinite(q[1]) && Math.abs(q[0]) <= max * 2 && Math.abs(q[1]) <= max * 2));
       if (!ok) return null;
-      out.shape = { cs };
+      out.shape = { cs: cs.map((c) => {
+        const pts = c.pts.map((q) => [Number(q[0]), Number(q[1])]);
+        const bulges = Array.isArray(c.bulges) ? c.bulges.map((b) => (Number.isFinite(+b) ? Math.max(-MAX_BULGE, Math.min(MAX_BULGE, +b)) : 0)) : [];
+        while (bulges.length < pts.length) bulges.push(0);
+        return { pts, closed: c.closed !== false, bulges: bulges.slice(0, pts.length) };
+      }) };
     }
     if (it.holes && typeof it.holes === "object") {
       for (const [k, v] of Object.entries(it.holes)) {
@@ -116,7 +142,8 @@ export class Sketch {
     this.items = JSON.parse(json);
     this.sel.ids = this.sel.ids.filter((id) => this.item(id));
     if (this.sel.ids.length !== 1) this.sel.hole = null;
-    this.commit(); this.onSelect();
+    this.normalizeEdgeSel();
+    this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
   }
   undo() { if (this.past.length) { this.future.push(this.snapshot()); this.restore(this.past.pop()); } }
   redo() { if (this.future.length) { this.past.push(this.snapshot()); this.restore(this.future.pop()); } }
@@ -127,18 +154,68 @@ export class Sketch {
   canMutate(it) { return !!(it && !it.lock); }
   selected() { return this.sel.ids.length === 1 ? this.item(this.sel.ids[0]) : null; }
   isPicked(it) { return this.sel.ids.includes(it.id); }
-  pick(ids, hole = null) { this.sel = { ids: [...ids], hole: ids.length === 1 ? hole : null }; }
+  pick(ids, hole = null) { this.sel = { ids: [...ids], hole: ids.length === 1 ? hole : null }; this.normalizeEdgeSel(); }
 
   baseContours(it) {
     if (it.type === "custom") {
       const k = (it.p.scale || 100) / 100;
-      return it.shape.cs.map((c) => ({ ...mapC(c, ([x, y]) => [x * k, y * k]), circle: c.circle ? { cx: c.circle.cx * k, cy: c.circle.cy * k, r: c.circle.r * k } : undefined }));
+      return it.shape.cs.map((c) => {
+        const scaled = mapC(c, ([x, y]) => [x * k, y * k]);
+        if (c.circle) scaled.circle = { cx: c.circle.cx * k, cy: c.circle.cy * k, r: c.circle.r * k };
+        return expandContour(scaled);
+      });
     }
     return makeShape(it.type, it.p);
   }
+  rawBase(it) {
+    const k = (it.p.scale || 100) / 100;
+    return it.shape.cs.map((c) => {
+      const o = mapC(c, ([x, y]) => [x * k, y * k]);
+      if (c.circle) o.circle = { cx: c.circle.cx * k, cy: c.circle.cy * k, r: c.circle.r * k };
+      if (c.bulges) o.bulges = c.bulges.slice();
+      return o;
+    });
+  }
+  rawWorld(it) {
+    let cs = this.rawBase(it);
+    const flip = (c, fx) => {
+      const srcB = (c.bulges || []).slice();
+      const m = mapC(c, ([x, y]) => fx ? [-x, y] : [x, -y]);
+      m.pts.reverse();
+      m.bulges = this.reverseBulges(c.pts.length, c.closed !== false, srcB);
+      return m;
+    };
+    if (it.fx) cs = cs.map((c) => flip(c, true));
+    if (it.fy) cs = cs.map((c) => flip(c, false));
+    if (it.rot) cs = cs.map((c) => mapC(c, (pt) => rot(pt, it.rot)));
+    if (!cs.length) return cs;
+    const b = def(it.type).multi ? bbox(cs) : bbox([cs[0]]);
+    return cs.map((c) => mapC(c, ([x, y]) => [x - b[0] + it.x, y - b[1] + it.y]));
+  }
+  reverseBulges(n, closed, bulges) {
+    // After reversing vertices, each edge flips direction so the bulge sign flips,
+    // and the leftover bulge (between last and first on a closed loop) moves with it.
+    const src = (bulges || []).slice();
+    while (src.length < n) src.push(0);
+    const out = [];
+    if (closed) {
+      // reversed pts: old n-1, n-2, ..., 0. new edge i is old edge (n-2-i) with flipped sign? 
+      // old edges: i -> i+1 with b[i]; after reverse, vertex order n-1..0, new edge from old i+1 to old i is -b[i].
+      for (let i = 0; i < n; i++) out.push(-(src[(n - 1 - i)] || 0));
+      // Wait: new vertex i is old (n-1-i). New edge i goes to new i+1 = old (n-2-i) = old vertex just before old (n-1-i) in original? 
+      // new[i] = old[n-1-i], new[i+1] = old[n-2-i]. Original edge from old[n-2-i] to old[n-1-i] is b[n-2-i]. Flipped = -b[n-2-i].
+      // So out[i] = -src[n-2-i]. For i=n-1, new last to first: new[n-1]=old[0], new[0]=old[n-1], original edge n-1: old[n-1]->old[0] = b[n-1], flipped -b[n-1]. n-2-(n-1)= -1 + n = n-1. Yes -src[n-1].
+      out.length = 0;
+      for (let i = 0; i < n; i++) out.push(-(src[(n - 2 - i + n) % n] || 0));
+    } else {
+      for (let i = 0; i < n - 1; i++) out.push(-(src[n - 2 - i] || 0));
+      out.push(0);
+    }
+    return out;
+  }
   holeStart(it) { return def(it.type).multi ? Infinity : 1; }
   contoursOf(it) {
-    const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs.length : 0]);
+    const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0]);
     if (it._key === key) return it._cs;
     let cs;
     try { cs = this.baseContours(it); } catch (e) { cs = []; }
@@ -606,7 +683,7 @@ export class Sketch {
     const b = bbox([{ pts: uniq }]);
     this.remember();
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
-      shape: { cs: [{ pts: uniq.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true }] } };
+      shape: { cs: [{ pts: uniq.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true, bulges: uniq.map(() => 0) }] } };
     this.items.push(it);
     this.pick([it.id]); this.tool = null; this.drawPts = [];
     this.commit(); this.onSelect();
@@ -838,6 +915,8 @@ export class Sketch {
       }
     }
 
+    this.drawEdgeHandles(ctx, C, S);
+
     // cut check markers
     this.marks.forEach((m, i) => {
       const [X, Y] = S(m.at[0], m.at[1]);
@@ -896,9 +975,391 @@ export class Sketch {
     return { x: x - tw / 2, y: y - th / 2, w: tw, h: th };
   }
 
+
+  isEditableCustom(it) { return !!(it && it.type === "custom" && this.canMutate(it) && it.shape && it.shape.cs && it.shape.cs.length); }
+  normalizeEdgeSel() {
+    const e = this.edgeSel;
+    if (!e) return;
+    const it = this.item(e.id);
+    if (!this.isEditableCustom(it) || !this.isPicked(it)) { this.edgeSel = null; return; }
+    const c = it.shape.cs[e.ci];
+    if (!c || !c.pts || e.ei >= c.pts.length || (e.vi != null && e.vi >= c.pts.length)) this.edgeSel = null;
+  }
+  bakeCustom(it) {
+    if (!this.isEditableCustom(it)) return;
+    const already = (it.p.scale || 100) === 100 && !it.rot && !it.fx && !it.fy;
+    const cs = this.rawWorld(it);
+    if (!cs.length) return;
+    const b = bbox(cs);
+    it.shape.cs = cs.map((c) => {
+      const pts = c.pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]);
+      const bulges = (c.bulges || []).slice();
+      while (bulges.length < pts.length) bulges.push(0);
+      return { pts, closed: c.closed !== false, bulges: bulges.slice(0, pts.length) };
+    });
+    it.p = { ...(it.p || {}), scale: 100 };
+    it.rot = 0; it.fx = false; it.fy = false;
+    it.x = r1(b[0]); it.y = r1(b[1]);
+    it._key = null;
+  }
+  customWorld(it) { this.bakeCustom(it); return this.rawWorld(it); }
+  edgeInfo() {
+    this.normalizeEdgeSel();
+    const e = this.edgeSel; if (!e) return null;
+    const it = this.item(e.id); if (!it) return null;
+    const world = this.customWorld(it);
+    const c = world[e.ci]; if (!c) return null;
+    const pts = c.pts, n = pts.length, closed = c.closed !== false;
+    const i = e.ei, j = (i + 1) % n;
+    const p = pts[i], q = pts[j];
+    const bulge = Number((c.bulges || [])[i]) || 0;
+    const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    const absAng = Math.atan2(q[1] - p[1], q[0] - p[0]) * 180 / Math.PI;
+    let prevAng = null;
+    if (n >= 3) {
+      const prev = pts[(i - 1 + n) % n];
+      prevAng = Math.atan2(p[1] - prev[1], p[0] - prev[0]) * 180 / Math.PI;
+    }
+    const rel = prevAng == null ? null : ((absAng - prevAng + 540) % 360) - 180;
+    const radius = Math.abs(bulge) < 1e-9 ? null : bulgeRadius(p, q, bulge);
+    return { it, ci: e.ci, ei: i, vi: e.vi, p, q, bulge, length: len, angle: absAng, prevAngle: prevAng, relAngle: rel, radius, closed, n, mid: bulgeMidpoint(p, q, bulge) };
+  }
+  // Keep the stored shape's lower-left corner at (0,0) WITHOUT moving anything on the table: unmoved corners
+  // keep their world position (so "keep this end fixed" really is fixed, and dragging a corner left/down past the
+  // old corner doesn't slide the whole part).
+  _renorm(it) {
+    const cs = it.shape.cs; if (!cs || !cs.length) return;
+    const src = def(it.type).multi ? cs : [cs[0]];
+    let x0 = Infinity, y0 = Infinity;
+    for (const c of src) for (const q of c.pts) { if (q[0] < x0) x0 = q[0]; if (q[1] < y0) y0 = q[1]; }
+    if (!Number.isFinite(x0) || !Number.isFinite(y0) || (Math.abs(x0) < 1e-9 && Math.abs(y0) < 1e-9)) return;
+    for (const c of cs) c.pts = c.pts.map((q) => [r1(q[0] - x0), r1(q[1] - y0)]);
+    it.x = r1(it.x + x0); it.y = r1(it.y + y0); it._key = null;
+  }
+  // Is the edited outline still a valid closed shape? Returns a message, or null when fine.
+  outlineProblem(it) {
+    if (!it || !it.shape || !it.shape.cs) return null;
+    const polys = [];
+    for (const c of it.shape.cs) {
+      const pts = c.pts, n = pts.length;
+      for (const q of pts) {
+        if (!Number.isFinite(q[0]) || !Number.isFinite(q[1]) || Math.abs(q[0] + it.x) > this.maxMm || Math.abs(q[1] + it.y) > this.maxMm) return "That would go further than the table.";
+      }
+      for (let i = 0; i < n; i++) {
+        const q = pts[(i + 1) % n];
+        if (Math.hypot(q[0] - pts[i][0], q[1] - pts[i][1]) < 0.05) return "Two corners would land on the same spot.";
+      }
+      const e = expandContour({ pts, closed: true, bulges: c.bulges });
+      if (e.pts.length < 3 || Math.abs(signedArea(e.pts)) < 0.01) return "That would flatten the outline.";
+      if (selfIntersects(e.pts, 6000)) return "That would make the outline cross itself.";
+      polys.push(e.pts);
+    }
+    for (let i = 0; i < polys.length; i++) for (let j = i + 1; j < polys.length; j++) {
+      if (polysCross(polys[i], polys[j], 6000)) return "That would make two outlines cross each other.";
+    }
+    return null;
+  }
+  _revertEdit(snap, fut, es) {
+    this.past.pop(); this.future = fut;
+    this.items = JSON.parse(snap);
+    this.sel.ids = this.sel.ids.filter((id) => this.item(id));
+    this.edgeSel = es ? { ...es } : null;
+    this.normalizeEdgeSel();
+    this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+  }
+  // Run an edit on a drawn outline. If it would make the outline cross itself, flatten it or push it off the table
+  // (and it wasn't already broken), the whole edit is undone and the reason is shown.
+  _guarded(it, fn) {
+    const snap = this.snapshot(), fut = this.future, es = this.edgeSel ? { ...this.edgeSel } : null;
+    this.remember();
+    this.bakeCustom(it);
+    const wasBad = this.outlineProblem(it);
+    const r = fn();
+    if (r === false) { this.past.pop(); this.future = fut; return false; }
+    this._renorm(it);
+    const bad = wasBad ? null : this.outlineProblem(it);
+    if (bad) { this._revertEdit(snap, fut, es); this.onMessage(bad + " Nothing was changed."); return false; }
+    this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+    return true;
+  }
+  _withEdge(fn, msg) {
+    const info = this.edgeInfo();
+    if (!info) { if (msg) this.onMessage("Click an edge of a drawn outline first."); return false; }
+    return this._guarded(info.it, () => { fn(info.it, info); });
+  }
+  // Move corner v of a closed outline to `to`. The edge leaving that corner (dir +1 = next, -1 = previous)
+  // keeps its direction: its far corner slides along ITS neighbour's line to stay parallel. Without this,
+  // lengthening one side of a squared-off part leaves the next side slanted.
+  _moveKeeping(pts, v, to, dir) {
+    const n = pts.length, from = pts[v].slice();
+    const k = (v + dir + n) % n, l = (k + dir + n) % n;
+    pts[v] = [r1(to[0]), r1(to[1])];
+    if (n < 3 || k === v || l === v) return;
+    const d2 = [pts[k][0] - from[0], pts[k][1] - from[1]];
+    const d3 = [pts[l][0] - pts[k][0], pts[l][1] - pts[k][1]];
+    const l2 = Math.hypot(d2[0], d2[1]), l3 = Math.hypot(d3[0], d3[1]);
+    if (l2 < 1e-9 || l3 < 1e-9) return;
+    const den = d2[0] * d3[1] - d2[1] * d3[0];
+    if (Math.abs(den) < 0.05 * l2 * l3) return;                 // nearly parallel: nothing sensible to slide along
+    const rx = pts[k][0] - to[0], ry = pts[k][1] - to[1];
+    const s = (rx * d3[1] - ry * d3[0]) / den;                    // new k = to + s * d2
+    const t = (rx * d2[1] - ry * d2[0]) / den;                    // ... = old k + t * d3
+    if (!(s > 0.02) || !(t > -0.9) || !(t < 0.9)) return;        // would flip or overshoot: keep the plain move
+    pts[k] = [r1(to[0] + s * d2[0]), r1(to[1] + s * d2[1])];
+  }
+  selectEdge(id, ci, ei, vi = null) {
+    const it = this.item(id);
+    if (!this.isEditableCustom(it)) return false;
+    this.pick([it.id]);
+    this.edgeSel = { id: it.id, ci, ei, vi };
+    this.normalizeEdgeSel();
+    this.draw();
+    this.onSelect();
+    this.onEdgeChange && this.onEdgeChange();
+    return !!this.edgeSel;
+  }
+  setEdgeLength(len, fixed) {
+    len = Number(len);
+    if (!(len > 0.05)) { this.onMessage("Enter a length greater than 0."); return false; }
+    if (len > this.maxMm) { this.onMessage("That edge would be longer than the table."); return false; }
+    return this._withEdge((it, info) => {
+      const c = it.shape.cs[info.ci], pts = c.pts, n = pts.length;
+      const i = info.ei, j = (i + 1) % n;
+      const a = pts[i], b = pts[j];
+      const dx = b[0] - a[0], dy = b[1] - a[1], cur = Math.hypot(dx, dy) || 1e-9;
+      const ux = dx / cur, uy = dy / cur;
+      if (fixed !== "end") this._moveKeeping(pts, j, [a[0] + ux * len, a[1] + uy * len], 1);
+      else this._moveKeeping(pts, i, [b[0] - ux * len, b[1] - uy * len], -1);
+    });
+  }
+  squareUpEdge(mode) {
+    return this._withEdge((it, info) => {
+      const c = it.shape.cs[info.ci], pts = c.pts, n = pts.length;
+      const i = info.ei, j = (i + 1) % n;
+      const a = pts[i], b = pts[j];
+      const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
+      let ang = Math.atan2(dy, dx);
+      if (mode === "prev" && n >= 3) {
+        const prev = pts[(i - 1 + n) % n];
+        const pa = Math.atan2(a[1] - prev[1], a[0] - prev[0]);
+        // nearest perpendicular to previous
+        const cand = [pa + Math.PI / 2, pa - Math.PI / 2];
+        cand.sort((u, v) => Math.abs(Math.atan2(Math.sin(ang - u), Math.cos(ang - u))) - Math.abs(Math.atan2(Math.sin(ang - v), Math.cos(ang - v))));
+        ang = cand[0];
+      } else {
+        const step = Math.PI / 2;
+        ang = Math.round(ang / step) * step;
+      }
+      this._moveKeeping(pts, j, [a[0] + Math.cos(ang) * len, a[1] + Math.sin(ang) * len], 1);
+    });
+  }
+  setEdgeAngle(deg, relative) {
+    deg = Number(deg);
+    if (!Number.isFinite(deg)) { this.onMessage("Enter an angle in degrees."); return false; }
+    return this._withEdge((it, info) => {
+      const c = it.shape.cs[info.ci], pts = c.pts, n = pts.length;
+      const i = info.ei, j = (i + 1) % n;
+      const a = pts[i], b = pts[j];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      let ang = deg * Math.PI / 180;
+      if (relative && n >= 3) {
+        const prev = pts[(i - 1 + n) % n];
+        ang = Math.atan2(a[1] - prev[1], a[0] - prev[0]) + ang;
+      }
+      pts[j] = [r1(a[0] + Math.cos(ang) * len), r1(a[1] + Math.sin(ang) * len)];
+    });
+  }
+  setEdgeCurve({ bulge, radius, sagitta } = {}) {
+    return this._withEdge((it, info) => {
+      const c = it.shape.cs[info.ci];
+      const p = c.pts[info.ei], q = c.pts[(info.ei + 1) % c.pts.length];
+      c.bulges = c.bulges || c.pts.map(() => 0);
+      let b = 0;
+      if (bulge != null && Number.isFinite(+bulge)) b = +bulge;
+      else if (radius != null && Number(radius) > 0) b = bulgeFromRadius(p, q, Number(radius), true);
+      else if (sagitta != null && Number.isFinite(+sagitta)) b = bulgeFromSagitta(p, q, Number(sagitta));
+      else b = 0.2;
+      c.bulges[info.ei] = clampBulge(b);
+    });
+  }
+  straightenEdge() {
+    return this._withEdge((it, info) => {
+      const c = it.shape.cs[info.ci];
+      c.bulges = c.bulges || c.pts.map(() => 0);
+      c.bulges[info.ei] = 0;
+    });
+  }
+  addVertexOnEdge(ci, ei, atWorld) {
+    const it = this.selected();
+    if (!this.isEditableCustom(it)) return false;
+    return this._guarded(it, () => {
+      const c = it.shape.cs[ci];
+      if (!c) return false;
+      const n = c.pts.length, i = ei, j = (i + 1) % n;
+      const p = c.pts[i], q = c.pts[j];
+      const bulge = Number((c.bulges || [])[i]) || 0;
+      const near = atWorld ? [atWorld[0] - it.x, atWorld[1] - it.y] : null;
+      // on an arc the new corner sits ON the arc and the two halves keep exactly the same curve
+      const sp = splitBulge(p, q, bulge, near);
+      const mid = [r1(sp.mid[0]), r1(sp.mid[1])];
+      c.pts.splice(j, 0, mid);
+      const bs = (c.bulges || []).slice();
+      while (bs.length < n) bs.push(0);
+      bs.splice(j, 0, sp.b2);
+      bs[i] = sp.b1;
+      c.bulges = bs;
+      this.edgeSel = { id: it.id, ci, ei: i, vi: j };
+    });
+  }
+  deleteVertex() {
+    const e = this.edgeSel; if (!e || e.vi == null) { this.onMessage("Click a corner first."); return false; }
+    const it = this.item(e.id); if (!this.isEditableCustom(it)) return false;
+    const c0 = it.shape.cs[e.ci];
+    if (!c0 || c0.pts.length <= 3) { this.onMessage("A closed outline needs at least three corners."); return false; }
+    return this._guarded(it, () => {
+      const c = it.shape.cs[e.ci];
+      if (!c || c.pts.length <= 3) return false;
+      const vi = e.vi;
+      c.pts.splice(vi, 1);
+      if (c.bulges) {
+        c.bulges.splice(vi, 1);                                   // the deleted corner's outgoing edge goes with it
+        if (c.bulges.length) c.bulges[(vi - 1 + c.bulges.length) % c.bulges.length] = 0;   // the edge that now joins its neighbours is straight
+      }
+      const ni = Math.min(vi, c.pts.length - 1);
+      this.edgeSel = { id: it.id, ci: e.ci, ei: (ni - 1 + c.pts.length) % c.pts.length, vi: ni };
+    });
+  }
+  moveVertex(ci, vi, x, y) {
+    const it = this.selected();
+    if (!this.isEditableCustom(it)) return;
+    this.bakeCustom(it);
+    const c = it.shape.cs[ci]; if (!c || !c.pts[vi]) return;
+    const step = this.opts.snap || 0.1;
+    const lx = Math.round((x - it.x) / step) * step;
+    const ly = Math.round((y - it.y) / step) * step;
+    c.pts[vi] = [r1(lx), r1(ly)];
+    this._renorm(it);
+    it._key = null;
+  }
+  moveBulge(ci, ei, x, y) {
+    const it = this.selected();
+    if (!this.isEditableCustom(it)) return;
+    this.bakeCustom(it);
+    const c = it.shape.cs[ci]; if (!c) return;
+    const n = c.pts.length, p = c.pts[ei], q = c.pts[(ei + 1) % n];
+    c.bulges = c.bulges || c.pts.map(() => 0);
+    c.bulges[ei] = clampBulge(bulgeFromPoint(p, q, [x - it.x, y - it.y]));
+    it._key = null;
+  }
+  hitCustomHandles(sx, sy, touch, onlySelected) {
+    const R = touch ? 22 : 12;
+    const [wx, wy] = this.toWorld(sx, sy);
+    const tol = R / (this.view && this.view.s ? this.view.s : 1);
+    const list = onlySelected ? [this.selected()].filter(Boolean) : this.order().reverse();
+    for (const it of list) {
+      if (!this.isEditableCustom(it)) continue;
+      const world = this.rawWorld(it);
+      // vertices
+      for (let ci = 0; ci < world.length; ci++) {
+        const pts = world[ci].pts, n = pts.length;
+        for (let i = 0; i < n; i++) {
+          const [X, Y] = this.toScreen(pts[i][0], pts[i][1]);
+          if (Math.hypot(sx - X, sy - Y) <= R) return { kind: "vertex", it, ci, vi: i, ei: i };
+        }
+      }
+      // bulge handles
+      for (let ci = 0; ci < world.length; ci++) {
+        const pts = world[ci].pts, n = pts.length, closed = world[ci].closed !== false;
+        const edges = closed ? n : n - 1;
+        const bs = world[ci].bulges || [];
+        for (let i = 0; i < edges; i++) {
+          const b = Number(bs[i]) || 0;
+          if (Math.abs(b) < 1e-9) continue;
+          const mid = bulgeMidpoint(pts[i], pts[(i + 1) % n], b);
+          const [X, Y] = this.toScreen(mid[0], mid[1]);
+          if (Math.hypot(sx - X, sy - Y) <= R) return { kind: "bulge", it, ci, ei: i };
+        }
+      }
+      // edges
+      let best = null, bestD = tol;
+      for (let ci = 0; ci < world.length; ci++) {
+        const pts = world[ci].pts, n = pts.length, closed = world[ci].closed !== false;
+        const edges = closed ? n : n - 1;
+        const bs = world[ci].bulges || [];
+        for (let i = 0; i < edges; i++) {
+          const d = distToEdge(wx, wy, pts[i], pts[(i + 1) % n], bs[i]);
+          if (d < bestD) { bestD = d; best = { kind: "edge", it, ci, ei: i }; }
+        }
+      }
+      if (best) return best;
+    }
+    return null;
+  }
+
+
+  drawEdgeHandles(ctx, C, S) {
+    const one = this.selected();
+    if (!this.isEditableCustom(one)) return;
+    const world = this.rawWorld(one);
+    const e = this.edgeSel && this.edgeSel.id === one.id ? this.edgeSel : null;
+    for (let ci = 0; ci < world.length; ci++) {
+      const pts = world[ci].pts, n = pts.length, closed = world[ci].closed !== false;
+      const edges = closed ? n : n - 1;
+      const bs = world[ci].bulges || [];
+      if (e && e.ci === ci) {
+        const i = e.ei, p = pts[i], q = pts[(i + 1) % n];
+        if (p && q) {
+          const b = Number(bs[i]) || 0;
+          ctx.save();
+          ctx.strokeStyle = C.sel; ctx.lineWidth = 3; ctx.setLineDash([]);
+          ctx.beginPath();
+          const [sx, sy] = S(p[0], p[1]);
+          ctx.moveTo(sx, sy);
+          if (Math.abs(b) > 1e-9) {
+            const exp = expandContour({ pts: [p, q], closed: false, bulges: [b] });
+            for (const pt of exp.pts.slice(1)) { const [x, y] = S(pt[0], pt[1]); ctx.lineTo(x, y); }
+          } else {
+            const [ex, ey] = S(q[0], q[1]); ctx.lineTo(ex, ey);
+          }
+          ctx.stroke();
+          // live length label
+          const mid = bulgeMidpoint(p, q, b);
+          const [mx, my] = S(mid[0], mid[1]);
+          const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+          const extra = Math.abs(b) > 1e-9 ? ` · R ${r1(bulgeRadius(p, q, b))}` : "";
+          const rec = this.tag(ctx, `${r1(len)} mm${extra}`, mx, my - 18, C.sel);
+          this.dimHits.push({ ...rec, kind: "edge-len", it: one, label: "Edge length (mm)" });
+          ctx.restore();
+        }
+      }
+      // vertices
+      for (let i = 0; i < n; i++) {
+        const [X, Y] = S(pts[i][0], pts[i][1]);
+        const on = e && e.ci === ci && e.vi === i;
+        ctx.beginPath(); ctx.arc(X, Y, on ? 6 : 4.5, 0, 7);
+        ctx.fillStyle = on ? C.sel : C.canvas;
+        ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
+        ctx.fill(); ctx.stroke();
+      }
+      // bulge mid handles
+      for (let i = 0; i < edges; i++) {
+        const b = Number(bs[i]) || 0;
+        if (Math.abs(b) < 1e-9 && !(e && e.ci === ci && e.ei === i)) continue;
+        if (Math.abs(b) < 1e-9) continue;
+        const mid = bulgeMidpoint(pts[i], pts[(i + 1) % n], b);
+        const [X, Y] = S(mid[0], mid[1]);
+        ctx.beginPath(); ctx.rect(X - 4, Y - 4, 8, 8);
+        ctx.fillStyle = C.canvas; ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
+        ctx.fill(); ctx.stroke();
+      }
+    }
+  }
+
   // ---------------------------------------------------------------- hit testing
   hit(sx, sy, touch) {
     const one = this.selected(), R = touch ? 20 : 11;
+    const custom = this.hitCustomHandles(sx, sy, touch, true);
+    if (custom) return custom;
     if (one && this.canResize(one)) {
       const b = this.boxOf(one);
       const corners = [[b[0], b[3], b[2], b[1]], [b[2], b[3], b[0], b[1]], [b[2], b[1], b[0], b[3]], [b[0], b[1], b[2], b[3]]];
@@ -921,6 +1382,8 @@ export class Sketch {
       const b = this.boxOf(it);
       if (wx > b[0] - tol && wx < b[2] + tol && wy > b[1] - tol && wy < b[3] + tol && (b[2] - b[0] < 3 * tol || b[3] - b[1] < 3 * tol)) return { kind: "move", it };
     }
+    const loose = this.hitCustomHandles(sx, sy, touch, false);
+    if (loose) return loose;
     return null;
   }
 
@@ -1001,6 +1464,13 @@ export class Sketch {
       }
       const before = this.snapshot(), it = h.it;
       const toggle = e.shiftKey || e.ctrlKey || e.metaKey;
+      if (h.kind === "vertex" || h.kind === "edge" || h.kind === "bulge") {
+        this.pick([it.id]);
+        this.edgeSel = { id: it.id, ci: h.ci, ei: (h.ei != null ? h.ei : h.vi), vi: h.kind === "vertex" ? h.vi : null };
+        this.drag = { kind: h.kind, it, ci: h.ci, ei: h.ei, vi: h.vi, before, wx, wy, moved: false };
+        this.onSelect(); this.onEdgeChange && this.onEdgeChange(); this.draw();
+        return;
+      }
       if (h.kind === "resize") { /* keep selection */ }
       else if (toggle) {
         const ids = this.isPicked(it) ? this.sel.ids.filter((id) => id !== it.id) : [...this.sel.ids, it.id];
@@ -1024,7 +1494,7 @@ export class Sketch {
       const d = this.drag;
       if (!d) {                                                 // hover cursor
         const h = this.spaceDown ? null : this.hit(sx, sy, false);
-        cv.style.cursor = this.spaceDown ? "grab" : !h ? "crosshair" : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : "move";
+        cv.style.cursor = this.spaceDown ? "grab" : !h ? "crosshair" : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
         return;
       }
       if (d.kind === "pinch") {
@@ -1072,6 +1542,17 @@ export class Sketch {
         const b = this.boxOf(it), W = b[2] - b[0], H = b[3] - b[1];
         it.x = r1(it.x + (wx < ax ? ax - W : ax) - b[0]); it.y = r1(it.y + (wy < ay ? ay - H : ay) - b[1]);
         this.label = { text: `${r1(W)} × ${r1(H)} mm`, x: sx, y: sy };
+      } else if (d.kind === "vertex") {
+        this.moveVertex(d.ci, d.vi, wx, wy);
+        this.label = { text: `${r1(wx)}, ${r1(wy)} mm`, x: sx, y: sy };
+      } else if (d.kind === "bulge") {
+        this.moveBulge(d.ci, d.ei, wx, wy);
+        const info = this.edgeInfo();
+        this.label = { text: info && info.radius && Number.isFinite(info.radius) ? `R ${r1(info.radius)} mm` : "curve", x: sx, y: sy };
+      } else if (d.kind === "edge") {
+        // click-select only; dragging an edge does not move the part
+        d.moved = false;
+        return;
       }
       this.draw();
       this.onChange(false);
@@ -1099,6 +1580,20 @@ export class Sketch {
         this.pick(d.add ? [...new Set([...this.sel.ids, ...ids])] : ids);
         this.onSelect(); this.draw(); return;
       }
+      if (d.moved && (d.kind === "vertex" || d.kind === "bulge") && d.it) {
+        // a corner or curve dragged so the outline crosses itself / leaves the table: put it back
+        const was = (() => { try { const old = JSON.parse(d.before).find((x) => x.id === d.it.id); return old ? this.outlineProblem(old) : null; } catch (err) { return null; } })();
+        const bad = was ? null : this.outlineProblem(d.it);
+        if (bad) {
+          const es = this.edgeSel ? { ...this.edgeSel } : null;
+          this.items = JSON.parse(d.before);
+          this.sel.ids = this.sel.ids.filter((id) => this.item(id));
+          this.edgeSel = es; this.normalizeEdgeSel();
+          this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+          this.onMessage(bad + " The corner went back.");
+          return;
+        }
+      }
       if (d.moved) {
         this.past.push(d.before); this.future = [];
         this.commit();
@@ -1116,7 +1611,14 @@ export class Sketch {
     cv.addEventListener("dblclick", (e) => {
       if (!this.active) return;
       const [sx, sy] = pos(e);
-      if (!this.hit(sx, sy, false)) this.fitView();
+      const h = this.hit(sx, sy, e.pointerType === "touch");
+      if (h && (h.kind === "edge" || h.kind === "vertex")) {
+        const [wx, wy] = this.toWorld(sx, sy);
+        this.selectEdge(h.it.id, h.ci, h.ei != null ? h.ei : h.vi);
+        this.addVertexOnEdge(h.ci, h.ei != null ? h.ei : h.vi, [wx, wy]);
+        return;
+      }
+      if (!h) this.fitView();
     });
     window.addEventListener("keyup", (e) => { if (e.key === " ") { this.spaceDown = false; if (this.active) this.cv.style.cursor = ""; } });
     // keys win over the machine jog keys while the editor is on screen and nothing's being typed
@@ -1141,7 +1643,7 @@ export class Sketch {
       const st = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
       const mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] }[e.key];
       if (mv) { stop(); this.nudge(...mv); return; }
-      if (e.key === "Delete" || e.key === "Backspace") { stop(); this.remove(); return; }
+      if (e.key === "Delete" || e.key === "Backspace") { stop(); if (this.edgeSel && this.edgeSel.vi != null) this.deleteVertex(); else this.remove(); return; }
       if (k === "r") { stop(); this.rotateBy(e.shiftKey ? -90 : 90); return; }
       if (k === "m") { stop(); this.mirror(); return; }
       if (e.key === "Escape") { e.stopImmediatePropagation(); this.pick([]); this.onSelect(); this.draw(); }

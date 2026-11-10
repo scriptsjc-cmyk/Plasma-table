@@ -1,3 +1,4 @@
--- Make one account an admin (run in the Supabase SQL Editor after that person has signed up).
--- Replace the email, then run:
-update public.profiles set role = 'admin' where id = (select id from auth.users where lower(email) = lower('you@example.com'));
+-- Make jchappell2003@gmail.com the only admin.
+-- Run this in the Supabase SQL Editor AFTER that account has signed up.
+-- It demotes any other admin and refuses any other email.
+select public.set_admin('jchappell2003@gmail.com');

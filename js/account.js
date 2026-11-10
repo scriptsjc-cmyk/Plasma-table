@@ -115,6 +115,10 @@ function demoState() {
   if (!Array.isArray(s.parts)) s.parts = [];
   if (!Array.isArray(s.machines)) s.machines = [];
   if (!Array.isArray(s.log)) s.log = [];
+  if (!Array.isArray(s.jobEvents)) s.jobEvents = [];
+  if (!Array.isArray(s.announcements)) s.announcements = [];
+  if (!s.announcementReads || typeof s.announcementReads !== "object") s.announcementReads = {};
+  if (!Array.isArray(s.cutPresets)) s.cutPresets = [];
   return s;
 }
 function saveDemo(s) { writeJson(DEMO_KEY, s); }
@@ -265,6 +269,24 @@ export function currentUser() {
 export function currentProfile() { return currentUser(); }
 
 export function isSignedIn() { return !!currentUser(); }
+
+function configHasBackend() {
+  return !!(CONFIG.SUPABASE_URL && (CONFIG.SUPABASE_ANON_KEY || CONFIG.SUPABASE_ANON_JWT));
+}
+function isLocalHost() {
+  try {
+    if (typeof location === "undefined" || !location.hostname) return true; // node / unit tests
+    const h = location.hostname;
+    return h === "localhost" || h === "127.0.0.1" || h === "[::1]";
+  } catch (e) { return true; }
+}
+// Fake "make me admin" is for local demo / tests only. It can never arm on the
+// live site (config has a real project), even if the page is opened with ?demo=1.
+export function canGrantDemoAdmin() {
+  if (cloudOn()) return false;
+  if (configHasBackend() && !isLocalHost()) return false;
+  return true;
+}
 export function isAdmin() { const u = currentUser(); return !!(u && u.role === "admin"); }
 export function accountMode() { const u = currentUser(); return u && u.mode === "pro" ? "pro" : (u ? "beginner" : null); }
 
@@ -546,10 +568,11 @@ export async function setDisplayName(name) {
 }
 
 export async function grantDemoAdmin() {
-  if (cloudOn()) throw new Error("In the live app, promote yourself in the SQL editor (see the setup guide).");
+  if (!canGrantDemoAdmin()) throw new Error("The demo admin switch is only for local demo mode with no cloud backend. On the live site the only admin is set in the SQL editor.");
   const s = demoState();
   const u = s.users.find((x) => demoSession() && x.id === demoSession().id);
   if (!u) throw new Error("Sign in first.");
+  s.users.forEach((x) => { x.role = "user"; });
   u.role = "admin";
   saveDemo(s);
   notify();
@@ -810,4 +833,230 @@ export async function adminListClaimLog(limit) {
   return demoState().log.slice().reverse().slice(0, limit || 100);
 }
 
+
+export async function touchLastActive() {
+  if (cloudOn()) {
+    try { await authFetch("/rest/v1/rpc/touch_last_active", { method: "POST", body: "{}" }); } catch (e) { /* ignore */ }
+    return;
+  }
+  const u = demoSession(); if (!u) return;
+  const s = demoState();
+  const rec = s.users.find((x) => x.id === u.id);
+  if (rec) { rec.last_active = nowIso(); saveDemo(s); }
+}
+
+export async function logJobEvent({ status, serial, durationS, cutLengthMm, partCount, eventId } = {}) {
+  const u = currentUser();
+  if (!u) return null;
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    const body = {
+      p_status: status,
+      p_serial: serial || null,
+      p_duration_s: durationS ?? null,
+      p_cut_length_mm: cutLengthMm ?? null,
+      p_part_count: partCount ?? null,
+      p_event_id: eventId || null,
+    };
+    return authFetch("/rest/v1/rpc/log_job_event", { method: "POST", body: JSON.stringify(body) });
+  }
+  const s = demoState();
+  if (status === "started") {
+    const row = { id: uid(), user_id: u.id, machine_serial: serial || null, status: "started", started_at: nowIso(), ended_at: null, duration_s: null, cut_length_mm: null, part_count: partCount ?? null };
+    s.jobEvents.push(row);
+    const rec = s.users.find((x) => x.id === u.id); if (rec) rec.last_active = nowIso();
+    saveDemo(s);
+    return { ok: true, id: row.id };
+  }
+  let row = eventId ? s.jobEvents.find((e) => e.id === eventId && e.user_id === u.id) : null;
+  if (!row) {
+    row = { id: uid(), user_id: u.id, machine_serial: serial || null, status, started_at: nowIso(), ended_at: nowIso(), duration_s: durationS ?? 0, cut_length_mm: cutLengthMm ?? null, part_count: partCount ?? null };
+    s.jobEvents.push(row);
+  } else {
+    row.status = status;
+    row.ended_at = nowIso();
+    if (durationS != null) row.duration_s = durationS;
+    if (cutLengthMm != null) row.cut_length_mm = cutLengthMm;
+    if (partCount != null) row.part_count = partCount;
+    if (serial) row.machine_serial = serial;
+  }
+  saveDemo(s);
+  return { ok: true, id: row.id };
+}
+
+export async function adminListUsers(query) {
+  if (!isAdmin()) throw new Error("Admin only");
+  const q = String(query || "").trim().toLowerCase();
+  let rows;
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    rows = await authFetch("/rest/v1/rpc/admin_list_users", { method: "POST", body: "{}" });
+  } else {
+    const s = demoState();
+    rows = s.users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      display_name: u.display_name || "",
+      mode: u.mode || "beginner",
+      role: u.role || "user",
+      created_at: u.created_at || u.created || null,
+      last_active: u.last_active || null,
+      parts_count: s.parts.filter((p) => p.owner === u.id).length,
+      machines: s.machines.filter((m) => m.owner === u.id).map((m) => ({ serial: m.serial, claimed_at: m.claimed_at })),
+    }));
+  }
+  if (!q) return rows || [];
+  return (rows || []).filter((r) => {
+    const hay = [r.email, r.display_name, r.mode, r.role, ...(r.machines || []).map((m) => m.serial)].join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+export async function adminUsageStats() {
+  if (!isAdmin()) throw new Error("Admin only");
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    return authFetch("/rest/v1/rpc/admin_usage_stats", { method: "POST", body: "{}" });
+  }
+  const s = demoState();
+  const now = Date.now();
+  const day = (iso) => (iso ? String(iso).slice(0, 10) : null);
+  const active = (days) => s.users.filter((u) => u.last_active && now - Date.parse(u.last_active) < days * 86400000).length;
+  const byDay = {};
+  for (const u of s.users) {
+    const d = day(u.created_at || u.created); if (!d) continue;
+    byDay[d] = (byDay[d] || 0) + 1;
+  }
+  const ev = s.jobEvents;
+  return {
+    users: s.users.length,
+    beginner: s.users.filter((u) => (u.mode || "beginner") !== "pro").length,
+    pro: s.users.filter((u) => u.mode === "pro").length,
+    active_7: active(7),
+    active_30: active(30),
+    machines_claimed: s.machines.filter((m) => m.owner).length,
+    machines_total: s.machines.length,
+    jobs_started: ev.filter((e) => e.status === "started" || e.started_at).length,
+    jobs_finished: ev.filter((e) => e.status === "finished").length,
+    jobs_aborted: ev.filter((e) => e.status === "aborted").length,
+    cut_time_s: ev.filter((e) => e.status === "finished").reduce((a, e) => a + (Number(e.duration_s) || 0), 0),
+    cut_length_mm: ev.reduce((a, e) => a + (Number(e.cut_length_mm) || 0), 0),
+    signups: Object.keys(byDay).sort().map((d) => ({ day: d, n: byDay[d] })),
+  };
+}
+
+export async function adminListJobEvents(limit) {
+  if (!isAdmin()) throw new Error("Admin only");
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    return authFetch("/rest/v1/rpc/admin_list_job_events", { method: "POST", body: JSON.stringify({ p_limit: limit || 200 }) });
+  }
+  return demoState().jobEvents.slice().sort((a, b) => String(b.started_at).localeCompare(String(a.started_at))).slice(0, limit || 200);
+}
+
+function expiryOk(a) { return !a.expires_at || Date.parse(a.expires_at) > Date.now(); }
+
+export async function listAnnouncements() {
+  const u = currentUser();
+  if (!u) return [];
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    return (await authFetch("/rest/v1/rpc/my_announcements", { method: "POST", body: "{}" })) || [];
+  }
+  const s = demoState();
+  const reads = s.announcementReads[u.id] || {};
+  return s.announcements.filter(expiryOk).slice().sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+    .map((a) => ({ ...a, read: !!reads[a.id] }));
+}
+
+export async function markAnnouncementRead(id) {
+  const u = currentUser();
+  if (!u || !id) return;
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    return authFetch("/rest/v1/rpc/mark_announcement_read", { method: "POST", body: JSON.stringify({ p_id: id }) });
+  }
+  const s = demoState();
+  s.announcementReads[u.id] = s.announcementReads[u.id] || {};
+  s.announcementReads[u.id][id] = nowIso();
+  saveDemo(s);
+  return { ok: true };
+}
+
+export async function adminCreateAnnouncement({ title, body, severity, expiresAt } = {}) {
+  if (!isAdmin()) throw new Error("Admin only");
+  title = String(title || "").trim().slice(0, 200);
+  body = String(body || "").trim().slice(0, 4000);
+  severity = String(severity || "info").toLowerCase();
+  if (!title || !body) throw new Error("Title and body are required.");
+  if (!["info", "warning", "update"].includes(severity)) throw new Error("Pick a severity.");
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    return authFetch("/rest/v1/rpc/admin_create_announcement", { method: "POST", body: JSON.stringify({ p_title: title, p_body: body, p_severity: severity, p_expires_at: expiresAt || null }) });
+  }
+  const s = demoState();
+  const row = { id: uid(), title, body, severity, created_at: nowIso(), expires_at: expiresAt || null, created_by: currentUser().id };
+  s.announcements.push(row);
+  saveDemo(s);
+  return row;
+}
+
+export async function adminDeleteAnnouncement(id) {
+  if (!isAdmin()) throw new Error("Admin only");
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    return authFetch("/rest/v1/rpc/admin_delete_announcement", { method: "POST", body: JSON.stringify({ p_id: id }) });
+  }
+  const s = demoState();
+  s.announcements = s.announcements.filter((a) => a.id !== id);
+  saveDemo(s);
+  return { ok: true };
+}
+
+export async function listCutPresets() {
+  if (cloudOn()) {
+    if (!currentUser()) return [];
+    await refreshIfNeeded();
+    return (await authFetch("/rest/v1/cut_presets?select=*&order=material,thickness_mm")) || [];
+  }
+  return demoState().cutPresets.slice();
+}
+
+export async function adminUpsertCutPreset(row) {
+  if (!isAdmin()) throw new Error("Admin only");
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    return authFetch("/rest/v1/rpc/admin_upsert_cut_preset", { method: "POST", body: JSON.stringify({
+      p_material: row.material, p_thickness_mm: row.thickness_mm,
+      p_pierce_delay_s: row.pierce_delay_s ?? null,
+      p_pierce_height_mm: row.pierce_height_mm ?? null,
+      p_cut_speed_mm_min: row.cut_speed_mm_min ?? null,
+      p_notes: row.notes || "",
+    }) });
+  }
+  const s = demoState();
+  const mat = String(row.material || "").trim();
+  const th = Number(row.thickness_mm);
+  if (!mat || !(th > 0)) throw new Error("Material and a positive thickness are required.");
+  let rec = s.cutPresets.find((p) => p.material.toLowerCase() === mat.toLowerCase() && Number(p.thickness_mm) === th);
+  if (!rec) { rec = { id: uid(), material: mat, thickness_mm: th }; s.cutPresets.push(rec); }
+  Object.assign(rec, { pierce_delay_s: row.pierce_delay_s, pierce_height_mm: row.pierce_height_mm, cut_speed_mm_min: row.cut_speed_mm_min, notes: row.notes || "", updated_at: nowIso() });
+  saveDemo(s);
+  return rec;
+}
+
+export async function adminDeleteCutPreset(id) {
+  if (!isAdmin()) throw new Error("Admin only");
+  if (cloudOn()) {
+    await refreshIfNeeded();
+    return authFetch("/rest/v1/rpc/admin_delete_cut_preset", { method: "POST", body: JSON.stringify({ p_id: id }) });
+  }
+  const s = demoState();
+  s.cutPresets = s.cutPresets.filter((p) => p.id !== id);
+  saveDemo(s);
+  return { ok: true };
+}
+
+
 export const account = api;
+

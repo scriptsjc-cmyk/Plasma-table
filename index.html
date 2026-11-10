@@ -54,6 +54,16 @@
   <div><b>Home the machine first.</b><br>It needs to find its home corner before it can keep the torch inside the edges.</div>
   <button class="do-home">Home</button>
 </div>
+<div id="announceBar" class="banner hidden" role="status">
+  <div>
+    <b id="announceTitle"></b>
+    <span id="announceBody"></span>
+  </div>
+  <div class="row">
+    <button type="button" id="announceOpen">Inbox</button>
+    <button type="button" id="announceDismiss">Dismiss</button>
+  </div>
+</div>
 
 <!-- ============================================================ connect screen -->
 <div id="demoAcctBar" class="banner amber hidden" role="status">Local demo accounts — nothing is sent to the cloud. Claim code <b>DEMO-0000</b> unlocks a practice machine.</div>
@@ -145,6 +155,54 @@
             <label class="check"><input type="checkbox" id="skGuides"> Line-up guides</label>
             <label class="check protoggle"><input type="checkbox" id="skPro"> Pro mode</label>
           </div>
+          <div id="edgePanel" class="edgepanel hidden" hidden>
+            <h3>Edit edge</h3>
+            <p class="muted small" id="edgeHint">Click an edge of a drawn outline to set its length, square it up, or turn it into a curve. Drag corners, double-click an edge to add a corner, Delete removes one.</p>
+            <div class="grid2">
+              <label>Length (mm)
+                <span class="row" style="margin-top:0">
+                  <input id="edgeLen" type="number" min="0.1" step="0.1" inputmode="decimal">
+                  <button type="button" id="edgeLenApply" class="small">Set</button>
+                </span>
+              </label>
+              <label>Keep this end fixed
+                <select id="edgeFixed"><option value="start">Start</option><option value="end">End</option></select>
+              </label>
+            </div>
+            <div class="row wrap">
+              <button type="button" id="edgeSquare" class="small">Square up (0/90°)</button>
+              <button type="button" id="edgeSquarePrev" class="small">Square to previous</button>
+            </div>
+            <div class="grid2">
+              <label>Angle (°)
+                <span class="row" style="margin-top:0">
+                  <input id="edgeAng" type="number" step="0.1" inputmode="decimal">
+                  <button type="button" id="edgeAngApply" class="small">Set</button>
+                </span>
+              </label>
+              <label>Measured from
+                <select id="edgeAngMode"><option value="abs">Absolute</option><option value="rel">Previous edge</option></select>
+              </label>
+            </div>
+            <div class="grid2">
+              <label>Curve radius (mm)
+                <span class="row" style="margin-top:0">
+                  <input id="edgeRad" type="number" min="0" step="0.1" inputmode="decimal">
+                  <button type="button" id="edgeCurve" class="small">Curve</button>
+                </span>
+              </label>
+              <label>Bulge
+                <span class="row" style="margin-top:0">
+                  <input id="edgeBulge" type="number" step="0.05" inputmode="decimal">
+                  <button type="button" id="edgeStraight" class="small">Straight</button>
+                </span>
+              </label>
+            </div>
+            <div class="row wrap">
+              <button type="button" id="edgeAddV" class="small">Add corner in the middle</button>
+              <button type="button" id="edgeDelV" class="small warn">Delete corner</button>
+            </div>
+          </div>
           <div id="proTools" class="protools hidden"></div>
           <h3>Add a part</h3>
           <div id="shapeTiles" class="tiles small"></div>
@@ -162,6 +220,7 @@
               <li><b>Size</b> – tap the millimetre label above or beside the shape and type the exact size (you can use 100/2 or 50+12.5). Or drag a corner, or use the boxes below.</li>
               <li><b>Versions</b> – tap a shape, then pick a version (rounded, chamfered, corner holes, flange, gusset…). It keeps the size and place.</li>
               <li><b>Pro mode</b> – turn it on for arrays, subtract, offset, measure, draw an outline, even spacing and auto-arrange.</li>
+              <li><b>Edit a drawn outline</b> – after <b>Draw outline</b>, click an edge to type an exact length, square it up, set an angle, or turn it into a curve (drag the midpoint handle). Drag corners, double-click an edge to add a corner, Delete removes one. Undo still works.</li>
               <li><b>Holes</b> – drag a hole to move it. The numbers show how far its middle is from the part's left and bottom edges.</li>
               <li><b>Several at once</b> – Shift-click them, or drag a box round them on empty space. Then move, copy, turn, mirror or delete them together.</li>
               <li><b>Join</b> – pick shapes that touch or overlap and press <b>Join into one part</b>. They become one outline, with all their holes. Now copy it, resize it or turn it as one part.</li>
@@ -638,27 +697,103 @@
 <div id="adminDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
   <div class="shapelib-card acctcard wide">
     <div class="shapelib-head">
-      <h2 id="adminTitle">Machine admin</h2>
+      <h2 id="adminTitle">Admin</h2>
       <button type="button" class="acct-close">Close</button>
     </div>
-    <p class="muted small">Add a serial and a one-off claim code for each table. Codes are stored as a hash, not as plain text. Unlink or transfer a table if it changes hands.</p>
-    <form id="formAddMachine" class="col">
-      <div class="grid2">
-        <label>Serial<input id="admSerial" required autocomplete="off" autocapitalize="characters"></label>
-        <label>Claim code
-          <span class="row" style="margin-top:0">
-            <input id="admCode" class="grow" required autocomplete="off" minlength="4">
-            <button type="button" id="btnGenCode" class="small">Generate</button>
-          </span>
-        </label>
-      </div>
-      <label>Notes<input id="admNotes" maxlength="200"></label>
-      <button type="submit" class="go">Add / update machine</button>
-    </form>
-    <h3>Serials</h3>
-    <div id="adminTable"></div>
-    <h3>Recent claim attempts</h3>
-    <div id="adminLog"></div>
+    <div class="admtabs" role="tablist">
+      <button type="button" class="admtab sel" data-admtab="users">Users</button>
+      <button type="button" class="admtab" data-admtab="stats">Usage</button>
+      <button type="button" class="admtab" data-admtab="announce">Announcements</button>
+      <button type="button" class="admtab" data-admtab="machines">Machines</button>
+      <button type="button" class="admtab" data-admtab="advanced">Advanced machine</button>
+      <button type="button" class="admtab" data-admtab="presets">Cut presets</button>
+    </div>
+
+    <div class="admpane" data-admpane="users">
+      <label class="grow">Search users
+        <input id="adminUserQ" type="search" placeholder="Email, name, or serial" autocomplete="off">
+      </label>
+      <div id="adminUsers"></div>
+    </div>
+
+    <div class="admpane hidden" data-admpane="stats">
+      <div id="adminStats"></div>
+      <h3>Recent jobs</h3>
+      <div id="adminJobEvents"></div>
+    </div>
+
+    <div class="admpane hidden" data-admpane="announce">
+      <form id="formAnnounce" class="col">
+        <label>Title<input id="annTitle" required maxlength="200" autocomplete="off"></label>
+        <label>Message<textarea id="annBody" required maxlength="4000" rows="4"></textarea></label>
+        <div class="grid2">
+          <label>Severity
+            <select id="annSev">
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="update">Update</option>
+            </select>
+          </label>
+          <label>Expires (optional)<input id="annExp" type="datetime-local"></label>
+        </div>
+        <button type="submit" class="go">Publish announcement</button>
+      </form>
+      <h3>Published</h3>
+      <div id="adminAnnList"></div>
+    </div>
+
+    <div class="admpane hidden" data-admpane="machines">
+      <p class="muted small">Add a serial and a one-off claim code for each table. Codes are stored as a hash, not as plain text. Unlink or transfer a table if it changes hands.</p>
+      <form id="formAddMachine" class="col">
+        <div class="grid2">
+          <label>Serial<input id="admSerial" required autocomplete="off" autocapitalize="characters"></label>
+          <label>Claim code
+            <span class="row" style="margin-top:0">
+              <input id="admCode" class="grow" required autocomplete="off" minlength="8">
+              <button type="button" id="btnGenCode" class="small">Generate</button>
+            </span>
+          </label>
+        </div>
+        <label>Notes<input id="admNotes" maxlength="200"></label>
+        <button type="submit" class="go">Add / update machine</button>
+      </form>
+      <h3>Serials</h3>
+      <div id="adminTable"></div>
+      <h3>Recent claim attempts</h3>
+      <div id="adminLog"></div>
+    </div>
+
+    <div class="admpane hidden" data-admpane="advanced">
+      <div id="advMachine"></div>
+    </div>
+
+    <div class="admpane hidden" data-admpane="presets">
+      <p class="muted small">These become the default pierce and cut values for every user. They can still pick their own speed on a job.</p>
+      <form id="formPreset" class="col">
+        <div class="grid2">
+          <label>Material<input id="preMat" required autocomplete="off" placeholder="Mild steel"></label>
+          <label>Thickness (mm)<input id="preThk" required type="number" min="0.1" step="0.1" inputmode="decimal"></label>
+        </div>
+        <div class="grid3">
+          <label>Pierce delay (s)<input id="preDelay" type="number" min="0" step="0.05" inputmode="decimal"></label>
+          <label>Pierce height (mm)<input id="preHeight" type="number" min="0" step="0.1" inputmode="decimal"></label>
+          <label>Cut speed (mm/min)<input id="preSpeed" type="number" min="0" step="10" inputmode="decimal"></label>
+        </div>
+        <label>Notes<input id="preNotes" maxlength="200"></label>
+        <button type="submit" class="go">Save preset</button>
+      </form>
+      <div id="adminPresets"></div>
+    </div>
+  </div>
+</div>
+
+<div id="announceDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="announceDlgTitle">
+  <div class="shapelib-card slim acctcard">
+    <div class="shapelib-head">
+      <h2 id="announceDlgTitle">Announcements</h2>
+      <button type="button" class="acct-close">Close</button>
+    </div>
+    <div id="announceInbox"></div>
   </div>
 </div>
 

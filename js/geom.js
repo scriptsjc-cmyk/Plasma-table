@@ -128,7 +128,7 @@ export function offsetPolygon(pts, d, tol = TOL) {
   return cleanPts(out, true);
 }
 
-function segX(a, b, c, d) {
+export function segX(a, b, c, d) {
   const d1 = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
   const d2 = (b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0]);
   const d3 = (d[0] - c[0]) * (a[1] - c[1]) - (d[1] - c[1]) * (a[0] - c[0]);
@@ -314,4 +314,125 @@ function ghDifference(A, B) {
   const outer = ccw(byArea[0].p);
   const holes = byArea.slice(1).map((x) => (signedArea(x.p) > 0 ? [...x.p].reverse() : x.p));
   return { outer, holes };
+}
+
+
+// ---- custom-outline bulges (DXF-style: tan of 1/4 included angle, + = CCW) ----
+export function bulgeRadius(p, q, bulge) {
+  if (Math.abs(bulge) < 1e-9) return Infinity;
+  const chord = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  if (chord < EPS) return 0;
+  const theta = 4 * Math.atan(bulge);
+  return chord / (2 * Math.sin(Math.abs(theta) / 2));
+}
+
+export function bulgeMidpoint(p, q, bulge) {
+  if (Math.abs(bulge) < 1e-9) return [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  const pts = bulgePoints(p, q, bulge);
+  return pts[Math.floor((pts.length - 1) / 2)] || [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+}
+
+// Mid-arc sagitta signed the same way as the bulge (left of p→q is positive).
+export function bulgeFromSagitta(p, q, sagitta) {
+  const chord = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  if (chord < EPS) return 0;
+  const s = Number(sagitta) || 0;
+  if (Math.abs(s) < 1e-9) return 0;
+  return (2 * s) / chord;
+}
+
+export function bulgeFromPoint(p, q, m) {
+  const chord = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  if (chord < EPS) return 0;
+  const ux = (q[0] - p[0]) / chord, uy = (q[1] - p[1]) / chord;
+  const vx = m[0] - p[0], vy = m[1] - p[1];
+  const along = vx * ux + vy * uy;
+  const side = vx * -uy + vy * ux; // left of p→q is +
+  const t = Math.max(0.05, Math.min(0.95, along / chord));
+  // through-point bulge: sagitta at mid-chord is a decent first estimate
+  const mx = p[0] + ux * (chord / 2), my = p[1] + uy * (chord / 2);
+  const s = (m[0] - mx) * -uy + (m[1] - my) * ux;
+  return bulgeFromSagitta(p, q, s);
+}
+
+export function bulgeFromRadius(p, q, radius, left) {
+  const chord = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  if (chord < EPS) return 0;
+  const r = Math.abs(Number(radius) || 0);
+  if (r < chord / 2 - 1e-6) return 0;
+  const half = Math.asin(Math.min(1, (chord / 2) / r));
+  const b = Math.tan(half / 2);
+  return left === false ? -b : b;
+}
+
+// Tessellate a contour's bulges into a polyline (kerf offset and CAM stay on segments).
+export function expandContour(c, tol = TOL) {
+  if (!c || !c.pts || !c.pts.length) return c;
+  const pts = c.pts;
+  const closed = !!c.closed;
+  const n = pts.length;
+  const bulges = c.bulges || [];
+  let any = false;
+  for (let i = 0; i < n; i++) if (Math.abs(Number(bulges[i]) || 0) > 1e-9) { any = true; break; }
+  if (!any) return { pts: pts.map((p) => [p[0], p[1]]), closed, holes: c.holes, circle: c.circle };
+  const out = [];
+  const edges = closed ? n : Math.max(0, n - 1);
+  for (let i = 0; i < edges; i++) {
+    const p = pts[i], q = pts[(i + 1) % n];
+    out.push([p[0], p[1]]);
+    const b = Number(bulges[i]) || 0;
+    if (Math.abs(b) > 1e-9) {
+      const mid = bulgePoints(p, q, b, tol);
+      for (let k = 0; k < mid.length - 1; k++) out.push(mid[k]);
+    }
+  }
+  if (!closed) out.push([pts[n - 1][0], pts[n - 1][1]]);
+  return { pts: cleanPts(out, closed), closed, holes: c.holes };
+}
+
+// Do two closed polylines cross each other (strictly)? Used to keep a hole inside its outline while editing.
+export function polysCross(A, B, limit = 4000) {
+  if (A.length > limit || B.length > limit) return false;
+  for (let i = 0; i < A.length; i++) {
+    const a = A[i], b = A[(i + 1) % A.length];
+    for (let j = 0; j < B.length; j++) if (segX(a, b, B[j], B[(j + 1) % B.length])) return true;
+  }
+  return false;
+}
+
+// Centre / radius / start angle / signed sweep of a bulge arc, or null for a straight edge.
+export function bulgeArc(p, q, bulge) {
+  if (Math.abs(bulge) < 1e-9) return null;
+  const theta = 4 * Math.atan(bulge);
+  const chord = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  if (chord < EPS) return null;
+  const r = chord / (2 * Math.sin(Math.abs(theta) / 2));
+  const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+  const d = Math.sqrt(Math.max(0, r * r - (chord / 2) ** 2));
+  const ux = (q[0] - p[0]) / chord, uy = (q[1] - p[1]) / chord;
+  const sgn = (theta > 0 ? 1 : -1) * (Math.abs(theta) > Math.PI ? -1 : 1);
+  const cx = mx - uy * d * sgn, cy = my + ux * d * sgn;
+  return { cx, cy, r, a0: Math.atan2(p[1] - cy, p[0] - cx), theta };
+}
+
+// Split the arc p->q at a point ON the arc. `near` (optional) is projected onto the arc; default = middle.
+// Returns { mid, b1, b2 } so that p->mid and mid->q together trace exactly the same arc.
+export function splitBulge(p, q, bulge, near) {
+  const A = bulgeArc(p, q, bulge);
+  if (!A) {
+    const m = near ? [near[0], near[1]] : [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    return { mid: m, b1: 0, b2: 0 };
+  }
+  let f = 0.5;
+  if (near) {
+    const ang = Math.atan2(near[1] - A.cy, near[0] - A.cx);
+    const TAU = Math.PI * 2;
+    let delta = A.theta > 0 ? ang - A.a0 : A.a0 - ang;
+    delta = ((delta % TAU) + TAU) % TAU;
+    f = Math.max(0.1, Math.min(0.9, delta / Math.abs(A.theta)));
+  }
+  const a = A.a0 + Math.sign(A.theta) * f * Math.abs(A.theta);
+  const mid = [A.cx + A.r * Math.cos(a), A.cy + A.r * Math.sin(a)];
+  const t1 = f * A.theta, t2 = (1 - f) * A.theta;
+  return { mid, b1: Math.tan(t1 / 4), b2: Math.tan(t2 / 4) };
 }
