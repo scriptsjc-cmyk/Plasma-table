@@ -132,6 +132,8 @@ export class WiFiTransport {
   }
   // is this page being served by the Pi?
   static async available() {
+    // the public GitHub Pages site is never the Pi: don't ask it for bridge.json (it only logs a 404)
+    if (/\.github\.io$/i.test(location.hostname)) return null;
     try {
       const r = await fetch("bridge.json", { cache: "no-store" });
       if (!r.ok) return null;

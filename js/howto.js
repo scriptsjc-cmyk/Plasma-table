@@ -13,14 +13,20 @@ const STEPS = [
     "Each sold table has a claim code on its sticker. Open Account → Link a machine, type the code, and the table is tied to you.",
     "Design and save are free without a machine. Connect, jog, Send and Run stay locked until a table is linked. The lock message is always: sign in, then link a machine.",
   ]},
+  { id: "layout", title: "Step 3: Get set up (sheet layout)", body: [
+    "The picture shows your sheet (blue) and the machine's work area (green dashes). Add parts with Add parts…: tick saved parts and/or choose several DXF or SVG files at once, and type how many of each. Arrange for me packs them with the right gaps.",
+    "Drag a part to move it (mouse or finger). Blue lines show when it lines up with the sheet edges, the middle, or another part's edges and centres; the numbers are the gaps in mm. Turn 90° either way, turn to any angle, mirror, copy and delete are under the picture. Pro also has arrow-key nudge and a grid snap.",
+    "A part turns red when it is closer to another part than the kerf plus clearance, overlaps one, or hangs off the sheet or the machine's work area. Start stays locked until nothing is red.",
+    "The sheet's bottom-left corner is your start point: every part is cut exactly where it sits on the sheet picture.",
+  ]},
   { id: "zero", title: "Set zero (Start here)", body: [
-    "Put the sheet on the slats. Jog the torch to the bottom-left corner of where the part should sit, at a safe height.",
-    "Press Start here. That is work zero. The Check step ticks “Start point set” only after you do this. If you skip it, Start is blocked and you’ll see a warning — you could cut in the wrong place.",
+    "Put the sheet on the slats. In step 3, jog the torch to the sheet's bottom-left corner, at a safe height.",
+    "Press Start here. That is work zero. Step 3 ticks “Start point set” only after you do this. If you skip it, Start is blocked and you’ll see a warning — you could cut in the wrong place.",
     "Use Trace the outline (torch off) to walk the path on the sheet before a real cut.",
   ]},
   { id: "practice", title: "A practice (dry) run", body: [
-    "On the Material step, tick Practice run – move only, torch stays off. A PRACTICE RUN chip appears in the header.",
-    "Go through Check, tick the boxes, and press Start. The machine moves the path with the torch off so you can see it will fit.",
+    "On step 2 (Material), tick Practice run – move only, torch stays off. A PRACTICE RUN chip appears in the header.",
+    "In step 3 tick the check boxes, and press Start. The machine moves the path with the torch off so you can see it will fit.",
     "This is the safest first job on a new setup.",
   ]},
   { id: "cut", title: "A first real cut", body: [
@@ -31,7 +37,7 @@ const STEPS = [
   { id: "materials", title: "Materials and settings", body: [
     "Pick a material and thickness. If the admin has published cut presets, those become the default pierce delay, height, speed and kerf — the cut flow uses them.",
     "You can override speed on the slider, and save a speed that worked. Settings → Material library keeps your own presets on this device.",
-    "Pierce height, cut height and delay live under Settings → Pierce & cut (and on the Material step under More settings).",
+    "Pierce height, cut height and delay live under Settings → Pierce & cut (and on step 2 under More settings).",
   ]},
   { id: "editor", title: "The full-screen shape editor", body: [
     "On Make a shape, press Full-screen editor. The canvas fills the screen. The toolbar has draw outline, rectangle, circle, slot, arc, holes, join, subtract, mirror, rotate, array, fillet/chamfer, offset, align, dimensions, snap, undo/redo, zoom/fit and edit-edge.",

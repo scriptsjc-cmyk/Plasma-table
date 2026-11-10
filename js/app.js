@@ -1,5 +1,5 @@
 // Plasma table operator screen (browser version).
-// Guided flow: File -> Material -> Position -> Check -> Cut.
+// Guided flow: File -> Material -> Get set up (lay the parts on the sheet, set the start point, check) -> Cut.
 // Machine logic lives in machine.js; this file is only the screen.
 import { Machine, POSITION_LOST_ALARMS } from "./machine.js";
 import { WebSerialTransport, WiFiTransport, RT } from "./grbl.js";
@@ -19,6 +19,9 @@ import { FluidNCTransport, fluidncWsUrl, fluidncUrlProblem, fluidncBlockedByHttp
 import { convertGcode, dialectExtension, DIALECTS } from "./dialect.js";
 import { initSettings, bindSettings, openSettings, closeSettings, currentSettings, matchPreset, refreshPublishedPresets, paintSettings } from "./settings.js";
 import { bindHowto, openHowto, closeHowto } from "./howto.js";
+import * as R2 from "./r2ui.js";
+import * as Setup from "./setup.js";
+import { contoursToEditable } from "./editable.js";
 
 const $ = (id) => document.getElementById(id);
 const themeColor = (name, fallback) => {
@@ -31,6 +34,7 @@ const S = {
   gcode: null, design: null, fileName: "", safety: {}, src: "file", showMachine: true, cur: 1, material: null, thickness: null, connected: false, designOnly: false, currentPart: null,
   lastAlarm: null, lastAlarmCode: null, speed: null, lastFeedOv: 100,
   zeroSet: false, fluidnc: false, shapeFs: false,
+  cam: { tabs: 0, tabW: 3, leadOut: 0, over: 0, starts: {}, tabOver: {} }, cutOrder: null, cutSkip: [], startCut: 1, resume: null, jobSeq: 0,
 };
 const MAT_TIPS = {
   "Mild steel": "Mild steel: the easiest to get right. Start at the recommended speed and adjust 10% at a time.",
@@ -156,6 +160,8 @@ function setAppMode(mode, opts) {
   }
   renderMatPreset();
   renderRecentJobs();
+  if (typeof M !== "undefined" && M && S.design && !(S.job && S.job.running)) loadJob();   // Beginner and Pro build the job differently (tabs, order…)
+  paintGuide(); R2.paintCutList(); R2.paintStartCut();
   try { paintSettings(); } catch (e) { /* settings not ready */ }
   if (persist && Acc.isSignedIn() && (mode === "pro" || mode === "beginner")) {
     Acc.setMode(mode).catch(() => {});
@@ -237,22 +243,23 @@ function showTab(name) {
   if (name === "cut") drawPreview();
 }
 function canGo(n) {
-  if (n === 5) return !!S.job;
+  if (n === 4) return !!S.job;
   if (n >= 2) return !!S.prepared;
   return true;
 }
 function goStep(n) {
   if (!canGo(n)) return;
-  if (S.job && S.job.running && n !== 5) { toast("A job is running. Pause or stop it first.", true); return; }
+  if (S.job && S.job.running && n !== 4) { toast("A job is running. Pause or stop it first.", true); return; }
   if (n !== 1 && S.shapeFs) setShapeFs(false);
-  S.cur = n;
+  S.cur = n; document.body.dataset.step = String(n);
   $$(".step").forEach((el) => el.classList.toggle("hidden", Number(el.dataset.step) !== n));
   $$("#stepper li").forEach((li) => {
     const k = Number(li.dataset.step);
     li.classList.toggle("cur", k === n);
     li.classList.toggle("done", k < n);
   });
-  if (n === 4) renderChecklist();
+  if (n !== 3) Setup.leave();
+  if (n === 3) { Setup.enter(); renderChecklist(); }
   refresh();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -342,7 +349,7 @@ function fileKind(name) {
   return ext === "dxf" ? "dxf" : ext === "svg" ? "svg" : "gcode";
 }
 // open a file's text: DXF/SVG become a design (we make the cut paths), anything else is G-code
-function openText(name, text, remember) {
+function openText(name, text, remember, scale) {
   const kind = fileKind(name);
   try {
     if (kind === "gcode") { S.design = null; S.gcode = text; }
@@ -358,13 +365,77 @@ function openText(name, text, remember) {
     return;
   }
   S.fileName = name;
-  $("dropTitle").textContent = "✓ " + name;
-  $("drop").classList.add("loaded");
-  if (remember) saveRecent(name, text);
-  loadJob();
-  if (S.prepared) goStep(2);
+  S.design && (S.design.straight = false);
+  R2.designChanged(-1);                                    // a new file: forget old cut order, tabs and start points
+  const finish = (k) => {
+    $("dropTitle").textContent = "✓ " + name;
+    $("drop").classList.add("loaded");
+    if (remember) saveRecent(name, text, k);
+    loadJob();
+    if (S.prepared) goStep(2);
+  };
+  if (S.design && scale && scale !== 1) { S.design.contours = R2.scaleContours(S.design.contours, scale); }
+  // "This drawing is W x H mm. Is that right?" – only for a file the person just opened (not a recent one with its scale remembered)
+  if (S.design && remember && R2.sizeCheckWanted()) {
+    S.prepared = null;
+    R2.askSize(S.design, S.design.units, finish);
+    return;
+  }
+  finish(scale || 1);
 }
-function setFile(name, text, remember) { openText(name, text, remember); }
+function setFile(name, text, remember, scale) { openText(name, text, remember, scale); }
+
+// An imported drawing becomes shapes the editor understands (lines + true arcs; one part per outline, holes travel
+// with their part) so every click-a-line tool works on it: set length, square up, angle, curve, move, resize, holes.
+function editDrawing() {
+  const d = S.design;
+  if (!d || d.straight || !d.contours || !d.contours.length) { toast("Open a drawing first.", true); return; }
+  const e = contoursToEditable(d.contours);
+  if (!e) { toast("There is nothing in this drawing the editor can use.", true); return; }
+  if (sketch.items.length && !confirm("The shape maker already has shapes on it. Replace them with this drawing? (Undo brings them back.)")) return;
+  sketch.importParts(e.parts, true);
+  S.currentPart = null;
+  S.fileName = String(d.name || "Imported drawing").replace(/\.[^.]+$/, "");
+  if ($("partName")) $("partName").value = S.fileName;
+  S.src = "shape";
+  showSource("shape");
+  useShape();
+  setShapeFs(true);
+  const cv = d.curveNote || (d.warnings || []).find((w) => /can't be edited as true curves/.test(w));
+  toast(`Opened ${e.parts.length} part${e.parts.length > 1 ? "s" : ""} for editing (${e.arcs} arc${e.arcs === 1 ? "" : "s"}, ${e.lines} straight edge${e.lines === 1 ? "" : "s"}).` + (cv ? " " + cv : ""), !!cv);
+}
+// exact width x height for the picked part (custom parts can also be stretched)
+function openResize() {
+  const list = sketch.picked(), it = list.length === 1 ? list[0] : null;
+  if (!it) { toast("Pick one part first, then use Width × height.", true); return; }
+  if (!sketch.canResize(it)) { toast("This part is locked or turned at an odd angle, so it can't be resized here.", true); return; }
+  const b = sketch.boxOf(it), W = Math.round((b[2] - b[0]) * 100) / 100, H = Math.round((b[3] - b[1]) * 100) / 100;
+  const dlg = $("resizeDlg"); dlg._id = it.id; dlg._ratio = W / H; dlg._which = "w";
+  $("resizeNow").textContent = `Now ${W} × ${H} mm.`;
+  $("rsW").value = W; $("rsH").value = H; $("rsKeep").checked = it.type === "custom" ? S.keepProp !== false : true;
+  $("rsKeep").disabled = it.type !== "custom";
+  dlg.classList.remove("hidden");
+  setTimeout(() => $("rsW").select(), 30);
+}
+function bindResize() {
+  const dlg = $("resizeDlg"), close = () => { dlg.classList.add("hidden"); S.uiBlockUntil = Date.now() + 450; };
+  $("rsW").addEventListener("input", () => { dlg._which = "w"; if ($("rsKeep").checked) { const v = evalExpr($("rsW").value); if (Number.isFinite(v)) $("rsH").value = Math.round(v / dlg._ratio * 100) / 100; } });
+  $("rsH").addEventListener("input", () => { dlg._which = "h"; if ($("rsKeep").checked) { const v = evalExpr($("rsH").value); if (Number.isFinite(v)) $("rsW").value = Math.round(v * dlg._ratio * 100) / 100; } });
+  $("rsKeep").addEventListener("change", () => { S.keepProp = $("rsKeep").checked; });
+  $("rsCancel").onclick = close;
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); });
+  $("rsOk").onclick = () => {
+    const it = sketch.item(dlg._id); if (!it) { close(); return; }
+    const W = evalExpr($("rsW").value), H = evalExpr($("rsH").value);
+    if (!(W > 0 && H > 0)) { toast("Type a width and a height in mm.", true); return; }
+    let ok;
+    if (it.type === "custom") ok = sketch.resizeCustomTo(it, W, H, $("rsKeep").checked, dlg._which);
+    else { sketch.remember(); sketch.resizeTo(it, W, H); sketch.commit(); sketch.onSelect(); ok = true; }
+    if (!ok) { toast("That size isn't possible for this part (too small, too big or locked).", true); return; }
+    close(); useShapeSoon(); toast("Resized");
+  };
+}
+function openEditor() { S.src = "shape"; showSource("shape"); useShape(); setShapeFs(true); }
 
 // ------------------------------------------------------------------ shape maker (drag-and-drop editor)
 let sketch = null, shapeTimer = null, editBefore = null;
@@ -374,17 +445,68 @@ function renderShapeTiles() {
   $("shapeTiles").innerHTML = QUICK_PARTS.map((id) => SHAPES.find((s) => s.id === id)).filter(Boolean).map(tile).join("")
     + `<button data-lib="1" class="libmore" title="Every shape, by category"><i>⋯</i>More shapes (${SHAPES.filter((s) => !s.hole).length})</button>`;
   $("holeTiles").innerHTML = SHAPES.filter((sh) => sh.hole).map(tile).join("");
+  renderBeginnerShapes();
   $("skSnap").value = String(sketch.opts.snap);
   $("skGuides").checked = !!sketch.opts.guides;
   syncModeSwitch();
   renderProTools();
 }
+// ---- Beginner: big plain shape buttons first, and a one-step-at-a-time guide
+const BEGIN_SHAPES = [["rect", "Rectangle"], ["disc", "Circle"], ["plate", "Plate with holes"], ["ring", "Ring"], ["triangle", "Triangle"], ["slot", "Slot"]];
+function renderBeginnerShapes() {
+  const box = $("bgShapes"); if (!box) return;
+  const cur = sketch && sketch.items.length === 1 ? sketch.items[0].type : null;
+  box.innerHTML = BEGIN_SHAPES.map(([id, label]) => SHAPES.find((s) => s.id === id)
+    ? `<button type="button" data-bshape="${esc(id)}" class="${cur === id ? "sel" : ""}"><i>${shapeThumb(SHAPES.find((s) => s.id === id), 72, 48)}</i><span>${esc(label)}</span></button>` : "").join("");
+}
+function beginnerPick(id) {
+  if (S.job && S.job.running) return;
+  S.bgChoosing = false;
+  if (S.src !== "shape") showSource("shape");
+  if (sketch.items.length && !sketch.items.some((i) => i.lock)) sketch.clear();     // Beginner: tapping another shape swaps it (Undo brings it back)
+  sketch.add(id);
+  sketch.fitView();
+}
+const GUIDE = [null,
+  ["Pick a shape", "Tap a shape, type how big it should be, then press Next. Got a drawing file instead? Open it below."],
+  ["What are you cutting?", "Tap the metal and how thick it is. The speed and power are set for you."],
+  ["Get set up", "Arrange the parts on the sheet, press Start here at the sheet's bottom-left corner, tick the checks, then Start cutting."],
+  ["Cutting", "Keep clear of the table. Press the big red STOP if anything looks wrong."]];
+function paintGuide() {
+  const beg = document.body.classList.contains("beginner");
+  $$(".srcTab").forEach((b) => {
+    const t = b.dataset.src === "file" ? (beg ? "📂 Open a drawing file" : "📂 Open a drawing") : (beg ? "✏ Draw your own" : "✏ Make a shape");
+    if (b.textContent !== t) b.textContent = t;
+  });
+  document.body.classList.toggle("bg-picked", !!(beg && S.src === "shape" && sketch && sketch.items.length && !S.bgChoosing && S.cur === 1));
+  const gh = $("guideHead"); if (!gh || !beg) return;
+  const g = GUIDE[S.cur] || GUIDE[1];
+  const done = S.job && !S.job.running && S.job.result === "done" && S.cur === 4;
+  $("ghStep").textContent = `Step ${S.cur} of 4`;
+  $("ghTitle").textContent = done ? "All done" : g[0];
+  $("ghHelp").textContent = done ? "Lift the part out when it has cooled." : g[1];
+  const n = S.cur;
+  gh.style.setProperty("--prog", String((n - 1) / 3 * 100) + "%");
+  const nx = $("next1"); if (nx) nx.textContent = S.prepared ? "Next: choose the metal →" : "Pick a shape to continue";
+  $$('.step[data-step="2"] .next')[0] && ($$('.step[data-step="2"] .next')[0].textContent = "Next: get set up →");
+  const mt = $("matLine"); if (mt) mt.textContent = S.material ? `Cutting ${S.material.toLowerCase()}, ${S.thickness} mm thick. Not right? Tap a different one.` : "";
+}
 const ALIGN = [["left", "⇤ Left"], ["centre", "↔ Centre"], ["right", "⇥ Right"], ["both", "◎ Dead centre"],
   ["bottom", "⤓ Bottom"], ["middle", "↕ Middle"], ["top", "⤒ Top"]];
+function customSizeHtml(it, b) {
+  if (!it || it.type !== "custom") return "";
+  const W = Math.round((b[2] - b[0]) * 100) / 100, H = Math.round((b[3] - b[1]) * 100) / 100;
+  return `<div class="grid2 custsize">
+      <label>Width (mm)<input type="number" step="any" min="2" inputmode="decimal" data-cw="1" value="${W}"></label>
+      <label>Height (mm)<input type="number" step="any" min="2" inputmode="decimal" data-ch="1" value="${H}"></label>
+      <label class="check wide2"><input type="checkbox" id="keepProp" ${S.keepProp === false ? "" : "checked"}> Keep proportions</label>
+    </div>`;
+}
 function renderShapeForm() {
   const list = sketch.picked(), it = sketch.selected();
   $("skUndo").disabled = !sketch.past.length; $("skRedo").disabled = !sketch.future.length;
   $("skClear").disabled = !sketch.items.length; $("skAll").disabled = !sketch.items.length;
+  paintGuide(); renderBeginnerShapes();
   if (!list.length) {
     $("shapeForm").innerHTML = sketch.items.length
       ? `<p class="muted">Click a shape on the drawing to change it. Shift-click or drag a box round several to move, copy, join or line them up.</p>` : "";
@@ -417,6 +539,19 @@ function renderShapeForm() {
     return;
   }
   const sh = shapeDef(it.type), b = sketch.boxOf(it);
+  if (!sketch.opts.pro) {                        // Beginner: just the sizes, turn, add a hole, remove
+    $("shapeForm").innerHTML = `
+      <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b></div>
+      <p class="tip">Type the size in millimetres.</p>
+      <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
+        `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}</div>${customSizeHtml(it, b)}
+      <div class="skbtns bigbtns">
+        <button data-sk="rotateBy" data-arg="90">⟳ Turn it</button>
+        ${!sh.hole && shapeDef("hole") ? `<button data-sk="add" data-arg="hole">◦ Add a hole</button>` : ""}
+        <button data-sk="remove" class="danger">🗑 Remove</button>
+      </div>`;
+    return;
+  }
   const moved = Object.keys(it.holes || {}).length;
   const curKey = sketch.currentVariantKey();
   const vars = variantsFor(it.type).map((v) => {
@@ -436,12 +571,13 @@ function renderShapeForm() {
     <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
     ${varBox}
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
-    <div class="grid2">${sh.params.map(([k, label]) =>
+    ${customSizeHtml(it, b)}
+    <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
       `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}
       <label>Position X (left edge)<input type="number" step="any" inputmode="decimal" data-pos="x" value="${Math.round(b[0] * 10) / 10}"></label>
       <label>Position Y (bottom edge)<input type="number" step="any" inputmode="decimal" data-pos="y" value="${Math.round(b[1] * 10) / 10}"></label>
       <label>Angle °<input type="number" step="any" inputmode="decimal" data-angle="1" value="${Math.round((it.rot || 0) * 10) / 10}"></label>
-      <label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>
+      ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
     </div>
     <div class="skbtns">
       <button data-sk="rotateBy" data-arg="90" title="R">⟳ Turn 90°</button>
@@ -509,13 +645,13 @@ const PALETTE = [
   { g: "Draw", items: [["draw", "✎", "Draw outline"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"]] },
   { g: "Combine", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"]] },
   { g: "Arrange", items: [["rot", "⟳", "Turn 90°"], ["mir", "⇋", "Mirror"], ["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["alignl", "⇤", "Align left"], ["alignb", "⤓", "Align bottom"], ["nest", "⊞", "Auto-arrange"]] },
-  { g: "Edit", items: [["size", "↔", "Size"], ["dims", "↔ mm", "Dimensions"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"], ["del", "🗑", "Delete"], ["undo", "↶", "Undo"], ["redo", "↷", "Redo"]] },
+  { g: "Edit", items: [["size", "↔", "Size"], ["resize", "⤡", "Width × height"], ["dims", "↔ mm", "Dimensions"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"], ["del", "🗑", "Delete"], ["undo", "↶", "Undo"], ["redo", "↷", "Redo"]] },
   { g: "View", items: [["fit", "⤢", "Zoom to fit"], ["snap", "⌗", "Snap"], ["fs", "⛶", "Full screen"]] },
 ];
 let paletteQ = "";
 function renderQuickBar() {
   const qb = $("quickBar"); if (!qb || !sketch) return;
-  const on = S.src === "shape" && (S.cur === 1 || S.shapeFs);
+  const on = S.src === "shape" && ((S.cur === 1 && isProMode()) || S.shapeFs);
   qb.classList.toggle("hidden", !on);
   const grid = qb.closest(".cutgrid"); if (grid) grid.classList.toggle("with-qb", on);
   if (!on) { qb.innerHTML = ""; return; }
@@ -525,7 +661,7 @@ function renderQuickBar() {
   const dis = {
     undo: !sketch.past.length, redo: !sketch.future.length,
     dup: !any, del: !any || locked, rot: !any || locked, mir: !any || locked,
-    size: !one || locked, ver: !hasVer || locked, join: !many || locked, subtract: !many || locked,
+    size: !one || locked, resize: !one || locked, ver: !hasVer || locked, join: !many || locked, subtract: !many || locked,
     offset: !one || locked, linarray: !one || locked, polar: !one || locked,
     alignl: !many, alignb: !many, edge: !(one && one.type === "custom"),
   };
@@ -537,7 +673,7 @@ function renderQuickBar() {
     if (id === "join" || id === "subtract" || id === "alignl" || id === "alignb") return "select two or more shapes first";
     if (id === "edge") return "select a drawn or joined outline first (Draw outline, then tap it)";
     if (id === "ver") return "this shape has no versions";
-    if (["size", "offset", "linarray", "polar"].includes(id)) return "select one shape first";
+    if (["size", "resize", "offset", "linarray", "polar"].includes(id)) return "select one shape first";
     return "select a shape first";
   };
   const HINTS = { rot: "R", mir: "M", undo: "Ctrl+Z", redo: "Ctrl+Y", del: "Del", dup: "Ctrl+D", fit: "F", fs: "Esc", join: "Ctrl+J", snap: "S", rect: "1", disc: "2" };
@@ -546,7 +682,7 @@ function renderQuickBar() {
     const title = hint ? `${label} (${hint})` : label;
     const kbd = hint ? ` <kbd>${esc(hint)}</kbd>` : "";
     const why = dis[id] ? ` \u2013 ${whyOff(id)}` : "";
-    return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" ? " danger" : ""}" ${dis[id] ? "disabled" : ""} title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
+    return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" ? " danger" : ""}" ${dis[id] ? 'aria-disabled="true"' : ""} data-why="${esc(dis[id] ? whyOff(id) : "")}" data-label="${esc(label)}" title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
   };
   const q = paletteQ;
   const parts = [`<div class="qb-search"><input id="qbSearch" type="search" placeholder="Search tools" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`];
@@ -574,6 +710,7 @@ function quickAction(a) {
     case "rot": sketch.rotateBy(90); break;
     case "mir": sketch.mirror(); break;
     case "size": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast("Tap one shape first."); break; }
+    case "resize": openResize(); break;
     case "ver": openVersions(); break;
     case "fit": sketch.fitView(); break;
     case "snap": sketch.opts.snap = sketch.opts.snap ? 0 : 1; try { sketch.saveOpts && sketch.saveOpts(); } catch (e) { /* ignore */ } sketch.draw(); toast(sketch.opts.snap ? "Snap on (1 mm)" : "Snap off"); break;
@@ -802,20 +939,43 @@ function useShape() {
     S.design = null; S.prepared = null; S.fileName = "";
     $("warnings").innerHTML = ""; refresh(); return;
   }
+  R2.designChanged(c.length);
   const nx = Number($("cpX").value) || 1, ny = Number($("cpY").value) || 1;
   if (nx * ny > 1) c = copies(c, nx, ny, Number($("cpGap").value) || 0);
   S.design = { name: sketch.name() + (nx * ny > 1 ? ` ×${nx * ny}` : ""), contours: c, warnings: [] };
   S.gcode = null; S.fileName = S.design.name;
   loadJob();
 }
-function showSource(src) {
-  S.src = src;
+// "Straight cut / sheet trim": one line, no drawing. Optionally a typed start point (needs the machine homed).
+function useStraight(dir, L, sx, sy) {
+  if (S.shapeFs) setShapeFs(false);
+  showSource("file");
+  const pts = dir === "y" ? [[0, 0], [0, L]] : [[0, 0], [L, 0]];
+  S.design = { name: `Straight cut ${L} mm along ${dir.toUpperCase()}`, contours: [{ pts, closed: false }], warnings: [], straight: true };
+  S.gcode = null; S.fileName = S.design.name;
+  R2.designChanged(-2);
+  loadJob();
+  if (!S.prepared) return;
+  if (sx != null || sy != null) {
+    if (!S.connected) toast("Connect (or try the demo) to type a start point. You can set it in Get set up instead.", true);
+    else if (!S.safety.referenced) toast("Home the machine first, then a typed start point can be used.", true);
+    else {
+      const mp = S.status.MPos || [0, 0, 0], cur = toView(mp[0], mp[1]);
+      const X = Number.isFinite(sx) ? sx : cur[0], Y = Number.isFinite(sy) ? sy : cur[1];
+      const [mx, my] = fromView(X, Y);
+      if (cmd("set_origin", { x: mx, y: my })) { S.zeroSet = true; toast(`Start point set at X ${Math.round(X)}, Y ${Math.round(Y)} mm. The torch did not move.`); }
+    }
+  }
+  goStep(2);
+}
+function showSource(src, opts) {
+  S.src = src; S.bgChoosing = false;
   $$(".srcTab").forEach((b) => b.classList.toggle("sel", b.dataset.src === src));
   $("srcFile").classList.toggle("hidden", src !== "file");
   $("srcShape").classList.toggle("hidden", src !== "shape");
   if (src === "shape") {
     renderShapeForm(); useShape();
-    if (isProMode() && !S.shapeFs) setShapeFs(true);
+    if (isProMode() && !S.shapeFs && !(opts && opts.noFs)) setShapeFs(true);
   }
   drawPreview();
 }
@@ -823,10 +983,10 @@ function showSource(src) {
 function recentList() {
   try { return JSON.parse(localStorage.getItem("plasma.recent") || "[]"); } catch (e) { return []; }
 }
-function saveRecent(name, text) {
+function saveRecent(name, text, scale) {
   try {
     const list = recentList().filter((r) => r.name !== name);
-    list.unshift({ name, text });
+    list.unshift({ name, text, scale: scale && scale !== 1 ? scale : undefined });
     while (list.length > 6 || JSON.stringify(list).length > 1500000) list.pop();
     localStorage.setItem("plasma.recent", JSON.stringify(list));
   } catch (e) { /* storage full - fine */ }
@@ -903,7 +1063,7 @@ function renderMatPreset(extra) {
   if (!opts.some((p) => p.material === S.material && Number(p.thickness_mm) === Number(S.thickness)) && cur) {
     sel.insertAdjacentHTML("afterbegin", `<option value="${esc(cur)}" selected>${esc(S.material + " " + S.thickness + " mm")}</option>`);
   }
-  refreshPublishedPresets().then((rows) => { if (Array.isArray(rows) && rows.length) renderMatPreset(rows); }).catch(() => {});
+  if (!extra) refreshPublishedPresets().then((rows) => { if (Array.isArray(rows) && rows.length) renderMatPreset(rows); }).catch(() => {});   // (only when not already given the rows: otherwise it re-asks forever and freezes the page once a local preset exists)
 }
 function applyMatPreset(id) {
   const all = chartPresetOptions();
@@ -918,7 +1078,7 @@ function checkAndRun() {
   if (S.src === "shape" && sketch) useShape();
   if (!S.prepared) loadJob();
   if (!S.prepared) { toast("Draw or load a part first.", true); goStep(1); return; }
-  goStep(4);
+  goStep(3);
   renderChecklist();
   refresh();
   // everything except the tick boxes (not connected, no start point, alarm, doesn't fit...) must already be fine
@@ -982,9 +1142,10 @@ function renderMaterials() {
   const r = row(), o = overrides();
   const ph = o.pierce_height_mm || (r.pierce_height_mm ?? S.chart.pierce_height_mm);
   const ch = o.cut_height_mm || (r.cut_height_mm ?? S.chart.cut_height_mm);
-  $("ovDelay").placeholder = r.pierce_delay_s;
-  $("ovKerf").placeholder = r.kerf_mm ?? S.chart.kerf_mm ?? 1.5; $("ovLead").placeholder = r.lead_in_mm ?? S.chart.lead_in_mm ?? 3;
-  $("ovPierce").placeholder = r.pierce_height_mm ?? S.chart.pierce_height_mm; $("ovCut").placeholder = r.cut_height_mm ?? S.chart.cut_height_mm;
+  const auto = (v) => `Auto (${v})`;
+  $("ovDelay").placeholder = auto(r.pierce_delay_s);
+  $("ovKerf").placeholder = auto(r.kerf_mm ?? S.chart.kerf_mm ?? 1.5); $("ovLead").placeholder = auto(r.lead_in_mm ?? S.chart.lead_in_mm ?? 3);
+  $("ovPierce").placeholder = auto(r.pierce_height_mm ?? S.chart.pierce_height_mm); $("ovCut").placeholder = auto(r.cut_height_mm ?? S.chart.cut_height_mm);
   $("ampsCard").innerHTML = `
     <div>Set the plasma to</div>
     <div class="big">${r.amps} A</div>
@@ -1078,8 +1239,10 @@ function renderCutCheck() {
     <div class="cchead">Cut check <span>· ${esc(mat)}${S.cur === 1 ? " (change it in step 2)" : ""}</span></div>
     ${chk.groups.length ? `<ol>${chk.groups.map((g) => `<li class="${g.level}"><b>${g.n}</b><span>${g.spots.length > 1 ? `<i>${g.spots.length} places:</i> ` : ""}${esc(g.text)}</span></li>`).join("")}</ol>`
       : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${esc(mat)}.</p>`}`;
-  $("cutCheck").innerHTML = S.src === "shape" ? html : "";
-  $("cutCheck2").innerHTML = html;
+  const tabBtn = chk && isProMode() && !S.cam.tabs && chk.groups.some((g) => /slats|tip/i.test(g.text))
+    ? `<div class="row"><button type="button" class="small" data-r2act="tabs">Add 2 hold-down tabs per part</button></div>` : "";
+  $("cutCheck").innerHTML = S.src === "shape" ? html + tabBtn : "";
+  $("cutCheck2").innerHTML = html + tabBtn;
   if (sketch) sketch.setMarks(S.src === "shape" && chk ? chk.issues : []);
   const L = machineLimits(limitsNow());
   const rows = [
@@ -1101,13 +1264,14 @@ function loadJob() {
   try {
     let gcode = S.gcode, cam = null, pre = [];
     if (S.design) {
-      cam = designToGcode(S.design.contours, { kerf: kerfNow(), leadIn: leadNow(), name: S.fileName });
+      cam = designToGcode(S.design.contours, { kerf: kerfNow(), leadIn: leadNow(), name: S.fileName, keepOrigin: !!(S.sheetMode && S.src === "shape" && !S.design.straight), ...R2.camOpts() });
       gcode = cam.gcode;
       pre = [...(S.design.warnings || []), ...cam.warnings];
+      if (S.design.straight) pre = pre.filter((w) => !/aren't closed shapes/.test(w));
     }
     S.prepared = M.loadJob({ gcode, name: S.fileName, material: S.material, thickness: S.thickness,
       dry_run: $("dryRun").checked, overrides: overrides() });
-    if (cam) { S.prepared.outline = cam.outline; S.prepared.summary = cam.summary; }
+    if (cam) { Object.assign(S.prepared, { outline: cam.outline, summary: cam.summary, shift: cam.shift, cutInfo: cam.cutInfo, allCuts: cam.allCuts, autoOrder: cam.autoOrder }); }
     S.check = S.design ? runCheck(S.design.contours) : null;
     if (S.check && cam) S.prepared.marks = S.check.issues.map((m) => ({ ...m, at: [m.at[0] + cam.shift[0], m.at[1] + cam.shift[1]] }));
     // the "left of zero" warning doesn't apply to parts we laid out ourselves
@@ -1119,6 +1283,7 @@ function loadJob() {
     S.prepared = null;
     $("warnings").innerHTML = `<li>${esc(e.message)}</li>`;
   }
+  R2.paintCutList(); R2.paintStartCut();
   refresh();
 }
 // where the start point is, in table view coordinates (the one being dragged wins)
@@ -1130,6 +1295,12 @@ function wcoNow() {
 }
 const edgesOn = () => !!(S.safety.limits && S.safety.referenced);
 function toView(mx, my) { return S.safety.referenced ? [mx - S.safety.ref[0], my - S.safety.ref[1]] : [mx, my]; }
+// the machine's reachable area written in the sheet picture's coordinates (the work zero = the sheet's bottom-left corner)
+function workAreaSheet() {
+  if (!edgesOn()) return null;
+  const w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
+  return { x: [L.x[0] - w[0] + ref[0], L.x[1] - w[0] + ref[0]], y: [L.y[0] - w[1] + ref[1], L.y[1] - w[1] + ref[1]] };
+}
 function viewArea() {
   if (edgesOn()) return { x: S.safety.limits.x, y: S.safety.limits.y, label: "machine edges" };
   const t = S.cfg.travel_mm;
@@ -1137,7 +1308,7 @@ function viewArea() {
 }
 function fit() {
   if (!S.prepared) return { cls: "", text: "" };
-  if (!S.safety.limits) return { cls: "unknown", text: "Edges not set up – can't check it fits (Setup tab)." };
+  if (!S.safety.limits) return { cls: "unknown", text: S.demo ? "Demo: tap here and the edges are set up for you." : "Edges not set up – can't check it fits (Setup tab)." };
   if (!S.safety.referenced) return { cls: "unknown", text: "Home the machine to check it fits." };
   const b = S.prepared.stats.bounds, w = S.dragOrigin ? fromView(...S.dragOrigin) : wcoNow(), ref = S.safety.ref, L = S.safety.limits;
   const x0 = b[0] + w[0] - ref[0], x1 = b[2] + w[0] - ref[0], y0 = b[1] + w[1] - ref[1], y1 = b[3] + w[1] - ref[1];
@@ -1155,7 +1326,7 @@ function drawPreview() {
   if (grid) grid.classList.toggle("nofile", S.cur === 1 && S.src === "file" && !S.prepared);
   drawCanvas($("moveMap"), false);
   if (!cv || !cv.offsetParent) return;
-  const editing = !!sketch && S.src === "shape" && S.cur === 1;
+  const editing = !!sketch && S.src === "shape" && (S.cur === 1 || (S.cur === 3 && Setup.layoutActive()));
   if (sketch) renderQuickBar();
   if (sketch && sketch.active !== editing) sketch.setActive(editing);
   $("showMachWrap").classList.toggle("hidden", editing || (!!S.prepared && S.cur <= 2));
@@ -1209,6 +1380,7 @@ function drawCanvas(cv, main) {
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
   const X = (x) => offX + (x - A.x[0]) * sc, Y = (y) => h - offY - (y - A.y[0]) * sc;
   if (main) cv.classList.toggle("placing", !zoom && canPlace());
+  cv._zmap = main && zoom ? { toMm: (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc], toPx: (x, y) => [X(x), Y(y)] } : null;
   cv._map = zoom ? null : { toMm: (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc], toPx: (x, y) => [X(x), Y(y)], sc, T: A.table };
   if (!zoom) drawMachineBed(ctx, A.table, X, Y, sc);
   if (S.prepared) {
@@ -1230,7 +1402,13 @@ function drawCanvas(cv, main) {
       ctx.setLineDash([4, 4]); ctx.strokeStyle = C.label; ctx.lineWidth = 1; pv.rapids.forEach(path);
     }
     ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? C.danger : C.lock; ctx.lineWidth = zoom ? 2.5 : 2;
+    const playing = main && R2.playActive();
+    if (playing) ctx.globalAlpha = 0.22;
     for (const p of (pv && pv.cuts) || []) { path(p); ctx.fillStyle = C.lock; ctx.beginPath(); ctx.arc(X(p[0][0] + ox), Y(p[0][1] + oy), zoom ? 4 : 3, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    if (playing) R2.drawPlay(ctx, X, Y, ox, oy, C, zoom);
+    if (main && !S.job) R2.drawNumbers(ctx, X, Y, ox, oy, C);
+    if (main && zoom) R2.drawHandles(ctx, X, Y, C);
     if (zoom && S.prepared.marks) S.prepared.marks.forEach((m) => {     // cut check markers
       const col = m.level === "error" ? C.danger : m.level === "warn" ? C.lock : C.sel;
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(m.at[0]), Y(m.at[1]), 10, 0, 7); ctx.fill();
@@ -1248,7 +1426,7 @@ function drawCanvas(cv, main) {
   if (!zoom) drawGantry(ctx, A.table, X, Y, sc);
 }
 
-// ---- drag the part around the table (step 3/4): drop it = new start point, torch doesn't move
+// ---- (old) drag the part around the table; now off: step 3 lays the parts out on a sheet: drop it = new start point, torch doesn't move
 function placeBlock() {      // why the part can't be dragged right now (null = it can)
   if (!S.connected) return "Connect to the table first.";
   if (S.job && S.job.running) return "A job is running.";
@@ -1259,7 +1437,7 @@ function placeBlock() {      // why the part can't be dragged right now (null = 
   return null;
 }
 function canPlace() {
-  return !!S.prepared && (S.cur === 3 || S.cur === 4) && !!S.connected;
+  return false;   // the part is placed on the sheet in step 3 (the sheet layout), not by dragging the start point
 }
 function bindPlacing() {
   const cv = $("preview");
@@ -1404,13 +1582,13 @@ function drawGantry(ctx, T, X, Y, sc) {
   ctx.moveTo(X(tx) - r, Y(ty)); ctx.lineTo(X(tx) + r, Y(ty)); ctx.moveTo(X(tx), Y(ty) - r); ctx.lineTo(X(tx), Y(ty) + r); ctx.stroke();
 }
 
-// ------------------------------------------------------------------ step 4: checks
+// ------------------------------------------------------------------ step 3 (second half): checks
 function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;
   const w = wcoNow();
   const zeroLine = S.zeroSet
     ? `Start point set at ${Number(w[0]).toFixed(1)}, ${Number(w[1]).toFixed(1)} mm`
-    : "Start point set (press Start here in Position)";
+    : "Start point set (press Start here in step 2 above)";
   const items = (S.designOnly && !S.connected)
     ? [zeroLine, "This is a design-only session — link a machine to run a real cut"]
     : dry ? [zeroLine, "Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
@@ -1429,7 +1607,7 @@ function blockers() {
   const b = [];
   if (!S.connected) b.push("Not connected to the table.");
   if (!S.prepared) b.push("No drawing loaded (step 1).");
-  if (S.connected && !S.zeroSet) b.push("Start point has not been set. Go back to Position and press Start here.");
+  if (S.connected && !S.zeroSet) b.push("Start point has not been set. Press Start here (step 2 above).");
   const st = S.status.state;
   if (S.connected && st === "Alarm") b.push("Machine is in alarm – press Unlock at the top.");
   else if (S.connected && st !== "Idle") b.push(`Machine is busy (${st}). Wait for it to stop.`);
@@ -1437,7 +1615,8 @@ function blockers() {
   if (inp.estop) b.push("E-stop is pressed – release it and press Unlock.");
   if (inp.probe) b.push("Floating head is pushed up – check the torch isn't touching anything or stuck.");
   if (S.safety.limits && !S.safety.referenced) b.push("Machine needs homing – press Home.");
-  if (fit().bad) b.push("The part doesn't fit – go back and move the start point.");
+  if (fit().bad) b.push("The part doesn't fit the machine – move the parts or the sheet's start corner.");
+  for (const t of Setup.blockText()) b.push(t);
   const boxes = $$("#checklist input");
   if (boxes.some((x) => !x.checked)) b.push("Tick every box above.");
   return b;
@@ -1450,7 +1629,7 @@ function paintChrome() {
   const torch = !!(S.status && S.status.torch);
   const pill = $("torchPill");
   if (pill) {
-    pill.hidden = false;
+    pill.hidden = !(S.connected || S.designOnly);       // no TORCH OFF on the connect screen (nothing is connected yet)
     pill.textContent = torch ? "TORCH ON" : "TORCH OFF";
     pill.classList.toggle("on", torch);
     pill.classList.toggle("off", !torch);
@@ -1458,7 +1637,7 @@ function paintChrome() {
   const mode = $("modeChip");
   if (mode) {
     let label = "";
-    if (S.connected && S.demo) label = "Demo";
+    if (S.connected && S.demo) label = "";
     else if (S.connected && S.fluidnc) label = "FluidNC";
     else if (S.connected) label = "Connected";
     else if (S.designOnly) label = "Design only";
@@ -1504,12 +1683,14 @@ function refresh() {
       ${S.prepared.summary ? `<span>Parts <b>${S.prepared.summary.parts}</b> · holes <b>${S.prepared.summary.holes}</b></span>` : `<span>Cuts <b>${st.pierces}</b></span>`}<span>About <b>${fmtTime(st.estimated_seconds)}</b></span>${S.prepared.dry_run ? "<span><b>PRACTICE RUN</b></span>" : ""}`;
   } else $("jobStats").innerHTML = "";
   $("next1").disabled = !S.prepared;
+  R2.updatePlayRow(); R2.paintRestart(); R2.paintDelay(); paintGuide();
+  if ($("btnEditDrawing")) $("btnEditDrawing").classList.toggle("hidden", !(S.design && !S.design.straight && S.src === "file" && S.design.contours && S.design.contours.length));
   $$("#stepper li").forEach((li) => (li.style.opacity = canGo(Number(li.dataset.step)) ? 1 : 0.4));
 
   // start button + reasons
   const b = blockers();
   $("btnStart").disabled = b.length > 0 || !machineAllowed();
-  $("blockers").innerHTML = b.length && S.cur === 4 ? `Can't start yet:<ul>${b.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  $("blockers").innerHTML = b.length && S.cur === 3 ? `Can't start yet:<ul>${b.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
 
 
   // banners
@@ -1527,7 +1708,7 @@ function refresh() {
     $("progBar").style.width = pct.toFixed(1) + "%";
     $("timeLeft").textContent = j.running ? clock(P.left) : "0:00";
     const pierces = S.prepared ? S.prepared.stats.pierces : 0;
-    $("runInfo").textContent = `${clock(P.elapsed)} so far` + (pierces ? ` · cut ${Math.max(1, Math.min(P.cut, pierces))} of ${pierces}` : "");
+    $("runInfo").textContent = `${clock(P.elapsed)} so far` + (pierces ? ` · cut ${Math.min(pierces, (M.runFrom || 1) - 1 + Math.max(1, P.cut))} of ${pierces}` : "");
     $("runTitle").textContent = S.status.state === "Hold" ? "Paused" : j.running ? "Cutting…" : "Finishing last moves…";
     $("btnPause").textContent = S.status.state === "Hold" ? "▶ Resume" : "⏸ Pause";
     const ov = S.status.feedOv || 100;
@@ -1652,7 +1833,7 @@ function onEvent(kind, d) {
     if ($("advConsoleLog")) appendConsole(d.text || "");
     if (looksLikeFluidNC(d.text)) S.fluidnc = true;
   }
-  else if (kind === "job") { S.job = d; if (!d.running) keepAwake(false); maybeLogJob(d); refresh(); }
+  else if (kind === "job") { S.job = d; if (!d.running) keepAwake(false); R2.noteJobEnded(d); maybeLogJob(d); refresh(); }
   else if (kind === "alarm") { S.lastAlarm = d.message; S.lastAlarmCode = d.code; $("alarmTitle").textContent = "Alarm"; $("alarmText").textContent = d.message; if (POSITION_LOST_ALARMS.has(d.code)) S.zeroSet = false; refresh(); }
   else if (kind === "safety") onSafety(d);
 }
@@ -1665,7 +1846,8 @@ function setConnected(on, label = "") {
   const work = on || S.designOnly;
   $("connectView").classList.toggle("hidden", work);
   $$(".tabs").forEach((t) => t.classList.toggle("hidden", !work));
-  $("connPill").textContent = on ? (S.fluidnc ? "● FluidNC" : S.demo ? "● Demo" : "● Connected") : "● Not connected";
+  $("connPill").textContent = on ? (S.fluidnc ? "● FluidNC" : S.demo ? "● Demo, nothing moves" : "● Connected") : "● Not connected";
+  document.body.classList.toggle("demo-on", !!(on && S.demo));
   $("connPill").className = "pill " + (on ? "on" : "off");
   if (!on) { S.fluidnc = false; S.zeroSet = false; }
   $("stateBadge").classList.toggle("hidden", !on);
@@ -1703,7 +1885,7 @@ async function connectWiFi(quiet = false) {
     S.demo = null; S.wifi = true; S.wifiUsed = true; S.userDisconnected = false;
     setConnected(true, quiet ? "" : "the table over Wi-Fi");
     if (quiet) toast("Wi-Fi back ✓");
-    if (M.grbl.job && M.grbl.job.running) { S.job = M.grbl.jobProgress(); showTab("cut"); goStep(5); }
+    if (M.grbl.job && M.grbl.job.running) { S.job = M.grbl.jobProgress(); showTab("cut"); goStep(4); }
   } catch (e) {
     if (!quiet) toast(e.message, true);
   } finally { S.wifiBusy = false; }
@@ -1915,9 +2097,14 @@ function bind() {
     pop.classList.add("hidden"); pop.hidden = true;
   });
   if ($("fit")) $("fit").addEventListener("click", () => {
-    if ($("fit").classList.contains("unknown") && (S.connected || !S.designOnly)) showTab("setup");
+    if (!$("fit").classList.contains("unknown")) return;
+    if (S.demo && S.connected) { R2.demoEdges(); return; }
+    if (S.connected || !S.designOnly) showTab("setup");
   });
   if ($("fsDone")) $("fsDone").onclick = () => setShapeFs(false);
+  if ($("fsSave")) $("fsSave").onclick = () => saveCurrent().catch((e) => toast(e.message, true));
+  if ($("btnEditDrawing")) $("btnEditDrawing").onclick = editDrawing;
+  bindResize();
   if ($("btnShapeFs")) $("btnShapeFs").onclick = () => setShapeFs(true);
   if ($("qbSearch") || $("quickBar")) {
     $("quickBar").addEventListener("input", (e) => {
@@ -1960,23 +2147,29 @@ function bind() {
   });
   $("recent").onclick = (e) => {
     const b = e.target.closest("[data-recent]");
-    if (b) { const r = recentList()[Number(b.dataset.recent)]; if (r) setFile(r.name, r.text, false); }
+    if (b) { const r = recentList()[Number(b.dataset.recent)]; if (r) setFile(r.name, r.text, false, r.scale); }
   };
 
   // step 1: drawing or shape
-  $$(".srcTab").forEach((b) => (b.onclick = () => showSource(b.dataset.src)));
+  $$(".srcTab").forEach((b) => (b.onclick = () => {
+    showSource(b.dataset.src);
+    if (b.dataset.src === "shape" && !isProMode() && sketch && !sketch.items.length) setShapeFs(true);   // "Draw your own": straight into the big editor
+  }));
+  if ($("bgShapes")) $("bgShapes").onclick = (e) => { const b = e.target.closest("[data-bshape]"); if (b) beginnerPick(b.dataset.bshape); };
+  if ($("bgMore")) $("bgMore").onclick = () => openLibrary();
+  if ($("bgChange")) $("bgChange").onclick = () => { S.bgChoosing = true; paintGuide(); };
   const addTile = (e) => {
     if (Date.now() < (S.uiBlockUntil || 0)) return;      // a second tap just after a sheet closed would hit whatever is under it
     if (e.target.closest("[data-lib]")) { openLibrary(); return; }
     const b = e.target.closest("[data-shape]"); if (b) sketch.add(b.dataset.shape);
   };
   $("shapeTiles").onclick = addTile; $("holeTiles").onclick = addTile;
-  $("quickBar").addEventListener("click", (e) => { if (Date.now() < (S.uiBlockUntil || 0)) return; const b = e.target.closest("[data-qb]"); if (b && !b.disabled) quickAction(b.dataset.qb); });
+  $("quickBar").addEventListener("click", (e) => { if (Date.now() < (S.uiBlockUntil || 0)) return; const b = e.target.closest("[data-qb]"); if (b && !b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(b.dataset.qb); });
   $("libClose").onclick = closeLibrary;
   $("shapeLib").addEventListener("click", (e) => {
     if (e.target === $("shapeLib")) { closeLibrary(); return; }
     const c = e.target.closest("[data-cat]"); if (c) { libCat = c.dataset.cat; renderLibrary(); return; }
-    const b = e.target.closest("[data-shape]"); if (b) { closeLibrary(); sketch.add(b.dataset.shape); }
+    const b = e.target.closest("[data-shape]"); if (b) { closeLibrary(); if (!isProMode()) beginnerPick(b.dataset.shape); else sketch.add(b.dataset.shape); }
   });
   $("libSearch").addEventListener("input", renderLibrary);
   $("verClose").onclick = closeVersions;
@@ -1995,7 +2188,7 @@ function bind() {
     const i = e.target, v = evalExpr(i.value) ;
     if (i.value.trim() === "" || !Number.isFinite(v)) return;
     const it = sketch.selected(); if (!it) return;
-    if (i.dataset.angle) return;                     // applied on change
+    if (i.dataset.angle || i.dataset.cw || i.dataset.ch) return;     // applied on change
     if (i.dataset.p) {
       if (it.lock) return;
       const k = i.dataset.p;
@@ -2013,6 +2206,14 @@ function bind() {
     sketch.save(); sketch.draw(); useShapeSoon();
   });
   $("shapeForm").addEventListener("change", (e) => {
+    if (e.target.id === "keepProp") { S.keepProp = e.target.checked; return; }
+    if (e.target.dataset.cw || e.target.dataset.ch) {
+      const it = sketch.selected(), box = it && sketch.boxOf(it);
+      const W = evalExpr($("shapeForm").querySelector("[data-cw]").value), H = evalExpr($("shapeForm").querySelector("[data-ch]").value);
+      const keep = !$("keepProp") || $("keepProp").checked;
+      if (!it || !sketch.resizeCustomTo(it, W, H, keep, e.target.dataset.cw ? "w" : "h")) toast("That size isn't possible for this part (too small, too big, or locked).", true);
+      editBefore = sketch.snapshot(); renderShapeForm(); useShapeSoon(); return;
+    }
     if (e.target.dataset.angle) { sketch.setAngle(Number(e.target.value)); editBefore = sketch.snapshot(); renderShapeForm(); return; }
     if (editBefore && editBefore !== sketch.snapshot()) { sketch.past.push(editBefore); sketch.future = []; }
     editBefore = sketch.snapshot(); renderShapeForm();
@@ -2135,7 +2336,10 @@ function bind() {
     { const b = blockers(); if (b.length) { toast(b[0], true); return; } }   // a script/DOM-poke can't bypass the disabled button: zero, alarm, fit, checklist are re-checked here
     try {
       M.command({ cmd: "feed_override", step: "reset" });  // cut at exactly the speed chosen in step 2
-      S.jobLogId = null; S.jobLoggedEnd = false; M.startJob(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(5); maybeLogJob(S.job);
+      const fromCut = R2.startCut();
+      if (fromCut > 1 && !confirm(`Continue from cut ${fromCut}?\n\nCuts 1 to ${fromCut - 1} are NOT cut again. The torch lifts, moves to the start of cut ${fromCut} with the arc off, then pierces there. Work zero is kept as it is now. Is the sheet still exactly where it was?`)) return;
+      S.jobSeq++; S.run = null;
+      S.jobLogId = null; S.jobLoggedEnd = false; M.startJob({ fromCut }); R2.afterStart(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(4); maybeLogJob(S.job);
       $("btnSaveSpeed").classList.add("hidden");
     }
     catch (e) { toast(e.message, true); }
@@ -2239,6 +2443,16 @@ async function init() {
   M = new Machine(machine, chart, settings, store);
   M.on(onEvent);
   document.title = machine.name;
+  R2.initR2({
+    S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, drawPreview, loadJob, goStep, showSource, setShapeFs, row,
+    isPro: isProMode, jobRunning: () => !!(M && M.jobRunning()), sketchActive: () => !!(sketch && sketch.active),
+    dirtyDesign: () => !!(sketch && sketch.items.length && !S.currentPart), checkAndRun,
+    useStraight, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
+  });
+  try { if (new URLSearchParams(location.search).get("turn") !== "0" && localStorage.getItem("plasma.turnOverlay") !== "0") document.body.classList.add("turn-on"); } catch (e) { document.body.classList.add("turn-on"); }
+  Setup.initSetup({
+    S, sketch: () => sketch, toast, esc, refresh, loadJob, useShape, useShapeSoon, showSource, kerf: kerfNow, workArea: workAreaSheet,
+  });
   $("machineName").textContent = machine.name;
   try {
     const saved = JSON.parse(localStorage.getItem("plasma.material") || "null");
@@ -2262,6 +2476,7 @@ async function init() {
       if ($("exportDialect") && !$("exportDialect").dataset.touched) $("exportDialect").value = (s && s.dialect) || "grbl";
     },
     firmwareText: () => "",
+    paintAbout: R2.paintAbout,
   });
   bindSettings();
   try { const s0 = currentSettings(); if (s0 && s0.bed && S.cfg && S.cfg.travel_mm) S.cfg.travel_mm = { x: s0.bed.x, y: s0.bed.y, z: s0.bed.z }; } catch (e) { /* defaults stay */ }   // a saved bed size also applies after a reload
@@ -2277,8 +2492,8 @@ async function init() {
   renderMaterials();
   renderRecent();
   sketch = new Sketch($("preview"), {
-    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } },
-    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); },
+    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } Setup.paint(!done); },
+    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); Setup.paint(true); },
     onEdgeChange: () => { fillEdgePanel(); },
     onMessage: (t) => toast(t),
     onDimTap: (dim) => {
@@ -2306,7 +2521,7 @@ async function init() {
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, setAppMode, isProMode, checkAndRun, rememberJob, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, setAppMode, isProMode, checkAndRun, rememberJob, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
   renderShapeTiles();
   setAppMode(sketch.opts.pro ? "pro" : "beginner", { persist: false, autoFs: false });
   bind();
@@ -2385,6 +2600,7 @@ async function init() {
     fileName: () => S.fileName || "",
     currentPart: () => S.currentPart,
     rememberPart: (p) => { S.currentPart = p; S.fileName = (p && p.name) || S.fileName; },
+    openEditor,
     loadDesign: (p) => {
       if (!p || !p.data) return;
       const items = p.data.items || p.data;

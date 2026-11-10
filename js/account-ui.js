@@ -71,6 +71,8 @@ async function refreshPartsList() {
         <div><b>${esc(p.name)}</b><div class="muted small">${esc(when)}</div></div>
         <div class="row">
           <button type="button" class="small" data-act="load">Open</button>
+          <button type="button" class="small go" data-act="edit" title="Open it in the full-screen shape editor">Edit</button>
+          <button type="button" class="small" data-act="dup" title="Make a copy of this part in this list">Duplicate</button>
           <button type="button" class="small" data-act="rename">Rename</button>
           <button type="button" class="small warn" data-act="del">Delete</button>
         </div>
@@ -369,6 +371,16 @@ function bind() {
   $("gateDlg").addEventListener("click", (e) => { if (e.target === $("gateDlg")) closeAll(); });
   $("migrateDlg").addEventListener("click", (e) => { if (e.target === $("migrateDlg")) closeAll(); });
   $("conflictDlg").addEventListener("click", (e) => { if (e.target === $("conflictDlg")) closeAll(); });
+  $("saveDlg").addEventListener("click", (e) => { if (e.target === $("saveDlg")) closeAll(); });
+  const doSave = (mode) => async () => {
+    $("saveDlg")._name = $("saveName").value.trim() || "Untitled part";
+    closeAll();
+    try { await saveCurrent(mode); } catch (err) { toast(err.message, true); }
+  };
+  $("saveOver").onclick = doSave("over");
+  $("saveCopy").onclick = doSave("copy");
+  $("btnUndoSave").onclick = () => undoSave();
+  $("btnUndoX").onclick = () => { $("undoSave").classList.add("hidden"); undoJob = null; };
 
   $$(".acctdlg .acct-close, .acctdlg [data-close]").forEach((b) => (b.onclick = closeAll));
 
@@ -517,6 +529,17 @@ function bind() {
         if (host && host.loadDesign) host.loadDesign(p);
         toast("Opened “" + p.name + "”");
         closeAll();
+      } else if (b.dataset.act === "edit") {
+        const p = await A.loadPart(id);
+        if (host && host.loadDesign) host.loadDesign(p);
+        closeAll();
+        if (host && host.openEditor) host.openEditor();
+        toast("Editing “" + p.name + "”. Save… offers overwrite or a copy.");
+      } else if (b.dataset.act === "dup") {
+        const p = await A.loadPart(id);
+        const c = await A.savePart({ name: p.name + " (copy)", data: p.data });
+        await refreshPartsList();
+        toast("Made “" + c.name + "”");
       } else if (b.dataset.act === "rename") {
         const name = prompt("New name", row.querySelector("b").textContent);
         if (!name) return;
@@ -668,24 +691,45 @@ function bind() {
   $("announceDlg") && $("announceDlg").addEventListener("click", (e) => { if (e.target === $("announceDlg")) closeAll(); });
 }
 
-export async function saveCurrent() {
+// Save: a brand-new drawing saves straight away. A part that came from the account asks first: save over it
+// (an Undo bar puts the old version back) or save as a copy in the same parts list.
+export async function saveCurrent(mode) {
   if (!A.isSignedIn()) { openAccount("in"); throw new Error("Sign in to save parts to your account."); }
   if (!host || !host.getDesign) throw new Error("Nothing to save.");
   const items = host.getDesign();
   if (!items || !items.length) throw new Error("The drawing is empty.");
-  const name = ($("partName") && $("partName").value.trim()) || (host.fileName && host.fileName()) || "Untitled part";
   const cur = host.currentPart ? host.currentPart() : null;
+  const name0 = ($("partName") && $("partName").value.trim()) || (host.fileName && host.fileName()) || "Untitled part";
+  if (cur && cur.id && !mode) {
+    $("saveTitle").textContent = "Save “" + (cur.name || name0) + "”";
+    $("saveName").value = cur.name || name0;
+    $("saveText").textContent = "Save over the original keeps one part (an Undo button appears so you can put the old one back). Save as copy adds a new part next to it and leaves the original alone.";
+    $("saveOver").classList.remove("hidden");
+    openDlg("saveDlg");
+    setTimeout(() => $("saveName").select && $("saveName").select(), 30);
+    return null;
+  }
+  const name = $("saveDlg")._name || name0;
+  $("saveDlg")._name = null;
+  if (mode === "copy") {
+    const base = String(name).replace(/ \(copy( \d+)?\)$/, "");
+    const nm = name === (cur && cur.name) ? base + " (copy)" : name;
+    const p = await A.savePart({ name: nm, data: { items } });
+    if (host.rememberPart) host.rememberPart(p);
+    if ($("partName")) $("partName").value = p.name;
+    toast("Saved a copy: “" + p.name + "”");
+    await refreshPartsList();
+    return p;
+  }
+  let prev = null;
+  if (mode === "over" && cur && cur.id) { try { prev = await A.loadPart(cur.id); } catch { prev = null; } }
   try {
-    const p = await A.savePart({
-      id: cur && cur.id,
-      name,
-      data: { items },
-      updated_at: cur && cur.updated_at,
-    });
+    const p = await A.savePart({ id: cur && cur.id, name, data: { items }, updated_at: cur && cur.updated_at });
     if (host.rememberPart) host.rememberPart(p);
     if ($("partName")) $("partName").value = p.name;
     toast("Saved “" + p.name + "”");
     await refreshPartsList();
+    if (prev) offerUndo(p, prev);
     return p;
   } catch (err) {
     if (err && err.conflict) {
@@ -696,6 +740,27 @@ export async function saveCurrent() {
     }
     throw err;
   }
+}
+
+let undoTimer = null, undoJob = null;
+function offerUndo(saved, prev) {
+  undoJob = { saved, prev };
+  $("undoText").textContent = "Saved over “" + saved.name + "”.";
+  $("undoSave").classList.remove("hidden");
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(() => { $("undoSave").classList.add("hidden"); undoJob = null; }, 60000);
+}
+export async function undoSave() {
+  if (!undoJob) return false;
+  const { saved, prev } = undoJob; undoJob = null;
+  clearTimeout(undoTimer); $("undoSave").classList.add("hidden");
+  try {
+    const p = await A.savePart({ id: saved.id, name: prev.name, data: prev.data, updated_at: saved.updated_at });
+    if (host.loadDesign) host.loadDesign(p);
+    toast("Put back the previous version of “" + p.name + "”");
+    await refreshPartsList();
+    return true;
+  } catch (err) { toast(err.message, true); return false; }
 }
 
 export function showConflict(job) {

@@ -7,7 +7,7 @@ Josh is driving the table with a **DUBEUYEW ESP32-DevKitC V1 (30-pin)** and a sc
 - FluidNC speaks the same GRBL 1.1 status reports (`<Idle|MPos:…>`), `ok` / `error`, and realtime bytes (`?`, `!`, `~`, `0x18`, feed overrides) as a USB grblHAL controller. The app’s existing parser and job sender work over that protocol.
 - In **Connect**, choose **FluidNC (Wi-Fi)** and enter the ESP32’s IP or hostname (for example `192.168.1.50` or `fluidnc.local`). The app opens a raw WebSocket at `ws://<host>:81` (FluidNC’s default: HTTP port + 1).
 - USB serial still works if you plug the ESP32 into the computer and pick the port.
-- FluidNC stores machine settings in **`config.yaml`**, not the usual GRBL `$0…$132` list. When the app sees FluidNC, the raw `$` editor is hidden and Settings offers this repo’s `config/fluidnc-plasma.yaml` template instead. You can still send `$$`, `$I` and `$/` style FluidNC commands from the filtered console if you need them.
+- FluidNC stores machine settings in **`config.yaml`**, not the usual GRBL `$0…$132` list. When the app sees FluidNC, the raw `$` editor is hidden and Settings offers this repo’s `config/fluidnc-plasma.yaml` template instead. From the filtered console you can still send `$$` and `$I`. `$/` and the other FluidNC config commands are blocked by the console filter on purpose: change config.yaml instead.
 
 ## The HTTPS mixed-content problem (important)
 

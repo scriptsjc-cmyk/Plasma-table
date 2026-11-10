@@ -62,6 +62,8 @@ export function convertGcode(text, dialect, { lineNumbers = false } = {}) {
         continue;
       }
       if (/^G0?4\s*P/i.test(line)) { out.push(mach3Delay(line)); continue; }
+      // Mach3 probes with G31 (G38.2 is a LinuxCNC / GRBL word). Same Z move and feed, stops when the probe input trips.
+      if (/^G38\.2\b/i.test(line)) { out.push(line.replace(/^G38\.2\b/i, "G31").replace(/;.*$/, "").trim()); continue; }
       out.push(line.replace(/;.*$/, "").trim() || mach3Comment(line.slice(line.indexOf(";") + 1)));
     }
     out.push("M5");                                  // the torch is always off at the end

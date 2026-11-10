@@ -40,6 +40,7 @@ export function parseDXF(text) {
   const contours = [];   // already closed
   const pieces = [];     // open pieces to join
   const skipped = {};
+  let splines = 0, ellipses = 0;
   const S = (v) => parseFloat(v) * scale;
   const get = (e, c, d = 0) => { const f = e.g.find((x) => x[0] === c); return f ? parseFloat(f[1]) : d; };
   const all = (e, c) => e.g.filter((x) => x[0] === c).map((x) => parseFloat(x[1]));
@@ -83,6 +84,7 @@ export function parseDXF(text) {
         break;
       }
       case "SPLINE": {
+        splines++;
         const pts = splinePoints(e, S);
         if (pts.length >= 2) {
           const closedFlag = (get(e, 70) & 1) === 1;
@@ -93,6 +95,7 @@ export function parseDXF(text) {
         break;
       }
       case "ELLIPSE": {
+        ellipses++;
         const cx = S(get(e, 10)), cy = S(get(e, 20)), mx = S(get(e, 11)), my = S(get(e, 21));
         const ratio = get(e, 40, 1), t0 = get(e, 41, 0), t1 = get(e, 42, 2 * Math.PI);
         const a = Math.hypot(mx, my), ang = Math.atan2(my, mx), b = a * ratio;
@@ -132,7 +135,8 @@ export function parseDXF(text) {
       INSERT: "explode blocks in your CAD", DIMENSION: "dimensions are ignored", HATCH: "hatching is ignored" }[t] || "not supported";
     warnings.push(`Ignored ${n} ${t} item(s) – ${why}.`);
   }
-  return { contours, warnings, units: unitsName };
+  if (splines || ellipses) warnings.push(`${splines + ellipses} spline/ellipse curve(s) can't be edited as true curves, so they were turned into short straight lines (they still cut smoothly). Edit them point by point, or redraw them as arcs.`);
+  return { contours, warnings, units: unitsName, curves: { splines, ellipses } };
 }
 
 // join open pieces end-to-end into chains; closed chains become outlines

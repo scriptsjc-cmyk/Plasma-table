@@ -2,7 +2,7 @@
 // (same behaviour as the App class in plasma/server.py, without a server).
 
 import { GrblLink, RT } from "./grbl.js";
-import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt, jobPlan } from "./job.js";
+import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt, jobPlan, restartLines } from "./job.js";
 import { Safety, SafetyError } from "./safety.js";
 import { filterConsoleCommand } from "./admin-machine.js";
 
@@ -257,7 +257,9 @@ export class Machine {
     return r;
   }
 
-  startJob() {
+  // opts.fromCut = N (>1): "Continue from cut N". Every check a normal start makes still applies (Idle, e-stop, floating head,
+  // edges known, job inside the edges). The torch is off, lifted, and rapids to the start of cut N before it pierces there.
+  startJob(opts = {}) {
     if (!this.grbl) throw new JobError("Not connected. Press Connect.");
     if (!this.prepared) throw new JobError("Load a job first.");
     if (this.state() !== "Idle") throw new JobError(`Machine must be Idle to start (it is ${this.state()}).`);
@@ -268,11 +270,39 @@ export class Machine {
       throw new JobError("The machine doesn't know where its edges are yet. Press Home (or 'Torch is at the home corner') first.");
     const problem = this.safety.jobCheck(this.prepared.stats.bounds, this.wco());
     if (problem) throw new JobError(problem);
-    const lines = [...this.raiseLines(false), ...this.boundedProbes(this.prepared.lines), ...this.raiseLines(false)];
+    const fromCut = Math.max(1, Math.trunc(Number(opts.fromCut) || 1));
+    let lines, note = "";
+    if (fromCut > 1) {
+      const r = restartLines(this.prepared, fromCut);
+      const top = this.raiseLines(false);
+      const lift = top.length ? top : ["G91", `G0 Z${fmt(this.cfg.torch.safe_lift_mm)}`, "G90"];
+      lines = [...r.head, ...lift, ...r.rapid, ...this.boundedProbes(r.body), ...this.raiseLines(false)];
+      note = ` from cut ${fromCut}`;
+    } else {
+      lines = [...this.raiseLines(false), ...this.boundedProbes(this.prepared.lines), ...this.raiseLines(false)];
+    }
     this.plan = jobPlan(lines, this.cfg);
+    this.runFrom = fromCut; this.liveDelay = null;
     this.grbl.startJob(lines);
-    this.emit("log", { text: `Started ${this.prepared.name}${this.prepared.dry_run ? " (dry run)" : ""}`, level: "info" });
+    this.emit("log", { text: `Started ${this.prepared.name}${note}${this.prepared.dry_run ? " (dry run)" : ""}`, level: "info" });
     return { ok: true };
+  }
+
+  // Live pierce delay (local USB / FluidNC jobs): rewrite the dwell of every pierce that has NOT been sent to the controller yet.
+  // A pierce that is already in the controller's buffer keeps its old value. Returns how many pierces will use the new delay.
+  setPierceDelay(delayS) {
+    const g = this.grbl;
+    if (!g || !g.job || !g.job.running) throw new JobError("Pierce delay can be changed while a job is running.");
+    if (g.t && g.t.remoteJobs) throw new JobError("This job is running on the Pi, so the pierce delay can't be changed from here.");
+    const d = Math.round(Number(delayS) * 100) / 100;
+    if (!Number.isFinite(d) || d < 0 || d > 5) throw new JobError("Pierce delay must be 0 to 5 seconds.");
+    let n = 0;
+    const q = g.pending;
+    for (let i = 1; i < q.length; i++) {
+      if (q[i].source === "job" && /^G4\s*P/i.test(q[i].line) && /^M[34]\b/i.test(q[i - 1].line)) { q[i].line = `G4 P${fmt(d)}`; n++; }
+    }
+    this.liveDelay = d;
+    return n;
   }
 }
 

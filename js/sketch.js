@@ -290,6 +290,18 @@ export class Sketch {
     this.pick([it.id]);
     if (!quiet) { this.ensureVisible(); this.commit(); this.onSelect(); } else this.save();
   }
+  // an imported drawing turned into editable geometry (see editable.js): one custom part per outline, at its real place
+  importParts(parts, replace = false) {
+    if (!parts || !parts.length) return 0;
+    this.remember();
+    if (replace) { this.items = []; this.nextId = 1; this.edgeSel = null; }
+    const made = parts.map(({ cs, x, y }) => {
+      const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(x), y: r1(y), rot: 0, holes: {}, shape: { cs: cs.map((c) => ({ pts: c.pts.map((q) => [q[0], q[1]]), closed: c.closed !== false, bulges: (c.bulges || []).slice() })) } };
+      this.items.push(it); return it;
+    });
+    this.pick([]); this.commit(); this.onSelect(); this.fitView();
+    return made.length;
+  }
   remove() {
     const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();
@@ -748,6 +760,34 @@ export class Sketch {
     it.p = d.fit(it.p, odd ? H : W, odd ? W : H);
     for (const k of Object.keys(it.p)) it.p[k] = r1(it.p[k]);
   }
+  // Exact width / height for a joined or imported part. keep = same shape (one scale for both);
+  // otherwise it is stretched, and each arc keeps its sweep (so a circle becomes a rounded oval-ish curve).
+  resizeCustomTo(it, W, H, keep = true, which = "w") {
+    if (!this.isEditableCustom(it) || it.lock) return false;
+    const b = this.boxOf(it), cw = b[2] - b[0], ch = b[3] - b[1];
+    if (!(cw > 0 && ch > 0) || !(W > 0) || !(H > 0)) return false;
+    const mx = this.maxMm || 2600;
+    let sx = W / cw, sy = H / ch;
+    if (keep) sx = sy = which === "h" ? H / ch : W / cw;
+    if (cw * sx > mx || ch * sy > mx || cw * sx < MIN || ch * sy < MIN) return false;
+    this.remember();
+    this.bakeCustom(it);
+    const q = (v) => Math.round(v * 100) / 100;
+    const base = it.shape.cs;
+    const apply = (ax, ay) => { it.shape.cs = base.map((c) => ({ ...c, pts: c.pts.map(([x, y]) => [q(x * ax), q(y * ay)]) })); it._key = null; };
+    apply(sx, sy);
+    // a curved edge bulges past its end points, so the first guess can be a little off: nudge the scale until the real outline is the size asked for
+    for (let k = 0; k < 6; k++) {
+      const bb = this.boxOf(it), aw = bb[2] - bb[0], ah = bb[3] - bb[1];
+      const okW = Math.abs(aw - W) < 0.005, okH = Math.abs(ah - H) < 0.005;
+      if (keep ? (which === "h" ? okH : okW) : (okW && okH)) break;
+      if (keep) { const f = which === "h" ? H / ah : W / aw; sx *= f; sy *= f; }
+      else { sx *= W / aw; sy *= H / ah; }
+      apply(sx, sy);
+    }
+    this.commit(); this.onSelect();
+    return true;
+  }
   canResize(it) { return it && !it.lock && (it.rot || 0) % 90 === 0 && !!(def(it.type).fit || it.type === "custom"); }
 
   contours() { return this.items.flatMap((i) => this.contoursOf(i)); }
@@ -769,7 +809,7 @@ export class Sketch {
     return [w, Math.round(Math.max(260, Math.min(640, w * 0.7, (window.innerHeight || 800) * 0.62)))];
   }
   fitView() {
-    const [w, h] = this.size(), b = this.allBox();
+    const [w, h] = this.size(), b = this.layout ? this.layout.viewBox(this) : this.allBox();
     const bw = Math.max(40, b[2] - b[0]), bh = Math.max(40, b[3] - b[1]);
     const padX = 48, padTop = 52, padBot = 44;
     const s = Math.min((w - padX * 2) / bw, (h - padTop - padBot) / bh);
@@ -845,15 +885,19 @@ export class Sketch {
     ctx.fillStyle = C.label; ctx.font = "11px Barlow, system-ui";
     ctx.textAlign = "right"; ctx.fillText(`grid ${G} mm · snap ${this.opts.snap ? this.opts.snap + " mm" : "off"}`, w - 8, h - 8); ctx.textAlign = "start";
 
+    // sheet layout (step 3): the sheet, the machine's work area, and which parts are too close / overlapping / off the sheet
+    const LY = this.layout || null, LI = LY ? (this.layoutInfo = LY.analyze(this)) : null;
+    if (LY) LY.drawBg(this, ctx, S, C, w, h);
     const trace = (c) => { c.pts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.closePath(); };
     for (const it of this.order()) {
       const cs = this.contoursOf(it); if (!cs.length) continue;
       const hole = this.isHole(it), on = this.isPicked(it);
       ctx.beginPath(); cs.forEach(trace);
-      ctx.fillStyle = hole ? C.hole : on ? C.partSel : C.partFill;
+      const bad = !!(LI && LI.bad.has(it.id));
+      ctx.fillStyle = bad ? "#f9c9c4" : hole ? C.hole : on ? C.partSel : C.partFill;
       ctx.fill(def(it.type).multi ? "nonzero" : "evenodd");
       ctx.setLineDash(hole ? [5, 4] : []);
-      ctx.strokeStyle = it.lock ? C.lock : on ? C.sel : hole ? C.label : C.partLine;
+      ctx.strokeStyle = bad ? C.danger : it.lock ? C.lock : on ? C.sel : hole ? C.label : C.partLine;
       ctx.lineWidth = on ? 2 : 1.5;
       ctx.stroke(); ctx.setLineDash([]);
       if (it.lock && on) {
@@ -865,6 +909,7 @@ export class Sketch {
       }
     }
 
+    if (LY) LY.drawTop(this, ctx, S, C, w, h);
     // guides while dragging
     if (this.guides.length) {
       ctx.strokeStyle = C.guide; ctx.lineWidth = 1; ctx.setLineDash([6, 4]); ctx.beginPath();
@@ -890,7 +935,7 @@ export class Sketch {
         }
       }
       const round = one && def(one.type).uniform && !one.rot && Math.abs((b[2] - b[0]) - (b[3] - b[1])) < 0.05 && one.type !== "custom";
-      if (list.length > 1) {
+      if (this.layout) { /* sheet layout: the gap numbers are drawn instead of the size tags */ } else if (list.length > 1) {
         this.tag(ctx, `${list.length} shapes · ${r1(b[2] - b[0])} × ${r1(b[3] - b[1])} mm`, (x0 + x1) / 2, Math.max(18, y0 - 20), C.sel);
       } else if (round) {
         const r = this.tag(ctx, `Ø ${r1(b[2] - b[0])} mm`, (x0 + x1) / 2, Math.max(18, y0 - 20), C.sel);
@@ -901,7 +946,7 @@ export class Sketch {
         const hr = this.tag(ctx, `${r1(b[3] - b[1])} mm`, x1 + 36, (y0 + y1) / 2, C.sel);
         this.dimHits.push({ ...hr, kind: "h", it: one, label: "Height (mm)" });
       }
-      if (one && this.opts.pro) {
+      if (one && this.opts.pro && !this.layout) {
         const xr = this.tag(ctx, `X ${r1(b[0])}`, x0, y1 + 20, C.partLine);
         this.dimHits.push({ ...xr, kind: "x", it: one, label: "Left edge X (mm)" });
         const yr = this.tag(ctx, `Y ${r1(b[1])}`, x0 + 80, y1 + 20, C.partLine);
@@ -930,8 +975,8 @@ export class Sketch {
 
     this.drawEdgeHandles(ctx, C, S);
 
-    // cut check markers
-    this.marks.forEach((m, i) => {
+    // cut check markers (not on the sheet layout: they would sit on top of the parts)
+    (this.layout ? [] : this.marks).forEach((m, i) => {
       const [X, Y] = S(m.at[0], m.at[1]);
       i = (m.n || i + 1) - 1;
       const col = m.level === "error" ? C.danger : m.level === "warn" ? C.lock : C.sel;
@@ -1404,15 +1449,27 @@ export class Sketch {
   snapMove(dx, dy, moving, free) {
     this.guides = [];
     const step = this.opts.snap;
-    if (step && !free) { dx = Math.round(dx / step) * step; dy = Math.round(dy / step) * step; }
-    if ((!this.opts.guides && !(this.opts.pro && this.opts.pointSnap)) || free) return [dx, dy];
+    if (step && !free) {
+      if (this.layout && moving.length) {          // sheet grid: the part's lower-left corner lands on a grid point
+        const m0 = unionBox(moving.map((m) => m.b0));
+        dx = Math.round((m0[0] + dx) / step) * step - m0[0]; dy = Math.round((m0[1] + dy) / step) * step - m0[1];
+      } else { dx = Math.round(dx / step) * step; dy = Math.round(dy / step) * step; }
+    }
+    if ((!this.opts.guides && !this.layout && !(this.opts.pro && this.opts.pointSnap)) || free) return [dx, dy];
     const mb = unionBox(moving.map((m) => m.b0));
     const others = this.items.filter((i) => !moving.some((m) => m.it === i));
-    if (!others.length) return [dx, dy];
+    if (!others.length && !this.layout) return [dx, dy];
     const oboxes = others.map((i) => this.boxOf(i));
     const tol = 7 / this.view.s;
     const xs = oboxes.flatMap((b) => [b[0], (b[0] + b[2]) / 2, b[2]]), ys = oboxes.flatMap((b) => [b[1], (b[1] + b[3]) / 2, b[3]]);
     const mx = [mb[0], (mb[0] + mb[2]) / 2, mb[2]], my = [mb[1], (mb[1] + mb[3]) / 2, mb[3]];
+    // sheet edges and middle lines, and "just the minimum gap away" from another part's edge
+    const gapX = [], gapY = [];
+    if (this.layout) {
+      const sh = this.layout.sheet, g = this.layout.gap || 0;
+      xs.push(0, sh.w / 2, sh.w); ys.push(0, sh.h / 2, sh.h);
+      for (const b of oboxes) { gapX.push([mb[0], b[2] + g], [mb[2], b[0] - g]); gapY.push([mb[1], b[3] + g], [mb[3], b[1] - g]); }
+    }
     if (this.opts.pro && this.opts.pointSnap) {
       for (const o of others) {
         const cs = this.contoursOf(o);
@@ -1426,10 +1483,12 @@ export class Sketch {
       }
     }
     let best = null;
-    for (const a of mx) for (const t of xs) { const d = t - (a + dx); if (Math.abs(d) < tol && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, x: t }; }
+    for (const [a, t] of gapX) { const d = t - (a + dx); if (Math.abs(d) < tol && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, x: t }; }
+    for (const a of mx) for (const t of xs) { const d = t - (a + dx); if (Math.abs(d) < tol && (!best || Math.abs(d) < Math.abs(best.d) - 1e-9)) best = { d, x: t }; }
     if (best) { dx += best.d; this.guides.push({ x: best.x }); }
     best = null;
-    for (const a of my) for (const t of ys) { const d = t - (a + dy); if (Math.abs(d) < tol && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, y: t }; }
+    for (const [a, t] of gapY) { const d = t - (a + dy); if (Math.abs(d) < tol && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, y: t }; }
+    for (const a of my) for (const t of ys) { const d = t - (a + dy); if (Math.abs(d) < tol && (!best || Math.abs(d) < Math.abs(best.d) - 1e-9)) best = { d, y: t }; }
     if (best) { dy += best.d; this.guides.push({ y: best.y }); }
     return [r1(dx), r1(dy)];
   }
@@ -1653,6 +1712,7 @@ export class Sketch {
       const isArrow = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown"].includes(e.key);
       if (!this.sel.ids.length) { if (isArrow) stop(); return; }
       if (e.key === "PageUp" || e.key === "PageDown") { stop(); return; }
+      if (this.layout && !this.opts.pro && isArrow) { stop(); return; }          // arrow-key nudge is a Pro feature in the sheet layout
       const st = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
       const mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] }[e.key];
       if (mv) { stop(); this.nudge(...mv); return; }

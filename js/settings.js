@@ -13,6 +13,7 @@ export const defaultSettings = () => ({
   units: "mm",
   dialect: "grbl",
   lineNumbers: false,
+  sizeCheck: true,
   bed: { x: 1300, y: 800, z: 60 },
   invert: { x: false, y: false, z: false },
   rates: { x: 8000, y: 8000, z: 1500 },
@@ -56,6 +57,7 @@ export function sanitizeSettings(raw, { strict = false } = {}) {
   if (src.units !== undefined) { if (UNITS.includes(src.units)) out.units = src.units; else errors.push("Units must be mm or inch."); }
   if (src.dialect !== undefined) { if (DIALECTS.some((x) => x.id === src.dialect)) out.dialect = src.dialect; else errors.push("Unknown G-code dialect."); }
   if (src.lineNumbers !== undefined) { if (typeof src.lineNumbers === "boolean") out.lineNumbers = src.lineNumbers; else errors.push("Line numbers must be on or off."); }
+  if (src.sizeCheck !== undefined) { if (typeof src.sizeCheck === "boolean") out.sizeCheck = src.sizeCheck; else errors.push("The size check must be on or off."); }
   if (isObj(src.homing)) {
     if (typeof src.homing.enabled === "boolean") out.homing.enabled = src.homing.enabled;
     if (src.homing.pullOff !== undefined) { const v = num(src.homing.pullOff); if (Number.isFinite(v) && v >= 0 && v <= 20) out.homing.pullOff = v; else errors.push("Homing pull-off must be 0 to 20 mm."); }
@@ -189,6 +191,7 @@ const TABS = [
   { id: "io", name: "I/O", beginner: true },
   { id: "units", name: "Units & export", beginner: true },
   { id: "backup", name: "Backup / restore", beginner: true },
+  { id: "about", name: "About", beginner: true },
   { id: "firmware", name: "Firmware (Pro)", beginner: false, pro: true },
 ];
 
@@ -210,6 +213,7 @@ function showTab(id) {
   if (id === "firmware") mountFirmware();
   if (id === "materials") paintMaterials();
   if (id === "io") paintIo();
+  if (id === "about" && host && host.paintAbout) host.paintAbout();
 }
 
 function $$(sel, root) { return [...(root || document).querySelectorAll(sel)]; }
@@ -248,6 +252,7 @@ function fillBasics() {
   if ($("setUnits")) $("setUnits").value = s.units || "mm";
   if ($("setDialect")) $("setDialect").value = s.dialect || "grbl";
   if ($("setLineNo")) $("setLineNo").checked = !!s.lineNumbers;
+  if ($("setSizeCheck")) $("setSizeCheck").checked = s.sizeCheck !== false;
   const thc = $("setThcNote");
   if (thc) {
     const has = host && host.hasThc && host.hasThc();
@@ -278,6 +283,7 @@ export function readFormIntoState() {
   if ($("setUnits")) cand.units = $("setUnits").value;
   if ($("setDialect")) cand.dialect = $("setDialect").value;
   if ($("setLineNo")) cand.lineNumbers = $("setLineNo").checked;
+  if ($("setSizeCheck")) cand.sizeCheck = $("setSizeCheck").checked;
   const r = sanitizeSettings(cand, { strict: true });
   if (r.errors.length) { toast(r.errors[0], true); return null; }   // nothing is saved or applied
   r.settings.firmwareWarned = state.firmwareWarned === true;

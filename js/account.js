@@ -725,6 +725,22 @@ export async function claimMachine(code, serial) {
     saveDemo(s);
     throw new Error("Too many tries. Wait 15 minutes and try again.");
   }
+  // The practice code works for EVERY local demo account: the first one links the built-in practice table, later ones get
+  // their own practice table record (never the real thing: demo accounts cannot drive hardware on the live site).
+  if (c === normCode(CONFIG.DEMO_CLAIM_CODE)) {
+    const mine = s.machines.find((m) => m.owner === u.id);
+    if (mine) { logClaim(s, u.id, true, "claimed:" + mine.serial + ":again"); saveDemo(s); notify(); return { ok: true, serial: mine.serial, already: true }; }
+    let rec = s.machines.find((m) => m.serial === CONFIG.DEMO_SERIAL && !m.owner);
+    if (!rec) {
+      rec = { id: uid(), serial: CONFIG.DEMO_SERIAL + "-" + String(u.id).replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase(),
+        hash: await sha256hex(c), owner: null, claimed_at: null, notes: "Practice table (demo account copy)" };
+      s.machines.push(rec);
+    }
+    rec.owner = u.id; rec.claimed_at = nowIso();
+    logClaim(s, u.id, true, "claimed:" + rec.serial);
+    saveDemo(s); notify();
+    return { ok: true, serial: rec.serial };
+  }
   const h = await sha256hex(c);
   let rec = serial
     ? s.machines.find((m) => m.serial.toUpperCase() === normCode(serial))

@@ -738,8 +738,7 @@ label.check.prominent { display: flex; align-items: center; gap: 8px; margin: 12
   body.short-land .exportrow { gap: 4px; }
   body.short-land .stepPane .step[data-step="2"],
   body.short-land .stepPane .step[data-step="3"],
-  body.short-land .stepPane .step[data-step="4"],
-  body.short-land .stepPane .step[data-step="5"] {
+  body.short-land .stepPane .step[data-step="4"] {
     /* keep the rail; don't leave an empty first column */
   }
   body.short-land.running-job #exportRow,
@@ -755,7 +754,7 @@ label.check.prominent { display: flex; align-items: center; gap: 8px; margin: 12
 @media (max-width: 899px) {
   body.running-job #exportRow, body.running-job #showMachWrap { display: none !important; }
   body.running-job .previewPane { max-height: 28dvh; overflow: hidden; }
-  body.running-job .step[data-step="5"] { padding-bottom: 8px; }
+  body.running-job .step[data-step="4"] { padding-bottom: 8px; }
   body.running-job .runctl { position: sticky; bottom: 0; background: var(--card); padding: 8px 0; z-index: 8; }
   body.running-job .torchbig { min-height: 48px; }
 }
@@ -1007,4 +1006,343 @@ body.pro-mode #setDlg .set-field.pro-field { display: flex; }
 }
 @media (max-width: 400px) {
   #connPill { max-width: 5.5em; }
+}
+
+/* =====================================================================================================
+   ROUND 2
+   ===================================================================================================== */
+.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.beginner-only { display: none; }
+body.beginner .beginner-only { display: block; }
+body.pro-mode .beginner-only { display: none !important; }
+body.beginner .advanced-only { display: none !important; }
+#torchPill[hidden] { display: none !important; }
+.straightrow { display: none; }
+.appfoot { text-align: center; padding: 6px 12px 10px; font-size: 12px; color: var(--muted); }
+body.shape-fs .appfoot { display: none; }
+
+/* new-version banner is a normal banner; About pane */
+.aboutver { font-size: var(--fs-lg); margin: 4px 0; }
+.verline { margin: 4px 0 0; }
+
+/* ---- STOP: the biggest control at every width (72 x 72 minimum on phones) ---- */
+.stop { min-height: 56px; min-width: 88px; font-size: 20px; }
+@media (max-width: 899px) {
+  #btnStop.stop { min-height: 72px; min-width: 72px; width: 80px; font-size: 20px; padding: 6px; }
+  .runstop { min-height: 88px !important; min-width: 72px; font-size: 26px !important; }
+}
+@media (min-width: 900px) { #btnStop.stop { min-height: 60px; min-width: 100px; font-size: 22px; } }
+body.short-land #btnStop.stop { min-height: 72px; min-width: 72px; }
+body.short-land .topbar { padding-top: 2px; padding-bottom: 2px; }
+.runstop { min-height: 72px !important; min-width: 72px; }
+
+/* ---- the "Demo, nothing moves" pill ---- */
+body.demo-on #connPill { background: var(--warn-bg); border-color: var(--warn); color: var(--warn-text); max-width: 56vw; }
+@media (max-width: 640px) { body.demo-on #connPill { max-width: 40vw; font-size: 12px; } }
+
+/* ---- playable preview ---- */
+.playrow { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: nowrap; }
+.playrow.hidden { display: none; }
+.playrow button { min-height: 44px; flex: none; }
+.playrow input[type="range"] { flex: 1 1 auto; min-width: 60px; accent-color: var(--accent); height: 28px; }
+.playtime { flex: none; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.qbwhy { margin: 4px 0 0; padding: 6px 10px; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); color: var(--warn-text); font-size: 14px; }
+.qbwhy.hidden { display: none; }
+.quickbar button[aria-disabled="true"] { opacity: .5; cursor: help; }
+
+/* ---- Pro: cut list, CAM panel, toolbar, delay row ---- */
+.cutlist { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; max-height: 240px; overflow: auto; }
+.cutlist li { display: flex; align-items: center; gap: 8px; background: var(--well); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; min-height: 40px; }
+.cutlist li.off { opacity: .55; }
+.cutlist .grip { cursor: grab; color: var(--muted); font-size: 18px; padding: 0 4px; touch-action: none; }
+.cutlist label { flex: 1; display: flex; align-items: center; gap: 8px; margin: 0; min-height: 36px; }
+.cutlist label b { min-width: 22px; text-align: right; }
+.cutlist .mv { display: flex; gap: 2px; }
+.cutlist .mv button { min-height: 32px; min-width: 32px; padding: 0 6px; font-size: 12px; }
+.campanel, .cutlistcard, .delayrow, .startcut { margin-top: 10px; }
+.campanel h3, .cutlistcard h3 { margin: 0 0 6px; }
+.delayrow .row { margin-top: 4px; }
+.delayrow button { min-height: 48px; }
+.startcut { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); padding: 8px 12px; }
+.startcut select { min-height: 44px; font-size: 16px; }
+.restartbox { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); padding: 10px 12px; margin: 10px 0; }
+.restartbox select { min-height: 48px; font-size: 18px; }
+.probar { display: none; align-items: center; gap: 6px; padding: 6px 12px; background: var(--card); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+body.pro-mode .probar { display: flex; }
+body.pro-mode.shape-fs .probar { display: none; }
+.probar button { min-height: 36px; padding: 4px 10px; font-size: 13px; }
+.probar kbd { margin-left: 4px; }
+.probar-keys { margin-left: auto; }
+body.running-job .probar { display: none; }
+@media (max-width: 899px) { .probar { display: none !important; } }
+
+/* ---- size check + straight cut dialogs ---- */
+#sizeDlg, #straightDlg, #resizeDlg { top: var(--topbar-h, 56px); z-index: 125; }
+.sizetext { font-size: 20px; margin: 4px 0 8px; }
+.sizecard .col button { min-height: 56px; }
+.sizescale { align-items: flex-end; margin-top: 8px; }
+.sizescale input { max-width: 110px; }
+
+/* ===================================================================================================== BEGINNER
+   One thing at a time. Big plain buttons, short sentences, advanced things not on the page at all. */
+.guidehead { position: relative; margin: 0; padding: 12px 16px 14px; background: var(--accent-weak); border-bottom: 1px solid var(--line); }
+.guidehead b { display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.guidehead #ghTitle { display: block; font-size: 26px; font-weight: 800; line-height: 1.15; margin: 2px 0; }
+.guidehead p { margin: 2px 0 0; font-size: 17px; line-height: 1.35; }
+.guidehead::after { content: ""; position: absolute; left: 0; bottom: 0; height: 5px; width: calc(var(--prog, 0%) + 12%); background: var(--accent); border-radius: 0 3px 3px 0; transition: width .25s; }
+body.beginner .stepper { padding-top: 6px; }
+body.beginner .stepper li { font-size: 13px; }
+body.beginner .stepper li span { width: 34px; height: 34px; font-size: 16px; }
+body.beginner .stepPane > .step > h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+body.beginner .stepPane > .step h3 { font-size: 15px; }
+
+/* step 1: shapes first */
+.bgpick { margin: 0 0 10px; }
+.bgshapes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.bgshapes button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 112px;
+  padding: 10px 6px; background: var(--well); border: 2px solid var(--line-strong); border-radius: 12px; font-size: 17px; font-weight: 700; }
+.bgshapes button i { font-style: normal; display: block; color: var(--text); line-height: 0; }
+.bgshapes button.sel { border-color: var(--accent); background: var(--accent-weak); }
+.bgmore { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.bgmore button { min-height: 60px; font-size: 18px; }
+body.beginner .srcTabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 10px; }
+body.beginner .srcTab { min-height: 60px; font-size: 18px; font-weight: 700; background: var(--well); border: 2px solid var(--line-strong); }
+body.beginner .srcTab.sel { background: var(--well); color: var(--text); border-color: var(--line-strong); }
+body.beginner .drop { min-height: 0; padding: 14px 12px; }
+body.beginner .drop .small { display: none; }
+body.beginner #srcShape > *:not(#shapeForm):not(#cutCheck) { display: none !important; }
+body.beginner #recentWrap h3 { display: none; }
+body.beginner .shapeform .tip { font-size: 16px; }
+body.beginner .shapeform .grid2 label { font-size: 16px; }
+body.beginner .shapeform input { min-height: 52px; font-size: 20px; }
+body.beginner .bigbtns button { min-height: 56px; font-size: 17px; flex: 1 1 140px; }
+body.beginner #btnSavePartQuick, body.beginner #btnExportMenu, body.beginner .showmach { display: none; }
+
+/* every step: one big Next */
+body.beginner .nav { margin-top: 14px; }
+body.beginner .nav .next, body.beginner #btnStart { flex: 1 1 auto; max-width: none; min-height: 72px; font-size: 22px; font-weight: 800; background: var(--accent); border-color: var(--accent); color: var(--on-accent); border-radius: 12px; }
+body.beginner .nav .next:disabled, body.beginner #btnStart:disabled { background: var(--well); border-color: var(--line-strong); color: var(--muted); }
+body.beginner #btnStart:not(:disabled) { background: var(--go); border-color: var(--go); color: var(--on-go); }
+body.beginner .nav .back { min-height: 72px; min-width: 96px; font-size: 18px; }
+body.beginner .nav { flex-wrap: wrap; }
+
+/* step 2: material */
+body.beginner .matline { font-size: 18px; margin: 0 0 10px; }
+body.beginner #materials button { min-height: 76px; font-size: 22px; }
+body.beginner #thicknesses { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+body.beginner #thicknesses button { min-height: 64px; font-size: 20px; }
+body.beginner #cutCheck2, body.beginner .step[data-step="2"] details, body.beginner .step[data-step="2"] .matpreset-wrap { display: none !important; }
+body.beginner .amps .big { font-size: 40px; }
+
+/* step 3: position */
+body.beginner .step[data-step="3"] > p.muted, body.beginner .step[data-step="3"] .placeways, body.beginner .keyhint { display: none; }
+body.beginner #btnZero { min-height: 72px; font-size: 22px; }
+body.beginner #btnTrace { min-height: 56px; font-size: 16px; }
+
+/* step 4 / 5 */
+body.beginner .checklist label { font-size: 18px; padding: 10px 6px; min-height: 52px; }
+body.beginner .livespeed .row, body.beginner .livespeed > .muted { display: none; }
+body.beginner .step[data-step="3"] #startCutRow { display: none; }
+body.beginner .step[data-step="3"] #startCutRow:not(.hidden) { display: block; }
+body.beginner .step[data-step="4"] .runnums .bigpct { font-size: 56px; }
+body.beginner .step[data-step="4"] .nav { display: none; }
+
+/* ===================================================================================================== PRO
+   Everything on one screen, tight spacing, no explanations. Preview left, panels right. */
+body.pro-mode .guidehead { display: none; }
+body.pro-mode .stepPane { padding: 8px 10px; }
+body.pro-mode .stepPane .step > h2 { display: none; }
+body.pro-mode button.xl { min-height: 40px; font-size: 14px; padding: 6px 12px; }
+body.pro-mode .nav { margin-top: 8px; }
+body.pro-mode .nav .next, body.pro-mode #btnStart { min-height: 44px; font-size: 15px; max-width: 220px; }
+body.pro-mode .nav .back { min-height: 40px; }
+body.pro-mode .choice { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
+body.pro-mode .choice button { min-height: 40px; font-size: 14px; }
+body.pro-mode .choice.small button { min-height: 36px; }
+body.pro-mode .amps { padding: 6px 10px; }
+body.pro-mode .amps .big { font-size: 24px; }
+body.pro-mode .stepPane h3 { font-size: 13px; margin: 8px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+body.pro-mode .campanel input, body.pro-mode .adjust input, body.pro-mode .cutlistcard input[type="number"] { min-height: 36px; font-size: 14px; }
+body.pro-mode .recentjobs { margin-top: 6px; }
+body.pro-mode .s2cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 14px; }
+@media (min-width: 1100px) { body.pro-mode .s2cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+body.pro-mode .s2a > *:first-child, body.pro-mode .s2b > *:first-child { margin-top: 0; }
+body.pro-mode .step[data-step="3"] .jogmount { margin-top: 4px; }
+body.pro-mode .checklist label { min-height: 36px; padding: 4px 6px; font-size: 14px; }
+@media (min-width: 900px) and (min-height: 600px) {
+  /* laptop: the whole cut screen fits without scrolling the page */
+  body.pro-mode .cutgrid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+}
+
+/* ---- Beginner on a phone / small laptop: guide head + canvas + one big Next, nothing wasted ---- */
+body.beginner .stepPane > .step .nav { position: sticky; bottom: 0; background: var(--card); padding: 8px 0 2px; z-index: 3; margin-top: 10px; }
+@media (max-width: 899px) {
+  .guidehead { padding: 8px 12px 10px; }
+  .guidehead b { font-size: 12px; }
+  .guidehead #ghTitle { font-size: 22px; }
+  .guidehead p { font-size: 15px; line-height: 1.3; }
+  body.beginner .stepper { display: none; }
+  .bgshapes { gap: 8px; }
+  .bgshapes button { min-height: 92px; font-size: 15px; }
+  .bgmore button, body.beginner .srcTab { min-height: 52px; font-size: 16px; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell.beginner:not(.short-land) .cutgrid,
+  body.app-shell.beginner:not(.short-land) .cutgrid.with-qb,
+  body.app-shell.beginner:not(.short-land) .cutgrid.editing {
+    grid-template-rows: minmax(0, 36dvh) minmax(0, 1fr);
+    grid-template-areas: "preview" "step";
+  }
+  body.app-shell.beginner:not(.short-land) .cutgrid.nofile { grid-template-rows: minmax(0, 1fr); grid-template-areas: "step"; }
+}
+@media (min-width: 900px) and (max-height: 800px) {
+  .guidehead { padding: 6px 16px 10px; }
+  .guidehead #ghTitle { font-size: 22px; }
+  .guidehead p { font-size: 15px; }
+  .bgshapes button { min-height: 84px; font-size: 16px; padding: 6px; }
+  .bgshapes button svg { height: 40px; width: auto; }
+  .bgmore button, body.beginner .srcTab { min-height: 50px; font-size: 16px; }
+  body.beginner .nav .next, body.beginner #btnStart { min-height: 60px; font-size: 20px; }
+}
+
+/* Beginner: once a shape is picked the picker folds away and the size boxes come first */
+#bgChange { display: none; width: 100%; margin-bottom: 8px; min-height: 52px; font-size: 16px; }
+body.bg-picked #bgChange { display: block; }
+body.bg-picked .bgshapes, body.bg-picked .bgmore, body.bg-picked.beginner .srcTabs { display: none; }
+body.beginner .previewDock .exportrow { display: none; }
+@media (min-width: 900px) { body.beginner .previewDock .exportrow { display: flex; } body.beginner #btnExportMenu, body.beginner #btnSavePartQuick { display: none; } }
+/* a picture imported from a file can still be edited in Beginner on a phone */
+@media (max-width: 899px) { body.beginner .previewDock .exportrow { display: flex; } body.beginner #btnExport, body.beginner #btnExportMenu, body.beginner #btnSavePartQuick { display: none; } }
+body.beginner[data-step="3"] #exportRow, body.beginner[data-step="4"] #exportRow { display: none; }
+@media (max-width: 899px) {
+  body.beginner .previewDock { position: static !important; max-height: none !important; background: var(--card) !important; }
+  body.beginner .previewDock .stats span:first-child { display: none; }
+}
+.appfoot { padding: 2px 12px 4px; font-size: 11px; line-height: 1.2; flex: none; }
+body.short-land .appfoot { display: none; }
+
+/* phone landscape, Beginner: one-line guide, shapes in a single row */
+@media (orientation: landscape) and (max-height: 540px) {
+  body.short-land .guidehead { padding: 4px 12px 8px; display: flex; align-items: baseline; gap: 10px; }
+  body.short-land .guidehead b { flex: none; }
+  body.short-land .guidehead #ghTitle { font-size: 18px; margin: 0; }
+  body.short-land .guidehead p { display: none; }
+  body.short-land .bgshapes { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  body.short-land .bgshapes button { min-height: 62px; font-size: 12px; padding: 4px 2px; gap: 2px; }
+  body.short-land .bgshapes button svg { height: 28px; width: auto; }
+  body.short-land .bgmore { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+  body.short-land .bgmore button, body.short-land.beginner .srcTab { min-height: 44px; font-size: 13px; padding: 4px; }
+  body.short-land.beginner .srcTabs { gap: 6px; margin-bottom: 6px; }
+  body.short-land.beginner #bgChange { min-height: 44px; }
+  body.short-land.beginner .nav .next, body.short-land.beginner #btnStart { min-height: 52px; font-size: 18px; }
+  body.short-land.beginner .nav .back { min-height: 52px; }
+}
+
+/* Beginner position step: arrows on the left, Start here on the right (laptop); readouts and lamps are not needed */
+body.beginner .jogwrap .small-pos, body.beginner .jogwrap .lamps.mini { display: none; }
+body.beginner #zeroState { font-size: 14px; }
+@media (min-width: 900px) {
+  body.beginner .zerobody { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-content: start; gap: 8px 14px; }
+  body.beginner .zerobody .jogmount { grid-column: 1; grid-row: 1 / span 3; }
+  body.beginner .zerobody > :not(.jogmount) { grid-column: 2; }
+}
+@media (max-height: 800px) {
+  body.beginner .checklist label { min-height: 44px; padding: 6px; font-size: 16px; }
+  body.beginner #materials button { min-height: 60px; font-size: 20px; }
+  body.beginner #thicknesses button { min-height: 52px; }
+}
+
+/* Beginner phone (portrait): small picture, one line of status, then the step */
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell.beginner:not(.short-land) .cutgrid,
+  body.app-shell.beginner:not(.short-land) .cutgrid.with-qb,
+  body.app-shell.beginner:not(.short-land) .cutgrid.editing { grid-template-rows: minmax(0, 30dvh) minmax(0, 1fr); }
+  body.beginner .previewDock .stats { display: none; }
+  body.beginner:not([data-step="2"]) #playRow { display: none; }
+  body.beginner .previewDock { padding: 2px 6px; min-height: 0; }
+  body.beginner .previewDock .fit:empty { display: none; }
+  body.beginner .stepPane > .step .nav { padding: 6px 0 0; margin-top: 8px; gap: 8px; }
+  body.beginner .nav .next, body.beginner #btnStart { min-height: 64px; font-size: 20px; }
+  body.beginner .nav .back { min-height: 64px; min-width: 76px; padding: 0 10px; font-size: 16px; }
+  body.beginner #materials { grid-template-columns: 1fr; }
+  body.beginner #materials button { min-height: 56px; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell.beginner:not(.short-land)[data-step="2"] .cutgrid,
+  body.app-shell.beginner:not(.short-land)[data-step="4"] .cutgrid { grid-template-rows: minmax(0, 24dvh) minmax(0, 1fr); }
+  body.app-shell.beginner:not(.short-land)[data-step="3"] .cutgrid { grid-template-rows: minmax(0, 44dvh) minmax(0, 1fr); }
+  body.beginner[data-step="1"] .previewDock .fit, body.beginner[data-step="2"] .previewDock .fit { display: none; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  body.short-land.beginner .tabs { display: none; }       /* more room for the steps: rotate to portrait for Move and Setup */
+}
+body.pro-mode .speedhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+body.pro-mode .speedrow button.xl { min-height: 40px; min-width: 52px; }
+body.pro-mode .speedrow { gap: 8px; }
+@media (min-width: 900px) { body.pro-mode .adjust .grid2 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* ---- ROUND 2: editing an imported drawing, save over / copy, undo bar */
+.undosave { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; align-items: center; background: var(--panel, #1f2a37); color: var(--fg, #eee); border: 1px solid var(--accent, #4aa3ff); border-radius: 10px; padding: 8px 12px; box-shadow: 0 6px 24px #0008; max-width: calc(100vw - 20px); font-size: 14px; }
+.undosave.hidden { display: none; }
+#saveDlg label { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+#saveDlg input { font-size: 16px; padding: 10px; }
+.fsbar #fsSave { margin-left: 6px; }
+#btnEditDrawing { border-color: var(--accent, #4aa3ff); }
+.partrow .row { flex-wrap: wrap; gap: 6px; }
+.custsize .wide2 { grid-column: 1 / -1; }
+
+/* ---- ROUND 2: step 3 "Get set up" (sheet layout + start point + checks) */
+.setupcard { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 6px 10px; background: var(--card); }
+.setupcard > summary { cursor: pointer; padding: 6px 0; font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; list-style: none; }
+.setupcard > summary::-webkit-details-marker { display: none; }
+.setupcard > summary::before { content: "▾"; color: var(--muted, #667); }
+.setupcard:not([open]) > summary::before { content: "▸"; }
+.layoutstate { font-size: 13px; font-weight: 600; }
+.layoutstate.good { color: #1e7a46; } .layoutstate.bad { color: #c42b1c; }
+.sheetrow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 4px 0; }
+.sheetrow label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.sheetrow input { width: 86px; padding: 8px; font-size: 16px; }
+.laybtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.laybtns button { flex: 1 1 140px; min-height: 52px; font-size: 16px; }
+.layoutsel { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px; }
+.layoutsel.hidden { display: none; }
+.laytools { display: flex; flex-wrap: wrap; gap: 6px; }
+.laytools button { flex: 1 1 88px; min-height: 48px; font-size: 15px; }
+.layangle, .layfine, .laygrid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+.layangle input { width: 90px; padding: 8px; font-size: 16px; }
+.layfine button { min-width: 44px; min-height: 44px; }
+.layproblems { margin: 6px 0 0; padding-left: 18px; color: #c42b1c; font-size: 14px; }
+.layproblems:empty { display: none; }
+.addlist .addrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.addlist .qty { display: flex; align-items: center; gap: 6px; }
+.addlist .qty input { width: 64px; padding: 8px; font-size: 16px; }
+.addsaved { max-height: 22dvh; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.savedrow { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+#addPartsDlg .shapelib-card { max-height: calc(100dvh - 24px); overflow: auto; }
+body.beginner #zeroCard .keyhint { display: none; }
+body.pro-mode .setupcard { margin: 4px 0; padding: 2px 8px; }
+body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
+@media (min-width: 1100px) { body.pro-mode .zerobody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 12px; } body.pro-mode .zerobody .jogmount { grid-row: 1 / span 3; } body.pro-mode .zerobody > :not(.jogmount) { grid-column: 2; } }
+/* the layout step wants a big picture on a phone */
+@media (max-width: 899px) and (orientation: portrait) { body.app-shell:not(.short-land)[data-step="3"] .cutgrid { grid-template-rows: minmax(0, 44dvh) minmax(0, 1fr); } }
+body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
+body[data-step="3"] #exportRow { display: none; }
+
+/* ---- ROUND 2: optional portrait "turn your phone sideways" cover. A clean full-screen overlay: no STOP, no banners, nothing else on top
+   of it. It is only paint (nothing is paused, hidden from the app or reset), so a running job carries on underneath. Off unless
+   body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
+.turnoverlay { display: none; }
+@media (max-width: 599px) and (orientation: portrait) {
+  body.turn-on .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+  body.turn-on .turnoverlay .turnicon { font-size: 72px; line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
+  body.turn-on .turnoverlay .turntext { font-size: 26px; font-weight: 700; }
+}
+@keyframes turnspin { 0%, 30% { transform: rotate(0); } 70%, 100% { transform: rotate(-90deg); } }
+/* phone portrait, step 3: the picture and the controls both need room, so the long help line goes and the nav scrolls with the content */
+@media (max-width: 899px) and (orientation: portrait) {
+  body.beginner[data-step="3"] #ghHelp { display: none; }
+  body.beginner[data-step="3"] .guidehead { padding-top: 4px; padding-bottom: 6px; }
+  body.app-shell.beginner:not(.short-land)[data-step="3"] .cutgrid { grid-template-rows: minmax(0, 36dvh) minmax(0, 1fr); }
+  body.beginner .stepPane > .step[data-step="3"] .nav { position: static; }
+  body[data-step="3"] .previewDock .fit { font-size: 12px; margin: 0; }
 }

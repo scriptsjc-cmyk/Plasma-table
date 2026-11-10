@@ -65,6 +65,12 @@ export class SimTransport {
     const f = (a) => a.map((v) => v.toFixed(3)).join(",");
     return `<${st}|MPos:${f(this.mpos)}|FS:${Math.round(this.feed * this.feedOv / 100)},0|WCO:${f(this.wco)}|Ov:${this.feedOv},100,100${pn}${acc}>`;
   }
+  // demo only: put the pretend torch somewhere instantly (used by "set up the edges for me"). Only when nothing is moving.
+  demoTeleport(p) {
+    if (this.moving || this.queue.length || this.executing || this.homing) return false;
+    this.mpos = [...p];
+    return true;
+  }
   // demo only: press / release the e-stop
   setEstop(on) {
     this.estop = on;

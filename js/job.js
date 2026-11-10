@@ -21,7 +21,7 @@ export function fmt(v) {
   return s;
 }
 
-function arcPoints(x0, y0, x1, y1, i, j, clockwise, stepDeg = 6) {
+export function arcPoints(x0, y0, x1, y1, i, j, clockwise, stepDeg = 6) {
   const cx = x0 + i, cy = y0 + j;
   const r = Math.hypot(x0 - cx, y0 - cy);
   const a0 = Math.atan2(y0 - cy, x0 - cx);
@@ -52,6 +52,8 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
   const park = machine.z_park_machine;
   if (park !== null && park !== undefined) out.push(`G53 G0 Z${fmt(park)}`);
   const warnings = [];
+  const headerLen = out.length;          // everything above is the set-up block (units, torch off, feed, park)
+  const cutIndex = [];                   // one entry per pierce: where it starts in `out` and where the torch is at that moment
 
   let x = 0, y = 0, posKnown = false, motion = 0, torchOn = false, pierces = 0;
   let cutLen = 0, rapidLen = 0, current = null, sawM3 = false;
@@ -137,6 +139,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
       torchOn = true;
       pierces += 1;
       current = null;
+      cutIndex.push({ n: pierces, line: out.length, at: [Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000] });
       out.push(`; --- pierce ${pierces} ---`);
       if (dryRun) out.push("G4 P0.1");
       else {
@@ -178,6 +181,8 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
 
   return {
     lines: out,
+    headerLen,
+    cutIndex,
     preview: { cuts: simplify(cuts), rapids: simplify(rapids) },
     stats: {
       pierces,
@@ -245,4 +250,22 @@ export function jobPlan(lines, machine) {
   const cum = []; let acc = 0;
   for (const t of secs) { acc += t; cum.push(acc); }
   return { cum, total: acc, torchOn, torchOff };
+}
+
+// "Continue from cut N": the set-up block, a torch-off rapid to the start of cut N, then everything from that cut's
+// pierce onwards. Cuts 1..N-1 are not repeated. The torch is never resumed part-way along a cut: it always pierces again
+// at the cut's own start (its lead-in point). The caller adds the lift and the safety checks.
+export function restartLines(prepared, n) {
+  const idx = prepared && prepared.cutIndex;
+  if (!Array.isArray(idx) || !idx.length) throw new JobError("This job can't be restarted part-way (no cut list).");
+  n = Math.trunc(Number(n));
+  if (!(n >= 1 && n <= idx.length)) throw new JobError(`There is no cut ${n}. Pick 1 to ${idx.length}.`);
+  const c = idx[n - 1];
+  if (!c.at.every(Number.isFinite)) throw new JobError("Cut " + n + " has no start point.");
+  return {
+    head: prepared.lines.slice(0, prepared.headerLen),
+    rapid: [`G90 G0 X${fmt(c.at[0])} Y${fmt(c.at[1])}`],
+    body: prepared.lines.slice(c.line),
+    at: c.at,
+  };
 }
