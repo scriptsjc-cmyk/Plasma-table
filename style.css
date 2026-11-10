@@ -10,7 +10,7 @@
   --line: #D0D5DD;
   --line-strong: #B8BFC9;
   --text: #1F2A37;
-  --muted: #4B5563;
+  --muted: #374151;
   --shadow: 0 1px 2px rgba(16, 24, 40, .06);
 
   /* one restrained accent — CAD blue — for selection and primary actions */
@@ -44,7 +44,8 @@
   --cad-lock: #C05600;
   --cad-dim: #0078D4;
   --cad-guide: #0078D4;
-  --cad-label: #4B5563;
+  --cad-label: #374151;
+  --accent-text: #004578;
   --cad-tag-text: #FFFFFF;
   --cad-danger: #C42B1C;
 
@@ -67,7 +68,8 @@
   --cad-canvas: #121920; --cad-grid: #18212b; --cad-grid-major: #243040;
   --cad-part-fill: #2c3a49; --cad-part-sel: #26385a; --cad-hole: #121920;
   --cad-part-line: #c9d1d9; --cad-sel: #7aa2f0; --cad-lock: #e3a73c; --cad-dim: #4f9cf0;
-  --cad-guide: #e3a73c; --cad-label: #9aa7b5; --cad-tag-text: #fff; --cad-danger: #e0342b;
+  --cad-guide: #e3a73c; --cad-label: #c5d0dc; --cad-tag-text: #fff; --cad-danger: #e0342b;
+  --accent-text: #9CC7FF;
 }
 
 * { box-sizing: border-box; }
@@ -1048,7 +1050,16 @@ body.demo-on #connPill { background: var(--warn-bg); border-color: var(--warn); 
 .playtime { flex: none; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .qbwhy { margin: 4px 0 0; padding: 6px 10px; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); color: var(--warn-text); font-size: 14px; }
 .qbwhy.hidden { display: none; }
-.quickbar button[aria-disabled="true"] { opacity: .5; cursor: help; }
+.quickbar button[aria-disabled="true"],
+[aria-disabled="true"][data-why] { opacity: .5; cursor: help; }
+.whytip { position: fixed; z-index: 80; max-width: min(280px, calc(100vw - 16px)); padding: 8px 10px;
+  background: #1F2A37; color: #fff; border-radius: 6px; font-size: 13px; font-weight: 650; line-height: 1.35;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .28); pointer-events: none; }
+.whytip.hidden { display: none; }
+button.secondary, .fit-demo-btn { background: var(--well); border: 1px solid var(--line-strong); color: var(--text); font-weight: 650; }
+button.secondary:hover:not(:disabled), .fit-demo-btn:hover { background: var(--accent-weak); border-color: var(--accent); }
+#fit .fit-demo-btn { display: inline-flex; align-items: center; width: auto; max-width: 100%; min-height: 40px;
+  margin-top: 4px; padding: 8px 12px; font-size: 14px; text-align: left; }
 
 /* ---- Pro: cut list, CAM panel, toolbar, delay row ---- */
 .cutlist { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; max-height: 240px; overflow: auto; }
@@ -1412,3 +1423,138 @@ body.beginner .batchbtn { min-height: var(--tap, 44px); }
 .addsaved { max-height: max(22dvh, 130px); }
 /* Add parts on a short landscape phone: the whole card scrolls, the saved list does not scroll inside it (its folder ticks stay reachable) */
 @media (max-height: 520px) { .addsaved { max-height: none; overflow: visible; } #addPartsDlg .shapelib-card { max-height: calc(100dvh - 70px); margin-top: 58px; } }
+/* ---- ROUND 3 item 7: at ~420px the header is one row and the sheet map gets the height ---- */
+.ico { width: 1.25em; height: 1.25em; display: inline-block; vertical-align: -0.2em; flex: none; }
+#btnTopMenu { display: none; }
+#btnTopMenu .ico { width: 22px; height: 22px; display: block; }
+.topmenu { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; flex-wrap: nowrap; }
+@media (max-width: 560px) {
+  .topbar { flex-wrap: nowrap; align-items: center; }
+  .topbar-main { flex-wrap: nowrap !important; align-items: center; overflow: visible; gap: 8px; }
+  #btnTopMenu { display: inline-flex; align-items: center; justify-content: center; }
+  .topmenu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 8px;
+    right: 96px;
+    z-index: 120;
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 8px;
+    margin: 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .16);
+    max-height: min(70dvh, 420px);
+    overflow: auto;
+  }
+  .topbar.menu-open .topmenu { display: flex; }
+  .topmenu .pill, .topmenu .badge { max-width: none; width: 100%; text-align: center; }
+  .topmenu .modesw { display: flex; width: 100%; }
+  .topmenu .modesw-btn { flex: 1; }
+  .topmenu .modesw-btn[data-mode="beginner"] { font-size: 13px; }
+  .topmenu .modesw-btn[data-mode="beginner"]::after { content: none; }
+  #topMenu #connPill, body.demo-on #topMenu #connPill { max-width: none; font-size: 13px; white-space: normal; }
+  #torchPill { flex: none; }
+  body.app-shell:not(.short-land)[data-step="3"] .cutgrid,
+  body.app-shell.beginner:not(.short-land)[data-step="3"] .cutgrid {
+    grid-template-rows: minmax(210px, 1.2fr) minmax(140px, 1fr) !important;
+  }
+  body.beginner[data-step="3"] .guidehead { padding: 4px 10px 6px; }
+  body.beginner[data-step="3"] .guidehead #ghTitle { font-size: 18px; }
+  #demoAcctBar { padding: 4px 8px; font-size: 12px; }
+  .appfoot { display: none; }
+}
+
+/* ---- ROUND 3 item 8: one icon weight, AA text, status account, visible focus ---- */
+button .ico, .tab .ico, .pill .ico, .locknote .ico, .ampsnote .ico { margin-right: 0.35em; }
+.iconbtn > .ico, #btnTopMenu .ico { margin-right: 0; }
+.jog .j > .ico { display: block; margin: 0 auto 2px; width: 1.35em; height: 1.35em; }
+.quickbar button i { display: grid; place-items: center; }
+.quickbar button i .ico { width: 18px; height: 18px; margin: 0; }
+.tab .ico { width: 1.05em; height: 1.05em; }
+.topbar .pill, .topbar .modesw-btn { font-weight: 650; }
+.topbar .pill { font-size: 13px; }
+@media (min-width: 900px) {
+  .topbar .pill, .topbar .modesw-btn { min-height: 40px; padding: 6px 12px; }
+  .topbar .iconbtn { min-width: 40px; padding: 6px 10px; }
+  .topmenu { gap: 8px; }
+}
+#acctPill.pill, #acctPill.pill.in {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-weight: 650;
+}
+#acctPill.pill::before {
+  content: "";
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: 0.05em;
+}
+#acctPill.pill.in::before { background: var(--go); }
+#acctPill.pill:hover, #acctPill.pill:focus-visible { background: var(--accent-weak); border-color: transparent; }
+.badge.Run, .badge.Jog, .badge.Home,
+.pill.chip:not(.practice),
+.settab.sel, .admtab.sel,
+.guidehead b { color: var(--accent-text); }
+.setupcard > summary::before {
+  content: "";
+  display: inline-block;
+  width: 0; height: 0;
+  margin-right: 6px;
+  vertical-align: 0.15em;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--text);
+  color: transparent;
+}
+.setupcard:not([open]) > summary::before {
+  content: "";
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--text);
+  border-right: 0;
+}
+button.warn, .locknote, .badge.Hold, .log .warn { color: var(--warn-text); }
+.lamp.on { color: var(--warn-text) !important; }
+.lamp.on[data-in="estop"] { color: #7A1A12 !important; }
+.lamp.on[data-in="torch"] { color: #7A3B00 !important; }
+::placeholder { color: var(--muted); opacity: 1; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
+
+/* ---- ROUND 3 item 9: signup button, fixed settings, dense cut ticks, pierce jump ---- */
+#formSignUp .signup-submit { position: static; margin-top: 14px; }
+#formSignUp .modepick { margin-bottom: 4px; }
+#formSignUp .modecard { position: relative; }
+#settingsDlg .shapelib-card {
+  height: min(620px, calc(100dvh - var(--topbar-h, 56px) - 20px));
+  max-height: calc(100dvh - var(--topbar-h, 56px) - 20px);
+  overflow: hidden;
+}
+#settingsDlg .setpane:not(.hidden) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+#settingsDlg .settabs { flex: none; }
+.cutlist input[type="checkbox"] {
+  width: 18px; height: 18px; min-width: 18px; min-height: 18px; margin: 0;
+}
+.cutlist label.cuttick { flex-direction: row; align-items: center; gap: 6px; flex-wrap: nowrap; min-height: 0; }
+.cutlist label.cuttick b { min-width: 1.25em; text-align: right; flex: none; }
+.cutlist .cutname { min-width: 0; }
+.cutlist .mv button { min-height: 28px; min-width: 28px; padding: 0 4px; }
+.cutlist .mv .ico { margin: 0; width: 14px; height: 14px; }

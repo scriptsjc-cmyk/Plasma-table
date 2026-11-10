@@ -20,7 +20,7 @@ let RUN = VERSION;
 export function initR2(host) {
   H = host;
   fetchLatest().then((j) => { if (j) { RUN = { id: j.id, commit: j.commit || VERSION.commit, built: j.built || VERSION.built }; paintVersionLines(); paintAbout(); } });
-  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy();
+  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy(); bindDemoFit(); bindTopMenu(); bindPierceJump(); installLabelGuard(); installIcons();
   paintVersionLines();
 }
 
@@ -103,7 +103,12 @@ export function updatePlayRow() {
 }
 function paintPlay() {
   const tl = P.tl; if (!tl) return;
-  $("playBtn").textContent = P.playing ? "⏸ Pause" : (P.t >= tl.total - 0.01 ? "↺ Replay" : "▶ Play");
+  const playLabel = P.playing ? "Pause" : (P.t >= tl.total - 0.01 ? "Replay" : "Play");
+  const playIcon = P.playing ? "pause" : (playLabel === "Replay" ? "undo" : "play");
+  if ($("playBtn").dataset.face !== playLabel) {
+    $("playBtn").dataset.face = playLabel;
+    $("playBtn").innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-${playIcon}"></use></svg> ${playLabel}`;
+  }
   $("playSlider").value = tl.total ? Math.round((P.t / tl.total) * 1000) : 0;
   const st = playActive() ? stateAt(tl, P.t) : null;
   const n = tl.pierces.length;
@@ -289,10 +294,12 @@ export function paintCutList() {
     const c = p.allCuts.find((x) => x.key === k); if (!c) return "";
     const off = skipped.has(k); if (!off) n++;
     const name = c.open ? "Line" : c.hole ? "Hole" : "Part";
+    const up = `<svg class="ico" aria-hidden="true"><use href="#i-arrow-up"></use></svg>`;
+    const dn = `<svg class="ico" aria-hidden="true"><use href="#i-arrow-down"></use></svg>`;
     return `<li draggable="true" data-key="${k}" class="${off ? "off" : ""}">
       <span class="grip" aria-hidden="true">≡</span>
-      <label><input type="checkbox" data-cutkey="${k}" ${off ? "" : "checked"} aria-label="Cut ${name} ${k + 1}"> <b>${off ? "–" : n}</b> ${name} ${c.size[0]} × ${c.size[1]} mm</label>
-      <span class="mv"><button type="button" data-mv="-1" data-key="${k}" aria-label="Move earlier" ${i === 0 ? "disabled" : ""}>▲</button><button type="button" data-mv="1" data-key="${k}" aria-label="Move later" ${i === order.length - 1 ? "disabled" : ""}>▼</button></span></li>`;
+      <label class="cuttick"><input type="checkbox" data-cutkey="${k}" ${off ? "" : "checked"} aria-label="Cut ${name} ${k + 1}"><b>${off ? "–" : n}</b><span class="cutname">${name} ${c.size[0]} × ${c.size[1]} mm</span></label>
+      <span class="mv"><button type="button" data-mv="-1" data-key="${k}" aria-label="Move earlier" ${i === 0 ? "disabled" : ""}>${up}</button><button type="button" data-mv="1" data-key="${k}" aria-label="Move later" ${i === order.length - 1 ? "disabled" : ""}>${dn}</button></span></li>`;
   }).join("");
   // status updates call this many times a second; touching the DOM when nothing changed would swallow a click half-way through
   if ($("cutList")._html !== html) { $("cutList")._html = html; $("cutList").innerHTML = html; }
@@ -567,17 +574,277 @@ function bindKeys() {
   });
 }
 
-// ================================================================ greyed-out tools say why (inline, and on tap)
+// ================================================================ greyed-out controls say why (tap anywhere)
+// Reasons already live on the control as data-why + aria-disabled="true" (whyOff() stays private in app.js).
 let whyTimer = 0;
-export function showWhy(text) {
-  const el = $("qbWhy"); if (!el) { H.toast(text); return; }
-  el.textContent = text; el.classList.remove("hidden");
-  clearTimeout(whyTimer); whyTimer = setTimeout(() => el.classList.add("hidden"), 4500);
+function whyMessage(el) {
+  const why = (el.getAttribute("data-why") || "").trim();
+  if (!why) return "";
+  const label = (el.dataset.label || "").trim();
+  if (!label) return why.endsWith(".") ? why : why + ".";
+  const short = label.replace(/\s*\([^)]*\)\s*$/, "");
+  return short + " is off: " + (why.endsWith(".") ? why : why + ".");
+}
+function placeWhyTip(el, anchor) {
+  const stop = $("btnStop");
+  const sr = stop ? stop.getBoundingClientRect() : null;
+  el.style.left = "0px"; el.style.top = "0px";
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const r = anchor.getBoundingClientRect();
+  let left = Math.max(8, Math.min(r.left, innerWidth - w - 8));
+  let top = r.bottom + 6;
+  if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  const hits = (t, l) => sr && !(l + w < sr.left || l > sr.right || t + h < sr.top || t > sr.bottom);
+  if (hits(top, left)) {
+    const below = sr.bottom + 6;
+    const above = sr.top - h - 6;
+    top = below + h <= innerHeight - 8 ? below : Math.max(8, above);
+    if (hits(top, left)) left = Math.max(8, sr.left - w - 8);
+  }
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+}
+export function showWhy(text, anchor) {
+  const tip = $("whyTip");
+  const inline = $("qbWhy");
+  if (inline) {
+    const inBar = anchor && anchor.closest("#quickBar");
+    if (inBar) { inline.textContent = text; inline.classList.remove("hidden"); }
+    else inline.classList.add("hidden");
+  }
+  if (!tip) { if (H) H.toast(text); return; }
+  tip.textContent = text;
+  tip.classList.remove("hidden");
+  if (anchor && anchor.getBoundingClientRect) placeWhyTip(tip, anchor);
+  else { tip.style.left = "50%"; tip.style.top = ""; tip.style.bottom = "24px"; tip.style.transform = "translateX(-50%)"; }
+  if (anchor) tip.style.transform = "";
+  clearTimeout(whyTimer);
+  whyTimer = setTimeout(() => { tip.classList.add("hidden"); if (inline) inline.classList.add("hidden"); }, 4500);
 }
 function bindWhy() {
-  $("quickBar").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-qb][aria-disabled='true']"); if (!b) return;
-    e.preventDefault(); e.stopPropagation();
-    showWhy((b.dataset.label || "This tool") + " is off: " + (b.dataset.why || "select a shape first") + ".");
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[aria-disabled='true'][data-why]");
+    if (!b) return;
+    const text = whyMessage(b);
+    if (!text) return;
+    e.preventDefault();
+    e.stopPropagation();
+    showWhy(text, b);
   }, true);
+}
+
+// The demo fit line is plain text rewritten by refresh(). Turn that one sentence into a real button.
+let fitDressing = false;
+function dressDemoFit() {
+  const el = $("fit"); if (!el || fitDressing) return;
+  if (el.querySelector(".fit-demo-btn")) return;
+  const raw = (el.textContent || "").replace(/\s+/g, " ").trim();
+  if (!/edges are set up for you/i.test(raw)) return;
+  fitDressing = true;
+  el.textContent = "";
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "secondary fit-demo-btn";
+  b.id = "btnFitDemoEdges";
+  b.textContent = "Set up the edges for me";
+  b.title = "Demo: nothing real moves";
+  b.setAttribute("aria-label", "Set up the edges for me. Demo only, nothing real moves.");
+  el.appendChild(b);
+  fitDressing = false;
+}
+function bindPierceJump() {
+  const toTorch = $("btnPierceJump");
+  if (toTorch) toTorch.onclick = () => {
+    const tab = document.querySelector('#settingsTabs [data-settab="torch"]');
+    if (tab) tab.click();
+    const el = $("setPierceH");
+    if (el) { el.scrollIntoView({ block: "center" }); el.focus(); }
+  };
+  const toSpeed = $("btnPierceSpeed");
+  if (toSpeed) toSpeed.onclick = () => {
+    const dlg = $("settingsDlg");
+    if (dlg) dlg.classList.add("hidden");
+    const cut = document.querySelector('.tab[data-tab="cut"]');
+    if (cut) cut.click();
+    if (H && H.goStep) H.goStep(2);
+    const el = $("spSlider");
+    if (el) setTimeout(() => { el.scrollIntoView({ block: "center" }); el.focus(); }, 60);
+  };
+}
+function bindDemoFit() {
+  const el = $("fit"); if (!el) return;
+  new MutationObserver(() => dressDemoFit()).observe(el, { childList: true, attributes: true, attributeFilter: ["class"] });
+  dressDemoFit();
+}
+
+// Narrow header: pills collapse into one menu. STOP and a lit torch stay on the bar.
+function closeTopMenu() {
+  const bar = document.querySelector(".topbar");
+  const btn = $("btnTopMenu");
+  if (bar) bar.classList.remove("menu-open");
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+function bindTopMenu() {
+  const btn = $("btnTopMenu");
+  const bar = document.querySelector(".topbar");
+  const menu = $("topMenu");
+  if (!btn || !bar || !menu) return;
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const on = !bar.classList.contains("menu-open");
+    bar.classList.toggle("menu-open", on);
+    btn.setAttribute("aria-expanded", on ? "true" : "false");
+  });
+  document.addEventListener("click", (e) => {
+    if (!bar.classList.contains("menu-open")) return;
+    if (e.target.closest("#btnTopMenu")) return;
+    if (e.target.closest("#topMenu")) {
+      if (e.target.closest("button, a")) closeTopMenu();
+      return;
+    }
+    closeTopMenu();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTopMenu(); });
+}
+
+// Sheet-map captions are drawn in sketch.js / setup.js. On a narrow canvas the footer
+// pair shares one baseline and the start-point caption sits on the sheet title.
+// Nudge only those known strings; leave every other canvas label where it was drawn.
+let mapSheetY = null, mapMachineY = null;
+function nudgePreviewLabel(text, x, y, w, h) {
+  if (typeof text !== "string" || !(w > 0)) return { x, y };
+  if (/^grid /.test(text)) { mapSheetY = null; mapMachineY = null; return { x, y }; }
+  if (/shape/.test(text) && /overall/.test(text) && w < 560) return { x: 8, y: Math.max(14, h - 22) };
+  if (text.startsWith("Sheet ")) { mapSheetY = y; return { x, y }; }
+  if (text === "Machine work area") {
+    let yy = y;
+    if (mapSheetY != null && Math.abs(yy - mapSheetY) < 22) yy = mapSheetY + 22;
+    if ((w < 560 || h < 220) && yy > h - 32) yy = Math.max(14, h - 32);
+    mapMachineY = yy;
+    return { x, y: yy };
+  }
+  if (text.startsWith("Start point")) {
+    let yy = y;
+    const block = Math.max(mapSheetY || 0, mapMachineY || 0);
+    if (block && yy < block + 22) yy = block + 22;
+    if ((w < 560 || h < 220) && yy > h - 36) yy = Math.max(14, h - 36);
+    const moved = yy !== y;
+    const xx = moved ? Math.max(4, Math.min(x, Math.max(4, w - 130))) : x;
+    return { x: xx, y: yy };
+  }
+  return { x, y };
+}
+function installLabelGuard() {
+  const orig = CanvasRenderingContext2D.prototype.fillText;
+  if (orig.__ptLabel) return;
+  function wrapped(text, x, y, maxWidth) {
+    const cv = this.canvas;
+    if (!cv || cv.id !== "preview") return maxWidth == null ? orig.call(this, text, x, y) : orig.call(this, text, x, y, maxWidth);
+    const w = cv.clientWidth || 0, h = cv.clientHeight || 0;
+    const p = nudgePreviewLabel(String(text), x, y, w, h);
+    return maxWidth == null ? orig.call(this, text, p.x, p.y) : orig.call(this, text, p.x, p.y, maxWidth);
+  }
+  wrapped.__ptLabel = true;
+  CanvasRenderingContext2D.prototype.fillText = wrapped;
+}
+
+// One stroke icon set. Emoji in buttons, tabs and status pills are swapped for these symbols.
+const ICON_GLYPHS = [
+  ["🗑", "trash"], ["🔍", "search"], ["📍", "pin"], ["📂", "folder"], ["📏", "ruler"],
+  ["⊂⊃", "slot"], ["⟳", "rotate-cw"], ["⟲", "rotate-ccw"], ["⤢", "expand"], ["⤡", "resize"],
+  ["⛶", "fullscreen"], ["⇤", "align-left"], ["⤓", "arrow-down"], ["⤒", "arrow-up"], ["⌂", "home"],
+  ["⚠", "warning"], ["⚙", "gear"], ["✂", "cut"], ["✥", "move"], ["🔒", "lock"], ["▶", "play"],
+  ["⏸", "pause"], ["✏", "pencil"], ["✎", "pencil"], ["↺", "undo"], ["↻", "rotate-cw"], ["➖", "minus"],
+  ["⊞", "arrange"], ["⇋", "flip"], ["⧉", "copy"], ["✕", "close"], ["●", "dot"], ["▣", "square"],
+  ["▭", "rect"], ["◯", "circle"], ["△", "triangle"], ["◔", "sector"], ["⊖", "minus-circle"],
+  ["⊕", "plus"], ["⁘", "dots"], ["⟋", "slash"], ["⧈", "offset"], ["↔", "arrows-h"], ["⌒", "arc"],
+  ["⌜", "corner"], ["◈", "diamond"], ["⌗", "grid"], ["✲", "asterisk"], ["⋯", "more"],
+  ["↶", "undo"], ["↷", "redo"], ["▲", "arrow-up"], ["▼", "arrow-down"], ["◀", "arrow-left"],
+  ["←", "arrow-left"], ["→", "arrow-right"], ["↑", "arrow-up"], ["↓", "arrow-down"],
+].sort((a, b) => b[0].length - a[0].length);
+
+function iconForGlyph(ch, el) {
+  if (ch === "▶" && el.closest(".jog")) return "arrow-right";
+  if (ch === "●" && !el.closest("#connPill")) return null;
+  if (ch === "▲" && el.closest(".selhead")) return null;
+  const hit = ICON_GLYPHS.find(([g]) => g === ch);
+  return hit ? hit[1] : null;
+}
+function iconSvg(name) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "ico");
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", "#i-" + name);
+  svg.appendChild(use);
+  return svg;
+}
+function shouldDressIcon(el) {
+  if (!el || el.closest("script, style, textarea, input, .ico, #log, #advConsoleLog, #whyTip, .selhead, [data-shape], [data-bshape], .libgrid")) return false;
+  return !!el.closest("button, .tab, .pill, .locknote, .turnicon, .jog, .ampsnote, .quickbar");
+}
+function replaceEmojiText(node) {
+  const raw = node.nodeValue;
+  const parent = node.parentElement;
+  if (!raw || !shouldDressIcon(parent)) return;
+  const segs = [];
+  let i = 0, buf = "", changed = false;
+  while (i < raw.length) {
+    let hit = null;
+    for (const pair of ICON_GLYPHS) {
+      if (raw.startsWith(pair[0], i)) { hit = pair; break; }
+    }
+    if (!hit) {
+      const cp = raw.codePointAt(i);
+      const ch = String.fromCodePoint(cp);
+      buf += ch;
+      i += ch.length;
+      continue;
+    }
+    const name = iconForGlyph(hit[0], parent);
+    if (!name) { buf += hit[0]; i += hit[0].length; continue; }
+    if (buf) segs.push({ t: buf });
+    buf = "";
+    segs.push({ i: name });
+    changed = true;
+    i += hit[0].length;
+  }
+  if (buf) segs.push({ t: buf });
+  if (!changed) return;
+  const frag = document.createDocumentFragment();
+  for (const s of segs) frag.appendChild(s.t != null ? document.createTextNode(s.t) : iconSvg(s.i));
+  node.parentNode.replaceChild(frag, node);
+}
+function dressIcons(root) {
+  if (!root || root.nodeType !== 1) return;
+  const nodes = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = walker.nextNode())) nodes.push(n);
+  for (const node of nodes) replaceEmojiText(node);
+}
+function installIcons() {
+  let queued = [];
+  let scheduled = false;
+  const flush = () => {
+    scheduled = false;
+    const list = queued;
+    queued = [];
+    for (const el of list) dressIcons(el);
+  };
+  const queue = (el) => {
+    if (!el || el.nodeType !== 1) return;
+    queued.push(el);
+    if (!scheduled) { scheduled = true; requestAnimationFrame(flush); }
+  };
+  dressIcons(document.body);
+  new MutationObserver((recs) => {
+    for (const r of recs) {
+      if (r.type === "characterData" && r.target.parentElement) queue(r.target.parentElement);
+      for (const node of r.addedNodes) {
+        if (node.nodeType === 1) queue(node);
+        else if (node.nodeType === 3 && node.parentElement) queue(node.parentElement);
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true });
 }
