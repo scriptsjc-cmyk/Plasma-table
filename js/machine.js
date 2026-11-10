@@ -149,6 +149,13 @@ export class Machine {
       case "home": g.send("$H"); break;
       case "unlock": g.send("$X"); break;
       case "zero_xy": g.send("G10 L20 P1 X0 Y0"); break;
+      case "set_origin": {      // put the start point anywhere (machine coordinates) without moving
+        if (this.state() !== "Idle") throw new JobError("Wait for the machine to stop first.");
+        const x = Number(body.x), y = Number(body.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) throw new JobError("Bad start point.");
+        g.send(`G10 L2 P1 X${x.toFixed(3)} Y${y.toFixed(3)}`);
+        break;
+      }
       case "goto_zero": {
         const w = this.wco();
         const problem = this.safety.checkPointsMachine([[w[0], w[1]]], "Going to the start point");

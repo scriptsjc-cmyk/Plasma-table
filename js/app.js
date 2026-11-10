@@ -348,6 +348,9 @@ function loadJob() {
   }
   refresh();
 }
+// where the start point is, in table view coordinates (the one being dragged wins)
+function originView() { if (S.dragOrigin) return S.dragOrigin; const w = wcoNow(); return toView(w[0], w[1]); }
+function fromView(vx, vy) { return S.safety.referenced ? [vx + S.safety.ref[0], vy + S.safety.ref[1]] : [vx, vy]; }
 function wcoNow() {
   const st = S.status;
   return st.MPos && st.WPos ? st.MPos.map((v, i) => v - st.WPos[i]) : [0, 0, 0];
@@ -363,7 +366,7 @@ function fit() {
   if (!S.prepared) return { cls: "", text: "" };
   if (!S.safety.limits) return { cls: "unknown", text: "Edges not set up – can't check it fits (Setup tab)." };
   if (!S.safety.referenced) return { cls: "unknown", text: "Home the machine to check it fits." };
-  const b = S.prepared.stats.bounds, w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
+  const b = S.prepared.stats.bounds, w = S.dragOrigin ? fromView(...S.dragOrigin) : wcoNow(), ref = S.safety.ref, L = S.safety.limits;
   const x0 = b[0] + w[0] - ref[0], x1 = b[2] + w[0] - ref[0], y0 = b[1] + w[1] - ref[1], y1 = b[3] + w[1] - ref[1];
   const over = [];
   if (x0 < L.x[0] - 0.05) over.push(`${Math.ceil(L.x[0] - x0)} mm too far left`);
@@ -399,7 +402,7 @@ function drawCanvas(cv, main) {
     // room around the table for the machine: X beam along the front, Y arm off its carriage
     const mg = S.showMachine ? [40, 110, 40] : [0, 0, 0];
     A = { x: [T.x[0] - mg[0], T.x[1] + mg[0]], y: [T.y[0] - mg[1], T.y[1] + mg[2]], label: T.label, table: T };
-    const w0 = wcoNow(); [ox, oy] = toView(w0[0], w0[1]);
+    [ox, oy] = originView();
   }
   const ax = A.x[1] - A.x[0], ay = A.y[1] - A.y[0];
   const h = Math.max(180, Math.min(520, Math.round(w * (ay / ax))));
@@ -410,10 +413,23 @@ function drawCanvas(cv, main) {
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
   const X = (x) => offX + (x - A.x[0]) * sc, Y = (y) => h - offY - (y - A.y[0]) * sc;
+  if (main) cv.classList.toggle("placing", !zoom && !!canPlace());
+  cv._map = zoom ? null : { toMm: (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc], toPx: (x, y) => [X(x), Y(y)], sc, T: A.table };
   if (!zoom) drawMachineBed(ctx, A.table, X, Y, sc);
   if (S.prepared) {
     const pv = S.prepared.preview;
     const path = (p) => { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(X(x + ox), Y(y + oy)) : ctx.moveTo(X(x + ox), Y(y + oy)))); ctx.stroke(); };
+    if (!zoom && main && canPlace()) {          // draggable: show the part's footprint
+      const b = S.prepared.stats.bounds;
+      ctx.fillStyle = S.dragging ? "rgba(227,167,60,.22)" : "rgba(227,167,60,.10)";
+      ctx.strokeStyle = "rgba(227,167,60,.75)"; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
+      ctx.fillRect(X(b[0] + ox), Y(b[3] + oy), (b[2] - b[0]) * sc, (b[3] - b[1]) * sc);
+      ctx.strokeRect(X(b[0] + ox), Y(b[3] + oy), (b[2] - b[0]) * sc, (b[3] - b[1]) * sc); ctx.setLineDash([]);
+      if (S.dragging) {
+        ctx.font = "600 13px Barlow, system-ui"; ctx.fillStyle = "#e8c46a";
+        ctx.fillText(`start point X ${Math.round(ox)}  Y ${Math.round(oy)} mm`, X(b[0] + ox), Y(b[3] + oy) - 8);
+      }
+    }
     if (S.prepared.outline) { ctx.strokeStyle = "#c9d1d9"; ctx.lineWidth = 1; S.prepared.outline.forEach((p) => path([...p, p[0]])); }
     ctx.setLineDash([4, 4]); ctx.strokeStyle = "#4a5868"; ctx.lineWidth = 1; pv.rapids.forEach(path);
     ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? "#ef4444" : "#f08a3c"; ctx.lineWidth = zoom ? 2.5 : 2;
@@ -426,6 +442,58 @@ function drawCanvas(cv, main) {
   ctx.strokeStyle = "#4f7fe0"; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(X(ox) - 9, Y(oy)); ctx.lineTo(X(ox) + 9, Y(oy)); ctx.moveTo(X(ox), Y(oy) - 9); ctx.lineTo(X(ox), Y(oy) + 9); ctx.stroke();
   if (!zoom) drawGantry(ctx, A.table, X, Y, sc);
+}
+
+// ---- drag the part around the table (step 3/4): drop it = new start point, torch doesn't move
+function canPlace() {
+  return S.connected && S.prepared && (S.cur === 3 || S.cur === 4) && S.status.state === "Idle" && !(S.job && S.job.running);
+}
+function bindPlacing() {
+  const cv = $("preview");
+  let drag = null;
+  const at = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  const onPart = (px, py, touch) => {
+    const m = cv._map; if (!m || !canPlace()) return false;
+    const [x, y] = m.toMm(px, py), [ox, oy] = originView(), b = S.prepared.stats.bounds, pad = (touch ? 22 : 10) / m.sc;
+    return x > b[0] + ox - pad && x < b[2] + ox + pad && y > b[1] + oy - pad && y < b[3] + oy + pad;
+  };
+  cv.addEventListener("pointerdown", (e) => {
+    if (sketch && sketch.active) return;
+    const [px, py] = at(e);
+    if (!onPart(px, py, e.pointerType === "touch")) return;
+    e.preventDefault(); cv.setPointerCapture(e.pointerId);
+    drag = { start: cv._map.toMm(px, py), o0: originView(), moved: false };
+    S.dragging = true; drawPreview();
+  });
+  cv.addEventListener("pointermove", (e) => {
+    if (sketch && sketch.active) return;
+    const [px, py] = at(e);
+    if (!drag) { cv.style.cursor = onPart(px, py, false) ? "grab" : ""; return; }
+    cv.style.cursor = "grabbing";
+    const m = cv._map, [x, y] = m.toMm(px, py), b = S.prepared.stats.bounds, T = m.T;
+    let ox = Math.round(drag.o0[0] + x - drag.start[0]), oy = Math.round(drag.o0[1] + y - drag.start[1]);
+    // keep it on the table
+    if (b[2] - b[0] <= T.x[1] - T.x[0]) ox = Math.min(Math.max(ox, T.x[0] - b[0]), T.x[1] - b[2]);
+    if (b[3] - b[1] <= T.y[1] - T.y[0]) oy = Math.min(Math.max(oy, T.y[0] - b[1]), T.y[1] - b[3]);
+    if (ox !== drag.o0[0] || oy !== drag.o0[1]) drag.moved = true;
+    S.dragOrigin = [ox, oy];
+    refresh();
+  });
+  const end = () => {
+    if (!drag) return;
+    const d = drag; drag = null; S.dragging = false; cv.style.cursor = "";
+    if (!d.moved || !S.dragOrigin) { S.dragOrigin = null; refresh(); return; }
+    const [mx, my] = fromView(...S.dragOrigin);
+    if (cmd("set_origin", { x: mx, y: my })) {
+      toast("Start point moved ✓");
+      const want = S.dragOrigin;
+      clearTimeout(S.dragTimer);
+      S.dragTimer = setTimeout(() => { if (S.dragOrigin === want) { S.dragOrigin = null; refresh(); } }, 3000);
+    } else S.dragOrigin = null;
+    refresh();
+  };
+  cv.addEventListener("pointerup", end);
+  cv.addEventListener("pointercancel", end);
 }
 
 // bird's-eye view of the table: slats across, the X beam along the front
@@ -570,6 +638,10 @@ function refresh() {
 
 function onStatus(st) {
   S.status = st;
+  if (S.dragOrigin && !S.dragging) {
+    const [vx, vy] = (() => { const w = wcoNow(); return toView(w[0], w[1]); })();
+    if (Math.abs(vx - S.dragOrigin[0]) < 0.05 && Math.abs(vy - S.dragOrigin[1]) < 0.05) S.dragOrigin = null;
+  }
   const badge = $("stateBadge");
   const words = { Idle: "Ready", Run: "Moving", Jog: "Moving", Home: "Homing", Hold: "Paused", Alarm: "Alarm", Disconnected: "" };
   badge.textContent = words[st.state] ?? st.state;
@@ -757,6 +829,7 @@ function bind() {
   // step 3
   $("btnZero").onclick = () => { if (cmd("zero_xy")) toast("Start point set ✓"); };
   $("btnTrace").onclick = () => cmd("trace_outline");
+  bindPlacing();
 
   // step 4
   $("checklist").addEventListener("change", refresh);

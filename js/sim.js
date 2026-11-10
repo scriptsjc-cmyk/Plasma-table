@@ -126,7 +126,8 @@ export class SimTransport {
     if (g.includes(90)) this.relative = false;
     if (g.includes(91)) this.relative = true;
     if (g.includes(10)) {
-      "XYZ".split("").forEach((a, i) => { if (a in ax) this.wco[i] = this.mpos[i] - ax[a]; });
+      const L = (words.find(([k]) => k === "L") || [, 20])[1];
+      "XYZ".split("").forEach((a, i) => { if (a in ax) this.wco[i] = L === 2 ? ax[a] : this.mpos[i] - ax[a]; });
       return this._send("ok");
     }
     if (g.includes(4)) {

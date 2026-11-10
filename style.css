@@ -339,3 +339,6 @@ canvas.map { width: 100%; display: block; border-radius: 12px; border: 1px solid
 }
 .tab { white-space: nowrap; }
 @media (max-width: 400px) { .tab { font-size: 16px; padding-left: 6px; padding-right: 6px; } .tabs { gap: 4px; padding-left: 10px; padding-right: 10px; } }
+.placeways { margin: 0 0 6px; padding-left: 20px; display: grid; gap: 4px; }
+canvas#preview { touch-action: pan-y; }
+canvas#preview.placing { touch-action: none; }
