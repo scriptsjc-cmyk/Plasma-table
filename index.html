@@ -3,18 +3,36 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#18202a">
+<meta name="theme-color" content="#E8EAED">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: wss: https://*.supabase.co; script-src 'self' 'unsafe-inline'; worker-src 'self'; base-uri 'self'; form-action 'self'">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' aria-hidden='true'><path d='M11 3h10l-2 12h-6z' fill='%23e3a73c'/><path d='M13.5 15h5l-1 3h-3z' fill='%23c8803a'/><path d='M16 18.5l-2 4 3 1-2.5 5.5' fill='none' stroke='%23a98bff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/><path d='M4 29h24' stroke='%234f7fe0' stroke-width='2.5' stroke-linecap='round'/></svg>">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
 <title>Plasma Table</title>
 <link rel="stylesheet" href="style.css">
+<script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(function () {});
+}
+</script>
 </head>
 <body>
 
 <!-- ============================================================ top bar -->
 <header class="topbar">
-  <div class="brand"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M11 3h10l-2 12h-6z" fill="#e3a73c"/><path d="M13.5 15h5l-1 3h-3z" fill="#c8803a"/><path d="M16 18.5l-2 4 3 1-2.5 5.5" fill="none" stroke="#a98bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 29h24" stroke="#4f7fe0" stroke-width="2.5" stroke-linecap="round"/></svg><span id="machineName">Plasma Table</span></div>
+  <div class="brand"><svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true" class="brand-mark">
+    <path fill="currentColor" d="M2.8 3.6h3.5V14.6H2.8z"/>
+    <path fill="currentColor" d="M2.8 17.4h3.5v10.8H2.8z"/>
+    <path fill="currentColor" d="M2.8 3.6h12.2v3.5H2.8z"/>
+    <path fill="currentColor" d="M11.5 3.6h3.5v10.1h-3.5z"/>
+    <path fill="currentColor" d="M2.8 10.2h12.2v3.5H2.8z"/>
+    <path fill="currentColor" d="M17.4 3.6H29.2v3.5H17.4z"/>
+    <path fill="currentColor" d="M21.75 3.6h3.5V14.6h-3.5z"/>
+    <path fill="currentColor" d="M21.75 17.4h3.5v10.8h-3.5z"/>
+    <path d="M1.6 16h28.8" stroke="var(--accent)" stroke-width="2" stroke-linecap="square"/>
+  </svg><span id="machineName">Plasma Table</span></div>
   <button id="acctPill" class="pill acct" title="Account">Sign in</button>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
   <span id="stateBadge" class="badge hidden"></span>
@@ -46,7 +64,17 @@
 
 <section id="connectView" class="view">
   <div class="hero">
-    <svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true" class="arcmark"><path d="M11 3h10l-2 12h-6z" fill="#e3a73c"/><path d="M13.5 15h5l-1 3h-3z" fill="#c8803a"/><path d="M16 18.5l-2 4 3 1-2.5 5.5" fill="none" stroke="#a98bff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 29h24" stroke="#4f7fe0" stroke-width="2.5" stroke-linecap="round"/></svg>
+    <svg width="56" height="56" viewBox="0 0 32 32" fill="none" aria-hidden="true" class="arcmark brand-mark">
+      <path fill="currentColor" d="M2.8 3.6h3.5V14.6H2.8z"/>
+      <path fill="currentColor" d="M2.8 17.4h3.5v10.8H2.8z"/>
+      <path fill="currentColor" d="M2.8 3.6h12.2v3.5H2.8z"/>
+      <path fill="currentColor" d="M11.5 3.6h3.5v10.1h-3.5z"/>
+      <path fill="currentColor" d="M2.8 10.2h12.2v3.5H2.8z"/>
+      <path fill="currentColor" d="M17.4 3.6H29.2v3.5H17.4z"/>
+      <path fill="currentColor" d="M21.75 3.6h3.5V14.6h-3.5z"/>
+      <path fill="currentColor" d="M21.75 17.4h3.5v10.8h-3.5z"/>
+      <path d="M1.6 16h28.8" stroke="var(--accent)" stroke-width="2" stroke-linecap="square"/>
+    </svg>
     <h1>Connect to the plasma table</h1>
     <ol class="plain">
       <li>Plug the table's USB cable into this computer.</li>
@@ -134,11 +162,11 @@
             <ul>
               <li><b>Add</b> – use the bar under the drawing for a rectangle, circle or triangle, or tap <b>More</b> for the full shape library. Tap a hole with a part picked and it drops into the middle of it.</li>
               <li><b>Rotate your phone</b> – landscape gives you a bigger drawing, with the tools down the side. Portrait still works as before.</li>
-              <li><b>Move</b> – drag it. Orange guide lines appear when it lines up with another shape. Hold <b>Alt</b> to move freely.</li>
-              <li><b>Size</b> – tap the blue millimetre label above or beside the shape and type the exact size (you can use 100/2 or 50+12.5). Or drag a corner, or use the boxes below.</li>
+              <li><b>Move</b> – drag it. Guide lines appear when it lines up with another shape. Hold <b>Alt</b> to move freely.</li>
+              <li><b>Size</b> – tap the millimetre label above or beside the shape and type the exact size (you can use 100/2 or 50+12.5). Or drag a corner, or use the boxes below.</li>
               <li><b>Versions</b> – tap a shape, then pick a version (rounded, chamfered, corner holes, flange, gusset…). It keeps the size and place.</li>
               <li><b>Pro mode</b> – turn it on for arrays, subtract, offset, measure, draw an outline, even spacing and auto-arrange.</li>
-              <li><b>Holes</b> – drag a hole to move it. The orange numbers show how far its middle is from the part's left and bottom edges.</li>
+              <li><b>Holes</b> – drag a hole to move it. The numbers show how far its middle is from the part's left and bottom edges.</li>
               <li><b>Several at once</b> – Shift-click them, or drag a box round them on empty space. Then move, copy, turn, mirror or delete them together.</li>
               <li><b>Join</b> – pick shapes that touch or overlap and press <b>Join into one part</b>. They become one outline, with all their holes. Now copy it, resize it or turn it as one part.</li>
               <li><b>Line up</b> – with several picked, the Line-up buttons move them to match the biggest one (e.g. pick a plate and a hole, press <b>Dead centre</b>).</li>

@@ -16,6 +16,10 @@ import * as Acc from "./account.js";
 import { initAccountUi, openAccount, openClaim, openGate, closeAccountUi, acctOverlayOpen, saveCurrent } from "./account-ui.js";
 
 const $ = (id) => document.getElementById(id);
+const themeColor = (name, fallback) => {
+  try { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fallback; }
+  catch { return fallback; }
+};
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 const S = {
   cfg: null, chart: null, jogStep: 10, status: { state: "Disconnected" }, job: null, prepared: null,
@@ -813,6 +817,19 @@ function drawCanvas(cv, main) {
   else cv.style.height = h + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
+  const C = {
+    canvas: themeColor("--cad-canvas", "#FFFFFF"),
+    partLine: themeColor("--cad-part-line", "#334155"),
+    sel: themeColor("--cad-sel", "#0078D4"),
+    lock: themeColor("--cad-lock", "#C05600"),
+    label: themeColor("--cad-label", "#4B5563"),
+    tagText: themeColor("--cad-tag-text", "#FFFFFF"),
+    danger: themeColor("--cad-danger", "#C42B1C"),
+    go: themeColor("--go", "#0F7B3A"),
+    bed: themeColor("--cad-grid", "#ECEEF1"),
+    slat: themeColor("--cad-grid-major", "#D5DAE0"),
+  };
+  ctx.fillStyle = C.canvas; ctx.fillRect(0, 0, w, h);
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
   const X = (x) => offX + (x - A.x[0]) * sc, Y = (y) => h - offY - (y - A.y[0]) * sc;
@@ -824,32 +841,32 @@ function drawCanvas(cv, main) {
     const path = (p) => { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(X(x + ox), Y(y + oy)) : ctx.moveTo(X(x + ox), Y(y + oy)))); ctx.stroke(); };
     if (!zoom && main && canPlace() && !placeBlock()) {          // draggable: show the part's footprint
       const b = S.prepared.stats.bounds;
-      ctx.fillStyle = S.dragging ? "rgba(227,167,60,.22)" : "rgba(227,167,60,.10)";
-      ctx.strokeStyle = "rgba(227,167,60,.75)"; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
+      ctx.fillStyle = S.dragging ? "rgba(0,120,212,.22)" : "rgba(0,120,212,.10)";
+      ctx.strokeStyle = "rgba(0,120,212,.75)"; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
       ctx.fillRect(X(b[0] + ox), Y(b[3] + oy), (b[2] - b[0]) * sc, (b[3] - b[1]) * sc);
       ctx.strokeRect(X(b[0] + ox), Y(b[3] + oy), (b[2] - b[0]) * sc, (b[3] - b[1]) * sc); ctx.setLineDash([]);
       if (S.dragging) {
-        ctx.font = "600 13px Barlow, system-ui"; ctx.fillStyle = "#e8c46a";
+        ctx.font = "600 13px Barlow, system-ui"; ctx.fillStyle = C.sel;
         ctx.fillText(`start point X ${Math.round(ox)}  Y ${Math.round(oy)} mm`, X(b[0] + ox), Y(b[3] + oy) - 8);
       }
     }
-    if (S.prepared.outline) { ctx.strokeStyle = "#c9d1d9"; ctx.lineWidth = 1; S.prepared.outline.forEach((p) => path([...p, p[0]])); }
-    ctx.setLineDash([4, 4]); ctx.strokeStyle = "#4a5868"; ctx.lineWidth = 1; pv.rapids.forEach(path);
-    ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? "#ef4444" : "#f08a3c"; ctx.lineWidth = zoom ? 2.5 : 2;
-    for (const p of pv.cuts) { path(p); ctx.fillStyle = "#fbbf24"; ctx.beginPath(); ctx.arc(X(p[0][0] + ox), Y(p[0][1] + oy), zoom ? 4 : 3, 0, 7); ctx.fill(); }
+    if (S.prepared.outline) { ctx.strokeStyle = C.partLine; ctx.lineWidth = 1; S.prepared.outline.forEach((p) => path([...p, p[0]])); }
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = C.label; ctx.lineWidth = 1; pv.rapids.forEach(path);
+    ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? C.danger : C.lock; ctx.lineWidth = zoom ? 2.5 : 2;
+    for (const p of pv.cuts) { path(p); ctx.fillStyle = C.lock; ctx.beginPath(); ctx.arc(X(p[0][0] + ox), Y(p[0][1] + oy), zoom ? 4 : 3, 0, 7); ctx.fill(); }
     if (zoom && S.prepared.marks) S.prepared.marks.forEach((m) => {     // cut check markers
-      const col = m.level === "error" ? "#e0342b" : m.level === "warn" ? "#e3a73c" : "#4f7fe0";
+      const col = m.level === "error" ? C.danger : m.level === "warn" ? C.lock : C.sel;
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(m.at[0]), Y(m.at[1]), 10, 0, 7); ctx.fill();
-      ctx.strokeStyle = "#121920"; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = m.level === "warn" ? "#1d1406" : "#fff"; ctx.font = "bold 12px Barlow, system-ui"; ctx.textAlign = "center";
+      ctx.strokeStyle = C.canvas; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = C.tagText; ctx.font = "bold 12px Barlow, system-ui"; ctx.textAlign = "center";
       ctx.fillText(String(m.n), X(m.at[0]), Y(m.at[1]) + 4); ctx.textAlign = "start";
     });
     if (zoom) {
-      ctx.fillStyle = "#94a2b0"; ctx.font = "12px system-ui";
+      ctx.fillStyle = C.label; ctx.font = "12px system-ui";
       ctx.fillText("orange: torch path   grey: your part   dots: where it pierces", 8, h - 8);
     }
   }
-  ctx.strokeStyle = "#4f7fe0"; ctx.lineWidth = 2;
+  ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(X(ox) - 9, Y(oy)); ctx.lineTo(X(ox) + 9, Y(oy)); ctx.moveTo(X(ox), Y(oy) - 9); ctx.lineTo(X(ox), Y(oy) + 9); ctx.stroke();
   if (!zoom) drawGantry(ctx, A.table, X, Y, sc);
 }
@@ -928,19 +945,19 @@ function drawMachineBed(ctx, T, X, Y, sc) {
   const [x0, x1] = T.x, [y0, y1] = T.y;
   const R = (x, y, w, h) => [X(x), Y(y + h), w * sc, h * sc];
   // water tray / table
-  ctx.fillStyle = "#151d26"; ctx.fillRect(...R(x0, y0, x1 - x0, y1 - y0));
+  ctx.fillStyle = themeColor("--cad-grid", "#ECEEF1"); ctx.fillRect(...R(x0, y0, x1 - x0, y1 - y0));
   if (S.showMachine) {
-    ctx.strokeStyle = "#2a3542"; ctx.lineWidth = Math.max(1, 3 * sc);                 // slats every 100 mm
+    ctx.strokeStyle = themeColor("--cad-grid-major", "#D5DAE0"); ctx.lineWidth = Math.max(1, 3 * sc);                 // slats every 100 mm
     ctx.beginPath();
     for (let x = Math.ceil((x0 + 1) / 100) * 100; x < x1; x += 100) { ctx.moveTo(X(x), Y(y0)); ctx.lineTo(X(x), Y(y1)); }
     ctx.stroke();
-    ctx.strokeStyle = "#1e2833"; ctx.lineWidth = 1; ctx.beginPath();                  // slat teeth (light)
+    ctx.strokeStyle = themeColor("--line", "#D0D5DD"); ctx.lineWidth = 1; ctx.beginPath();                  // slat teeth (light)
     for (let y = y0 + 50; y < y1; y += 50) for (let x = Math.ceil((x0 + 1) / 100) * 100; x < x1; x += 100) { ctx.moveTo(X(x) - 2, Y(y)); ctx.lineTo(X(x) + 2, Y(y)); }
     ctx.stroke();
   }
-  ctx.strokeStyle = edgesOn() ? "#2f9e5b" : "#3d4c5c"; ctx.lineWidth = edgesOn() ? 2 : 1;
+  ctx.strokeStyle = edgesOn() ? themeColor("--go", "#0F7B3A") : themeColor("--line-strong", "#B8BFC9"); ctx.lineWidth = edgesOn() ? 2 : 1;
   ctx.strokeRect(...R(x0, y0, x1 - x0, y1 - y0));
-  ctx.fillStyle = "#94a2b0"; ctx.font = "12px Barlow, system-ui";
+  ctx.fillStyle = themeColor("--cad-label", "#4B5563"); ctx.font = "12px Barlow, system-ui";
   ctx.textAlign = "right"; ctx.fillText(`${T.label} ${Math.round(x1 - x0)} × ${Math.round(y1 - y0)} mm`, X(x1) - 8, Y(y1) - 8 + 20); ctx.textAlign = "start";
   if (!S.showMachine) return;
   // X beam: box section with the rail on top and end caps
@@ -959,7 +976,7 @@ function drawGantry(ctx, T, X, Y, sc) {
   const r = Math.max(5, 9 * sc);
   if (!S.showMachine) {                      // just the torch dot
     if (!has) return;
-    ctx.fillStyle = S.status.torch ? "#a98bff" : "#edeee8";
+    ctx.fillStyle = S.status.torch ? themeColor("--torch", "#C05600") : themeColor("--text", "#1F2A37");
     ctx.beginPath(); ctx.arc(X(tx), Y(ty), 6, 0, 7); ctx.fill();
     return;
   }
@@ -1003,8 +1020,8 @@ function drawGantry(ctx, T, X, Y, sc) {
   ctx.fillStyle = "#8f322e"; for (let k = 30; k < 120; k += 22) ctx.fillRect(k * sc, -11 * sc, 4 * sc, 22 * sc);
   ctx.restore();
   ctx.fillStyle = "#3d4752"; ctx.beginPath(); ctx.arc(X(tx), Y(ty), 16 * sc + 2, 0, 7); ctx.fill();   // torch body
-  if (S.status.torch) { ctx.fillStyle = "rgba(169,139,255,.38)"; ctx.beginPath(); ctx.arc(X(tx), Y(ty), r * 2.4, 0, 7); ctx.fill(); }
-  ctx.fillStyle = S.status.torch ? "#a98bff" : "#edeee8";
+  if (S.status.torch) { ctx.fillStyle = "rgba(192,86,0,.38)"; ctx.beginPath(); ctx.arc(X(tx), Y(ty), r * 2.4, 0, 7); ctx.fill(); }
+  ctx.fillStyle = S.status.torch ? themeColor("--torch", "#C05600") : themeColor("--text", "#1F2A37");
   ctx.beginPath(); ctx.arc(X(tx), Y(ty), r * 0.75, 0, 7); ctx.fill();
   ctx.strokeStyle = "#121920"; ctx.lineWidth = 1.5; ctx.beginPath();
   ctx.moveTo(X(tx) - r, Y(ty)); ctx.lineTo(X(tx) + r, Y(ty)); ctx.moveTo(X(tx), Y(ty) - r); ctx.lineTo(X(tx), Y(ty) + r); ctx.stroke();
