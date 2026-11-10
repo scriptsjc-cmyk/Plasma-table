@@ -1,7 +1,7 @@
 // Plasma table operator screen (browser version).
 // Guided flow: File -> Material -> Position -> Check -> Cut.
 // Machine logic lives in machine.js; this file is only the screen.
-import { Machine } from "./machine.js";
+import { Machine, POSITION_LOST_ALARMS } from "./machine.js";
 import { WebSerialTransport, WiFiTransport, RT } from "./grbl.js";
 import { SimTransport } from "./sim.js";
 import { parseDXF } from "./dxf.js";
@@ -15,6 +15,10 @@ import { checkDesign, machineLimits } from "./check.js";
 import * as Acc from "./account.js";
 import { initAccountUi, openAccount, openClaim, openGate, closeAccountUi, acctOverlayOpen, saveCurrent, openAdmin, paintAnnouncements } from "./account-ui.js";
 import { fillSettingsFromText, setFirmwareText, appendConsole, filterConsoleCommand } from "./admin-machine.js";
+import { FluidNCTransport, fluidncWsUrl, fluidncUrlProblem, fluidncBlockedByHttps, fluidncMixedContentMessage, looksLikeFluidNC } from "./fluidnc.js";
+import { convertGcode, dialectExtension, DIALECTS } from "./dialect.js";
+import { initSettings, bindSettings, openSettings, closeSettings, currentSettings, matchPreset, refreshPublishedPresets, paintSettings } from "./settings.js";
+import { bindHowto, openHowto, closeHowto } from "./howto.js";
 
 const $ = (id) => document.getElementById(id);
 const themeColor = (name, fallback) => {
@@ -25,7 +29,8 @@ const $$ = (sel) => [...document.querySelectorAll(sel)];
 const S = {
   cfg: null, chart: null, jogStep: 10, status: { state: "Disconnected" }, job: null, prepared: null,
   gcode: null, design: null, fileName: "", safety: {}, src: "file", showMachine: true, cur: 1, material: null, thickness: null, connected: false, designOnly: false, currentPart: null,
-  lastAlarm: null, speed: null, lastFeedOv: 100,
+  lastAlarm: null, lastAlarmCode: null, speed: null, lastFeedOv: 100,
+  zeroSet: false, fluidnc: false, shapeFs: false,
 };
 const MAT_TIPS = {
   "Mild steel": "Mild steel: the easiest to get right. Start at the recommended speed and adjust 10% at a time.",
@@ -112,22 +117,54 @@ function requireMachine(why) {
     toast("Demo accounts can't control a real machine. Open the site normally and sign in.", true);
     return false;
   }
-  openGate(why || "Link your machine to run jobs");
+  openGate(why || "Locked: sign in, then link a machine to run jobs.");
   return false;
 }
-function applyAccountMode(mode) {
-  if (!sketch) {
-    document.body.classList.toggle("beginner", mode === "beginner");
-    return;
-  }
+function isProMode() {
+  return !!(sketch && sketch.opts.pro);
+}
+function syncModeSwitch() {
+  const pro = isProMode() || document.body.classList.contains("pro-mode");
+  const mode = pro ? "pro" : "beginner";
+  $$("#modeSwitch [data-mode], .acct-modesw [data-mode]").forEach((b) => b.classList.toggle("sel", b.dataset.mode === mode));
+  $$('input[name="acctMode"], input[name="suMode"]').forEach((r) => { r.checked = r.value === mode; });
+  const adj = document.querySelector("details.adjust");
+  if (adj) adj.open = !!pro;
+  ["btnCheckRun", "btnCheckRun2"].forEach((id) => { const el = $(id); if (el) el.classList.toggle("hidden", !pro); });
+}
+function setAppMode(mode, opts) {
+  const persist = !opts || opts.persist !== false;
+  const autoFs = !opts || opts.autoFs !== false;
+  const pro = mode === "pro";
   if (mode === "pro" || mode === "beginner") {
-    sketch.setPro(mode === "pro");
-    $("skPro").checked = mode === "pro";
-    document.body.classList.toggle("beginner", mode === "beginner");
+    if (sketch) sketch.setPro(pro);
+    document.body.classList.toggle("beginner", !pro);
+    document.body.classList.toggle("pro-mode", pro);
   } else {
-    document.body.classList.remove("beginner");
+    const localPro = !!(sketch && sketch.opts.pro);
+    document.body.classList.toggle("beginner", !localPro);
+    document.body.classList.toggle("pro-mode", localPro);
   }
-  renderProTools(); renderShapeForm(); renderQuickBar();
+  syncModeSwitch();
+  if (sketch) {
+    renderProTools(); renderShapeForm(); renderQuickBar();
+    if (autoFs) {
+      const dlgOpen = !!document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden)");
+      if (isProMode() && S.src === "shape" && !dlgOpen) setShapeFs(true);
+      else if (!isProMode() && S.shapeFs) setShapeFs(false);
+    }
+  }
+  renderMatPreset();
+  renderRecentJobs();
+  try { paintSettings(); } catch (e) { /* settings not ready */ }
+  if (persist && Acc.isSignedIn() && (mode === "pro" || mode === "beginner")) {
+    Acc.setMode(mode).catch(() => {});
+  }
+  try { paintChrome(); } catch (e) { /* ignore */ }
+}
+function applyAccountMode(mode) {
+  if (mode === "pro" || mode === "beginner") setAppMode(mode, { persist: false });
+  else setAppMode(isProMode() ? "pro" : "beginner", { persist: false, autoFs: false });
 }
 function refreshGate() {
   const needLink = !Acc.hasLinkedMachine();
@@ -139,6 +176,7 @@ function refreshGate() {
   const send = $("btnConsoleSend");
   if (send) send.classList.toggle("locked", runLocked);
   document.body.classList.toggle("run-locked", runLocked);
+  $$(".jogwrap, .jogmount").forEach((el) => el.classList.toggle("locked", runLocked && !S.connected));
 }
 function enterDesignOnly() {
   S.designOnly = true;
@@ -153,9 +191,19 @@ function enterDesignOnly() {
   refreshGate();
   toast("Design and save freely. Link a machine when you want to cut.");
 }
+function exportDialect() {
+  const sel = $("exportDialect");
+  if (sel && sel.value) return sel.value;
+  try { return (currentSettings() && currentSettings().dialect) || "grbl"; } catch (e) { return "grbl"; }
+}
+function exportLineNumbers() {
+  const c = $("exportN");
+  if (c) return !!c.checked;
+  try { return !!(currentSettings() && currentSettings().lineNumbers); } catch (e) { return false; }
+}
 function exportGcode() {
   if (!Acc.allowExportWithoutMachine() && !Acc.hasLinkedMachine()) {
-    openGate("Link your machine to download G-code");
+    openGate("Locked: sign in, then link a machine to download G-code");
     return;
   }
   if (!S.prepared) loadJob();
@@ -164,12 +212,17 @@ function exportGcode() {
   else if (S.prepared && S.prepared.source) text = S.prepared.source;
   else if (S.gcode) text = S.gcode;
   if (!text) { toast("Nothing to export yet. Load or design a part first.", true); return; }
+  const dialect = exportDialect();
+  const numbered = exportLineNumbers();
+  text = convertGcode(text, dialect, { lineNumbers: numbered });
+  const ext = dialectExtension(dialect);
   const blob = new Blob([text], { type: "text/plain" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = ((S.fileName || "part").replace(/\.[^.]+$/, "") || "part") + ".nc";
+  a.download = ((S.fileName || "part").replace(/\.[^.]+$/, "") || "part") + ext;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast("Downloaded " + dialect.toUpperCase() + " file");
 }
 
 // ------------------------------------------------------------------ tabs & steps
@@ -191,6 +244,7 @@ function canGo(n) {
 function goStep(n) {
   if (!canGo(n)) return;
   if (S.job && S.job.running && n !== 5) { toast("A job is running. Pause or stop it first.", true); return; }
+  if (n !== 1 && S.shapeFs) setShapeFs(false);
   S.cur = n;
   $$(".step").forEach((el) => el.classList.toggle("hidden", Number(el.dataset.step) !== n));
   $$("#stepper li").forEach((li) => {
@@ -265,8 +319,15 @@ function jogRelease(id) {
 function jogReleaseAll() { for (const id of [...J.held.keys()]) jogRelease(id); }
 function renderPos() {
   const w = S.status.WPos || [0, 0, 0];
-  const html = `<div><span>X</span><b>${w[0].toFixed(1)}</b></div><div><span>Y</span><b>${w[1].toFixed(1)}</b></div><div><span>Z</span><b>${w[2].toFixed(1)}</b></div>`;
+  const m = S.status.MPos || [0, 0, 0];
+  const html = `<div><span>X</span><b>${Number(w[0]).toFixed(1)}</b></div><div><span>Y</span><b>${Number(w[1]).toFixed(1)}</b></div><div><span>Z</span><b>${Number(w[2]).toFixed(1)}</b></div>`;
   $$(".small-pos").forEach((el) => (el.innerHTML = html));
+  const dro = $("moveDro");
+  if (dro) {
+    dro.innerHTML = ["X", "Y", "Z"].map((ax, i) =>
+      `<div><span>${ax} work</span><b>${Number(w[i]).toFixed(2)}</b><div class="dro-sub">M ${Number(m[i]).toFixed(2)}</div></div>`
+    ).join("");
+  }
 }
 
 // ------------------------------------------------------------------ step 1: file
@@ -315,7 +376,7 @@ function renderShapeTiles() {
   $("holeTiles").innerHTML = SHAPES.filter((sh) => sh.hole).map(tile).join("");
   $("skSnap").value = String(sketch.opts.snap);
   $("skGuides").checked = !!sketch.opts.guides;
-  $("skPro").checked = !!sketch.opts.pro;
+  syncModeSwitch();
   renderProTools();
 }
 const ALIGN = [["left", "⇤ Left"], ["centre", "↔ Centre"], ["right", "⇥ Right"], ["both", "◎ Dead centre"],
@@ -401,6 +462,15 @@ function openLibrary() {
   setTimeout(() => { if (matchMedia("(pointer: fine)").matches) $("libSearch").focus(); }, 30);
 }
 function closeLibrary() { $("shapeLib").classList.add("hidden"); S.uiBlockUntil = Date.now() + 450; }
+// "l bracket", "L-bracket" and "lbracket" all match: ignore case, spaces, hyphens and underscores
+function normQ(s) { return String(s || "").toLowerCase().replace(/[\s\-_()/.,]+/g, " ").trim(); }
+function matchesQuery(hay, q) {
+  const h = normQ(hay), hs = h.replace(/ /g, "");
+  const toks = normQ(q).split(" ").filter(Boolean);
+  if (!toks.length) return true;
+  if (hs.includes(toks.join(""))) return true;
+  return toks.every((tk) => h.includes(tk) || hs.includes(tk));
+}
 function renderLibrary() {
   const q = $("libSearch").value.trim().toLowerCase();
   const cats = [{ id: "all", name: "All" }, ...SHAPE_GROUPS];
@@ -409,7 +479,7 @@ function renderLibrary() {
   if (libCat === "all") { const seen = new Set(); ids = SHAPE_GROUPS.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id)); }
   else ids = (SHAPE_GROUPS.find((g) => g.id === libCat) || { ids: [] }).ids;
   const list = ids.map((id) => SHAPES.find((s) => s.id === id)).filter(Boolean)
-    .filter((s) => !q || (s.name + " " + (s.tip || "") + " " + s.id).toLowerCase().includes(q));
+    .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
   $("libGrid").innerHTML = list.length ? list.map((s) => `<button type="button" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 64, 44)}<span class="libname">${esc(s.name)}</span></button>`).join("")
     : `<p class="muted">No shapes match “${esc(q)}”.</p>`;
 }
@@ -432,32 +502,70 @@ function sizeDimForSelection() {
   return sketch.dimHits.find((h) => h.kind === "w") || sketch.dimHits.find((h) => h.kind === "d") || null;
 }
 
+// Tool palette: labelled groups with a search box (replaces the icon-only rail)
+const PALETTE = [
+  { g: "Shapes", items: [["rect", "▭", "Rectangle"], ["disc", "◯", "Circle"], ["triangle", "△", "Triangle"], ["slot", "⊂⊃", "Slot"], ["sector", "◔", "Arc / sector"], ["lib", "⋯", "All shapes…"]] },
+  { g: "Holes", items: [["hole", "◦", "Hole"], ["slothole", "⊖", "Slot hole"], ["boltcircle", "⁘", "Bolt circle"]] },
+  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"]] },
+  { g: "Combine", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"]] },
+  { g: "Arrange", items: [["rot", "⟳", "Turn 90°"], ["mir", "⇋", "Mirror"], ["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["alignl", "⇤", "Align left"], ["alignb", "⤓", "Align bottom"], ["nest", "⊞", "Auto-arrange"]] },
+  { g: "Edit", items: [["size", "↔", "Size"], ["dims", "↔ mm", "Dimensions"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"], ["del", "🗑", "Delete"], ["undo", "↶", "Undo"], ["redo", "↷", "Redo"]] },
+  { g: "View", items: [["fit", "⤢", "Zoom to fit"], ["snap", "⌗", "Snap"], ["fs", "⛶", "Full screen"]] },
+];
+let paletteQ = "";
 function renderQuickBar() {
   const qb = $("quickBar"); if (!qb || !sketch) return;
-  const on = S.src === "shape" && S.cur === 1;
+  const on = S.src === "shape" && (S.cur === 1 || S.shapeFs);
   qb.classList.toggle("hidden", !on);
   const grid = qb.closest(".cutgrid"); if (grid) grid.classList.toggle("with-qb", on);
-  if (!on) return;
-  const one = sketch.selected(), any = sketch.picked().length > 0;
+  if (!on) { qb.innerHTML = ""; return; }
+  const one = sketch.selected(), any = sketch.picked().length > 0, many = sketch.picked().length > 1;
   const locked = sketch.picked().some((i) => i.lock);
   const hasVer = !!(one && variantsFor(one.type).length);
-  const B = (id, icon, label, opts = {}) => `<button type="button" data-qb="${id}" class="${opts.cls || ""}" ${opts.dis ? "disabled" : ""} title="${esc(opts.title || label)}" aria-label="${esc(opts.title || label)}"><i>${icon}</i>${esc(label)}</button>`;
-  qb.innerHTML = [
-    B("rect", "▭", "Rect"), B("disc", "◯", "Circle"), B("triangle", "△", "Triangle"), B("lib", "⋯", "More", { title: "Shape library" }),
-    `<span class="qb-sep"></span>`,
-    B("undo", "↶", "Undo", { dis: !sketch.past.length }), B("redo", "↷", "Redo", { dis: !sketch.future.length }),
-    B("dup", "⧉", "Copy", { dis: !any }), B("del", "🗑", "Delete", { dis: !any || locked, cls: "danger" }),
-    B("rot", "⟳", "Turn 90°", { dis: !any || locked }), B("mir", "⇋", "Mirror", { dis: !any || locked }),
-    B("size", "↔", "Size", { dis: !one || locked, cls: one ? "on" : "", title: "Type an exact size" }),
-    B("ver", "◈", "Versions", { dis: !hasVer || locked }),
-    `<span class="qb-sep"></span>`,
-    B("fit", "⤢", "Fit"), B("pro", "★", "Pro", { cls: sketch.opts.pro ? "on" : "", title: "Pro mode on/off" }),
-  ].join("");
+  const dis = {
+    undo: !sketch.past.length, redo: !sketch.future.length,
+    dup: !any, del: !any || locked, rot: !any || locked, mir: !any || locked,
+    size: !one || locked, ver: !hasVer || locked, join: !many || locked, subtract: !many || locked,
+    offset: !one || locked, linarray: !one || locked, polar: !one || locked,
+    alignl: !many, alignb: !many, edge: !(one && one.type === "custom"),
+  };
+  const onCls = { snap: !!sketch.opts.snap, draw: sketch.tool === "draw", measure: sketch.tool === "measure", fs: S.shapeFs, size: !!one };
+  // UX2 fix: a greyed tool says why (tooltip + screen reader label)
+  const whyOff = (id) => {
+    if (id === "undo") return "nothing to undo"; if (id === "redo") return "nothing to redo";
+    if (locked && !["undo", "redo"].includes(id) && any) return "the selected shape is locked";
+    if (id === "join" || id === "subtract" || id === "alignl" || id === "alignb") return "select two or more shapes first";
+    if (id === "edge") return "select a drawn or joined outline first (Draw outline, then tap it)";
+    if (id === "ver") return "this shape has no versions";
+    if (["size", "offset", "linarray", "polar"].includes(id)) return "select one shape first";
+    return "select a shape first";
+  };
+  const HINTS = { rot: "R", mir: "M", undo: "Ctrl+Z", redo: "Ctrl+Y", del: "Del", dup: "Ctrl+D", fit: "F", fs: "Esc", join: "Ctrl+J", snap: "S", rect: "1", disc: "2" };
+  const B = (id, icon, label) => {
+    const hint = (sketch.opts.pro && HINTS[id]) ? HINTS[id] : "";
+    const title = hint ? `${label} (${hint})` : label;
+    const kbd = hint ? ` <kbd>${esc(hint)}</kbd>` : "";
+    const why = dis[id] ? ` \u2013 ${whyOff(id)}` : "";
+    return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" ? " danger" : ""}" ${dis[id] ? "disabled" : ""} title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
+  };
+  const q = paletteQ;
+  const parts = [`<div class="qb-search"><input id="qbSearch" type="search" placeholder="Search tools" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`];
+  for (const grp of PALETTE) {
+    const items = grp.items.filter(([id, , lab]) => !q || matchesQuery(lab + " " + id + " " + grp.g, q));
+    if (!items.length) continue;
+    parts.push(`<div class="qb-group" role="heading" aria-level="3">${esc(grp.g)}</div>`);
+    parts.push(...items.map(([id, ic, lab]) => B(id, ic, lab)));
+  }
+  if (parts.length === 1) parts.push(`<p class="muted small">No tool matches “${esc(q)}”.</p>`);
+  const hadFocus = document.activeElement && document.activeElement.id === "qbSearch";
+  qb.innerHTML = parts.join("");
+  if (hadFocus) { const s = $("qbSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
 }
 
 function quickAction(a) {
   switch (a) {
-    case "rect": case "disc": case "triangle": sketch.add(a); break;
+    case "rect": case "disc": case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
+      if (shapeDef(a)) sketch.add(a); else toast("That shape isn't available.", true); break;
     case "lib": openLibrary(); break;
     case "undo": sketch.undo(); break;
     case "redo": sketch.redo(); break;
@@ -465,12 +573,55 @@ function quickAction(a) {
     case "del": sketch.remove(); break;
     case "rot": sketch.rotateBy(90); break;
     case "mir": sketch.mirror(); break;
-    case "size": { const d = sizeDimForSelection(); if (d) openNumPad(d); else toast("Tap one shape first."); break; }
+    case "size": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast("Tap one shape first."); break; }
     case "ver": openVersions(); break;
     case "fit": sketch.fitView(); break;
-    case "pro": sketch.setPro(!sketch.opts.pro); $("skPro").checked = !!sketch.opts.pro; renderProTools(); renderShapeForm(); break;
+    case "snap": sketch.opts.snap = sketch.opts.snap ? 0 : 1; try { sketch.saveOpts && sketch.saveOpts(); } catch (e) { /* ignore */ } sketch.draw(); toast(sketch.opts.snap ? "Snap on (1 mm)" : "Snap off"); break;
+    case "draw": case "measure": case "nest": case "offset": case "linarray": case "polar": case "subtract":
+      runPro(a); break;
+    case "join": sketch.join(); break;
+    case "alignl": sketch.align("left"); break;
+    case "alignb": sketch.align("bottom"); break;
+    case "edge": { const ep = $("edgePanel"); if (ep) { ep.classList.remove("hidden"); ep.scrollIntoView({ block: "nearest" }); } toast("Tap an edge on the outline, then change its length, angle or curve."); break; }
+    case "fs": setShapeFs(!S.shapeFs); break;
+    case "dims": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast("Tap a blue size on the drawing, then type the new number."); break; }
+    case "fillet":
+      openCad("Fillet a corner", [{ id: "r", label: "Radius (mm)", value: 5 }], (v) => {
+        if (!(v.r > 0)) { toast("Enter a radius.", true); return; }
+        if (sketch.edgeInfo && sketch.edgeInfo()) { sketch.setEdgeCurve({ radius: v.r }); toast("Corner filleted."); }
+        else toast("Tap an edge on a custom outline first (Draw outline, then Edit edge), then Fillet.");
+      });
+      break;
+    case "chamfer":
+      openCad("Chamfer / flatten an edge", [{ id: "none", label: "Tap an edge first. This makes that edge straight. Use a chamfered rectangle from the library for a ready-made chamfer.", value: "", text: true }], () => {
+        if (sketch.edgeInfo && sketch.edgeInfo()) { sketch.setEdgeCurve({}); toast("Edge flattened. Adjust the corners by dragging."); }
+        else toast("Tap an edge first, or add a Chamfer rectangle from All shapes.");
+      });
+      break;
   }
   renderQuickBar();
+}
+function syncProToAccount() {
+  if (Acc.isSignedIn()) Acc.setMode(sketch.opts.pro ? "pro" : "beginner").catch(() => {});
+}
+
+// ---- full-screen "Make a shape" editor
+function setShapeFs(on) {
+  on = !!on;
+  if (S.shapeFs === on && document.body.classList.contains("shape-fs") === on) {
+    if (on && S.src !== "shape") showSource("shape");
+    if (on && S.cur !== 1) goStep(1);
+    renderQuickBar();
+    return;
+  }
+  S.shapeFs = on;
+  if (on && S.src !== "shape") { showSource("shape"); }
+  if (on && S.cur !== 1) goStep(1);
+  document.body.classList.toggle("shape-fs", on);
+  const bar = $("fsBar"); if (bar) { bar.classList.toggle("hidden", !on); bar.hidden = !on; }
+  if (on && !sketch.opts.pro) { /* every tool is in the palette; Pro only adds the side panel */ }
+  renderQuickBar();
+  setTimeout(() => { try { sketch.resize && sketch.resize(); } catch (e) { /* ignore */ } sketch.fitView(); drawPreview(); }, 30);
 }
 
 function renderProTools() {
@@ -489,45 +640,95 @@ function renderProTools() {
   $("toolFinish").textContent = "Close outline";
 }
 
-function openNumPad(dim) {
-  const pad = $("numPad");
-  pad.classList.remove("hidden");
-  $("numPadLabel").textContent = dim.label || "Value (mm)";
+function dimSeedOf(dim) {
   const seed = { w: () => { const b = sketch.boxOf(dim.it); return b[2] - b[0]; },
     h: () => { const b = sketch.boxOf(dim.it); return b[3] - b[1]; },
     d: () => { const b = sketch.boxOf(dim.it); return b[2] - b[0]; },
     x: () => sketch.boxOf(dim.it)[0], y: () => sketch.boxOf(dim.it)[1],
     hx: () => dim._v, hy: () => dim._v,
     "edge-len": () => dim._v }[dim.kind];
-  let cur = "";
-  $("numPadValue").textContent = "";
-  $("numPadValue").dataset.seed = seed ? String(Math.round(seed() * 1000) / 1000) : "";
-  if (!cur) $("numPadValue").textContent = $("numPadValue").dataset.seed;
-  const keys = [["7","7"],["8","8"],["9","9"],["/","/"],["4","4"],["5","5"],["6","6"],["*","*"],["1","1"],["2","2"],["3","3"],["-","-"],["0","0"],[".","."],["(","("],[")",")"],["⌫","DEL"],["+","+"]];
-  $("numPadKeys").innerHTML = keys.map(([k, lab]) => `<button type="button" data-k="${k}" class="${"+-*/⌫()".includes(k) ? "op" : ""}">${lab}</button>`).join("");
-  const apply = () => {
-    const raw = $("numPadValue").textContent.trim();
-    const v = evalExpr(raw);
-    if (!Number.isFinite(v)) { toast("Use a number, or something like 100/2 or (30+10)/2", true); return; }
-    const isSize = dim.kind === "w" || dim.kind === "h" || dim.kind === "d";
-    if (isSize && (v < 2 || v > (sketch.maxMm || 2600))) { toast("Size must be at least 2 mm and no bigger than the table.", true); return; }
-    if (dim.kind === "w") sketch.setWidth(v);
-    else if (dim.kind === "h") sketch.setHeight(v);
-    else if (dim.kind === "d") sketch.setDiameter(v);
-    else if (dim.kind === "x" || dim.kind === "y") sketch.setPos(dim.kind, v);
-    else if (dim.kind === "hx" || dim.kind === "hy") sketch.setHoleOffset(dim.kind === "hx" ? "x" : "y", v);
-    else if (dim.kind === "edge-len") sketch.setEdgeLength(v, ($("edgeFixed") && $("edgeFixed").value) || "start");
-    closeNumPad();
-  };
-  pad._apply = apply;
-  pad._cur = true; // first key replaces the seed
-  // iPhone: the tap that opened the pad can fall through onto a key — ignore keys briefly
-  pad.style.pointerEvents = "none";
-  clearTimeout(pad._ghost);
-  pad._ghost = setTimeout(() => { pad.style.pointerEvents = ""; }, 350);
+  return seed ? seed() : null;
 }
-
-function closeNumPad() { $("numPad").classList.add("hidden"); $("numPad")._apply = null; S.uiBlockUntil = Date.now() + 450; }
+function applyDimValue(dim, v) {
+  const isSize = dim.kind === "w" || dim.kind === "h" || dim.kind === "d";
+  if (isSize && (v < 2 || v > (sketch.maxMm || 2600))) { toast("Size must be at least 2 mm and no bigger than the table.", true); return false; }
+  if (dim.kind === "w") sketch.setWidth(v);
+  else if (dim.kind === "h") sketch.setHeight(v);
+  else if (dim.kind === "d") sketch.setDiameter(v);
+  else if (dim.kind === "x" || dim.kind === "y") sketch.setPos(dim.kind, v);
+  else if (dim.kind === "hx" || dim.kind === "hy") sketch.setHoleOffset(dim.kind === "hx" ? "x" : "y", v);
+  else if (dim.kind === "edge-len") sketch.setEdgeLength(v, ($("edgeFixed") && $("edgeFixed").value) || "start");
+  else return false;
+  return true;
+}
+function positionDimEdit(dim) {
+  const box = $("dimEdit"); if (!box) return;
+  let x = 16, y = 80;
+  if (dim && Number.isFinite(dim.x) && Number.isFinite(dim.y)) { x = dim.x; y = dim.y + 12; }
+  else {
+    const cv = $("preview");
+    if (cv) { const r = cv.getBoundingClientRect(); x = r.left + 16; y = r.top + 16; }
+  }
+  const w = Math.min(280, innerWidth - 24), h = 120;
+  x = Math.max(8, Math.min(x, innerWidth - w - 8));
+  y = Math.max(8, Math.min(y, innerHeight - h - 8));
+  box.style.left = x + "px"; box.style.top = y + "px";
+}
+function dimHitsList() {
+  try { sketch.draw(); } catch (e) { /* ignore */ }
+  return (sketch && sketch.dimHits) ? sketch.dimHits.slice() : [];
+}
+function openDimEdit(dim) {
+  const box = $("dimEdit"), inp = $("dimEditInput");
+  if (!box || !inp || !dim) return;
+  box._dim = dim;
+  $("dimEditLabel").textContent = dim.label || "Size (mm)";
+  const seed = dimSeedOf(dim);
+  inp.value = seed != null && Number.isFinite(seed) ? String(Math.round(seed * 1000) / 1000) : "";
+  box.classList.remove("hidden"); box.hidden = false;
+  positionDimEdit(dim);
+  requestAnimationFrame(() => { try { inp.focus(); inp.select(); } catch (e) { /* ignore */ } });
+}
+function closeDimEdit() {
+  const box = $("dimEdit"); if (!box) return;
+  box.classList.add("hidden"); box.hidden = true; box._dim = null;
+  S.uiBlockUntil = Date.now() + 450;
+}
+function applyDimEdit() {
+  const box = $("dimEdit"), inp = $("dimEditInput");
+  if (!box || !inp || !box._dim) return false;
+  const raw = inp.value.trim();
+  const v = evalExpr(raw);
+  if (!Number.isFinite(v)) { toast("Use a number, or something like 100/2 or (30+10)/2", true); return false; }
+  if (!applyDimValue(box._dim, v)) return false;
+  closeDimEdit();
+  return true;
+}
+function nudgeDimEdit(dir) {
+  const box = $("dimEdit"), inp = $("dimEditInput");
+  if (!box || !inp || !box._dim) return;
+  const cur = evalExpr(inp.value.trim());
+  if (!Number.isFinite(cur)) return;
+  const step = (sketch && sketch.opts && sketch.opts.snap) ? sketch.opts.snap : 1;
+  const next = Math.round((cur + dir * step) * 1000) / 1000;
+  inp.value = String(next);
+  applyDimValue(box._dim, next);
+  inp.select();
+}
+function tabDimEdit() {
+  const box = $("dimEdit"); if (!box || !box._dim) return;
+  const hits = dimHitsList();
+  if (!hits.length) return;
+  const cur = box._dim;
+  let i = hits.findIndex((h) => h.it === cur.it && h.kind === cur.kind);
+  if (i < 0) i = 0;
+  const next = hits[(i + 1) % hits.length];
+  openDimEdit(next);
+}
+// Kept names so existing tests and onDimTap hooks still work. The on-screen
+// calculator pad stays in the DOM but is no longer opened.
+function openNumPad(dim) { openDimEdit(dim); }
+function closeNumPad() { closeDimEdit(); }
 
 function openCad(title, fields, onOk) {
   $("cadTitle").textContent = title;
@@ -612,7 +813,10 @@ function showSource(src) {
   $$(".srcTab").forEach((b) => b.classList.toggle("sel", b.dataset.src === src));
   $("srcFile").classList.toggle("hidden", src !== "file");
   $("srcShape").classList.toggle("hidden", src !== "shape");
-  if (src === "shape") { renderShapeForm(); useShape(); }
+  if (src === "shape") {
+    renderShapeForm(); useShape();
+    if (isProMode() && !S.shapeFs) setShapeFs(true);
+  }
   drawPreview();
 }
 
@@ -632,6 +836,137 @@ function renderRecent() {
   const list = recentList();
   $("recentWrap").classList.toggle("hidden", !list.length);
   $("recent").innerHTML = list.map((r, i) => `<button data-recent="${i}">${esc(r.name)}</button>`).join("");
+}
+function jobList() {
+  try { return JSON.parse(localStorage.getItem("plasma.recentJobs") || "[]"); } catch (e) { return []; }
+}
+function rememberJob(extra) {
+  try {
+    const rec = {
+      name: (S.fileName || "Job"), material: S.material, thickness: S.thickness,
+      dry: !!(S.prepared && S.prepared.dry_run), at: Date.now(), ...(extra || {}),
+    };
+    const list = jobList().filter((j) => !(j.name === rec.name && j.material === rec.material && Number(j.thickness) === Number(rec.thickness)));
+    list.unshift(rec);
+    while (list.length > 8) list.pop();
+    localStorage.setItem("plasma.recentJobs", JSON.stringify(list));
+  } catch (e) { /* ignore */ }
+  renderRecentJobs();
+}
+function renderRecentJobs() {
+  const wrap = $("recentJobsWrap"), box = $("recentJobs");
+  if (!wrap || !box) return;
+  const list = jobList();
+  wrap.classList.toggle("hidden", !(isProMode() && list.length));
+  box.innerHTML = list.map((j, i) => `<button type="button" data-job="${i}">${esc(j.name)} · ${esc(j.material)} ${j.thickness} mm</button>`).join("");
+}
+function applyRecentJob(i) {
+  const j = jobList()[Number(i)];
+  if (!j) return;
+  if (j.material) S.material = j.material;
+  if (j.thickness != null) S.thickness = Number(j.thickness);
+  applyMatchingPreset();
+  renderMaterials();
+  loadJob();
+  toast("Loaded settings for " + j.name);
+}
+function chartPresetOptions() {
+  const out = [];
+  for (const m of (S.chart && S.chart.materials) || []) {
+    for (const r of m.rows || []) {
+      out.push({
+        id: m.name + "|" + r.thickness_mm,
+        label: m.name + " " + r.thickness_mm + " mm",
+        material: m.name, thickness_mm: r.thickness_mm,
+        cut_speed_mm_min: r.feed_mm_min, pierce_delay_s: r.pierce_delay_s,
+        pierce_height_mm: r.pierce_height_mm, cut_height_mm: r.cut_height_mm, kerf_mm: r.kerf_mm,
+      });
+    }
+  }
+  return out;
+}
+function renderMatPreset(extra) {
+  const sel = $("matPreset"); if (!sel) return;
+  const opts = chartPresetOptions();
+  for (const p of extra || []) {
+    const id = (p.id || (p.material + "|" + p.thickness_mm));
+    if (!opts.some((x) => x.material === p.material && Number(x.thickness_mm) === Number(p.thickness_mm))) {
+      opts.push({ id, label: (p.name || p.material || "Preset") + " " + p.thickness_mm + " mm", ...p });
+    }
+  }
+  const cur = String(S.material) + "|" + String(S.thickness);
+  sel.innerHTML = opts.map((p) => {
+    const id = p.id || (p.material + "|" + p.thickness_mm);
+    const selc = p.material === S.material && Number(p.thickness_mm) === Number(S.thickness) ? " selected" : "";
+    return `<option value="${esc(id)}"${selc}>${esc(p.label || id)}</option>`;
+  }).join("");
+  if (!opts.some((p) => p.material === S.material && Number(p.thickness_mm) === Number(S.thickness)) && cur) {
+    sel.insertAdjacentHTML("afterbegin", `<option value="${esc(cur)}" selected>${esc(S.material + " " + S.thickness + " mm")}</option>`);
+  }
+  refreshPublishedPresets().then((rows) => { if (Array.isArray(rows) && rows.length) renderMatPreset(rows); }).catch(() => {});
+}
+function applyMatPreset(id) {
+  const all = chartPresetOptions();
+  let p = all.find((x) => x.id === id || (x.material + "|" + x.thickness_mm) === id);
+  if (!p) {
+    const [mat, th] = String(id).split("|");
+    p = { material: mat, thickness_mm: Number(th) };
+  }
+  applyPresetRow(p);
+}
+function checkAndRun() {
+  if (S.src === "shape" && sketch) useShape();
+  if (!S.prepared) loadJob();
+  if (!S.prepared) { toast("Draw or load a part first.", true); goStep(1); return; }
+  goStep(4);
+  renderChecklist();
+  refresh();
+  // everything except the tick boxes (not connected, no start point, alarm, doesn't fit...) must already be fine
+  const hard = blockers().filter((x) => x !== "Tick every box above.");
+  if (hard.length || !machineAllowed()) {
+    toast((hard[0] || "Can't start yet — check the list."), true);
+    return;
+  }
+  // the physical checks (plasma on, air, earth clamp, hands clear) must never be ticked FOR the operator: ask, in words
+  const todo = $$("#checklist input").filter((i) => !i.disabled && !i.checked).map((i) => i.closest("label").textContent.trim());
+  if (todo.length && !confirm("Before the torch lights, check each of these yourself:\n\n" + todo.map((x) => "  • " + x).join("\n") + "\n\nAre all of them true?")) {
+    toast("Not started. Tick each box when you have checked it.", true);
+    return;
+  }
+  $$("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; });
+  refresh();
+  const b = blockers();
+  if (b.length || !machineAllowed()) {
+    toast((b[0] || "Can't start yet — check the list."), true);
+    return;
+  }
+  if ($("btnStart") && !$("btnStart").disabled) $("btnStart").click();
+  else toast("Can't start yet — check the list.", true);
+}
+function sendConsoleLine(raw, inputEl) {
+  const l = String(raw || "").trim();
+  if (!l) return;
+  // STOP / realtime bytes are never behind the account lock, the Idle check or a confirm
+  const live = l === "!" || l === "?" || l === "~" || l === "\x18";
+  if (!live && !requireMachine("Locked: sign in, then link a machine to run jobs.")) return;
+  let f = filterConsoleCommand(l);
+  if (!live) {
+    // Same rules as the admin console: nothing is queued behind a running cut, and anything that moves the machine,
+    // lights the torch or writes a $ setting needs the controller to be Idle.
+    if (M.jobRunning()) { toast("A job is running. Press STOP, or wait until it finishes.", true); return; }
+    const needsIdle = f.needsTorchConfirm || f.moves || /^\$\d/.test(f.send || "") || f.send === "$H";
+    if (M.grbl && needsIdle && M.state() !== "Idle") { toast("The machine must be Idle (it is " + M.state() + ").", true); return; }
+  }
+  if (f.needsTorchConfirm) {
+    if (!confirm("Send " + l + "?\n\nThis would fire the torch. Torch over scrap, earth clamp on, hands clear.\n\nSTOP stays available.")) return;
+    f = filterConsoleCommand(l, { allowTorch: true });
+  }
+  if (!f.ok) { toast(f.reason, true); return; }
+  if (f.confirm && !confirm("Send " + f.send + "?\n\n" + f.confirm.join("\n") + "\n\nSTOP stays available.")) return;
+  if (f.send === "!") { cmd("stop"); }
+  else if (f.send === "\x18") { cmd("reset"); }
+  else cmd("console", { line: f.send, allowTorch: !!f.send && /M[34]/.test(f.send) });
+  if (inputEl) inputEl.value = "";
 }
 
 // ------------------------------------------------------------------ step 2: material
@@ -657,6 +992,7 @@ function renderMaterials() {
     ${r.note ? `<div class="ampsnote">⚠ ${esc(r.note)}</div>` : ""}`;
   try { localStorage.setItem("plasma.material", JSON.stringify({ m: S.material, t: S.thickness })); } catch (e) { /* ignore */ }
   renderSpeed();
+  renderMatPreset();
 }
 function overrides() {
   const v = (id) => $(id).value.trim();
@@ -671,6 +1007,33 @@ function saveSpeed(v) {
   try { const all = savedSpeeds(); all[speedKey()] = v; localStorage.setItem("plasma.speeds", JSON.stringify(all)); } catch (e) { /* ignore */ }
 }
 function defaultSpeed() { S.speed = savedSpeed() || row().feed_mm_min; }
+function applyMatchingPreset() {
+  try {
+    const p = matchPreset(S.material, S.thickness);
+    if (!p) return;
+    if (!savedSpeed() && p.cut_speed_mm_min) S.speed = Number(p.cut_speed_mm_min) || S.speed;
+    const set = (id, v) => { const el = $(id); if (el && v != null && v !== "") el.value = String(v); };
+    set("ovDelay", p.pierce_delay_s);
+    set("ovPierce", p.pierce_height_mm);
+    set("ovCut", p.cut_height_mm);
+    set("ovKerf", p.kerf_mm);
+    if (p.feed_mm_min && !savedSpeed()) S.speed = Number(p.feed_mm_min) || S.speed;
+  } catch (e) { /* ignore */ }
+}
+function applyPresetRow(p) {
+  if (!p) return;
+  if (p.material) S.material = p.material;
+  if (p.thickness_mm != null) S.thickness = Number(p.thickness_mm);
+  if (p.cut_speed_mm_min) S.speed = Number(p.cut_speed_mm_min);
+  else if (p.feed_mm_min) S.speed = Number(p.feed_mm_min);
+  const set = (id, v) => { const el = $(id); if (el && v != null && v !== "") el.value = String(v); };
+  set("ovDelay", p.pierce_delay_s);
+  set("ovPierce", p.pierce_height_mm);
+  set("ovCut", p.cut_height_mm);
+  set("ovKerf", p.kerf_mm);
+  renderMaterials();
+  loadJob();
+}
 function speedStep(rec) { return rec < 1000 ? 25 : 50; }
 function renderSpeed() {
   const rec = row().feed_mm_min, lo = Math.round(rec * 0.85 / 10) * 10, hi = Math.round(rec * 1.15 / 10) * 10;
@@ -751,6 +1114,7 @@ function loadJob() {
     const ws = [...pre, ...S.prepared.warnings.filter((w) => !(cam && /zero point/.test(w)))];
     $("warnings").innerHTML = ws.map((w) => `<li>${esc(w)}</li>`).join("");
     renderCutCheck();
+    rememberJob();
   } catch (e) {
     S.prepared = null;
     $("warnings").innerHTML = `<li>${esc(e.message)}</li>`;
@@ -816,12 +1180,15 @@ function drawCanvas(cv, main) {
   }
   const ax = A.x[1] - A.x[0], ay = A.y[1] - A.y[0];
   let h = Math.max(180, Math.min(520, Math.round(w * (ay / ax))));
-  if (document.body.classList.contains("short-land")) {
+  const fill = document.body.classList.contains("short-land") || document.body.classList.contains("app-shell") || document.body.classList.contains("shape-fs");
+  if (fill) {
     const box = cv.closest(".previewPane") || cv.parentElement;
-    h = Math.max(120, (box && box.clientHeight) || cv.clientHeight || 200);
+    const dock = box && box.querySelector(".previewDock");
+    const avail = box ? (box.clientHeight - (dock ? dock.offsetHeight : 0)) : 0;
+    h = Math.max(120, avail || cv.clientHeight || 200);
   }
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-  if (document.body.classList.contains("short-land")) cv.style.height = "";
+  if (fill) cv.style.height = "";
   else cv.style.height = h + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
@@ -859,9 +1226,11 @@ function drawCanvas(cv, main) {
       }
     }
     if (S.prepared.outline) { ctx.strokeStyle = C.partLine; ctx.lineWidth = 1; S.prepared.outline.forEach((p) => path([...p, p[0]])); }
-    ctx.setLineDash([4, 4]); ctx.strokeStyle = C.label; ctx.lineWidth = 1; pv.rapids.forEach(path);
+    if (pv && Array.isArray(pv.rapids)) {
+      ctx.setLineDash([4, 4]); ctx.strokeStyle = C.label; ctx.lineWidth = 1; pv.rapids.forEach(path);
+    }
     ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? C.danger : C.lock; ctx.lineWidth = zoom ? 2.5 : 2;
-    for (const p of pv.cuts) { path(p); ctx.fillStyle = C.lock; ctx.beginPath(); ctx.arc(X(p[0][0] + ox), Y(p[0][1] + oy), zoom ? 4 : 3, 0, 7); ctx.fill(); }
+    for (const p of (pv && pv.cuts) || []) { path(p); ctx.fillStyle = C.lock; ctx.beginPath(); ctx.arc(X(p[0][0] + ox), Y(p[0][1] + oy), zoom ? 4 : 3, 0, 7); ctx.fill(); }
     if (zoom && S.prepared.marks) S.prepared.marks.forEach((m) => {     // cut check markers
       const col = m.level === "error" ? C.danger : m.level === "warn" ? C.lock : C.sel;
       ctx.fillStyle = col; ctx.beginPath(); ctx.arc(X(m.at[0]), Y(m.at[1]), 10, 0, 7); ctx.fill();
@@ -1038,15 +1407,29 @@ function drawGantry(ctx, T, X, Y, sc) {
 // ------------------------------------------------------------------ step 4: checks
 function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;
-  const items = dry ? ["Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
-    : [...(row().check ? [row().check] : []), `Plasma ON and set to ${row().amps} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
-  $("checklist").innerHTML = items.map((t, i) => `<li><label><input type="checkbox" data-chk="${i}"> ${esc(t)}</label></li>`).join("");
+  const w = wcoNow();
+  const zeroLine = S.zeroSet
+    ? `Start point set at ${Number(w[0]).toFixed(1)}, ${Number(w[1]).toFixed(1)} mm`
+    : "Start point set (press Start here in Position)";
+  const items = (S.designOnly && !S.connected)
+    ? [zeroLine, "This is a design-only session — link a machine to run a real cut"]
+    : dry ? [zeroLine, "Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
+    : [zeroLine, ...(row().check ? [row().check] : []), `Plasma ON and set to ${row().amps} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
+  $("checklist").innerHTML = items.map((t, i) => {
+    const auto = i === 0 && S.zeroSet;
+    return `<li><label><input type="checkbox" data-chk="${i}" ${auto ? "checked disabled" : ""}> ${esc(t)}</label></li>`;
+  }).join("");
+  const cm = $("checkMat");
+  if (cm) cm.textContent = S.material && S.thickness != null ? `${S.material} · ${S.thickness} mm` : "";
+  const zw = $("zeroWarn");
+  if (zw) zw.classList.toggle("hidden", !!S.zeroSet);
   refresh();
 }
 function blockers() {
   const b = [];
   if (!S.connected) b.push("Not connected to the table.");
   if (!S.prepared) b.push("No drawing loaded (step 1).");
+  if (S.connected && !S.zeroSet) b.push("Start point has not been set. Go back to Position and press Start here.");
   const st = S.status.state;
   if (S.connected && st === "Alarm") b.push("Machine is in alarm – press Unlock at the top.");
   else if (S.connected && st !== "Idle") b.push(`Machine is busy (${st}). Wait for it to stop.`);
@@ -1061,10 +1444,60 @@ function blockers() {
 }
 
 // ------------------------------------------------------------------ refresh everything that depends on state
+function paintChrome() {
+  const b = document.querySelector(".topbar");
+  if (b) document.documentElement.style.setProperty("--topbar-h", Math.ceil(b.getBoundingClientRect().height) + "px");
+  const torch = !!(S.status && S.status.torch);
+  const pill = $("torchPill");
+  if (pill) {
+    pill.hidden = false;
+    pill.textContent = torch ? "TORCH ON" : "TORCH OFF";
+    pill.classList.toggle("on", torch);
+    pill.classList.toggle("off", !torch);
+  }
+  const mode = $("modeChip");
+  if (mode) {
+    let label = "";
+    if (S.connected && S.demo) label = "Demo";
+    else if (S.connected && S.fluidnc) label = "FluidNC";
+    else if (S.connected) label = "Connected";
+    else if (S.designOnly) label = "Design only";
+    mode.textContent = label;
+    mode.classList.toggle("hidden", !label);
+  }
+  const pr = $("practiceChip");
+  if (pr) {
+    const on = !!(S.prepared && S.prepared.dry_run) || ($("dryRun") && $("dryRun").checked);
+    pr.classList.toggle("hidden", !on);
+  }
+  const zs = $("zeroState");
+  if (zs) {
+    if (S.zeroSet) {
+      const w = wcoNow();
+      zs.textContent = "Start point set at " + Number(w[0]).toFixed(1) + ", " + Number(w[1]).toFixed(1) + " mm.";
+      zs.classList.remove("warntext");
+    } else {
+      zs.textContent = "Start point is not set yet. Press Start here when the torch is where the cut should begin.";
+      zs.classList.add("warntext");
+    }
+  }
+  const running = !!(S.job && S.job.running);
+  document.body.classList.toggle("running-job", running);
+  const lost = S.lastAlarmCode != null && POSITION_LOST_ALARMS.has(S.lastAlarmCode);
+  const again = $("btnAgain"), rezero = $("btnRezero");
+  if (again && rezero) {
+    again.classList.toggle("hidden", !!lost);
+    rezero.classList.toggle("hidden", !lost);
+  }
+}
 function refresh() {
+  paintChrome();
   // stats + fit (preview pane)
   const f = fit();
-  $("fit").className = "fit " + f.cls; $("fit").textContent = f.text;
+  $("fit").className = "fit " + f.cls;
+  $("fit").textContent = f.text;
+  $("fit").style.cursor = f.cls === "unknown" ? "pointer" : "";
+  $("fit").title = f.cls === "unknown" ? "Open the Setup tab" : "";
   if (S.prepared) {
     const st = S.prepared.stats;
     $("jobStats").innerHTML = `<span><b>${esc(S.fileName)}</b></span><span>Size <b>${S.prepared.summary ? `${S.prepared.summary.width} × ${S.prepared.summary.height}` : `${st.width_mm} × ${st.height_mm}`} mm</b></span>
@@ -1206,27 +1639,35 @@ async function maybeLogJob(j) {
 
 function onEvent(kind, d) {
   if (kind === "status") {
+    const wasHot = d.state === "Disconnected" && S.connected && !S.userDisconnected && (M.jobRunning() || !!(S.status && S.status.torch) || ["Run", "Jog", "Hold", "Home"].includes(S.status && S.status.state));
     onStatus(d);
-    if (d.state === "Disconnected") setConnected(false);
+    if (d.state === "Disconnected") {
+      setConnected(false);
+      // a dropped link (Wi-Fi, USB pulled) cannot be told to switch the torch off: say so loudly
+      if (wasHot && $("lostBar")) { $("lostBar").classList.remove("hidden"); toast("Connection lost while running. The torch may still be ON.", true); }
+    }
   } else if (kind === "log") {
     log(d.text, d.level);
     if (S._settingsCapture) S._settingsCapture.push(d.text || "");
     if ($("advConsoleLog")) appendConsole(d.text || "");
+    if (looksLikeFluidNC(d.text)) S.fluidnc = true;
   }
   else if (kind === "job") { S.job = d; if (!d.running) keepAwake(false); maybeLogJob(d); refresh(); }
-  else if (kind === "alarm") { S.lastAlarm = d.message; $("alarmTitle").textContent = "Alarm"; $("alarmText").textContent = d.message; refresh(); }
+  else if (kind === "alarm") { S.lastAlarm = d.message; S.lastAlarmCode = d.code; $("alarmTitle").textContent = "Alarm"; $("alarmText").textContent = d.message; if (POSITION_LOST_ALARMS.has(d.code)) S.zeroSet = false; refresh(); }
   else if (kind === "safety") onSafety(d);
 }
 
 // ------------------------------------------------------------------ connection
 function setConnected(on, label = "") {
   S.connected = on;
+  if (on && $("lostBar")) $("lostBar").classList.add("hidden");
   if (on) S.designOnly = false;
   const work = on || S.designOnly;
   $("connectView").classList.toggle("hidden", work);
   $$(".tabs").forEach((t) => t.classList.toggle("hidden", !work));
-  $("connPill").textContent = on ? "● Connected" : "● Not connected";
+  $("connPill").textContent = on ? (S.fluidnc ? "● FluidNC" : S.demo ? "● Demo" : "● Connected") : "● Not connected";
   $("connPill").className = "pill " + (on ? "on" : "off");
+  if (!on) { S.fluidnc = false; S.zeroSet = false; }
   $("stateBadge").classList.toggle("hidden", !on);
   if (on) { showTab(S.tab || "cut"); if (label) toast("Connected to " + label); }
   else if (S.designOnly) { showTab("cut"); }
@@ -1276,6 +1717,33 @@ function wifiWatch() {
     if (S.wifiUsed && !S.connected && !S.userDisconnected && document.visibilityState === "visible") connectWiFi(true);
   });
 }
+async function connectFluidNC() {
+  if (!requireMachine("Locked: sign in, then link a machine to run jobs.")) return;
+  const host = ($("fnHost") && $("fnHost").value.trim()) || "";
+  const port = $("fnPort") ? $("fnPort").value : 81;
+  const url = fluidncWsUrl(host, port);
+  const mixed = $("fnMixed");
+  if (mixed) { mixed.classList.add("hidden"); mixed.textContent = ""; }
+  const problem = fluidncUrlProblem(host, port);
+  if (problem) { toast(problem, true); return; }
+  if (fluidncBlockedByHttps(url)) {
+    const msg = fluidncMixedContentMessage();
+    if (mixed) { mixed.textContent = msg; mixed.classList.remove("hidden"); }
+    toast(msg, true);
+    return;
+  }
+  try {
+    const t = new FluidNCTransport(host, port);
+    await t.open();
+    await M.connect(t);
+    S.demo = null; S.fluidnc = true;
+    try { localStorage.setItem("plasma.fluidnc.host", host); localStorage.setItem("plasma.fluidnc.port", String(port)); } catch (e) { /* ignore */ }
+    setConnected(true, "FluidNC at " + host);
+  } catch (e) {
+    toast(e.message, true);
+    if (mixed && /https|ws:\/\//i.test(e.message)) { mixed.textContent = e.message; mixed.classList.remove("hidden"); }
+  }
+}
 async function connectDemo() {
   const t = new SimTransport({ switchOffset: S.cfg.probe.switch_offset_mm, sheetZ: -15, speedup: 1 });   // real speed
   await t.open();
@@ -1284,7 +1752,9 @@ async function connectDemo() {
   setConnected(true, "the demo (nothing real moves)");
 }
 async function disconnect() {
-  if (M.jobRunning() && !confirm(S.wifi ? "A job is running on the Pi. Disconnecting stops it. Disconnect anyway?" : "A job is running. Disconnect anyway?")) return;
+  if (M.jobRunning() && !confirm(S.wifi
+    ? "A job is running on the Pi. Disconnecting stops it, and the torch may stay on until the Pi stops the job. Disconnect anyway?"
+    : "A job is running. Disconnecting now leaves the controller mid-cut — the torch may stay on. Press STOP first if you can. Disconnect anyway?")) return;
   S.userDisconnected = true;
   await M.disconnect();
   setConnected(false);
@@ -1337,6 +1807,42 @@ function bindEdgePanel() {
 
 // Admin console / settings: never while a job is cutting (a G-code line or $ write must not interleave with the job),
 // and anything that moves the machine or writes a setting only when it is Idle.
+// Read $$ from the controller right now and wait for the answer (it ends when no new line arrives for a moment).
+async function readControllerSettings() {
+  if (!M.grbl) return null;
+  S._settingsCapture = [];
+  try { M.grbl.send("$$"); M.grbl.send("$I"); } catch (e) { S._settingsCapture = null; return null; }
+  const t0 = Date.now(); let last = 0, lastT = Date.now();
+  while (Date.now() - t0 < 5000) {
+    await new Promise((r) => setTimeout(r, 120));
+    const n = (S._settingsCapture || []).length;
+    if (n !== last) { last = n; lastT = Date.now(); }
+    else if (n > 0 && Date.now() - lastT >= 450) break;
+  }
+  const lines = S._settingsCapture || [];
+  S._settingsCapture = null;
+  const map = {};
+  for (const l of lines) { const m = String(l).match(/^\$(\d{1,3})=(-?\d+(?:\.\d+)?)\s*(?:\(.*)?$/); if (m) map[Number(m[1])] = Number(m[2]); }
+  return { lines, map };
+}
+// Back up what the controller reports RIGHT NOW (not what the form last showed), check the copy reads back identically,
+// save it as a file and keep a second copy on this device. Returns the snapshot, or null when it could not be made.
+function takeVerifiedBackup(snap) {
+  const ids = Object.keys((snap && snap.map) || {}).sort((a, b) => a - b);
+  if (!ids.length) { toast("The controller didn't report any settings, so nothing was written.", true); return null; }
+  const body = ids.map((k) => "$" + k + "=" + snap.map[k]).join("\n") + "\n";
+  const back = {};
+  for (const l of body.split("\n")) { const m = l.match(/^\$(\d+)=(.+)$/); if (m) back[m[1]] = Number(m[2]); }
+  if (Object.keys(back).length !== ids.length || ids.some((k) => back[k] !== snap.map[k])) { toast("The settings backup didn't read back correctly, so nothing was written.", true); return null; }
+  try { localStorage.setItem("plasma.fw.lastBackup", JSON.stringify({ at: new Date().toISOString(), body })); } catch (e) { /* storage full or blocked: the file is still saved */ }
+  const blob = new Blob([body], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "grbl-settings-backup-" + new Date().toISOString().replace(/[:.]/g, "-") + ".txt";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  return { body, count: ids.length };
+}
 function adminMayTalk(needsIdle) {
   if (M.jobRunning()) { toast("A job is running. Press STOP, or wait until it finishes.", true); return false; }
   if (needsIdle && M.state() !== "Idle") { toast("The machine must be Idle (it is " + M.state() + ").", true); return false; }
@@ -1387,6 +1893,37 @@ function bind() {
   $("btnDemo").onclick = connectDemo;
   $("btnDesignOnly").onclick = enterDesignOnly;
   $("btnExport").onclick = exportGcode;
+  if ($("btnFluidNC")) $("btnFluidNC").onclick = connectFluidNC;
+  if ($("btnLostOk")) $("btnLostOk").onclick = () => $("lostBar").classList.add("hidden");
+  if ($("btnExportMenu")) $("btnExportMenu").onclick = (e) => {
+    e.stopPropagation();
+    const pop = $("exportPop"); if (!pop) return;
+    const on = pop.classList.contains("hidden");
+    pop.classList.toggle("hidden", !on); pop.hidden = !on;
+    $("btnExportMenu").setAttribute("aria-expanded", on ? "true" : "false");
+    try {
+      const s = currentSettings();
+      if ($("exportDialect") && !$("exportDialect").dataset.touched) $("exportDialect").value = s.dialect || "grbl";
+      if ($("exportN") && !$("exportN").dataset.touched) $("exportN").checked = !!s.lineNumbers;
+    } catch (err) { /* ignore */ }
+  };
+  if ($("exportDialect")) $("exportDialect").addEventListener("change", () => { $("exportDialect").dataset.touched = "1"; });
+  if ($("exportN")) $("exportN").addEventListener("change", () => { $("exportN").dataset.touched = "1"; });
+  document.addEventListener("click", (e) => {
+    const pop = $("exportPop"); if (!pop || pop.classList.contains("hidden")) return;
+    if (e.target.closest("#exportPop") || e.target.closest("#btnExportMenu")) return;
+    pop.classList.add("hidden"); pop.hidden = true;
+  });
+  if ($("fit")) $("fit").addEventListener("click", () => {
+    if ($("fit").classList.contains("unknown") && (S.connected || !S.designOnly)) showTab("setup");
+  });
+  if ($("fsDone")) $("fsDone").onclick = () => setShapeFs(false);
+  if ($("btnShapeFs")) $("btnShapeFs").onclick = () => setShapeFs(true);
+  if ($("qbSearch") || $("quickBar")) {
+    $("quickBar").addEventListener("input", (e) => {
+      if (e.target && e.target.id === "qbSearch") { paletteQ = e.target.value; renderQuickBar(); }
+    });
+  }
   $("btnSavePartQuick").onclick = () => saveCurrent().catch((e) => toast(e.message, true));
   $("connectLock").onclick = () => { if (!Acc.hasLinkedMachine()) openGate("Link your machine to run jobs"); };
   $("startLock").onclick = () => openGate("Link your machine to run jobs");
@@ -1408,7 +1945,8 @@ function bind() {
   $("btnTouchTest").onclick = () => cmd("touchoff_test", { material: S.material, thickness: S.thickness, overrides: overrides() });
   $("btnTorchTest").onclick = () => { if (!requireMachine("Link your machine to run jobs")) return; if (confirm("Fire the torch for half a second?\nTorch over scrap, earth clamp on, hands clear.")) cmd("torch_test", { confirm: true }); };
   $("btnPushSettings").onclick = () => { if (confirm("Send the controller settings? Only after editing the CHANGE-ME values for your machine.")) cmd("push_settings"); };
-  $("consoleForm").onsubmit = (e) => { e.preventDefault(); if (!requireMachine("Link your machine to run jobs")) return; const l = $("consoleIn").value.trim(); if (l) cmd("console", { line: l }); $("consoleIn").value = ""; };
+  $("consoleForm").onsubmit = (e) => { e.preventDefault(); sendConsoleLine($("consoleIn").value, $("consoleIn")); };
+  if ($("moveConsoleForm")) $("moveConsoleForm").onsubmit = (e) => { e.preventDefault(); sendConsoleLine($("moveConsoleIn").value, $("moveConsoleIn")); };
 
   // step 1
   $("file").onchange = () => readFile($("file").files[0]);
@@ -1447,7 +1985,7 @@ function bind() {
     const v = e.target.closest("[data-var]"); if (!v) return;
     const it = sketch.selected(); if (!it) return;
     const spec = variantsFor(it.type).find((x) => variantKey(x) === v.dataset.var);
-    if (spec) { sketch.applyVariant(spec); openVersions(); }
+    if (spec) { sketch.applyVariant(spec); closeVersions(); }
   });
   $("skAll").onclick = () => sketch.pickAll();
   $("skSnap").onchange = () => { sketch.setSnap(Number($("skSnap").value)); sketch.draw(); };
@@ -1495,7 +2033,16 @@ function bind() {
   $("proTools").addEventListener("click", (e) => {
     const b = e.target.closest("[data-pro]"); if (b) runPro(b.dataset.pro);
   });
-  $("skPro").onchange = () => { sketch.setPro($("skPro").checked); renderProTools(); renderShapeForm(); renderQuickBar(); if (Acc.isSignedIn()) Acc.setMode($("skPro").checked ? "pro" : "beginner").catch(() => {}); };
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("#modeSwitch [data-mode], .acct-modesw [data-mode]");
+    if (!b) return;
+    e.preventDefault();
+    setAppMode(b.dataset.mode);
+  });
+  if ($("matPreset")) $("matPreset").onchange = () => applyMatPreset($("matPreset").value);
+  if ($("recentJobs")) $("recentJobs").onclick = (e) => { const b = e.target.closest("[data-job]"); if (b) applyRecentJob(b.dataset.job); };
+  if ($("btnCheckRun")) $("btnCheckRun").onclick = () => checkAndRun();
+  if ($("btnCheckRun2")) $("btnCheckRun2").onclick = () => checkAndRun();
   $("numPadKeys").addEventListener("click", (e) => {
     const b = e.target.closest("[data-k]"); if (!b) return;
     const k = b.dataset.k, el = $("numPadValue");
@@ -1520,6 +2067,18 @@ function bind() {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); closeAccountUi(); }
       return;
     }
+    if ($("dimEdit") && !$("dimEdit").classList.contains("hidden")) {
+      if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); applyDimEdit(); return; }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeDimEdit(); return; }
+      if (e.key === "Tab") { e.preventDefault(); e.stopPropagation(); tabDimEdit(); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); nudgeDimEdit(1); return; }
+      if (e.key === "ArrowDown" || e.key === "ArrowLeft") { e.preventDefault(); e.stopPropagation(); nudgeDimEdit(-1); return; }
+      if (e.key === "ArrowRight") { e.preventDefault(); e.stopPropagation(); nudgeDimEdit(1); return; }
+      if (e.target && e.target.id === "dimEditInput") return;
+      e.stopPropagation();
+      return;
+    }
+    if (S.shapeFs && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setShapeFs(false); return; }
     if (!$("numPad").classList.contains("hidden")) {
       if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); if ($("numPad")._apply) $("numPad")._apply(); }
       else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeNumPad(); }
@@ -1545,9 +2104,9 @@ function bind() {
   // step 2
   $("materials").onclick = (e) => {
     const b = e.target.closest("[data-mat]");
-    if (b) { S.material = b.dataset.mat; if (!material().rows.some((r) => r.thickness_mm === S.thickness)) S.thickness = material().rows[0].thickness_mm; defaultSpeed(); renderMaterials(); loadJob(); }
+    if (b) { S.material = b.dataset.mat; if (!material().rows.some((r) => r.thickness_mm === S.thickness)) S.thickness = material().rows[0].thickness_mm; defaultSpeed(); applyMatchingPreset(); renderMaterials(); loadJob(); }
   };
-  $("thicknesses").onclick = (e) => { const b = e.target.closest("[data-th]"); if (b) { S.thickness = Number(b.dataset.th); defaultSpeed(); renderMaterials(); loadJob(); } };
+  $("thicknesses").onclick = (e) => { const b = e.target.closest("[data-th]"); if (b) { S.thickness = Number(b.dataset.th); defaultSpeed(); applyMatchingPreset(); renderMaterials(); loadJob(); } };
   ["ovDelay", "ovPierce", "ovCut", "ovKerf", "ovLead", "dryRun"].forEach((id) => $(id).addEventListener("change", () => { renderMaterials(); loadJob(); }));
   $("spDown").onclick = () => setSpeed(S.speed - speedStep(row().feed_mm_min));
   $("spUp").onclick = () => setSpeed(S.speed + speedStep(row().feed_mm_min));
@@ -1565,7 +2124,7 @@ function bind() {
   };
 
   // step 3
-  $("btnZero").onclick = () => { if (cmd("zero_xy")) toast("Start point set ✓"); };
+  $("btnZero").onclick = () => { if (cmd("zero_xy")) { S.zeroSet = true; toast("Start point set ✓"); refresh(); } };
   $("btnTrace").onclick = () => cmd("trace_outline");
   bindPlacing();
 
@@ -1573,6 +2132,7 @@ function bind() {
   $("checklist").addEventListener("change", refresh);
   $("btnStart").onclick = () => {
     if (!requireMachine("Link your machine to run jobs")) return;
+    { const b = blockers(); if (b.length) { toast(b[0], true); return; } }   // a script/DOM-poke can't bypass the disabled button: zero, alarm, fit, checklist are re-checked here
     try {
       M.command({ cmd: "feed_override", step: "reset" });  // cut at exactly the speed chosen in step 2
       S.jobLogId = null; S.jobLoggedEnd = false; M.startJob(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(5); maybeLogJob(S.job);
@@ -1583,7 +2143,9 @@ function bind() {
 
   // step 5
   $("btnPause").onclick = () => cmd(S.status.state === "Hold" ? "resume" : "hold");
-  $("btnAgain").onclick = () => { S.job = null; goStep(3); toast("Move to the next spot and press Start here."); };
+  if ($("btnStopRun")) $("btnStopRun").onclick = () => cmd("stop");
+  $("btnAgain").onclick = () => { S.job = null; S.zeroSet = false; goStep(3); toast("Move to the next spot and press Start here."); };
+  if ($("btnRezero")) $("btnRezero").onclick = () => { S.job = null; S.zeroSet = false; goStep(3); toast("Position was lost. Set a new start point before cutting again."); };
   $("btnNewFile").onclick = () => {
     S.job = null; S.prepared = null; S.gcode = null; S.design = null; $("file").value = "";
     $("dropTitle").textContent = "Tap to choose a file"; $("drop").classList.remove("loaded"); goStep(1);
@@ -1686,7 +2248,32 @@ async function init() {
   try { S.showMachine = localStorage.getItem("plasma.showMachine") !== "0"; } catch (e) { /* ignore */ }
   $("showMach").checked = S.showMachine;
   mountJogPads();
+  initSettings({
+    toast,
+    isPro: () => !!(Acc.isPro() || Acc.isAdmin() || (sketch && sketch.opts.pro)),
+    isFluidNC: () => !!S.fluidnc,
+    hasThc: () => !!(S.cfg && S.cfg.thc),
+    status: () => S.status || {},
+    applyPreset: applyPresetRow,
+    onChange: (s) => {
+      if (s && s.bed && S.cfg && S.cfg.travel_mm) {
+        S.cfg.travel_mm = { x: s.bed.x, y: s.bed.y, z: s.bed.z };
+      }
+      if ($("exportDialect") && !$("exportDialect").dataset.touched) $("exportDialect").value = (s && s.dialect) || "grbl";
+    },
+    firmwareText: () => "",
+  });
+  bindSettings();
+  try { const s0 = currentSettings(); if (s0 && s0.bed && S.cfg && S.cfg.travel_mm) S.cfg.travel_mm = { x: s0.bed.x, y: s0.bed.y, z: s0.bed.z }; } catch (e) { /* defaults stay */ }   // a saved bed size also applies after a reload
+  bindHowto();
+  try {
+    const fh = localStorage.getItem("plasma.fluidnc.host");
+    if (fh && $("fnHost")) $("fnHost").value = fh;
+    const fp = localStorage.getItem("plasma.fluidnc.port");
+    if (fp && $("fnPort")) $("fnPort").value = fp;
+  } catch (e) { /* ignore */ }
   defaultSpeed();
+  applyMatchingPreset();
   renderMaterials();
   renderRecent();
   sketch = new Sketch($("preview"), {
@@ -1719,18 +2306,21 @@ async function init() {
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, enterDesignOnly, applyAccountMode, setAppMode, isProMode, checkAndRun, rememberJob, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
   renderShapeTiles();
+  setAppMode(sketch.opts.pro ? "pro" : "beginner", { persist: false, autoFs: false });
   bind();
   await initAccountUi({
     toast, esc,
     applyMode: applyAccountMode,
     refreshGate,
     confirm: (msg) => confirm(msg),
-    sendAdvanced: (line) => {
-      if (!Acc.isAdmin()) { toast("Admin only", true); return; }
+    startDesigning: () => { if (!S.connected) enterDesignOnly(); else showTab("cut"); goStep(1); },
+    sendAdvanced: (line, meta) => {
+      if (!(Acc.isAdmin() || Acc.isPro())) { toast("Pro or admin only", true); return; }
       if (!M.grbl) { toast("Connect the table first.", true); return; }
-      const f = filterConsoleCommand(line);
+      const f = (meta && meta.send) ? meta : filterConsoleCommand(line, { allowTorch: !!(meta && meta.allowTorch) });
+      if (f && f.needsTorchConfirm) { toast(f.reason, true); return; }
       if (!f.ok) { toast(f.reason, true); return; }
       if (f.send === "!") { M.command({ cmd: "stop" }); return; }                  // STOP is never held back
       if (f.send === "\x18") { M.command({ cmd: "reset" }); return; }
@@ -1739,35 +2329,51 @@ async function init() {
       M.grbl.send(f.send);
     },
     readSettings: async () => {
-      if (!Acc.isAdmin()) { toast("Admin only", true); return; }
+      if (!(Acc.isAdmin() || Acc.isPro())) { toast("Pro or admin only", true); return; }
       if (!M.grbl) { toast("Connect the table first.", true); return; }
       if (!adminMayTalk(false)) return;
-      S._settingsCapture = [];
-      M.grbl.send("$$");
-      M.grbl.send("$I");
-      setTimeout(() => {
-        const lines = S._settingsCapture || [];
-        S._settingsCapture = null;
-        fillSettingsFromText(lines.join("\n"));
-        const fw = lines.filter((l) => /grbl|hal|ver/i.test(l)).join(" ");
-        if (fw) setFirmwareText(fw);
-        toast("Read $ settings");
-      }, 1200);
+      const snap = await readControllerSettings();
+      if (!snap || !snap.lines.length) { toast("The controller didn't answer.", true); return; }
+      fillSettingsFromText(snap.lines.join("\n"));
+      const fw = snap.lines.filter((l) => /grbl|hal|ver/i.test(l)).join(" ");
+      if (fw) setFirmwareText(fw);
+      toast("Read $ settings");
     },
-    writeSettings: (map) => {
-      if (!Acc.isAdmin()) { toast("Admin only", true); return; }
+    writeSettings: async (map) => {
+      if (S.fwWriting) { toast("A settings write is already in progress.", true); return; }
+      if (!(Acc.isAdmin() || Acc.isPro())) { toast("Pro or admin only", true); return; }
       if (!M.grbl) { toast("Connect the table first.", true); return; }
       if (!adminMayTalk(true)) return;
-      const bad = [];
-      const lines = Object.keys(map).sort((a,b)=>a-b).map((k) => {
-        const r = filterConsoleCommand("$" + k + "=" + map[k]);
-        if (!r.ok) { bad.push("$" + k); return null; }
-        return r.send;
-      }).filter(Boolean);
-      if (bad.length) { toast("Not sent (outside the allowed range): " + bad.join(", "), true); return; }
-      if (!lines.length) { toast("Nothing to write.", true); return; }
-      M.grbl.sendLines(lines);
-      toast("Wrote " + lines.length + " settings. Check the console for ok/error.");
+      S.fwWriting = true;
+      try {
+        const bad = [];
+        const lines = Object.keys(map).sort((a, b) => a - b).map((k) => {
+          const r = filterConsoleCommand("$" + k + "=" + map[k]);
+          if (!r.ok) { bad.push("$" + k); return null; }
+          return r.send;
+        }).filter(Boolean);
+        if (bad.length) { toast("Not sent (outside the allowed range): " + bad.join(", "), true); return; }
+        if (!lines.length) { toast("Nothing to write.", true); return; }
+        // 1. backup what the controller has right now, and make sure it is a real, complete copy
+        const snap = await readControllerSettings();
+        if (!snap) { toast("Couldn't read the controller's settings, so nothing was written.", true); return; }
+        const missing = Object.keys(map).filter((k) => !(Number(k) in snap.map));
+        if (missing.length) { toast("The controller doesn't report $" + missing.join(", $") + ", so nothing was written.", true); return; }
+        const bk = takeVerifiedBackup(snap);
+        if (!bk) return;
+        // 2. things may have changed while we waited
+        if (!adminMayTalk(true)) return;
+        // 3. write, then read back and compare
+        M.grbl.sendLines(lines);
+        toast("Backup saved (" + bk.count + " settings). Writing " + lines.length + "...");
+        for (let i = 0; i < 40 && M.grbl && (M.grbl.pending.length || M.grbl.inflight.length); i++) await new Promise((r) => setTimeout(r, 100));
+        const after = await readControllerSettings();
+        if (!after || !Object.keys(after.map).length) { toast("Wrote the settings but couldn't read them back. Press Read $ settings and check.", true); return; }
+        const diff = Object.keys(map).filter((k) => !(Math.abs((after.map[k] ?? NaN) - Number(map[k])) <= 1e-6 + 1e-4 * Math.abs(Number(map[k]))));
+        fillSettingsFromText(after.lines.join("\n"));
+        if (diff.length) toast("The controller kept different values for $" + diff.join(", $") + ". Your backup file has the old values.", true);
+        else toast("Wrote and verified " + lines.length + " setting" + (lines.length > 1 ? "s" : "") + ". Backup saved first.");
+      } finally { S.fwWriting = false; }
     },
     calMove: (axis, mm) => {
       if (!requireMachine("Link your machine to run calibration moves")) return;
@@ -1820,5 +2426,6 @@ async function init() {
   onSafety(M.safety.state());
   setConnected(false);
   goStep(1);
+  refreshPublishedPresets().then(() => { applyMatchingPreset(); renderMaterials(); }).catch(() => {});
 }
 init().catch((e) => toast("Couldn't start: " + e.message, true));

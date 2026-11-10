@@ -67,7 +67,7 @@ export function isRisky(id) { return RISKY.has(Number(id)); }
 // everything is plain ASCII on ONE line, and what is sent is rebuilt from the checked words, never the raw text.
 // Anything that could light the torch (M3/M4/M7/M8 in any spelling), reset or sleep the controller ($RST $SLP $BOOT),
 // change laser mode, or chain a second command is refused. STOP / ! / 0x18 are never blocked.
-export function filterConsoleCommand(raw) {
+export function filterConsoleCommand(raw, opts = {}) {
   const s0 = String(raw == null ? "" : raw);
   if (s0 === "!" || s0 === "?" || s0 === "~" || s0 === "\x18") return { ok: true, send: s0 };
   const s = s0.trim();
@@ -101,6 +101,8 @@ export function filterConsoleCommand(raw) {
     rest = rest.slice(m[0].length);
     if (words.length > 10) return fail("Too many words on one line.");
   }
+  // The torch is only ever lit by a bare M3 / M4 (confirmed), never together with a move: a rapid with the torch on is a crash.
+  if (words.some(([w, v]) => w === "M" && (v === 3 || v === 4)) && words.length > 1) return fail("Send M3 on its own line. Moving with the torch lit is not allowed from the console.");
   const OKG = new Set([0, 1, 21, 90, 91, 92]);
   let moves = false;
   for (const [w, v] of words) {
@@ -109,7 +111,9 @@ export function filterConsoleCommand(raw) {
       if (!OKG.has(v)) return fail(v === 20 ? "Inches (G20) are not allowed here: the 50 mm limit is in millimetres." : "G" + v + " isn't allowed in this console.");
       if (v === 0 || v === 1) moves = true;
     } else if (w === "M") {
-      if (v !== 5) return fail([3, 4, 7, 8].includes(v) ? "That would fire the torch. Use the Torch test button on the Setup tab." : "M" + v + " isn't allowed in this console.");
+      if (v === 3 || v === 4) {
+        if (!opts.allowTorch) return { ok: false, reason: "That would fire the torch. Confirm first, or use the Torch test button on the Setup tab.", needsTorchConfirm: true };
+      } else if (v !== 5) return fail([7, 8].includes(v) ? "That would fire the torch. Use the Torch test button on the Setup tab." : "M" + v + " isn't allowed in this console.");
     } else if (w === "S") {
       if (v !== 0) return fail("Only S0 is allowed here.");
     } else if (w === "F") {
@@ -142,6 +146,7 @@ export function parseBackup(text) {
     if (!Number.isFinite(val) || val < info[2] || val > info[3]) return { ok: false, reason: "Line " + (i + 1) + ": $" + id + "=" + m[2] + " is outside " + info[2] + " to " + info[3] + ", so nothing was loaded." };
     if (INTEGER_IDS.has(id) && !Number.isInteger(val)) return { ok: false, reason: "Line " + (i + 1) + ": $" + id + " must be a whole number, so nothing was loaded." };
     if (id === 32 && val) return { ok: false, reason: "Line " + (i + 1) + ": laser mode must stay off on a plasma table, so nothing was loaded." };
+    if (id in out) return { ok: false, reason: "Line " + (i + 1) + ": $" + id + " is listed twice, so nothing was loaded." };
     out[id] = val;
   }
   if (!Object.keys(out).length) return { ok: false, reason: "No $ settings found in that file." };
@@ -183,14 +188,15 @@ function inputFor(id, val) {
   return inp;
 }
 
-export function renderAdvancedMachine(values = {}, firmware = "") {
-  const box = $("advMachine");
+export function renderAdvancedMachine(values = {}, firmware = "", opts = {}) {
+  const box = opts.target || $("advMachine");
   if (!box) return;
   box.replaceChildren();
-  if (host && host.isAdmin && !host.isAdmin()) {
+  const allow = (host && host.isAdmin && host.isAdmin()) || (opts.allowPro && host && host.isPro && host.isPro());
+  if (!allow) {
     const p = document.createElement("p");
     p.className = "muted";
-    p.textContent = "Admin only.";
+    p.textContent = opts.allowPro ? "Switch to Pro in your account to edit firmware settings." : "Admin only.";
     box.appendChild(p);
     return;
   }
@@ -264,25 +270,31 @@ export function renderAdvancedMachine(values = {}, firmware = "") {
   cal.append(ch, cp, grid, crow, cres);
   box.appendChild(cal);
 
-  const pats = document.createElement("div");
-  pats.className = "row wrap";
-  const ph = document.createElement("h3"); ph.textContent = "Test patterns";
-  pats.append(mk("patSquare", "100 mm square"), mk("patCircle", "50 mm circle"), mk("patKerf", "Kerf / speed ladder"));
-  box.append(ph, pats);
+  if (!opts.hidePatterns) {
+    const pats = document.createElement("div");
+    pats.className = "row wrap";
+    const ph = document.createElement("h3"); ph.textContent = "Test patterns";
+    pats.append(mk("patSquare", "100 mm square"), mk("patCircle", "50 mm circle"), mk("patKerf", "Kerf / speed ladder"));
+    box.append(ph, pats);
+  }
 
-  bindAdvanced();
+  bindAdvanced(box);
 }
 
-function currentValues() {
+function settingInputs(root) {
+  const scope = root || document;
+  return [...scope.querySelectorAll("#advSettings input[data-sid], [data-adv-settings] input[data-sid]")];
+}
+function currentValues(root) {
   const out = {};
-  document.querySelectorAll("#advSettings input[data-sid]").forEach((el) => {
+  settingInputs(root).forEach((el) => {
     if (el.value !== "") out[Number(el.dataset.sid)] = Number(el.value);
   });
   return out;
 }
 
 function applyValues(map) {
-  document.querySelectorAll("#advSettings input[data-sid]").forEach((el) => {
+  settingInputs().forEach((el) => {
     const v = map[Number(el.dataset.sid)];
     if (v != null) el.value = String(v);
   });
@@ -297,12 +309,14 @@ function logLine(text) {
   pre.scrollTop = pre.scrollHeight;
 }
 
-function bindAdvanced() {
-  const read = $("advRead");
+function q(root, id) { return (root && root.querySelector("#" + id)) || $(id); }
+
+function bindAdvanced(root) {
+  const read = q(root, "advRead");
   if (!read || read._bound) return;
   read._bound = true;
-  $("advRead").onclick = () => host && host.readSettings && host.readSettings();
-  $("advApply").onclick = () => {
+  q(root, "advRead").onclick = () => host && host.readSettings && host.readSettings();
+  q(root, "advApply").onclick = () => {
     if (!(host && host.writeSettings)) return;
     if (!baseline) { if (host.toast) host.toast("Press Read $ settings first, so only real changes are written.", true); return; }
     const cur = currentValues(), changes = {}, notes = [];
@@ -321,7 +335,7 @@ function bindAdvanced() {
     if (!askConfirm("Write " + ids.length + " setting" + (ids.length > 1 ? "s" : "") + " to the controller?\n\n" + list + (notes.length ? "\n\nCheck these carefully:\n" + notes.join("\n") : "") + "\n\nSTOP stays available. Have you taken a backup?")) return;
     host.writeSettings(changes);
   };
-  $("advBackup").onclick = () => {
+  q(root, "advBackup").onclick = () => {
     const map = currentValues();
     const body = Object.keys(map).sort((a, b) => a - b).map((k) => `$${k}=${map[k]}`).join("\n") + "\n";
     const blob = new Blob([body], { type: "text/plain" });
@@ -331,8 +345,8 @@ function bindAdvanced() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
-  $("advRestoreBtn").onclick = () => $("advRestore").click();
-  $("advRestore").onchange = async (e) => {
+  q(root, "advRestoreBtn").onclick = () => q(root, "advRestore").click();
+  q(root, "advRestore").onchange = async (e) => {
     const f = e.target.files && e.target.files[0];
     e.target.value = "";
     if (!f) return;
@@ -342,38 +356,43 @@ function bindAdvanced() {
     applyValues(r.map);
     logLine("Loaded backup " + String(f.name).replace(/[^\x20-\x7e]/g, "?").slice(0, 60) + " (" + Object.keys(r.map).length + " settings; nothing is sent until you press Write changed settings)");
   };
-  $("formAdvConsole").addEventListener("submit", (e) => {
+  q(root, "formAdvConsole").addEventListener("submit", (e) => {
     e.preventDefault();
-    const raw = $("advConsole").value;
-    const r = filterConsoleCommand(raw);
+    const raw = q(root, "advConsole").value;
+    let r = filterConsoleCommand(raw);
+    if (r.needsTorchConfirm) {
+      if (!askConfirm("Send " + String(raw).trim() + "?\n\nThis would fire the torch. Torch over scrap, earth clamp on, hands clear.\n\nSTOP stays available.")) return;
+      r = filterConsoleCommand(raw, { allowTorch: true });
+    }
     if (!r.ok) { if (host && host.toast) host.toast(r.reason, true); return; }
     if (r.confirm && !askConfirm("Send " + r.send + "?\n\n" + r.confirm.join("\n") + "\n\nSTOP stays available.")) return;
     logLine("> " + r.send);
-    if (host && host.send) host.send(r.send);
-    $("advConsole").value = "";
+    if (host && host.send) host.send(r.send, r);
+    q(root, "advConsole").value = "";
   });
-  $("calMove").onclick = () => {
-    const axis = $("calAxis").value;
-    const mm = Number($("calCmd").value);
+  q(root, "calMove").onclick = () => {
+    const axis = q(root, "calAxis").value;
+    const mm = Number(q(root, "calCmd").value);
     if (!(mm > 0)) { host.toast && host.toast("Enter a move distance.", true); return; }
     if (mm > 200) { host.toast && host.toast("Calibration moves are limited to 200 mm.", true); return; }
     if (host && host.calMove) host.calMove(axis, mm);
   };
-  $("calCompute").onclick = () => {
-    const axis = $("calAxis").value;
-    const cmd = Number($("calCmd").value), meas = Number($("calMeas").value);
+  q(root, "calCompute").onclick = () => {
+    const axis = q(root, "calAxis").value;
+    const cmd = Number(q(root, "calCmd").value), meas = Number(q(root, "calMeas").value);
     if (!(cmd > 0) || !(meas > 0)) { host.toast && host.toast("Enter the commanded and measured distances.", true); return; }
     const sid = { X: 100, Y: 101, Z: 102 }[axis];
     const cur = currentValues()[sid];
     if (!(cur > 0)) { host.toast && host.toast("Read $ settings first so the current steps/mm is known.", true); return; }
     const next = cur * (cmd / meas);
-    $("calResult").textContent = `$${sid} ${cur} → ${next.toFixed(3)} steps/mm (commanded ${cmd} mm, measured ${meas} mm). Press Write changed settings to send it.`;
+    q(root, "calResult").textContent = `$${sid} ${cur} → ${next.toFixed(3)} steps/mm (commanded ${cmd} mm, measured ${meas} mm). Press Write changed settings to send it.`;
     const inp = document.querySelector(`#advSettings input[data-sid="${sid}"]`);
     if (inp) inp.value = String(Math.round(next * 1000) / 1000);
   };
-  $("patSquare").onclick = () => host && host.addPattern && host.addPattern("square");
-  $("patCircle").onclick = () => host && host.addPattern && host.addPattern("circle");
-  $("patKerf").onclick = () => host && host.addPattern && host.addPattern("kerf");
+  const patSq = q(root, "patSquare"), patCi = q(root, "patCircle"), patKe = q(root, "patKerf");
+  if (patSq) patSq.onclick = () => host && host.addPattern && host.addPattern("square");
+  if (patCi) patCi.onclick = () => host && host.addPattern && host.addPattern("circle");
+  if (patKe) patKe.onclick = () => host && host.addPattern && host.addPattern("kerf");
 }
 
 export function fillSettingsFromText(text) {
@@ -384,6 +403,8 @@ export function fillSettingsFromText(text) {
   else applyValues(map);
   return map;
 }
+
+export function lastDollarMap() { return baseline ? { ...baseline } : null; }
 
 export function setFirmwareText(s) {
   const el = $("advFirmware");

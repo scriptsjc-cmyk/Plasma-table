@@ -10,6 +10,7 @@ export class SimTransport {
     this.jogSpeedup = jogSpeedup;
     this.onLine = null; this.onClose = null; this.label = "demo machine";
     this.mpos = [0, 0, 0]; this.wco = [0, 0, 0];
+    this.settings = { 0: 5, 1: 255, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 10: 511, 11: 0.01, 12: 0.002, 13: 0, 20: 0, 21: 0, 22: 1, 23: 0, 24: 25, 25: 500, 26: 250, 27: 1, 30: 1000, 31: 0, 32: 0, 100: 40, 101: 40, 102: 400, 110: 8000, 111: 8000, 112: 1500, 120: 400, 121: 400, 122: 200, 130: 1300, 131: 800, 132: 60 };
     this.alarm = false; this.torch = false; this.hold = false; this.spindleStopped = false;
     this.homing = false; this.relative = false; this.feed = 1000; this.motion = 0;
     this.sheetZ = sheetZ; this.switchOffset = switchOffset; this.speedup = speedup;
@@ -204,7 +205,11 @@ export class SimTransport {
       await this._move(t, w.F || 1000, true);
       return;
     } else if (u === "$$") {
-      for (const s of ["$0=5", "$1=255", "$32=0", "$100=40", "$101=40", "$102=400"]) this._send(s);
+      for (const k of Object.keys(this.settings).map(Number).sort((a, b) => a - b)) this._send("$" + k + "=" + this.settings[k]);
+    } else if (/^\$\d+=/.test(u)) {
+      const m = u.match(/^\$(\d+)=(-?[\d.]+)$/);
+      if (!m || !(Number(m[1]) in this.settings)) return this._send("error:3");
+      this.settings[Number(m[1])] = Number(m[2]);
     } else if (u === "$PINS") {
       for (const s of ["[PIN:PA0,X step]", "[PIN:PA1,Y step]", "[PIN:PA2,Z step]", "[PIN:PB0,Probe]", "[PIN:PB1,Spindle on]"]) this._send(s);
     }

@@ -288,6 +288,7 @@ export function canGrantDemoAdmin() {
   return true;
 }
 export function isAdmin() { const u = currentUser(); return !!(u && u.role === "admin"); }
+export function isPro() { return accountMode() === "pro"; }
 export function accountMode() { const u = currentUser(); return u && u.mode === "pro" ? "pro" : (u ? "beginner" : null); }
 
 export function snapshot() {
@@ -386,7 +387,7 @@ async function refreshLinked() {
 
 function needPin(pin, min) {
   const s = String(pin || "");
-  if (s.length < (min || 6)) throw new Error("Choose a login phrase of at least " + (min || 6) + " characters.");
+  if (s.length < (min || 6)) throw new Error("Choose a password of at least " + (min || 6) + " characters.");
   return s;
 }
 
@@ -433,7 +434,7 @@ export async function signIn({ email, pin }) {
     return currentUser();
   }
   const u = demoState().users.find((x) => x.email === email);
-  if (!u || u.hash !== await hashPin(pin, u.salt)) throw new Error("Email or login phrase is not right.");
+  if (!u || u.hash !== await hashPin(pin, u.salt)) throw new Error("Email or password is not right.");
   writeJson(SESS_KEY, { id: u.id });
   notify();
   return currentUser();

@@ -322,7 +322,7 @@ export function openClaim() {
 }
 
 export function openGate(why) {
-  $("gateWhy").textContent = why || "Link your machine to run jobs";
+  $("gateWhy").textContent = why || "Locked: sign in, then link a machine to run jobs.";
   openDlg("gateDlg");
 }
 
@@ -442,7 +442,7 @@ function bind() {
       if (r.demoInstant) {
         $("newPinEmail").value = $("resetEmail").value;
         pane("newpin");
-        toast("Demo: choose a new login phrase. No email was sent.");
+        toast("Demo: choose a new password. No email was sent.");
       } else toast("If that account exists, a reset email is on its way.");
     } catch (err) { toast(err.message, true); }
     finally { btn.disabled = false; }
@@ -454,10 +454,24 @@ function bind() {
     btn.disabled = true;
     try {
       await A.setNewPin($("newPin").value, $("newPinEmail").value);
-      toast("Login phrase updated");
+      toast("Password updated");
       await afterAuth(false);
     } catch (err) { toast(err.message, true); }
     finally { btn.disabled = false; }
+  });
+
+  if ($("btnStartDesign")) {
+    $("btnStartDesign").onclick = () => {
+      closeAll();
+      if (host && host.startDesigning) host.startDesigning();
+    };
+  }
+
+  $$('input[name="acctMode"]').forEach((r) => {
+    r.addEventListener("change", () => {
+      if (r.checked && host && host.applyMode) host.applyMode(r.value);
+      if (r.checked) A.setMode(r.value).catch(() => {});
+    });
   });
 
   $("btnAcctSave").onclick = async () => {
@@ -696,6 +710,7 @@ export async function initAccountUi(opts) {
   initAdminMachine({
     toast,
     isAdmin: () => A.isAdmin(),
+    isPro: () => A.isPro() || A.isAdmin(),
     send: host.sendAdvanced,
     confirm: host.confirm,
     readSettings: host.readSettings,

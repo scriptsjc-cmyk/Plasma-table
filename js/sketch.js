@@ -77,7 +77,7 @@ export class Sketch {
       if (typeof saved.pointSnap === "boolean") this.opts.pointSnap = saved.pointSnap;
     } catch (e) { /* ignore */ }
     this.load();
-    if (!this.items.length) { this.add("rect", true); this.sel = { ids: [], hole: null }; }
+    this.sel = this.sel || { ids: [], hole: null };
     this.past = [];
     this.bind();
   }
@@ -322,17 +322,31 @@ export class Sketch {
     this.ensureVisible(); this.commit(); this.onSelect();
   }
   pickAll() { this.pick(this.items.map((i) => i.id)); this.draw(); this.onSelect(); }
-  // turn the picked shapes about their middle
+  // Turn 90 keeps each shape's bottom-left and, when width/height exist, swaps them
+  // instead of spinning around the centre (which used to push Y below zero).
   rotateBy(deg) {
     const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();
-    const g = unionBox(list.map((i) => this.boxOf(i))), gc = [(g[0] + g[2]) / 2, (g[1] + g[3]) / 2];
+    const ang = ((Number(deg) % 360) + 360) % 360;
+    const quarter = ang === 90 || ang === 270;
     for (const it of list) {
-      const b = this.boxOf(it), c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
-      const nc = list.length > 1 ? (([x, y]) => [gc[0] + x, gc[1] + y])(rot([c[0] - gc[0], c[1] - gc[1]], deg)) : c;
-      it.rot = (((it.rot || 0) + deg) % 360 + 360) % 360;
-      const nb = this.boxOf(it), nw = nb[2] - nb[0], nh = nb[3] - nb[1];
-      it.x = r1(nc[0] - nw / 2); it.y = r1(nc[1] - nh / 2);
+      const b = this.boxOf(it);
+      const bl = [b[0], b[1]];
+      const aligned = (((it.rot || 0) % 180) + 180) % 180 === 0;
+      const canSwap = quarter && aligned && it.p && Number.isFinite(Number(it.p.w)) && Number.isFinite(Number(it.p.h));
+      if (canSwap) {
+        const t = it.p.w; it.p.w = it.p.h; it.p.h = t;
+        it.x = r1(bl[0]); it.y = r1(bl[1]);
+      } else {
+        it.rot = (((it.rot || 0) + deg) % 360 + 360) % 360;
+        const nb = this.boxOf(it);
+        it.x = r1(bl[0]); it.y = r1(bl[1]);
+        // boxOf uses x,y as the bottom-left of the unrotated params; after rot the
+        // visual BL may shift. Nudge so the visual bottom-left stays put.
+        const nb2 = this.boxOf(it);
+        it.x = r1(it.x + (bl[0] - nb2[0]));
+        it.y = r1(it.y + (bl[1] - nb2[1]));
+      }
     }
     this.commit(); this.onSelect();
   }
@@ -747,9 +761,8 @@ export class Sketch {
   // ---------------------------------------------------------------- view
   size() {
     const w = this.cv.clientWidth || 600;
-    if (typeof document !== "undefined" && document.body && document.body.classList.contains("short-land")) {
-      // in side-rail landscape the canvas fills whatever the flex layout leaves it, so its own height IS the answer
-      // (the old "pane minus siblings" sum ignored gaps and borders: the backing store ended up ~6px taller than the box)
+    if (typeof document !== "undefined" && document.body && (document.body.classList.contains("short-land") || document.body.classList.contains("app-shell") || document.body.classList.contains("shape-fs"))) {
+      // the canvas fills whatever the flex layout leaves it, so its own height IS the answer
       const h = this.cv.clientHeight || 0;
       return [w, Math.round(Math.max(120, h || ((window.innerHeight || 400) * 0.6)))];
     }
@@ -794,7 +807,7 @@ export class Sketch {
     const cv = this.cv, [w, h] = this.size(), dpr = window.devicePixelRatio || 1;
     if (!this.view) { this.view = { s: 1, vx: 0, vy: 0 }; this.fitView(); return; }
     if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-    if (document.body && document.body.classList.contains("short-land")) cv.style.height = "";
+    if (document.body && (document.body.classList.contains("short-land") || document.body.classList.contains("app-shell") || document.body.classList.contains("shape-fs"))) cv.style.height = "";
     else cv.style.height = (h + (cv.offsetHeight - cv.clientHeight)) + "px";   // border-box: add the 1px borders so the content box is exactly h (else the picture is squashed ~2px)
     const ctx = cv.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

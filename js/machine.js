@@ -4,8 +4,9 @@
 import { GrblLink, RT } from "./grbl.js";
 import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt, jobPlan } from "./job.js";
 import { Safety, SafetyError } from "./safety.js";
+import { filterConsoleCommand } from "./admin-machine.js";
 
-const POSITION_LOST_ALARMS = new Set([1, 3, 10, 13]);
+export const POSITION_LOST_ALARMS = new Set([1, 3, 10, 13]);
 export { JobError, SafetyError };
 
 export class Machine {
@@ -226,8 +227,15 @@ export class Machine {
       }
       case "console": {
         const line = String(body.line || "").trim();
-        if (["!", "~", "?"].includes(line)) g.realtime(line);
-        else if (line) g.send(line);
+        if (!line) break;
+        const r = filterConsoleCommand(line, { allowTorch: !!body.allowTorch });
+        if (!r.ok) throw new JobError(r.reason || "That command isn't allowed in the console.");
+        // nothing but realtime bytes is queued behind a running cut (it would run after the job, or between its lines)
+        if (this.jobRunning() && !["!", "?", "~", "\x18"].includes(r.send)) throw new JobError("A job is running. Press STOP, or wait until it finishes.");
+        if (r.send === "!" ) { g.stop(); break; }
+        if (r.send === "\x18") { g.reset(); break; }
+        if (r.send === "?" || r.send === "~") { g.realtime(r.send); break; }
+        g.send(r.send);
         break;
       }
       default: throw new JobError(`Unknown command '${cmd}'.`);

@@ -1,0 +1,100 @@
+# FluidNC config template for Josh's plasma table
+# Board: DUBEUYEW ESP32-DevKitC V1 (30-pin) + screw-terminal breakout
+# Drivers: DM542TE (step/dir/enable). Tune steps/mm after a tape measure test.
+# Copy this file to the FluidNC SD/local FS as config.yaml, then edit the
+# pin numbers to match your breakout wiring.
+#
+# FluidNC uses YAML, not GRBL $ numbers. In this app, open Settings →
+# Machine when connected to FluidNC to download this template. The raw $
+# editor is hidden on FluidNC because those settings live here instead.
+
+name: Plasma Table
+board: ESP32 DevKitC V1
+
+stepping:
+  engine: RMT
+  idle_ms: 255
+  dir_delay_us: 1
+  pulse_us: 4
+  disable_delay_us: 0
+
+axes:
+  shared_stepper_disable_pin: NO_PIN
+  x:
+    steps_per_mm: 80
+    max_rate_mm_per_min: 8000
+    acceleration_mm_per_sec2: 400
+    max_travel_mm: 1300
+    homing:
+      cycle: 2
+      mpos_mm: 0
+      positive_direction: false
+    motor0:
+      limit_neg_pin: NO_PIN
+      limit_pos_pin: NO_PIN
+      standard_stepper:
+        step_pin: gpio.18
+        direction_pin: gpio.19
+        disable_pin: gpio.21
+  y:
+    steps_per_mm: 80
+    max_rate_mm_per_min: 8000
+    acceleration_mm_per_sec2: 400
+    max_travel_mm: 800
+    homing:
+      cycle: 2
+      mpos_mm: 0
+      positive_direction: false
+    motor0:
+      limit_neg_pin: NO_PIN
+      limit_pos_pin: NO_PIN
+      standard_stepper:
+        step_pin: gpio.22
+        direction_pin: gpio.23
+        disable_pin: gpio.21
+  z:
+    steps_per_mm: 400
+    max_rate_mm_per_min: 1500
+    acceleration_mm_per_sec2: 200
+    max_travel_mm: 60
+    homing:
+      cycle: 1
+      mpos_mm: 0
+      positive_direction: true
+    motor0:
+      limit_neg_pin: NO_PIN
+      limit_pos_pin: NO_PIN
+      standard_stepper:
+        step_pin: gpio.25
+        direction_pin: gpio.26
+        disable_pin: gpio.21
+
+# Plasma torch: FluidNC 'spindle' PWM/relay on M3/M5. Use a relay for the torch trigger.
+spindle:
+  type: Relay
+  output_pin: gpio.27
+  enable_pin: NO_PIN
+  direction_pin: NO_PIN
+
+probe:
+  pin: gpio.32:low
+
+# Optional: wire an e-stop to a control pin if you have one on the breakout.
+# control:
+#   safety_door_pin: NO_PIN
+#   reset_pin: NO_PIN
+#   feed_hold_pin: NO_PIN
+#   cycle_start_pin: NO_PIN
+
+# Wi-Fi: station mode so this app can reach ws://<ip>:81 from the same LAN.
+# (A page served from https:// GitHub Pages cannot open ws:// — see docs/FLUIDNC.md)
+http:
+  port: 80
+
+sta:
+  ssid: YOUR_WIFI_NAME
+  password: YOUR_WIFI_PASSWORD
+# Or start as an access point the first time:
+# ap:
+#   ssid: FluidNC
+#   password: 12345678
