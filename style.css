@@ -10,7 +10,7 @@
   --line: #D0D5DD;
   --line-strong: #B8BFC9;
   --text: #1F2A37;
-  --muted: #4B5563;
+  --muted: #374151;
   --shadow: 0 1px 2px rgba(16, 24, 40, .06);
 
   /* one restrained accent — CAD blue — for selection and primary actions */
@@ -44,7 +44,8 @@
   --cad-lock: #C05600;
   --cad-dim: #0078D4;
   --cad-guide: #0078D4;
-  --cad-label: #4B5563;
+  --cad-label: #374151;
+  --accent-text: #004578;
   --cad-tag-text: #FFFFFF;
   --cad-danger: #C42B1C;
 
@@ -67,7 +68,8 @@
   --cad-canvas: #121920; --cad-grid: #18212b; --cad-grid-major: #243040;
   --cad-part-fill: #2c3a49; --cad-part-sel: #26385a; --cad-hole: #121920;
   --cad-part-line: #c9d1d9; --cad-sel: #7aa2f0; --cad-lock: #e3a73c; --cad-dim: #4f9cf0;
-  --cad-guide: #e3a73c; --cad-label: #9aa7b5; --cad-tag-text: #fff; --cad-danger: #e0342b;
+  --cad-guide: #e3a73c; --cad-label: #c5d0dc; --cad-tag-text: #fff; --cad-danger: #e0342b;
+  --accent-text: #9CC7FF;
 }
 
 * { box-sizing: border-box; }
@@ -1401,4 +1403,69 @@ body[data-step="3"] #exportRow { display: none; }
   body.beginner[data-step="3"] .guidehead #ghTitle { font-size: 18px; }
   #demoAcctBar { padding: 4px 8px; font-size: 12px; }
   .appfoot { display: none; }
+}
+
+/* ---- ROUND 3 item 8: one icon weight, AA text, status account, visible focus ---- */
+button .ico, .tab .ico, .pill .ico, .locknote .ico, .ampsnote .ico { margin-right: 0.35em; }
+.iconbtn > .ico, #btnTopMenu .ico { margin-right: 0; }
+.jog .j > .ico { display: block; margin: 0 auto 2px; width: 1.35em; height: 1.35em; }
+.quickbar button i { display: grid; place-items: center; }
+.quickbar button i .ico { width: 18px; height: 18px; margin: 0; }
+.tab .ico { width: 1.05em; height: 1.05em; }
+.topbar .pill, .topbar .modesw-btn { font-weight: 650; }
+.topbar .pill { font-size: 13px; }
+@media (min-width: 900px) {
+  .topbar .pill, .topbar .modesw-btn { min-height: 40px; padding: 6px 12px; }
+  .topbar .iconbtn { min-width: 40px; padding: 6px 10px; }
+  .topmenu { gap: 8px; }
+}
+#acctPill.pill, #acctPill.pill.in {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-weight: 650;
+}
+#acctPill.pill::before {
+  content: "";
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: 0.05em;
+}
+#acctPill.pill.in::before { background: var(--go); }
+#acctPill.pill:hover, #acctPill.pill:focus-visible { background: var(--accent-weak); border-color: transparent; }
+.badge.Run, .badge.Jog, .badge.Home,
+.pill.chip:not(.practice),
+.settab.sel, .admtab.sel,
+.guidehead b { color: var(--accent-text); }
+.setupcard > summary::before {
+  content: "";
+  display: inline-block;
+  width: 0; height: 0;
+  margin-right: 6px;
+  vertical-align: 0.15em;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--text);
+  color: transparent;
+}
+.setupcard:not([open]) > summary::before {
+  content: "";
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--text);
+  border-right: 0;
+}
+button.warn, .locknote, .badge.Hold, .log .warn { color: var(--warn-text); }
+.lamp.on { color: var(--warn-text) !important; }
+.lamp.on[data-in="estop"] { color: #7A1A12 !important; }
+.lamp.on[data-in="torch"] { color: #7A3B00 !important; }
+::placeholder { color: var(--muted); opacity: 1; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
 }

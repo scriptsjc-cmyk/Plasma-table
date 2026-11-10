@@ -475,8 +475,12 @@ const GUIDE = [null,
 function paintGuide() {
   const beg = document.body.classList.contains("beginner");
   $$(".srcTab").forEach((b) => {
-    const t = b.dataset.src === "file" ? (beg ? "📂 Open a drawing file" : "📂 Open a drawing") : (beg ? "✏ Draw your own" : "✏ Make a shape");
-    if (b.textContent !== t) b.textContent = t;
+    const t = b.dataset.src === "file" ? (beg ? "Open a drawing file" : "Open a drawing") : (beg ? "Draw your own" : "Make a shape");
+    const icon = b.dataset.src === "file" ? "folder" : "pencil";
+    if (b.dataset.face !== t) {
+      b.dataset.face = t;
+      b.innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-${icon}"></use></svg> ${t}`;
+    }
   });
   document.body.classList.toggle("bg-picked", !!(beg && S.src === "shape" && sketch && sketch.items.length && !S.bgChoosing && S.cur === 1));
   const gh = $("guideHead"); if (!gh || !beg) return;
@@ -1710,7 +1714,12 @@ function refresh() {
     const pierces = S.prepared ? S.prepared.stats.pierces : 0;
     $("runInfo").textContent = `${clock(P.elapsed)} so far` + (pierces ? ` · cut ${Math.min(pierces, (M.runFrom || 1) - 1 + Math.max(1, P.cut))} of ${pierces}` : "");
     $("runTitle").textContent = S.status.state === "Hold" ? "Paused" : j.running ? "Cutting…" : "Finishing last moves…";
-    $("btnPause").textContent = S.status.state === "Hold" ? "▶ Resume" : "⏸ Pause";
+    const hold = S.status.state === "Hold";
+    const pauseLabel = hold ? "Resume" : "Pause";
+    if ($("btnPause").dataset.face !== pauseLabel) {
+      $("btnPause").dataset.face = pauseLabel;
+      $("btnPause").innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-${hold ? "play" : "pause"}"></use></svg> ${pauseLabel}`;
+    }
     const ov = S.status.feedOv || 100;
     if (j.running) S.lastFeedOv = ov;
     $("liveSpeed").textContent = `${Math.round((S.speed * ov) / 100)} mm/min` + (ov !== 100 ? ` (${ov}% of ${S.speed})` : "");
@@ -1846,7 +1855,8 @@ function setConnected(on, label = "") {
   const work = on || S.designOnly;
   $("connectView").classList.toggle("hidden", work);
   $$(".tabs").forEach((t) => t.classList.toggle("hidden", !work));
-  $("connPill").textContent = on ? (S.fluidnc ? "● FluidNC" : S.demo ? "● Demo, nothing moves" : "● Connected") : "● Not connected";
+  const connLabel = on ? (S.fluidnc ? "FluidNC" : S.demo ? "Demo, nothing moves" : "Connected") : "Not connected";
+  $("connPill").innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-dot"></use></svg> ${connLabel}`;
   document.body.classList.toggle("demo-on", !!(on && S.demo));
   $("connPill").className = "pill " + (on ? "on" : "off");
   if (!on) { S.fluidnc = false; S.zeroSet = false; }
