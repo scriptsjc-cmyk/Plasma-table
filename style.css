@@ -1048,7 +1048,16 @@ body.demo-on #connPill { background: var(--warn-bg); border-color: var(--warn); 
 .playtime { flex: none; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .qbwhy { margin: 4px 0 0; padding: 6px 10px; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); color: var(--warn-text); font-size: 14px; }
 .qbwhy.hidden { display: none; }
-.quickbar button[aria-disabled="true"] { opacity: .5; cursor: help; }
+.quickbar button[aria-disabled="true"],
+[aria-disabled="true"][data-why] { opacity: .5; cursor: help; }
+.whytip { position: fixed; z-index: 80; max-width: min(280px, calc(100vw - 16px)); padding: 8px 10px;
+  background: #1F2A37; color: #fff; border-radius: 6px; font-size: 13px; font-weight: 650; line-height: 1.35;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .28); pointer-events: none; }
+.whytip.hidden { display: none; }
+button.secondary, .fit-demo-btn { background: var(--well); border: 1px solid var(--line-strong); color: var(--text); font-weight: 650; }
+button.secondary:hover:not(:disabled), .fit-demo-btn:hover { background: var(--accent-weak); border-color: var(--accent); }
+#fit .fit-demo-btn { display: inline-flex; align-items: center; width: auto; max-width: 100%; min-height: 40px;
+  margin-top: 4px; padding: 8px 12px; font-size: 14px; text-align: left; }
 
 /* ---- Pro: cut list, CAM panel, toolbar, delay row ---- */
 .cutlist { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; max-height: 240px; overflow: auto; }

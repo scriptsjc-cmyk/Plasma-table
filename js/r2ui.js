@@ -14,7 +14,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export function initR2(host) {
   H = host;
-  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy();
+  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindKeys(); bindWhy(); bindDemoFit();
   paintVersionLines();
 }
 
@@ -533,17 +533,86 @@ function bindKeys() {
   });
 }
 
-// ================================================================ greyed-out tools say why (inline, and on tap)
+// ================================================================ greyed-out controls say why (tap anywhere)
+// Reasons already live on the control as data-why + aria-disabled="true" (whyOff() stays private in app.js).
 let whyTimer = 0;
-export function showWhy(text) {
-  const el = $("qbWhy"); if (!el) { H.toast(text); return; }
-  el.textContent = text; el.classList.remove("hidden");
-  clearTimeout(whyTimer); whyTimer = setTimeout(() => el.classList.add("hidden"), 4500);
+function whyMessage(el) {
+  const why = (el.getAttribute("data-why") || "").trim();
+  if (!why) return "";
+  const label = (el.dataset.label || "").trim();
+  if (!label) return why.endsWith(".") ? why : why + ".";
+  const short = label.replace(/\s*\([^)]*\)\s*$/, "");
+  return short + " is off: " + (why.endsWith(".") ? why : why + ".");
+}
+function placeWhyTip(el, anchor) {
+  const stop = $("btnStop");
+  const sr = stop ? stop.getBoundingClientRect() : null;
+  el.style.left = "0px"; el.style.top = "0px";
+  const w = el.offsetWidth, h = el.offsetHeight;
+  const r = anchor.getBoundingClientRect();
+  let left = Math.max(8, Math.min(r.left, innerWidth - w - 8));
+  let top = r.bottom + 6;
+  if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 6);
+  const hits = (t, l) => sr && !(l + w < sr.left || l > sr.right || t + h < sr.top || t > sr.bottom);
+  if (hits(top, left)) {
+    const below = sr.bottom + 6;
+    const above = sr.top - h - 6;
+    top = below + h <= innerHeight - 8 ? below : Math.max(8, above);
+    if (hits(top, left)) left = Math.max(8, sr.left - w - 8);
+  }
+  el.style.left = left + "px";
+  el.style.top = top + "px";
+}
+export function showWhy(text, anchor) {
+  const tip = $("whyTip");
+  const inline = $("qbWhy");
+  if (inline) {
+    const inBar = anchor && anchor.closest("#quickBar");
+    if (inBar) { inline.textContent = text; inline.classList.remove("hidden"); }
+    else inline.classList.add("hidden");
+  }
+  if (!tip) { if (H) H.toast(text); return; }
+  tip.textContent = text;
+  tip.classList.remove("hidden");
+  if (anchor && anchor.getBoundingClientRect) placeWhyTip(tip, anchor);
+  else { tip.style.left = "50%"; tip.style.top = ""; tip.style.bottom = "24px"; tip.style.transform = "translateX(-50%)"; }
+  if (anchor) tip.style.transform = "";
+  clearTimeout(whyTimer);
+  whyTimer = setTimeout(() => { tip.classList.add("hidden"); if (inline) inline.classList.add("hidden"); }, 4500);
 }
 function bindWhy() {
-  $("quickBar").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-qb][aria-disabled='true']"); if (!b) return;
-    e.preventDefault(); e.stopPropagation();
-    showWhy((b.dataset.label || "This tool") + " is off: " + (b.dataset.why || "select a shape first") + ".");
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[aria-disabled='true'][data-why]");
+    if (!b) return;
+    const text = whyMessage(b);
+    if (!text) return;
+    e.preventDefault();
+    e.stopPropagation();
+    showWhy(text, b);
   }, true);
+}
+
+// The demo fit line is plain text rewritten by refresh(). Turn that one sentence into a real button.
+let fitDressing = false;
+function dressDemoFit() {
+  const el = $("fit"); if (!el || fitDressing) return;
+  if (el.querySelector(".fit-demo-btn")) return;
+  const raw = (el.textContent || "").replace(/\s+/g, " ").trim();
+  if (!/edges are set up for you/i.test(raw)) return;
+  fitDressing = true;
+  el.textContent = "";
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "secondary fit-demo-btn";
+  b.id = "btnFitDemoEdges";
+  b.textContent = "Set up the edges for me";
+  b.title = "Demo: nothing real moves";
+  b.setAttribute("aria-label", "Set up the edges for me. Demo only, nothing real moves.");
+  el.appendChild(b);
+  fitDressing = false;
+}
+function bindDemoFit() {
+  const el = $("fit"); if (!el) return;
+  new MutationObserver(() => dressDemoFit()).observe(el, { childList: true, attributes: true, attributeFilter: ["class"] });
+  dressDemoFit();
 }
