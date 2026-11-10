@@ -83,10 +83,26 @@ export class SimTransport {
     for (const l of this.queue) { if (/^\$J=/i.test(l)) this._send("ok"); else keep.push(l); }
     this.queue = keep;
   }
-  // move in small steps so the position updates smoothly; jogs run at real speed
+  // straight move, in small steps so the position updates smoothly
   async _move(target, feed, jog = false) {
-    const gen = this.resetGen, jgen = this.jogGen, start = [...this.mpos];
+    const start = [...this.mpos];
     const dist = Math.hypot(...target.map((t, i) => t - start[i]));
+    return this._path((f) => start.map((v, i) => v + (target[i] - v) * f), dist, feed, jog, target);
+  }
+  // arc (G2 clockwise / G3 anticlockwise) about centre start+(I,J); same start and end = full circle
+  async _arc(target, I, J, cw, feed) {
+    const s = [...this.mpos], cx = s[0] + I, cy = s[1] + J, r = Math.hypot(I, J);
+    const a0 = Math.atan2(s[1] - cy, s[0] - cx), a1 = Math.atan2(target[1] - cy, target[0] - cx);
+    let sweep = cw ? a0 - a1 : a1 - a0;
+    while (sweep <= 1e-6) sweep += 2 * Math.PI;
+    const dir = cw ? -1 : 1;
+    return this._path((f) => {
+      const a = a0 + dir * sweep * f;
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a), s[2] + (target[2] - s[2]) * f];
+    }, r * sweep, feed, false, target);
+  }
+  async _path(at, dist, feed, jog, target) {
+    const gen = this.resetGen, jgen = this.jogGen;
     const dur = ((dist / Math.max(feed, 1)) * 60000) / (jog ? this.jogSpeedup : this.speedup);
     let done = 0, last = Date.now();
     this.moving = true; this.jogging = jog;
@@ -95,8 +111,7 @@ export class SimTransport {
         await sleep(10);
         if (gen !== this.resetGen || (jog && jgen !== this.jogGen)) return false;
         const now = Date.now(); if (!this.hold) done += now - last; last = now;
-        const f = Math.min(1, done / dur);
-        this.mpos = start.map((v, i) => v + (target[i] - v) * f);
+        this.mpos = at(Math.min(1, done / dur));
       }
       this.mpos = [...target];
       return true;
@@ -149,7 +164,9 @@ export class SimTransport {
       const t = [...this.mpos];
       "XYZ".split("").forEach((a, i) => { if (a in ax) t[i] = this.relative ? this.mpos[i] + ax[a] : ax[a] + this.wco[i]; });
       this._send("ok");
-      await this._move(t, this.motion === 0 ? 8000 : (this.feed * this.feedOv) / 100);
+      const feed = this.motion === 0 ? 8000 : (this.feed * this.feedOv) / 100;
+      if ((this.motion === 2 || this.motion === 3) && ("I" in ax || "J" in ax)) await this._arc(t, ax.I || 0, ax.J || 0, this.motion === 2, feed);
+      else await this._move(t, feed);
       return;
     }
     this._send("ok");

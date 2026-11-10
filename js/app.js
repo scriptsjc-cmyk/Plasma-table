@@ -413,13 +413,13 @@ function drawCanvas(cv, main) {
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
   const X = (x) => offX + (x - A.x[0]) * sc, Y = (y) => h - offY - (y - A.y[0]) * sc;
-  if (main) cv.classList.toggle("placing", !zoom && !!canPlace());
+  if (main) cv.classList.toggle("placing", !zoom && canPlace());
   cv._map = zoom ? null : { toMm: (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc], toPx: (x, y) => [X(x), Y(y)], sc, T: A.table };
   if (!zoom) drawMachineBed(ctx, A.table, X, Y, sc);
   if (S.prepared) {
     const pv = S.prepared.preview;
     const path = (p) => { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(X(x + ox), Y(y + oy)) : ctx.moveTo(X(x + ox), Y(y + oy)))); ctx.stroke(); };
-    if (!zoom && main && canPlace()) {          // draggable: show the part's footprint
+    if (!zoom && main && canPlace() && !placeBlock()) {          // draggable: show the part's footprint
       const b = S.prepared.stats.bounds;
       ctx.fillStyle = S.dragging ? "rgba(227,167,60,.22)" : "rgba(227,167,60,.10)";
       ctx.strokeStyle = "rgba(227,167,60,.75)"; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
@@ -445,36 +445,51 @@ function drawCanvas(cv, main) {
 }
 
 // ---- drag the part around the table (step 3/4): drop it = new start point, torch doesn't move
+function placeBlock() {      // why the part can't be dragged right now (null = it can)
+  if (!S.connected) return "Connect to the table first.";
+  if (S.job && S.job.running) return "A job is running.";
+  const st = S.status.state || "";
+  if (st.startsWith("Alarm")) return "The machine is in alarm. Press Unlock at the top, then drag the part.";
+  if (["Run", "Jog", "Home"].some((x) => st.startsWith(x))) return "Wait for the machine to stop moving, then drag the part.";
+  if (st.startsWith("Hold") || st.startsWith("Door")) return "The machine is paused. Press Stop or Resume first.";
+  return null;
+}
 function canPlace() {
-  return S.connected && S.prepared && (S.cur === 3 || S.cur === 4) && S.status.state === "Idle" && !(S.job && S.job.running);
+  return !!S.prepared && (S.cur === 3 || S.cur === 4) && !!S.connected;
 }
 function bindPlacing() {
   const cv = $("preview");
   let drag = null;
   const at = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  const onPart = (px, py, touch) => {
-    const m = cv._map; if (!m || !canPlace()) return false;
-    const [x, y] = m.toMm(px, py), [ox, oy] = originView(), b = S.prepared.stats.bounds, pad = (touch ? 22 : 10) / m.sc;
-    return x > b[0] + ox - pad && x < b[2] + ox + pad && y > b[1] + oy - pad && y < b[3] + oy + pad;
+  const where = (px, py) => {        // "part" | "table" | null
+    const m = cv._map; if (!m || !canPlace()) return null;
+    const [x, y] = m.toMm(px, py), [ox, oy] = originView(), b = S.prepared.stats.bounds, pad = 14 / m.sc;
+    if (x > b[0] + ox - pad && x < b[2] + ox + pad && y > b[1] + oy - pad && y < b[3] + oy + pad) return "part";
+    return null;
+  };
+  const clampOrigin = (ox, oy) => {
+    const b = S.prepared.stats.bounds, T = cv._map.T;
+    if (b[2] - b[0] <= T.x[1] - T.x[0]) ox = Math.min(Math.max(ox, T.x[0] - b[0]), T.x[1] - b[2]);
+    if (b[3] - b[1] <= T.y[1] - T.y[0]) oy = Math.min(Math.max(oy, T.y[0] - b[1]), T.y[1] - b[3]);
+    return [Math.round(ox), Math.round(oy)];
   };
   cv.addEventListener("pointerdown", (e) => {
     if (sketch && sketch.active) return;
-    const [px, py] = at(e);
-    if (!onPart(px, py, e.pointerType === "touch")) return;
+    const [px, py] = at(e), hit = where(px, py);
+    if (!hit) return;
+    const why = placeBlock();
+    if (why) { toast(why, true); return; }
     e.preventDefault(); cv.setPointerCapture(e.pointerId);
     drag = { start: cv._map.toMm(px, py), o0: originView(), moved: false };
-    S.dragging = true; drawPreview();
+    S.dragging = true; refresh();
   });
   cv.addEventListener("pointermove", (e) => {
     if (sketch && sketch.active) return;
     const [px, py] = at(e);
-    if (!drag) { cv.style.cursor = onPart(px, py, false) ? "grab" : ""; return; }
+    if (!drag) { const h = where(px, py); cv.style.cursor = h === "part" ? "grab" : ""; return; }
     cv.style.cursor = "grabbing";
-    const m = cv._map, [x, y] = m.toMm(px, py), b = S.prepared.stats.bounds, T = m.T;
-    let ox = Math.round(drag.o0[0] + x - drag.start[0]), oy = Math.round(drag.o0[1] + y - drag.start[1]);
-    // keep it on the table
-    if (b[2] - b[0] <= T.x[1] - T.x[0]) ox = Math.min(Math.max(ox, T.x[0] - b[0]), T.x[1] - b[2]);
-    if (b[3] - b[1] <= T.y[1] - T.y[0]) oy = Math.min(Math.max(oy, T.y[0] - b[1]), T.y[1] - b[3]);
+    const [x, y] = cv._map.toMm(px, py);
+    const [ox, oy] = clampOrigin(drag.o0[0] + x - drag.start[0], drag.o0[1] + y - drag.start[1]);
     if (ox !== drag.o0[0] || oy !== drag.o0[1]) drag.moved = true;
     S.dragOrigin = [ox, oy];
     refresh();
@@ -717,7 +732,7 @@ async function connectUSB() {
   }
 }
 async function connectDemo() {
-  const t = new SimTransport({ switchOffset: S.cfg.probe.switch_offset_mm, sheetZ: -15 });
+  const t = new SimTransport({ switchOffset: S.cfg.probe.switch_offset_mm, sheetZ: -15, speedup: 1 });   // real speed
   await t.open();
   await M.connect(t);
   S.demo = t;
