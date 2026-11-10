@@ -1715,7 +1715,7 @@ export class Sketch {
       const isArrow = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown"].includes(e.key);
       if (!this.sel.ids.length) { if (isArrow) stop(); return; }
       if (e.key === "PageUp" || e.key === "PageDown") { stop(); return; }
-      if (this.layout && !this.opts.pro && isArrow) { stop(); return; }          // arrow-key nudge is a Pro feature in the sheet layout
+      if (this.layout && isArrow) { stop(); return; }          // on the cutting screen the arrows are for jogging, never for nudging a part (the nudge buttons are there)
       const st = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
       const mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] }[e.key];
       if (mv) { stop(); this.nudge(...mv); return; }

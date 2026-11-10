@@ -1176,7 +1176,7 @@
 
     <div class="setpane hidden" data-setpane="speeds">
       <h3>Speeds and acceleration</h3>
-      <p class="muted small">Maximum rates (mm/min) and acceleration (mm/s²). These are the controller limits, not the cut speed for a material — that lives on the Material step.</p>
+      <p class="muted small">Maximum rates (mm/min) and acceleration (mm/s²). These are the controller limits, not the cut speed for a material — that lives under More cut options on the cutting screen.</p>
       <div class="grid3">
         <label>X max rate<input id="setRateX" type="number" min="1" step="10" inputmode="decimal"></label>
         <label>Y max rate<input id="setRateY" type="number" min="1" step="10" inputmode="decimal"></label>
@@ -1202,8 +1202,8 @@
 
     <div class="setpane hidden" data-setpane="pierce">
       <h3>Pierce and cut</h3>
-      <p class="muted small">These same values appear on the Material step under More settings and are written into the G-code for each pierce. The selected material preset fills them automatically.</p>
-      <p class="muted">Pierce height, cut height and delay are on Torch &amp; THC. Cut speed is on the Material step.</p>
+      <p class="muted small">These same values appear on the cutting screen under More cut options and are written into the G-code for each pierce. The selected material preset fills them automatically.</p>
+      <p class="muted">Pierce height, cut height and delay are on Torch &amp; THC. Cut speed is under More cut options on the cutting screen.</p>
       <div class="row wrap">
         <button type="button" id="btnPierceJump" class="secondary">Open Torch &amp; THC</button>
         <button type="button" id="btnPierceSpeed" class="secondary">Open cut speed</button>

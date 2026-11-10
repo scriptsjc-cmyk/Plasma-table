@@ -93,7 +93,7 @@ export function makeClaimCode() {
   return pick(0, 4) + "-" + pick(4, 4);
 }
 
-function notify() { for (const fn of LISTENERS) try { fn(api.snapshot()); } catch (e) { /* ignore */ } }
+function notify() { for (const fn of LISTENERS) try { fn(snapshot()); } catch (e) { /* ignore */ } }
 export function onAccountChange(fn) { LISTENERS.add(fn); return () => LISTENERS.delete(fn); }
 
 function readJson(key, fallback) {

@@ -25,19 +25,19 @@ const STEPS = [
     "Use Trace the outline (torch off) to walk the path on the sheet before a real cut.",
   ]},
   { id: "practice", title: "A practice (dry) run", body: [
-    "On step 2 (Material), tick Practice run – move only, torch stays off. A PRACTICE RUN chip appears in the header.",
+    "On the Part step, under Material and thickness, tick Practice run – move only, torch stays off. A PRACTICE RUN chip appears in the header.",
     "In step 3 tick the check boxes, and press Start. The machine moves the path with the torch off so you can see it will fit.",
     "This is the safest first job on a new setup.",
   ]},
   { id: "cut", title: "A first real cut", body: [
     "Untick Practice run. Confirm material and thickness, air on, plasma set to the listed amps, earth clamp on the sheet, and hands clear.",
     "A red TORCH ON pill in the header lights whenever the controller says the torch is firing — on every tab, not just the run screen.",
-    "Pause holds motion and the torch. STOP or Esc cancels the job at once. Do not close the tab while a job is running. If you Disconnect mid-cut, the torch may stay on until you stop it.",
+    "Pause holds motion and the torch. STOP, Esc or the space bar cancels the job at once (the red mushroom shows E-STOP ON until you tap it to reset). Do not close the tab while a job is running. If you Disconnect mid-cut, the torch may stay on until you stop it.",
   ]},
   { id: "materials", title: "Materials and settings", body: [
     "Pick a material and thickness. If the admin has published cut presets, those become the default pierce delay, height, speed and kerf — the cut flow uses them.",
     "You can override speed on the slider, and save a speed that worked. Settings → Material library keeps your own presets on this device.",
-    "Pierce height, cut height and delay are edited under Settings → Torch & THC. The Pierce & cut tab jumps straight to those fields. Cut speed is on the Material step.",
+    "Pierce height, cut height and delay are edited under Settings → Torch & THC. The Pierce & cut tab jumps straight to those fields. Cut speed is under More cut options on the Part step.",
   ]},
   { id: "editor", title: "The full-screen shape editor", body: [
     "On Make a shape, press Full-screen editor. The canvas fills the screen. The toolbar has draw outline, rectangle, circle, slot, arc, holes, join, subtract, mirror, rotate, array, fillet/chamfer, offset, align, dimensions, snap, undo/redo, zoom/fit and edit-edge.",
