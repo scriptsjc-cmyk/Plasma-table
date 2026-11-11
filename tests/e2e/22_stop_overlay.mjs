@@ -1,4 +1,5 @@
 // Round 3 safety tests: (1a) the portrait overlay never hides STOP while anything is moving, (1b) Continue-from-cut never forces work zero.
+// Round 5 safety: with a machine connected, STOP is above the cover, the numpad and the dialogs even while idle.
 import { serve, open, launch, demoToShape, REPO, SITE, DATA, SHOTS, mod } from "../lib/r2compat.mjs";
 // Round 4: serves the repo; the opening goes through the new flow (menu -> make -> send to cutting -> Practice).
 const out = SHOTS;
@@ -22,6 +23,20 @@ const refresh = (page) => page.evaluate(() => window.plasmaTest.refreshGate());
   await demoToShape(page, { stay: "cut" }); await sleep(800);
   await sleep(300); await refresh(page);
   ck("1a connected + idle: overlay still shown (nothing is moving)", await overlayShown(page));
+  // Round 5 safety: with a machine connected, STOP stays above the cover (and every other overlay) even while idle
+  const c0 = await coverAt(page, "btnStop");
+  ck("r5 connected + idle, cover up: STOP is on top of it and big", c0.top === "btnStop" && c0.w >= 72 && c0.h >= 72, JSON.stringify(c0));
+  ck("r5 the cover starts below the header, so the STOP corner is clear", await T(page, "document.getElementById('turnOverlay').getBoundingClientRect().top >= document.querySelector('.topbar').getBoundingClientRect().bottom - 1"));
+  for (const id of ["numPad", "cadDialog", "accountDlg", "shapeLib"]) {
+    await page.evaluate((id) => document.getElementById(id).classList.remove("hidden"), id); await sleep(150);
+    const c = await coverAt(page, "btnStop");
+    ck(`r5 connected + idle, #${id} open: STOP is still on top`, c.top === "btnStop", JSON.stringify(c));
+    await page.evaluate((id) => document.getElementById(id).classList.add("hidden"), id);
+  }
+  await page.evaluate(() => document.getElementById("numPad").classList.remove("hidden"));
+  await page.click("#btnStop"); await sleep(600);       // a real tap through the cover + numpad
+  ck("r5 a real tap on STOP over the cover and the numpad latches the E-stop", await T(page, "window.plasmaTest.estopOn()"));
+  await page.evaluate(() => { document.getElementById("numPad").classList.add("hidden"); window.plasmaTest.estopReset(); document.getElementById("btnUnlock").click(); }); await sleep(1200);
   for (const st of [{ state: "Run" }, { state: "Hold:0" }, { state: "Jog" }, { state: "Home" }, { state: "Alarm" }, { state: "Idle", torch: true }]) {
     await page.evaluate((st) => { const S = window.plasmaTest.S; S.status = { ...S.status, state: "Idle", torch: false, ...st }; window.plasmaTest.refresh(); }, st);
     const o = await overlayShown(page), c = await coverAt(page, "btnStop");

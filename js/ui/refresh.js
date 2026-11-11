@@ -58,6 +58,8 @@ export function paintChrome() {
   // Round 3 safety: while a job runs / is paused / the machine is doing anything / the torch could be on, the portrait
   // "turn sideways" overlay must stay away so STOP and pause are always on screen. It only shows when everything is idle.
   document.body.classList.toggle("job-live", overlayLive());
+  // Round 5 safety: with a machine connected, STOP is lifted above every overlay (css/screen-cut.css), not only during a job
+  document.body.classList.toggle("machine-connected", !!S.connected);
   document.body.classList.toggle("is-admin", !!Acc.isAdmin());
   paintLock(); estopPaint();
   const lost = S.lastAlarmCode != null && POSITION_LOST_ALARMS.has(S.lastAlarmCode);
