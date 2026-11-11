@@ -1,7 +1,7 @@
 // Round 5 group 2 (SAFETY) tests, items 6-11. Takes the r5-safety-*.png screenshots.
 //  6 E-stop release is a deliberate press-and-hold; Torch test / jog / console M3 are blocked while it is latched
 //  7 the TORCH ON pill is visible on the landscape-phone cutting screen
-//  8 Score / Mark lines block Start with a clear warning (the G-code can't cut them lighter)
+//  8 Score / Mark lines block Start and Download G-code with a clear warning (the G-code can't cut them lighter)
 //  9 STOP / reset / home / alarm clear work zero; startJob (and Continue from cut N) refuse without it
 // 10 Space is the one STOP key; Esc never stops
 // 11 STOP is only on the cutting screen (the only screen the machine can move from)
@@ -245,7 +245,7 @@ for (const view of ["laptop", "phone"]) {
   ck("8 setting Score is accepted by the inspector", r !== false, String(r));
   await sleep(300);
   const toastTxt = await T(page, "document.getElementById('toast').textContent");
-  ck("8 choosing Score tells you at once it can't be cut lighter", /Score/.test(toastTxt) && /Start stays blocked/.test(toastTxt), toastTxt);
+  ck("8 choosing Score tells you at once it can't be cut lighter", /Score/.test(toastTxt) && /Start and Download G-code stay blocked/.test(toastTxt), toastTxt);
   await page.evaluate(() => window.plasmaTest.goStep(3)); await sleep(400);
   await T(page, "window.plasmaTest.refresh()");
   const bt = await blockersText(page);
@@ -264,10 +264,22 @@ for (const view of ["laptop", "phone"]) {
   ck("8 un-hiding it blocks again", !(await startable(page)));
   await setOp("cut"); await tick();
   ck("8 back to Cut: Start is allowed again", await startable(page), await blockersText(page));
-  // export warns
+  // Download G-code: refused (and said why) before any file is written while a Score/Mark line is showing
+  const downloads = [];
+  page.on("download", (d) => downloads.push(d.suggestedFilename()));
   await setOp("score");
-  await T(page, "window.plasmaTest.exportGcode()"); await sleep(400);
-  ck("8 downloading G-code with a Score shape warns that it is cut at full power", /full power/.test(await T(page, "document.getElementById('toast').textContent")), await T(page, "document.getElementById('toast').textContent"));
+  await T(page, "document.getElementById('btnExport').click()"); await sleep(800);
+  const dlToast = await T(page, "document.getElementById('toast').textContent");
+  ck("8 Download G-code with a Score shape is refused: no file is saved", downloads.length === 0, JSON.stringify(downloads));
+  ck("8 ...and the reason (Score/Mark, full power, set to Cut or hide) shows at once", /Not downloaded/.test(dlToast) && /Score or Mark/.test(dlToast) && /full power/.test(dlToast) && /back to Cut|hide/.test(dlToast), dlToast);
+  await setOp("mark"); await T(page, "window.plasmaTest.exportGcode()"); await sleep(500);
+  ck("8 Mark is refused the same way", downloads.length === 0 && /Not downloaded/.test(await T(page, "document.getElementById('toast').textContent")));
+  await T(page, "window.ptInspector.setLayerHidden('mark', true)"); await sleep(300);
+  await T(page, "document.getElementById('btnExport').click()"); await sleep(1200);
+  ck("8 with the Score/Mark layer hidden the download goes ahead", downloads.length === 1, JSON.stringify(downloads));
+  await T(page, "window.ptInspector.setLayerHidden('mark', false)"); await sleep(300);
+  await setOp("cut"); await T(page, "document.getElementById('btnExport').click()"); await sleep(1200);
+  ck("8 back to Cut: the download goes ahead", downloads.length === 2, JSON.stringify(downloads));
   await page.context().close();
 }
 

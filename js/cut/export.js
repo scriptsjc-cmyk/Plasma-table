@@ -6,7 +6,7 @@ import * as Acc from "../account/account.js";
 import { $, toast } from "../core/dom.js";
 import { S } from "../core/state.js";
 import { loadJob } from "./prepare.js";
-import { scoreMarkCount } from "./checklist.js";
+import { scoreMarkProblem } from "./checklist.js";
 import { lockText } from "../machine/access.js";
 
 function exportDialect() {
@@ -24,6 +24,10 @@ export function exportGcode() {
     openGate(lockText("download G-code"));
     return;
   }
+  // Round 5 (safety): Score/Mark lines would come out as full-power through-cuts (the torch only switches on and off),
+  // so nothing is written until they are set back to Cut or their layer is hidden. Said before any file is saved.
+  const sm = scoreMarkProblem();
+  if (sm) { toast("Not downloaded. " + sm, true); return; }
   if (!S.prepared) loadJob();
   let text = "";
   if (S.prepared && Array.isArray(S.prepared.lines) && S.prepared.lines.length) text = S.prepared.lines.join("\n") + "\n";
@@ -41,8 +45,6 @@ export function exportGcode() {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   toast("Downloaded " + dialect.toUpperCase() + " file");
-  const sm = scoreMarkCount();
-  if (sm) toast(`Careful: ${sm} shape${sm === 1 ? " is" : "s are"} set to Score or Mark. The G-code cuts them through at full power.`, true);
 }
 export function bindExport() {
   $("btnExport").onclick = exportGcode;

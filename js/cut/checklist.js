@@ -38,8 +38,8 @@ export function zeroJustSet() {
   refresh();
 }
 // Round 5 (safety): Score and Mark are only labels. The torch here is on/off (M3 S1000 / M5) and the plasma power is set by hand at the
-// unit, so the G-code can't cut a line lighter. Rather than silently cut those lines through at full power, Start is blocked.
-export function scoreMarkCount() {
+// unit, so the G-code can't cut a line lighter. Rather than cut those lines through at full power, Start and Download G-code are blocked.
+function scoreMarkCount() {
   if (!sketch || S.src !== "shape") return 0;
   return sketch.items.filter((it) => (it.op === "score" || it.op === "mark") && !sketch.layerHidden(it)).length;
 }
