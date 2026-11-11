@@ -251,6 +251,19 @@ export class GrblLink {
     this.pending.push({ line, source });
     this._pump();
   }
+  // send one line and wait for its ok / error, with the lines the controller printed before it (e.g. a $ setting's value).
+  // secret: the console shows "> $Name=********" instead of the line (passwords).
+  ask(line, { secret = false, timeout = 5000 } = {}) {
+    line = String(line).trim();
+    return new Promise((resolve) => {
+      let done = false;
+      const finish = (r) => { if (!done) { done = true; clearTimeout(timer); resolve(r); } };
+      const timer = setTimeout(() => finish({ ok: false, lines: item.got, error: "no answer" }), timeout);
+      const item = { line, source: secret ? "secret" : "manual", got: [], done: (ok, text) => finish({ ok, lines: item.got, error: ok ? "" : text }) };
+      this.pending.push(item);
+      this._pump();
+    });
+  }
   sendLines(lines, source = "manual") {
     for (const l of lines) if (l.trim() && !l.trim().startsWith(";")) this.send(l, source);
   }
@@ -316,21 +329,23 @@ export class GrblLink {
 
   _pump() {
     while (this.pending.length) {
-      const { line, source } = this.pending[0];
+      const { line, source, got, done } = this.pending[0];
       const n = line.length + 1;
       const used = this.inflight.reduce((a, x) => a + x.n, 0);
       if (used + n > this.rx && this.inflight.length) break;
       this.pending.shift();
-      this.inflight.push({ n, source, line });
+      this.inflight.push({ n, source, line, got, done });
       this.t.write(line + "\n");
       if (source === "job" && this.job) this.job.sent++;
       else if (source === "manual") this._emit("log", { text: "> " + line, level: "tx" });
+      else if (source === "secret") this._emit("log", { text: "> " + line.split("=")[0] + "=********", level: "tx" });
     }
   }
 
   _ack(ok, text) {
     const item = this.inflight.shift();
     if (!item) return;
+    if (item.done) item.done(ok, text);
     if (item.source === "job" && this.job) {
       this.job.acked++;
       if (!ok) {
@@ -383,6 +398,7 @@ export class GrblLink {
       return;
     }
     if (line.startsWith("[PRB:")) this._emit("probe", { text: line });
+    if (this.inflight[0] && this.inflight[0].got) this.inflight[0].got.push(line);     // the answer to an ask() comes before its ok
     this._emit("log", { text: line, level: "rx" });
   }
 }
