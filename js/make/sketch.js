@@ -131,15 +131,19 @@ export class Sketch {
   }
   add(type, quiet, overrides) {
     if (!def(type)) return;
-    this.remember();
-    const it = this.newItem(type, overrides);
+    const hole = !!def(type).hole;
     let host = this.selected();
     if (host && this.isHole(host)) host = this.hostOf(host) || (def(host.type).multi ? this.hostOfBox(host, this.items.filter((o) => !this.isHole(o))) : null);
+    if (hole && !host) {                                                 // round 5 item 6: no part picked: use the only part, or (Beginner) ask which one
+      const parts = this.items.filter((o) => !this.isHole(o));
+      if (parts.length === 1) host = parts[0];
+      else if (parts.length > 1 && !this.opts.pro) { this.onMessage("Tap the part the hole should go in, then add the hole."); return; }
+    }
+    this.remember();
+    const it = this.newItem(type, overrides);
     this.items.push(it);
-    const b0 = this.boxOf(it), w = b0[2] - b0[0], h = b0[3] - b0[1];
-    if (def(type).hole && host && !this.isHole(host)) {               // holes drop into the middle of the picked part
-      const b = this.boxOf(host);
-      it.x = Math.round((b[0] + b[2] - w) / 2); it.y = Math.round((b[1] + b[3] - h) / 2);
+    if (hole && host) {                                                  // holes drop into the middle of the part (or the solid spot nearest it, e.g. beside a ring's bore)
+      if (!this.placeHoleIn(it, host) && !quiet) this.onMessage("That hole is bigger than the solid part of the shape. Make the hole smaller or the part bigger.");
     } else {
       const b = this.allBoxExcept([it]);
       if (b) { it.x = Math.round(b[2] + 15); it.y = Math.round(b[1]); }

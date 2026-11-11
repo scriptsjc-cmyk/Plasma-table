@@ -119,6 +119,23 @@ export class GeomMethods {
     if (!it || !this.isHole(it)) return null;
     return this.hostOf(it) || (wholeSet(it.type) ? this.hostOfBox(it, this.items.filter((o) => !this.isHole(o))) : null);
   }
+  // a hole (or every hole of a pattern) sits wholly in the part's material: not over its edge, not in one of its own openings such as a ring's bore
+  holeFitsIn(it, host) {
+    const hc = this.contoursOf(host), cs = this.contoursOf(it); if (!cs.length || !hc.length) return false;
+    const inMaterial = (p) => hc.filter((k) => pointInPoly(p, k.pts)).length % 2 === 1;
+    return cs.every((c) => c.pts.every(inMaterial));
+  }
+  // move a new hole to the middle of a part, or to the solid place nearest the middle; false when it fits nowhere (it is left in the middle)
+  placeHoleIn(it, host) {
+    const hb = this.boxOf(host), moveTo = (cx, cy) => { const b = this.boxOf(it); it.x = r1(it.x + cx - (b[0] + b[2]) / 2); it.y = r1(it.y + cy - (b[1] + b[3]) / 2); };
+    const mx = (hb[0] + hb[2]) / 2, my = (hb[1] + hb[3]) / 2;
+    moveTo(mx, my); if (this.holeFitsIn(it, host)) return true;
+    const b = this.boxOf(it), w = b[2] - b[0], h = b[3] - b[1], step = Math.max(1, Math.min(w, h) / 2, (hb[2] - hb[0]) / 40, (hb[3] - hb[1]) / 40), spots = [];
+    for (let x = hb[0] + w / 2; x <= hb[2] - w / 2 + 1e-6; x += step) for (let y = hb[1] + h / 2; y <= hb[3] - h / 2 + 1e-6; y += step) spots.push([x, y]);
+    spots.sort((a, c) => Math.hypot(a[0] - mx, a[1] - my) - Math.hypot(c[0] - mx, c[1] - my));
+    for (const [x, y] of spots) { moveTo(x, y); if (this.holeFitsIn(it, host)) return true; }
+    moveTo(mx, my); return false;
+  }
   // pick the part that holds the picked hole (so you can get back to it after adding holes)
   pickHost() {
     const host = this.hostPart(this.selected());

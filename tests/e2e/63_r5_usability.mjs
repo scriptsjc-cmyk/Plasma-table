@@ -1,6 +1,7 @@
 // Round 5 stage 2 (USABILITY) tests. Takes the r5-use-*.png screenshots.
 //  L  phone on its side: sign-in fits, Settings scrolls with Close / Save in reach, the toast never covers Start, slim Start row
 //  16 touch targets on the phone cutting screen are at least 44 px, text at least 13-14 px
+//  6  Add a hole lands inside the part (even a ring), is picked; with several parts and none picked, Beginner is asked which
 //  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Zoom to fit, Expand picture, scroll zoom
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
@@ -122,6 +123,29 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   ck("5 laptop: Pro keeps its own layout (no Beginner divider or picture buttons)", await T(page, `!document.getElementById("makeSplit").offsetParent && !document.getElementById("picTools").offsetParent`));
   ck("5 laptop: no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await ctx.close();
+}
+
+// ================================================================== 6: Add a hole lands inside the part
+{
+  const page = await phone(390, 664); await makeBeginner(page, false);
+  const parts = `(() => { const s = window.plasmaTest.sketch; return { parts: s.items.filter((o) => !s.isHole(o)).length, holes: s.items.filter((o) => s.isHole(o)).length, sel: s.selected() && s.selected().type, n: s.items.length }; })()`;
+  for (const shape of ["Rectangle", "Circle", "Ring", "Slot"]) {
+    await T(page, `(() => { window.plasmaTest.sketch.clear(); document.body.classList.remove("bg-picked"); })()`);
+    await T(page, `[...document.querySelectorAll("#bgShapes button")].find((x) => x.textContent.includes(${JSON.stringify(shape)})).click()`); await sleep(300);
+    const before = await T(page, parts);
+    await page.click('[data-sk="add"][data-arg="hole"]'); await sleep(250);
+    const after = await T(page, parts);
+    ck(`6 ${shape}: Add a hole makes one hole inside the part (still one part) and picks it`, after.parts === before.parts && after.holes === before.holes + 1 && after.sel === "hole", { before, after });
+  }
+  // nothing picked: one part takes the hole; two parts: Beginner is asked which, nothing is added
+  await T(page, `(() => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect"); s.pick([]); s.onSelect(); s.add("hole"); })()`); await sleep(200);
+  const one = await T(page, parts);
+  ck("6 nothing picked, one part: the hole goes into that part", one.parts === 1 && one.holes === 1, one);
+  await T(page, `(() => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect"); s.add("disc"); s.pick([]); s.onSelect(); s.add("hole"); })()`); await sleep(250);
+  const two = await T(page, parts);
+  const msg = await T(page, `(document.getElementById("toast").textContent || "")`);
+  ck("6 nothing picked, two parts: no stray hole, and the Beginner is told to tap the part first", two.n === 2 && /Tap the part/.test(msg), { two, msg });
+  await page.context().close();
 }
 
 const failed = rec.done();
