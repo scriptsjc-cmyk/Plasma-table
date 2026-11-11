@@ -1,0 +1,12 @@
+{
+  "name": "plasma-table-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "End-to-end suites for the Plasma table app (Playwright + Chrome). See README.md",
+  "type": "module",
+  "scripts": { "test": "./run-e2e.sh" },
+  "dependencies": {
+    "axe-core": "^4.14.0",
+    "playwright": "^1.65.0"
+  }
+}
