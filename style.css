@@ -1988,3 +1988,9 @@ body.short-land[data-screen="cut"] #topMenu #connPill { flex: 0 1 auto; min-widt
 .dimops button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; font-size: 20px; font-weight: 700; }
 .dimops button.go { flex: 1.6 1 0; font-size: 16px; }
 .warnline { color: #8a5a00; margin-top: 2px; }
+
+/* the size box (with its maths row) must fit on a phone on its side: drop the keyboard-hint line and tighten the rows */
+body.short-land .dimedit { padding: 6px 10px; }
+body.short-land .dimedit > p.small { display: none; }
+body.short-land .dimedit label { margin-bottom: 2px; }
+body.short-land .dimedit .dimops { margin-top: 4px; }

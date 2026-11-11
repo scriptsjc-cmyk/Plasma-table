@@ -36,7 +36,7 @@ for (const prof of ["w320", "iphoneSE", "iphone14", "iphone14land", "ipad", "des
   await sleep(300);
   const pad = await page.evaluate(() => { const p = document.getElementById("dimEdit"); if (!p || p.classList.contains("hidden")) return null; const r = p.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight, w: innerWidth, right: r.right, left: r.left }; });
   // KNOWN APP BUG #3 (tests/KNOWN-BUGS.md): with the operator row added in group 3 (item 23) the type-in size box is ~2.6 px taller than a phone on its side (750x340)
-  if (pad && prof === "iphone14land") t.known(`${prof}: dimension box fully inside the viewport`, pad.bottom <= pad.h + 1 && pad.top >= 0 && pad.right <= pad.w + 1, "BUG-3-KEYPAD-LAND", JSON.stringify(pad));
+  if (pad && prof === "iphone14land") t.check(`${prof}: dimension box fully inside the viewport`, pad.bottom <= pad.h + 1 && pad.top >= 0 && pad.right <= pad.w + 1, JSON.stringify(pad), "BUG-3-KEYPAD-LAND");
   else if (pad) t.check(`${prof}: dimension box fully inside the viewport`, pad.bottom <= pad.h + 1 && pad.top >= 0 && pad.right <= pad.w + 1, JSON.stringify(pad), "KEYPAD-FIT");
   await shot(page, `${prof}-layout-keypad`);
   if (["iphone14", "desktop"].includes(prof)) {

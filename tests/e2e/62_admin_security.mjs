@@ -68,7 +68,7 @@ try {
       await p.fill("#advConsole", "G0 X5"); await p.press("#advConsole", "Enter"); await sleep(300);
       // KNOWN APP BUG #2 (tests/KNOWN-BUGS.md): the latch is enforced in machine.js for M.command({cmd:"console"}) but the Admin > Advanced console goes through
       // app.js sendAdvanced -> M.grbl.send(...) directly (app.js ~2622), so a latched E-stop does not stop a confirmed M3 or a move typed there.
-      t.known("E-stop latched: Admin > Advanced console refuses a confirmed M3 and a move (nothing but status polls reach the controller)", (await txOf(p)).slice(m1).replace(/[?]/g, "").length === 0, "BUG-2-ADMIN-CONSOLE-LATCH", JSON.stringify((await txOf(p)).slice(m1)));
+      t.check("E-stop latched: Admin > Advanced console refuses a confirmed M3 and a move (nothing but status polls reach the controller)", (await txOf(p)).slice(m1).replace(/[?]/g, "").length === 0, JSON.stringify((await txOf(p)).slice(m1)), "BUG-2-ADMIN-CONSOLE-LATCH");
       p.removeAllListeners("dialog"); p.on("dialog", async (d) => { p.dialogs.push(`${d.type()}: ${d.message()}`); await d.dismiss(); });
     }
     // a newline cannot be typed into the <input>, but set it through the DOM like a paste would

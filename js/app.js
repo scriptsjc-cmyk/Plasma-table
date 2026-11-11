@@ -962,7 +962,7 @@ function positionDimEdit(dim) {
     const cv = $("preview");
     if (cv) { const r = cv.getBoundingClientRect(); x = r.left + 16; y = r.top + 16; }
   }
-  const w = Math.min(280, innerWidth - 24), h = 170;
+  const w = Math.min(280, innerWidth - 24), h = Math.ceil(box.getBoundingClientRect().height) || 170;   // measured, so the OK row is never cut off
   x = Math.max(8, Math.min(x, innerWidth - w - 8));
   y = Math.max(8, Math.min(y, innerHeight - h - 8));
   box.style.left = x + "px"; box.style.top = y + "px";
@@ -1946,7 +1946,7 @@ function setConnected(on, label = "") {
   $("stateBadge").classList.toggle("hidden", !on);
   if (on && label) toast("Connected to " + label);
   // the connect card (step "Connect, home and set the start point"): connect buttons while disconnected, Disconnect once connected
-  for (const id of ["btnConnect", "btnDemo", "fnBox", "connectHelp"]) if ($(id)) $(id).classList.toggle("hidden", on || (id === "btnConnect" && S.noUsb));
+  for (const id of ["btnConnect", "btnDemo", "fnBox", "connectHelp"]) if ($(id)) $(id).classList.toggle("hidden", !!(on || (id === "btnConnect" && S.noUsb)));
   if ($("btnDisconnect")) $("btnDisconnect").classList.toggle("hidden", !on);
   $("demoInputs").classList.toggle("hidden", !(on && S.demo));
   refreshGate();
@@ -2671,9 +2671,10 @@ async function init() {
       if (!f.ok) { toast(f.reason, true); return; }
       if (f.send === "!") { M.command({ cmd: "stop" }); return; }                  // STOP is never held back
       if (f.send === "\x18") { M.command({ cmd: "reset" }); return; }
-      if (f.send === "?" || f.send === "~") { M.grbl.realtime(f.send); return; }
-      if (!adminMayTalk(f.moves || /^\$\d/.test(f.send) || f.send === "$H")) return;
-      M.grbl.send(f.send);
+      if (!(f.send === "?" || f.send === "~") && !adminMayTalk(f.moves || /^\$\d/.test(f.send) || f.send === "$H")) return;
+      // Everything else goes through the machine's own console path, which enforces the E-stop latch (no torch, move, cycle start or
+      // homing while the E-stop is latched), the "job running" rule and the zero bookkeeping. The torch confirm was already answered above.
+      try { M.command({ cmd: "console", line: f.send, allowTorch: true }); } catch (e) { toast(e.message || String(e), true); }
     },
     readSettings: async () => {
       if (firmwareDenied()) return;

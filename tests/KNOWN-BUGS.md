@@ -1,4 +1,7 @@
-# Known app bugs found while rebuilding the e2e suites (item 32)
+# App bugs found while rebuilding the e2e suites (item 32) — ALL FIXED
+
+BUG-1, BUG-2 and BUG-3 below were fixed in group 4 and their checks are now normal checks (no `known()` markers are left).
+
 
 These are real app bugs. The tests that expose them use `t.known(...)`: while the bug exists the check is reported as `KNOWN` (not a failure);
 when the app is fixed it prints "now PASSES — remove the known() marker". Tests were not allowed to change app code in this change set.

@@ -81,7 +81,7 @@ try {
     await toBed(p);
     // KNOWN APP BUG #1 (tests/KNOWN-BUGS.md): js/app.js:1907 classList.toggle("hidden", on || (id==="btnConnect" && S.noUsb)) passes undefined as "force" when S.noUsb is unset,
     // which FLIPS the class instead of clearing it, so "Connect with USB" is hidden on a fresh load of a USB-capable browser. The click below is done from script so the rest of the suite still runs.
-    t.known("Connect with USB is visible on the bed step of a USB-capable browser while disconnected", await p.locator("#btnConnect").isVisible(), "BUG-1-CONNECT-HIDDEN");
+    t.check("Connect with USB is visible on the bed step of a USB-capable browser while disconnected", await p.locator("#btnConnect").isVisible(), "", "BUG-1-CONNECT-HIDDEN");
     await p.evaluate(() => document.getElementById("btnConnect").click()); await sleep(500);
     const net = await p.evaluate(() => window.__net);
     t.check("demo-linked account: Connect does NOT open Web Serial on the live host", net.serial.length === 0, JSON.stringify(net), "DEMO-REAL");
