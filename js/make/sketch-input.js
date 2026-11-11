@@ -299,7 +299,8 @@ export class InputMethods {
     window.addEventListener("keydown", (e) => {
       if (!this.active || !this.cv.offsetParent) return;
       const overlay = (id) => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); };
-      if (overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop") || document.querySelector(".acctdlg:not(.hidden)")) return;
+      // the type-in size box owns the keys from the moment it opens (its input only takes focus on the next frame, so focus alone isn't enough)
+      if (overlay("dimEdit") || overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop") || document.querySelector(".acctdlg:not(.hidden)")) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };

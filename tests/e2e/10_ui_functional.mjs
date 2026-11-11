@@ -103,6 +103,11 @@ for (const prof of ["desktop", "iphone14"]) {
     await fresh(page, "rect", { w: 100, h: 50, r: 0 }); await openDim(page, "w"); const x0 = (await state(page))[0].box[0]; const w0 = (await state(page))[0].box[2] - (await state(page))[0].box[0]; await page.keyboard.press("ArrowRight"); await page.keyboard.press("r"); const b0 = (await state(page))[0];
     t.check(P("arrow keys nudge the size; 'r' does not rotate the part while the box is open"), Math.abs(b0.box[0] - x0) < 0.01 && Math.abs((b0.box[2] - b0.box[0]) - (w0 + 1)) < 0.06, `box now ${b0.box}`, "KEYPAD-KEYS");
     if (!(await dimClosed(page))) await dimCancel(page);
+    // the flaky case made deterministic: an arrow pressed in the same frame the box opens (before its input has focus) still goes to the box, never moves the part
+    await fresh(page, "rect", { w: 100, h: 50, r: 0 });
+    const early = await page.evaluate(() => { const s = window.plasmaTest.sketch; s.draw(); const h = s.dimHits.find((x) => x.kind === "w"); const b0 = s.boxOf(s.items[0]); window.plasmaTest.openDimEdit(h); if (document.activeElement) document.activeElement.blur(); const focused = document.activeElement && document.activeElement.id === "dimEditInput"; document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true })); const b1 = s.boxOf(s.items[0]); return { focused, dx: b1[0] - b0[0], dw: (b1[2] - b1[0]) - (b0[2] - b0[0]) }; });
+    t.check(P("an arrow pressed before the size box has focus nudges the size, not the part's position"), !early.focused && Math.abs(early.dx) < 0.01 && Math.abs(early.dw - 1) < 0.06, JSON.stringify(early), "KEYPAD-KEYS");
+    if (!(await dimClosed(page))) await dimCancel(page);
   }
   // position labels (x / y) and diameter on disc
   await fresh(page, "disc", { d: 60 }); if (await openDim(page, "d")) { await typeKeys(page, "100/4"); await dimEnter(page); const b = (await state(page))[0].box; t.check(P("disc diameter keypad 100/4 → 25"), Math.abs((b[2] - b[0]) - 25) < 0.06 && Math.abs((b[3] - b[1]) - 25) < 0.06, JSON.stringify(b)); } else t.check(P("disc Ø label tappable"), false);
