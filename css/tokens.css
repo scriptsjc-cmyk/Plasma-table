@@ -1,0 +1,77 @@
+/* Design tokens: the colour, type, spacing and CAD-canvas variables everything else reads. One light theme; the dark block is
+   kept for a future theme switch (nothing sets data-theme today).
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
+
+/* Plasma Table — light CAD theme (Fusion / Onshape / SolidWorks inspired). Colours live in this one theme block so a dark theme can return later. */
+:root, [data-theme="light"] {
+  /* chrome */
+  --bg: #E8EAED;
+  --card: #F7F8FA;
+  --well: #FFFFFF;
+  --canvas: #FFFFFF;
+  --line: #D0D5DD;
+  --line-strong: #B8BFC9;
+  --text: #1F2A37;
+  --muted: #374151;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06);
+
+  /* one restrained accent — CAD blue — for selection and primary actions */
+  --accent: #0078D4;
+  --accent-weak: #E8F3FB;
+  --on-accent: #FFFFFF;
+
+  /* status only: go / connected, warning, danger, torch */
+  --go: #0F7B3A;
+  --on-go: #FFFFFF;
+  --warn: #C05600;
+  --warn-text: #7A3200;
+  --warn-bg: #FFF4E5;
+  --stop: #C42B1C;
+  --on-stop: #FFFFFF;
+  --torch: #C05600;
+  --alarm: #C42B1C;
+  --alarm-bg: #FDECEC;
+  --ok-bg: #E8F6EE;
+  --ok-text: #0F7B3A;
+
+  /* canvas drawing tokens (read by sketch.js / app.js) */
+  --cad-canvas: #FFFFFF;
+  --cad-grid: #ECEEF1;
+  --cad-grid-major: #D5DAE0;
+  --cad-part-fill: #F2F4F7;
+  --cad-part-sel: #D6E8F8;
+  --cad-hole: #FFFFFF;
+  --cad-part-line: #334155;
+  --cad-sel: #0078D4;
+  --cad-lock: #C05600;
+  --cad-dim: #0078D4;
+  --cad-guide: #0078D4;
+  --cad-label: #374151;
+  --accent-text: #004578;
+  --cad-tag-text: #FFFFFF;
+  --cad-danger: #C42B1C;
+
+  /* typographic scale and spacing (4/8px) */
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --cond: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 18px; --fs-xl: 22px; --fs-2xl: 28px;
+  --space: 8px;
+  --r: 4px;
+  --tap: 44px;
+}
+/* Dark theme tokens — unused by default; set data-theme="dark" on <html> to switch. */
+[data-theme="dark"] {
+  --bg: #18202a; --card: #202a35; --well: #161e27; --canvas: #121920; --line: #324050;
+  --line-strong: #3d4c5c; --text: #edeee8; --muted: #9aa7b5; --shadow: 0 1px 2px rgba(0,0,0,.4);
+  --accent: #4f9cf0; --accent-weak: #1e3a5f; --on-accent: #0b1220;
+  --go: #2f9e5b; --on-go: #fff; --warn: #e3a73c; --warn-text: #F6D089; --warn-bg: #4a3410; --stop: #e0342b; --on-stop: #fff;
+  --torch: #e07a3c; --alarm: #e0342b; --alarm-bg: #4c1717; --ok-bg: #13301f; --ok-text: #86efac;
+  --cad-canvas: #121920; --cad-grid: #18212b; --cad-grid-major: #243040;
+  --cad-part-fill: #2c3a49; --cad-part-sel: #26385a; --cad-hole: #121920;
+  --cad-part-line: #c9d1d9; --cad-sel: #7aa2f0; --cad-lock: #e3a73c; --cad-dim: #4f9cf0;
+  --cad-guide: #e3a73c; --cad-label: #c5d0dc; --cad-tag-text: #fff; --cad-danger: #e0342b;
+  --accent-text: #9CC7FF;
+}

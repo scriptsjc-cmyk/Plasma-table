@@ -97,7 +97,7 @@ for (const prof of ["desktop", "iphone14", "iphone14land"]) {
   await p.evaluate(() => document.getElementById("btnHome").click()); await sleep(250);
   t.check(P("Menu button goes back to the menu"), (await scr(p)) === "menu");
   await p.evaluate(() => document.getElementById("menuCut").click()); await sleep(250);
-  t.check(P("Go to cutting opens the cutting screen: E-stop shown, no Beginner/Pro switch"), (await scr(p)) === "cut" && await vis(p, "#btnStop") && !(await vis(p, "#modeSwitch")) && (prof === "iphone14land" ? !(await vis(p, "#stepper")) : await vis(p, "#stepper")));   // style.css: body.short-land[data-screen="cut"] #stepper {display:none} — phone on its side gives all the height to the bed (commit ba9ac6d), so the stepper is hidden there by design
+  t.check(P("Go to cutting opens the cutting screen: E-stop shown, no Beginner/Pro switch"), (await scr(p)) === "cut" && await vis(p, "#btnStop") && !(await vis(p, "#modeSwitch")) && (prof === "iphone14land" ? !(await vis(p, "#stepper")) : await vis(p, "#stepper")));   // css/layout.css: body.short-land[data-screen="cut"] #stepper {display:none} — phone on its side gives all the height to the bed (commit ba9ac6d), so the stepper is hidden there by design
   t.check(P("the cutting screen starts with upload / saved parts, and no Move step or tab anywhere"), await vis(p, "#drop") && await vis(p, "#btnPickSaved") && (await p.locator("#moveView, .tab[data-tab='move'], .step[data-step='2']").count()) === 0);
   if (prof === "desktop") await shot(p, "r4-cut-empty-desktop");
   await p.close(); await p.ctx.close();

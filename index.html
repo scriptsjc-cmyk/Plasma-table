@@ -11,10 +11,23 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>Plasma Table</title>
-<link rel="stylesheet" href="style.css">
+<!-- Stylesheets: the ORDER matters (later files win ties). See the header of each file in css/. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/screen-signin-menu.css">
+<link rel="stylesheet" href="css/screen-make.css">
+<link rel="stylesheet" href="css/screen-cut.css">
+<link rel="stylesheet" href="css/screen-admin.css">
 <script src="js/sw-register.js"></script>
 </head>
 <body class="app-shell" data-screen="boot">
+<!-- PAGE OUTLINE
+     icon sprite  ->  top bar + tabs  ->  banners (E-stop, alarm, link lost, home, update, announcement, demo)
+     ->  #menuView (main menu)  ->  #cutView (Make a part + Cutting steps)  ->  #setupView (Machine setup)
+     ->  jog pad  ->  overlays and dialogs (all start hidden)  ->  turn-phone overlay, footer, scripts.
+     Only one view shows at a time: js sets body[data-screen] (boot | login | menu | make | cut). -->
 <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
   <defs>
     <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"/></g></symbol>
@@ -160,8 +173,8 @@
   </div>
 </div>
 
-<!-- ============================================================ MAIN MENU (after sign-in) -->
 <div id="demoAcctBar" class="banner amber hidden" role="status">Local demo accounts — nothing is sent to the cloud. Claim code <b>DEMO-0000</b> unlocks a practice machine.</div>
+<!-- ============================================================ MAIN MENU (after sign-in) -->
 
 <section id="menuView" class="view hidden" aria-label="Main menu">
   <div class="menuwrap">
@@ -735,9 +748,11 @@
   </div>
 </template>
 
+<!-- ============================================================ OVERLAYS: toast, tooltip, dialogs (all start hidden) -->
 <div id="toast" class="toast hidden"></div>
 <div id="whyTip" class="whytip hidden" role="status" aria-live="polite"></div>
 
+<!-- shape library (Make) -->
 <div id="shapeLib" class="shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="libTitle">
   <div class="shapelib-card">
     <div class="shapelib-head">
@@ -749,6 +764,7 @@
     <div id="libGrid" class="libgrid"></div>
   </div>
 </div>
+<!-- version / release popover -->
 <div id="verPop" class="shapelib hidden" role="dialog" aria-modal="true">
   <div class="shapelib-card slim">
     <div class="shapelib-head">
@@ -760,6 +776,7 @@
 </div>
 
 
+<!-- number pad (value entry) -->
 <div id="numPad" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="numPadLabel">
   <div class="numpad-card">
     <div class="numpad-label" id="numPadLabel">Size (mm)</div>
@@ -771,6 +788,7 @@
     </div>
   </div>
 </div>
+<!-- CAD size fields dialog -->
 <div id="cadDialog" class="numpad hidden" role="dialog" aria-modal="true">
   <div class="numpad-card">
     <h3 id="cadTitle">Options</h3>
@@ -781,6 +799,7 @@
     </div>
   </div>
 </div>
+<!-- floating tool bar -->
 <div id="toolBar" class="toolbar hidden">
   <button type="button" id="toolFinish" class="go">Close outline</button>
   <button type="button" id="toolCancel">Cancel</button>
@@ -903,6 +922,7 @@
   </div>
 </div>
 
+<!-- claim a machine -->
 <div id="claimDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="claimTitle">
   <div class="shapelib-card slim acctcard">
     <div class="shapelib-head">
@@ -918,6 +938,7 @@
   </div>
 </div>
 
+<!-- sign-in gate (shown when a signed-out user opens something locked) -->
 <div id="gateDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
   <div class="shapelib-card slim acctcard">
     <div class="shapelib-head">
@@ -941,6 +962,7 @@
   </div>
 </div>
 
+<!-- move local parts into the account -->
 <div id="migrateDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="migrateTitle">
   <div class="shapelib-card slim acctcard">
     <div class="shapelib-head">
@@ -955,6 +977,7 @@
   </div>
 </div>
 
+<!-- save parts -->
 <div id="saveDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="saveTitle">
   <div class="shapelib-card slim acctcard">
     <div class="shapelib-head">
@@ -969,8 +992,10 @@
     </div>
   </div>
 </div>
+<!-- undo-save notice -->
 <div id="undoSave" class="undosave hidden" role="status"><span id="undoText"></span> <button type="button" id="btnUndoSave" class="small">Undo</button> <button type="button" id="btnUndoX" class="small" aria-label="Dismiss">✕</button></div>
 
+<!-- save conflict -->
 <div id="conflictDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="conflictTitle">
   <div class="shapelib-card slim acctcard">
     <div class="shapelib-head">
@@ -986,6 +1011,7 @@
   </div>
 </div>
 
+<!-- admin console -->
 <div id="adminDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
   <div class="shapelib-card acctcard wide">
     <div class="shapelib-head">
@@ -1080,6 +1106,7 @@
   </div>
 </div>
 
+<!-- admin: write an announcement -->
 <div id="announceDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="announceDlgTitle">
   <div class="shapelib-card slim acctcard">
     <div class="shapelib-head">
@@ -1108,6 +1135,7 @@
   <span class="muted small">Esc also exits. The part stays on the canvas.</span>
 </div>
 
+<!-- add saved parts to the sheet -->
 <div id="addPartsDlg" class="shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="addTitle">
   <div class="shapelib-card slim">
     <div class="shapelib-head"><h2 id="addTitle">Add parts to the sheet</h2><button type="button" id="addCancel">Close</button></div>
@@ -1122,6 +1150,7 @@
   </div>
 </div>
 
+<!-- import DXF / SVG files -->
 <div id="importDlg" class="shapelib acctdlg impdlg hidden" role="dialog" aria-modal="true" aria-labelledby="impTitle">
   <div class="shapelib-card">
     <div class="shapelib-head"><h2 id="impTitle">Import DXF / SVG</h2><button type="button" id="impCancel">Cancel</button></div>
@@ -1141,6 +1170,7 @@
   </div>
 </div>
 
+<!-- resize a part -->
 <div id="resizeDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="resizeTitle">
   <div class="numpad-card sizecard">
     <h3 id="resizeTitle">Exact width and height</h3>
@@ -1155,6 +1185,7 @@
   </div>
 </div>
 
+<!-- set a part size -->
 <div id="sizeDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="sizeTitle">
   <div class="numpad-card sizecard">
     <h3 id="sizeTitle">Check the size</h3>
@@ -1174,6 +1205,7 @@
     </div>
   </div>
 </div>
+<!-- import: ask what to do with the file -->
 <div id="importAskDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="importAskTitle">
   <div class="numpad-card">
     <h3 id="importAskTitle">Add to the sheet, or replace?</h3>
@@ -1185,6 +1217,7 @@
     </div>
   </div>
 </div>
+<!-- straighten a wobbly line -->
 <div id="straightDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="straightTitle">
   <div class="numpad-card">
     <h3 id="straightTitle">Straight cut</h3>
@@ -1202,6 +1235,7 @@
   </div>
 </div>
 
+<!-- settings -->
 <div id="settingsDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="shapelib-card acctcard wide">
     <div class="shapelib-head">
@@ -1338,6 +1372,7 @@
   </div>
 </div>
 
+<!-- how-to guide -->
 <div id="howtoDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
   <div class="shapelib-card acctcard wide howto-card">
     <div class="shapelib-head">
@@ -1351,6 +1386,7 @@
   </div>
 </div>
 
+<!-- ============================================================ phone portrait: turn sideways overlay, footer, scripts -->
 <div id="turnOverlay" class="turnoverlay" aria-hidden="true"><div class="turnicon">⟳</div><div class="turntext">Turn your phone sideways</div></div>
 
 <footer class="appfoot"><span id="footVer"></span></footer>

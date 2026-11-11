@@ -1,0 +1,65 @@
+/* Machine setup tab, settings, help and the admin dialog.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
+
+#setupView .card + .card { border-radius: var(--r); margin-top: 12px; }
+.limits { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: var(--fs-sm); }
+.limits td { padding: 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.limits td:first-child { color: var(--muted); padding-right: 12px; width: 46%; }
+.howto ul { gap: 8px; }
+.accttable { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.accttable th, .accttable td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.accttable th { color: var(--muted); font-weight: 700; font-size: 13px; }
+/* ---- admin powers + edge editor ---- */
+.admtabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 12px; }
+.admpane { margin-top: 4px; }
+.statgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 8px 0 16px; }
+.statcard { background: var(--well); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.statcard b { display: block; font-size: 22px; line-height: 1.2; }
+.signupchart { display: flex; align-items: flex-end; gap: 3px; height: 80px; margin: 8px 0 16px; }
+#announceBar #announceBody { display: block; margin-top: 2px; }
+.annrow, .userrow { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 8px; background: var(--well); }
+.edgepanel { border: 1px solid var(--line); background: var(--well); border-radius: 8px; padding: 10px 12px; margin: 8px 0 12px; }
+.adv-warn { background: var(--warn-bg); border: 1px solid var(--warn); color: #7A3B00; border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; font-weight: 650; }
+#advConsoleLog { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #1F2A37; color: #E8EAED; border-radius: 8px; padding: 8px; min-height: 80px; max-height: 180px; overflow: auto; white-space: pre-wrap; }
+#advSettings { max-height: 280px; overflow: auto; }
+.adv-set { display: grid; grid-template-columns: 64px 1fr 120px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+#calWizard { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 12px 0; background: var(--card); }
+@media (max-width: 640px) {
+  .adv-set { grid-template-columns: 56px 1fr; }
+  .adv-set input { grid-column: 1 / -1; }
+}
+/* settings + howto */
+.settabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 12px; }
+.howto-grid { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); gap: 16px; }
+.howto-nav { display: flex; flex-direction: column; gap: 4px; }
+@media (max-width: 640px) {
+  .howto-grid { grid-template-columns: 1fr; }
+}
+/* FluidNC box + export pop */
+.fnbox { margin: 16px auto 0; max-width: 520px; text-align: left; background: var(--well);
+  border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+.fnbox summary { font-weight: 650; cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+body.app-shell #setupView { overflow: auto; }
+/* new-version banner is a normal banner; About pane */
+.aboutver { font-size: var(--fs-lg); margin: 4px 0; }
+#impBar { width: 100%; height: 14px; }
+#settingsDlg .shapelib-card {
+  height: min(620px, calc(100dvh - var(--topbar-h, 56px) - 20px));
+  max-height: calc(100dvh - var(--topbar-h, 56px) - 20px);
+  overflow: hidden;
+}
+#settingsDlg .setpane:not(.hidden) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+#settingsDlg .settabs { flex: none; }
+.admin-only { display: none; }
+body.is-admin .admin-only { display: revert; }
+body.is-admin .card.admin-only { display: block; }
+body.is-admin button.admin-only { display: inline-flex; }
+#advCut { margin: 12px 0 4px; }
+#advCut > summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; font-weight: 700; }
