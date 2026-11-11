@@ -32,10 +32,15 @@ export function openAccount(paneName) {
   if (A.isSignedIn() && paneName !== "newpin") {
     pane("home");
     fillSignedIn();
-    refreshPartsList();
   } else {
     pane(paneName || "in");
   }
+}
+// round 5 item 13: the saved parts are their own screen (Account keeps profile, machine link and sign out)
+export function openParts() {
+  if (!A.isSignedIn()) { openAccount("in"); toast("Sign in to see your saved parts."); return; }
+  openDlg("partsDlg");
+  refreshPartsList();
 }
 export function openClaim() {
   if (!A.isSignedIn()) { openAccount("in"); toast("Sign in first, then link your machine."); return; }
@@ -101,15 +106,12 @@ export function bindDialogs() {
   $("migrateDlg").addEventListener("click", (e) => { if (e.target === $("migrateDlg")) closeAll(); });
   $("conflictDlg").addEventListener("click", (e) => { if (e.target === $("conflictDlg")) closeAll(); });
   $("saveDlg").addEventListener("click", (e) => { if (e.target === $("saveDlg")) closeAll(); });
+  $("partsDlg").addEventListener("click", (e) => { if (e.target === $("partsDlg")) closeAll(); });
   $$(".acctdlg .acct-close, .acctdlg [data-close]").forEach((b) => (b.onclick = closeAll));
 }
 export function bindHome() {
-  if ($("btnStartDesign")) {
-    $("btnStartDesign").onclick = () => {
-      closeAll();
-      if (host && host.startDesigning) host.startDesigning();
-    };
-  }
+  $("btnAcctParts").onclick = openParts;
+  $("menuParts").onclick = openParts;
   $("btnAcctSave").onclick = async () => {
     try {
       await A.setDisplayName($("acctName").value);
@@ -132,7 +134,6 @@ export function bindHome() {
     pane("in");
   };
   $("btnOpenClaim").onclick = () => openClaim();
-  $("btnOpenParts").onclick = () => { $("partsCard").scrollIntoView({ block: "nearest" }); };
   $("acctAdminBtn").onclick = () => openAdmin();
   $("acctDemoAdmin").onclick = async () => {
     try { await A.grantDemoAdmin(); toast("This demo account is now an admin."); fillSignedIn(); }

@@ -105,10 +105,21 @@ try {
     await sleep(300);
     await p.click("#acctPill");
     await p.waitForSelector('[data-pane="home"]:not(.hidden)');
+    // round 5 item 13: Account is profile, machine link and sign out (at the top); the saved parts have their own screen
+    t.check("Account: Sign out sits at the top, before the machine list", await p.evaluate(() => document.getElementById("btnSignOut").getBoundingClientRect().top < document.getElementById("acctMachines").getBoundingClientRect().top));
+    t.check("Account: no Make a part button and no parts list inside it", await p.evaluate(() => !document.querySelector("#accountDlg #partsList, #accountDlg #btnStartDesign")));
+    await p.click("#btnAcctParts");
+    await p.waitForSelector("#partsDlg:not(.hidden)");
     await p.fill("#partName", "Test plate");
     await p.click("#btnSavePart");
     await p.waitForFunction(() => document.querySelectorAll("#partsList .partrow").length >= 1, null, { timeout: 8000 });
-    t.check("saved part appears in the account list", await p.locator("#partsList .partrow").count() >= 1);
+    t.check("saved part appears in the Your parts list", await p.locator("#partsList .partrow").count() >= 1);
+    await p.click("#partsDlg .acct-close");
+    await p.evaluate(() => window.plasmaTest.showScreen("menu", { force: true })); await sleep(200);
+    await p.click("#menuParts"); await p.waitForSelector("#partsDlg:not(.hidden)", { timeout: 4000 }).catch(() => {});
+    t.check("the main menu's Your parts opens the same list", await p.evaluate(() => !document.getElementById("partsDlg").classList.contains("hidden") && document.querySelectorAll("#partsList .partrow").length >= 1));
+    await p.click("#partsDlg .acct-close");
+    await p.click("#acctPill"); await p.waitForSelector('[data-pane="home"]:not(.hidden)');
     // claim
     await p.click("#btnOpenClaim");
     await p.waitForSelector("#claimDlg:not(.hidden)");

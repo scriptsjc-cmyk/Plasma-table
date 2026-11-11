@@ -92,6 +92,13 @@ body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-wi
 .menubig .ico { width: 44px; height: 44px; margin: 0; }
 .menubig b { font-size: 28px; line-height: 1.1; }
 .menubig:hover { filter: brightness(1.04); }
+/* round 5 item 13: "Your parts" is the third, smaller choice under the two big ones */
+.menubtns #menuParts { grid-column: 1 / -1; min-height: 72px; flex-direction: row; justify-content: center; gap: 12px; padding: 10px 14px; }
+.menubtns #menuParts b { font-size: 22px; }
+.menubtns #menuParts .ico { width: 32px; height: 32px; }
+.acctwhorow { align-items: center; justify-content: space-between; gap: 10px; }
+.acctwhorow p { margin: 0; overflow-wrap: anywhere; }
+#btnAcctParts { min-height: 48px; }
 @media (max-width: 640px) {
   .menubtns { grid-template-columns: 1fr; }
   .menubig b { font-size: 24px; }

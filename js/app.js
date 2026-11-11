@@ -226,7 +226,6 @@ if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } }
     applyMode: applyAccountMode,
     refreshGate,
     confirm: (msg) => confirm(msg),
-    startDesigning: () => { showScreen("make"); },
     sendAdvanced: (line, meta) => {
       if (firmwareDenied()) return;
       if (!M.grbl) { toast("Connect the table first.", true); return; }
