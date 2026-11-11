@@ -1,11 +1,12 @@
 // Records that the user is active and logs job events (start, finish, alarm) for the admin.
-import { authFetch, refreshIfNeeded } from "./cloud.js";
+import { authFetch, readySession, refreshIfNeeded } from "./cloud.js";
 import { cloudOn, nowIso, uid } from "./acctbase.js";
 import { currentUser } from "./acctstate.js";
 import { demoSession, demoState, saveDemo } from "./demostore.js";
 
 export async function touchLastActive() {
   if (cloudOn()) {
+    if (!(await readySession())) return;              // signed out: nothing to record (and no 401 from an anonymous call)
     try { await authFetch("/rest/v1/rpc/touch_last_active", { method: "POST", body: "{}" }); } catch (e) { /* ignore */ }
     return;
   }

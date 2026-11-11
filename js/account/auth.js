@@ -2,7 +2,7 @@
 import { CONFIG } from "./config.js";
 import { F_PASS, META_KEY, SESS_KEY, cloudOn, normEmail, nowIso, okEmail, uid } from "./acctbase.js";
 import { accountMode, canGrantDemoAdmin, currentUser, notify, snapshot } from "./acctstate.js";
-import { api, authFetch, cloudSess, fromAuthPayload, loadCloudProfile, parseHashSession, refreshIfNeeded, saveCloudSess } from "./cloud.js";
+import { api, authFetch, cloudSess, fromAuthPayload, loadCloudProfile, parseHashSession, readySession, refreshIfNeeded, saveCloudSess } from "./cloud.js";
 import { demoSession, demoState, hashPin, readJson, saveDemo, seedDemo, writeJson } from "./demostore.js";
 
 export async function initAccount() {
@@ -27,6 +27,7 @@ export async function refreshLinked() {
     writeJson(META_KEY, meta);
     return;
   }
+  if (!(await readySession())) return;               // no usable token yet (offline / refresh failed): keep the last known answer, don't send an anonymous call
   try {
     const rows = await authFetch("/rest/v1/rpc/my_machines", { method: "POST", body: "{}" });
     const serials = (rows || []).map((r) => r.serial);

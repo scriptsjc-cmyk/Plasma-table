@@ -239,7 +239,7 @@ try {
     const LIVE = "https://plasma-live.test";
     const mime = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png" };
     const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "*" };
-    const mock = { role: "user", calls: [], log: [], admin403: 0 };
+    const mock = { role: "user", calls: [], log: [], admin403: 0, rpc: [], reject401: {} };
     const UID = "11111111-1111-4111-8111-111111111111";
     const ctx = await K.browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: "block", acceptDownloads: true });
     await ctx.route(/^https:\/\/plasma-live\.test\//, async (route) => {
@@ -250,6 +250,8 @@ try {
     await ctx.route(/sjtjgumbsnakipkgskxt\.supabase\.co/, async (route) => {
       const rq = route.request(), u = new URL(rq.url()), p = u.pathname, m = rq.method();
       mock.calls.push(m + " " + p);
+      if (/^\/rest\/v1\/rpc\//.test(p) && m === "POST") mock.rpc.push({ p, bearer: /^Bearer aaa/.test(rq.headers()["authorization"] || "") });
+      if (m === "POST" && mock.reject401[p] > 0) { mock.reject401[p]--; return route.fulfill({ status: 401, headers: { ...cors, "content-type": "application/json" }, body: JSON.stringify({ message: "JWT expired" }) }); }
       if (m === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
       const json = (b, status = 200) => route.fulfill({ status, headers: { ...cors, "content-type": "application/json" }, body: JSON.stringify(b) });
       if (p === "/auth/v1/token") return json({ access_token: "aaa.bbb.ccc", refresh_token: "r", expires_in: 3600, user: { id: UID, email: "user@example.com" } });
@@ -284,6 +286,23 @@ try {
       t.check("live origin + ?demo=1: demo 'make me admin' refuses", r.can === false && !r.granted && !!r.grantErr, JSON.stringify(r), "LIVE-ADMIN");
       t.check("live origin: forged localStorage (admin role + claimed machine) still can NOT unlock real machine control", r.real === false, JSON.stringify(r), "LIVE-GATE");
       t.note("forged demo admin on live origin (UI only, demo data only)", JSON.stringify({ forgedAdmin: r.forgedAdmin, linked: r.linked }));
+      await page.close();
+    }
+    // (a2) round 5 item 14: no anonymous calls to the signed-in-only RPCs (the 401s), the token is sent, and a rejected token is refreshed once
+    {
+      const page = (await ctx.addInitScript(J_INIT()), await ctx.newPage()); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
+      mock.rpc.length = 0;
+      await page.goto(LIVE + "/index.html", { waitUntil: "load" }); await sleep(1200);
+      const anon = mock.rpc.filter((c) => /touch_last_active|my_machines/.test(c.p));
+      t.check("item 14: signed out on load, touch_last_active / my_machines are not called anonymously (no 401)", anon.length === 0, JSON.stringify(anon), "R5-401");
+      const r = await page.evaluate(async () => { const A = await import(window.__J["account"]); await A.signIn({ email: "user@example.com", pin: "letmein1" }); await A.touchLastActive(); return { linked: A.hasLinkedMachine() }; });
+      const after = mock.rpc.filter((c) => /touch_last_active|my_machines/.test(c.p));
+      t.check("item 14: after sign-in both calls carry the signed-in token", after.length >= 2 && after.every((c) => c.bearer) && r.linked, JSON.stringify({ after, r }), "R5-401");
+      mock.reject401["/rest/v1/rpc/touch_last_active"] = 1; mock.rpc.length = 0; const n0 = mock.calls.filter((c) => /auth\/v1\/token/.test(c)).length;
+      const ok = await page.evaluate(async () => { const A = await import(window.__J["account"]); try { await A.touchLastActive(); return true; } catch (e) { return String(e); } });
+      const touches = mock.rpc.filter((c) => /touch_last_active/.test(c.p)).length, refreshed = mock.calls.filter((c) => /auth\/v1\/token/.test(c)).length - n0;
+      t.check("item 14: a token the server rejects (401) is refreshed once and the call retried", ok === true && touches === 2 && refreshed === 1, JSON.stringify({ ok, touches, refreshed }), "R5-401");
+      await page.evaluate(async () => { const A = await import(window.__J["account"]); await A.signOut(); });
       await page.close();
     }
     // (b) real cloud mode as an ordinary user: UI role can be forged, the server is what refuses

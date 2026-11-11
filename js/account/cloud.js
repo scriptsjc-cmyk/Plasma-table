@@ -12,13 +12,18 @@ function authHeaders(access) {
   return h;
 }
 export function cloudSess() { return readJson(SESS_KEY, null); }
+// signed in with a usable token (refreshed first if it is about to run out); null when signed out or offline
+export async function readySession() {
+  try { const s = await refreshIfNeeded(); return s && s.access ? s : null; } catch (e) { return null; }
+}
 export function saveCloudSess(s) { if (s) writeJson(SESS_KEY, s); else try { localStorage.removeItem(SESS_KEY); } catch (e) {} }
 export async function authFetch(path, opts = {}) {
-  const sess = cloudSess();
-  const r = await fetch(rootUrl() + path, {
-    ...opts,
-    headers: { ...authHeaders(sess && sess.access), ...(opts.headers || {}) },
-  });
+  const send = () => { const sess = cloudSess(); return fetch(rootUrl() + path, { ...opts, headers: { ...authHeaders(sess && sess.access), ...(opts.headers || {}) } }); };
+  let r = await send();
+  // a token the server no longer accepts (expired early, clock skew): get a fresh one once and try again, instead of a stray 401
+  if (r.status === 401 && !/^\/auth\//.test(path) && cloudSess() && cloudSess().refresh) {
+    try { await refreshIfNeeded({ force: true }); r = await send(); } catch (e) { /* signed out: report the 401 below */ }
+  }
   let body = null;
   const text = await r.text();
   try { body = text ? JSON.parse(text) : null; } catch (e) { body = { msg: text }; }
@@ -31,11 +36,11 @@ export async function authFetch(path, opts = {}) {
   }
   return body;
 }
-export async function refreshIfNeeded() {
+export async function refreshIfNeeded({ force = false } = {}) {
   const sess = cloudSess();
   if (!sess || !sess.refresh) return sess;
   const exp = sess.expires_at ? Date.parse(sess.expires_at) : 0;
-  if (exp && exp - Date.now() > 30_000) return sess;
+  if (!force && exp && exp - Date.now() > 30_000) return sess;
   const body = {};
   body.refresh_token = sess.refresh;
   const r = await fetch(rootUrl() + "/auth/v1/token?grant_type=refresh_token", {
