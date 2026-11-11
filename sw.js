@@ -4,7 +4,7 @@
 //  * Network-first for everything (index.html, js/, css, config): the request skips the browser's own HTTP cache
 //    (GitHub Pages lets browsers keep files for 10 minutes), and the cached copy is used only when the network fails.
 //  * When a new worker takes over, open pages are told so they can show "New version available. Reload".
-const CACHE = "plasma-cad-2026.11.10-ba9ac6d";
+const CACHE = "plasma-cad-2026.11.11-e8cbc3d";
 self.addEventListener("install", (e) => {
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
