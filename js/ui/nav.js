@@ -46,6 +46,7 @@ export function onScreen(name, prev) {
   gate.classList.toggle("loginpage", name === "login");
   if (name === "login") openAccount("in");
   else if (prev === "login") closeAccountUi();
+  if (name !== "make") setShapeFs(false);          // round 5 item 12: the full-screen editor's Done / Save bar never follows you off Make a part
   if (name === "menu") paintMenu();
   if (name === "cut") applyFirstJobDefault();
   if (name === "make") {
@@ -55,7 +56,6 @@ export function onScreen(name, prev) {
     goStep(1);
     syncModeSwitch(); renderProTools(); renderShapeForm(); renderQuickBar();
   } else if (name === "cut") {
-    setShapeFs(false);
     showTab(S.tab === "setup" ? "setup" : "cut");
     goStep(S.prepared && S.cutStep >= 3 ? Math.min(S.cutStep, S.job ? 4 : 3) : 1);
     renderMaterials();

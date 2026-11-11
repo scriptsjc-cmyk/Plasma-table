@@ -28,6 +28,10 @@ for (const prof of profiles) {
   t.check(P("Pro hides the beginner help and opens the full-screen editor"), await page.evaluate(() => { const h = document.querySelector(".skhelp, .beginner-help"); return (!h || getComputedStyle(h).display === "none") && document.body.classList.contains("shape-fs"); }));
   t.check(P("Pro palette shows shortcut hints"), (await page.locator("#quickBar kbd").count()) >= 3);
   await snap(page, `r4-make-pro-${tag[prof]}`);
+  // round 5 item 12: going to the menu from the full-screen editor closes the editor chrome (no Done / Save bar over the menu)
+  await page.evaluate(() => document.getElementById("btnHome").click()); await sleep(300);
+  t.check(P("item 12: Menu from the full-screen editor closes it (no editor bar over the menu)"), await page.evaluate(() => document.body.dataset.screen === "menu" && !document.body.classList.contains("shape-fs") && [...document.querySelectorAll("#fsBar, .fsbar, #toolBar")].every((e) => !e.offsetParent)));
+  await page.evaluate(() => window.plasmaTest.showScreen("make")); await sleep(200);
   // ---- the cutting screen: identical whatever the mode
   const sigs = {};
   for (const mode of ["beginner", "pro"]) {
