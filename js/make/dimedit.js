@@ -50,7 +50,10 @@ export function openDimEdit(dim) {
   inp.value = seed != null && Number.isFinite(seed) ? String(Math.round(seed * 1000) / 1000) : "";
   box.classList.remove("hidden"); box.hidden = false;
   positionDimEdit(dim);
-  requestAnimationFrame(() => { try { inp.focus(); inp.select(); } catch (e) { /* ignore */ } });
+  // focus at once, so the first key typed lands in the box; again on the next frame only if the tap that opened it took focus away
+  const grab = () => { try { inp.focus(); inp.select(); } catch (e) { /* ignore */ } };
+  grab();
+  requestAnimationFrame(() => { if (document.activeElement !== inp && !box.classList.contains("hidden")) grab(); });
 }
 // the operator row under the size box (shown on touch screens): inserts at the cursor without taking focus off the box
 function bindDimOps() {

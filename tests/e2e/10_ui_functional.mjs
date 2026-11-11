@@ -108,6 +108,11 @@ for (const prof of ["desktop", "iphone14"]) {
     const early = await page.evaluate(() => { const s = window.plasmaTest.sketch; s.draw(); const h = s.dimHits.find((x) => x.kind === "w"); const b0 = s.boxOf(s.items[0]); window.plasmaTest.openDimEdit(h); if (document.activeElement) document.activeElement.blur(); const focused = document.activeElement && document.activeElement.id === "dimEditInput"; document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true, cancelable: true })); const b1 = s.boxOf(s.items[0]); return { focused, dx: b1[0] - b0[0], dw: (b1[2] - b1[0]) - (b0[2] - b0[0]) }; });
     t.check(P("an arrow pressed before the size box has focus nudges the size, not the part's position"), !early.focused && Math.abs(early.dx) < 0.01 && Math.abs(early.dw - 1) < 0.06, JSON.stringify(early), "KEYPAD-KEYS");
     if (!(await dimClosed(page))) await dimCancel(page);
+    // and the box takes focus the moment it opens, so the first digit typed is never lost
+    await fresh(page, "rect", { w: 100, h: 50, r: 0 });
+    const sync = await page.evaluate(() => { const s = window.plasmaTest.sketch; s.draw(); const h = s.dimHits.find((x) => x.kind === "w"); window.plasmaTest.openDimEdit(h); return document.activeElement && document.activeElement.id; });
+    t.check(P("the size box has keyboard focus in the same moment it opens"), sync === "dimEditInput", String(sync), "KEYPAD-KEYS");
+    if (!(await dimClosed(page))) await dimCancel(page);
   }
   // position labels (x / y) and diameter on disc
   await fresh(page, "disc", { d: 60 }); if (await openDim(page, "d")) { await typeKeys(page, "100/4"); await dimEnter(page); const b = (await state(page))[0].box; t.check(P("disc diameter keypad 100/4 → 25"), Math.abs((b[2] - b[0]) - 25) < 0.06 && Math.abs((b[3] - b[1]) - 25) < 0.06, JSON.stringify(b)); } else t.check(P("disc Ø label tappable"), false);
