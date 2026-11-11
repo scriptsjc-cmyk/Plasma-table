@@ -534,7 +534,7 @@
         </div>
           <div id="blockers" class="blockers"></div>
         </details>
-        <div class="nav"><button class="back" data-go="1">← Back</button><button id="btnStart" class="xl go" disabled>▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><p id="startLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p></div>
+        <div class="nav"><button class="back" data-go="1">← Back</button><button id="btnStart" class="xl go" disabled aria-describedby="startWhy">▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><p id="startLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p><p id="startWhy" class="startwhy hidden" role="status"></p></div>
       </div>
 
       <!-- step 4: running / done -->
