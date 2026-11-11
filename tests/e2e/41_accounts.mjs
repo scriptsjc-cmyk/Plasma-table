@@ -178,6 +178,32 @@ try {
     t.check(`${prof}: no page errors`, p.errors.filter((e) => !/404|favicon|Failed to load resource/i.test(e)).length === 0, p.errors.slice(0, 3).join(" | "));
     await p.close(); await p.ctx.close();
   }
+  // ---------- "Parts on this device": Not now dismisses it and it stays away for the session
+  {
+    const p = await newPage(K.browser, "desktop", { base: srv.base, query: "?test=1&gate=1&turn=0" });
+    const prompt = () => p.locator("#migrateDlg:not(.hidden)").count();
+    await p.evaluate(() => window.plasmaTest.sketch.add("rect"));
+    await p.click("#goSignUp");
+    await p.fill("#upEmail", "notnow@example.com");
+    await p.fill("#upPin", "letmein1");
+    await p.click('#formSignUp [type=submit]');
+    await p.waitForFunction(() => window.plasmaTest.account.isSignedIn(), null, { timeout: 10000 });
+    await p.evaluate(() => window.plasmaTest.showScreen("make"));
+    if (!(await p.locator("#acctPill").isVisible())) await p.click("#btnTopMenu");
+    await p.click("#acctPill"); await p.click("#accountDlg .acct-close");
+    await p.waitForSelector("#migrateDlg:not(.hidden)", { timeout: 3000 });
+    t.check("after sign-in the 'Parts on this device' prompt is offered", await prompt() === 1);
+    // a second sign-in landing while the prompt is open used to make Not now re-open it
+    await p.evaluate(() => { inEmail.value = "notnow@example.com"; inPin.value = "letmein1"; formSignIn.requestSubmit(); });
+    await sleep(800);
+    await p.click("#migrateNo");
+    await sleep(300);
+    t.check("Not now dismisses the prompt", await prompt() === 0);
+    await p.click("#acctPill"); await p.click("#accountDlg .acct-close");
+    await sleep(300);
+    t.check("and it is not offered again this session", await prompt() === 0);
+    await p.close(); await p.ctx.close();
+  }
 } finally {
   K.kill(); await srv.close();
 }
