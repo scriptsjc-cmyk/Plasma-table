@@ -1,4 +1,6 @@
-// Round 4: the app's four screens, the "can't leave while cutting" lock, and the E-stop (big red button, Esc and the space bar).
+// Round 4: the app's four screens, the "can't leave while cutting" lock, and the E-stop (big red button and the space bar).
+// Round 5 (safety): the space bar is the ONE STOP key (Esc only closes dialogs / leaves the editor). A latched E-stop is released
+// only by a deliberate reset: press and HOLD the red button for HOLD_MS (never by a tap, a double tap, Space or Esc).
 //   boot -> login (nothing works until someone is signed in) -> menu -> make (design) | cut (the one cutting screen)
 // body[data-screen] says which one is showing. The E-stop here only ever calls the app's existing STOP path (host.stop),
 // so a soft reset and torch-off are exactly what they were before: no new machine commands.
@@ -9,7 +11,8 @@ export const screen = () => document.body.dataset.screen || "boot";
 
 // ---------------------------------------------------------------- keyboard E-stop
 // Registered when this module loads (before the sketch editor adds its own window listener), so Esc and the space bar
-// reach the E-stop first. Esc always stops. The space bar stops on the cutting screen, except while typing into a box.
+// reach the E-stop first. The space bar stops on the cutting screen, except while typing into a box (but while a job is live it
+// stops even then). Esc is NOT a stop key: it belongs to dialogs and the editor.
 const TEXT_INPUTS = new Set(["text", "number", "email", "password", "search", "tel", "url", "date", "time", "datetime-local", "month", "week", "color", ""]);
 export function typingTarget(el) {
   if (!el || el === document.body) return false;
@@ -22,13 +25,8 @@ export function typingTarget(el) {
 const isSpace = (e) => e.key === " " || e.code === "Space";
 window.addEventListener("keydown", (e) => {
   if (!H) return;
-  if (e.key === "Escape") {                                                      // the page's own Esc handlers (close a dialog…) still run
-    // Esc stops while a job is live, or on the cutting screen when it isn't just closing a dialog
-    if (!e.repeat && (H.jobLive() || (screen() === "cut" && !H.dialogOpen()))) estopPress("esc");
-    return;
-  }
   if (!isSpace(e) || screen() !== "cut") return;
-  if (typingTarget(e.target) || typingTarget(document.activeElement)) return;      // typing a space in a box is not an E-stop
+  if (!H.jobLive() && (typingTarget(e.target) || typingTarget(document.activeElement))) return;   // typing a space in a box is not an E-stop (unless a job is live)
   e.preventDefault(); e.stopImmediatePropagation();
   const a = document.activeElement;
   if (a && a !== document.body && /^(BUTTON|A|SUMMARY)$/.test(a.tagName)) a.blur();   // so the key can't also "click" the focused button
@@ -40,7 +38,8 @@ window.addEventListener("keyup", (e) => {
 }, true);
 
 // ---------------------------------------------------------------- E-stop button
-let latched = false, pressedAt = 0;
+export const HOLD_MS = 1500;
+let latched = false, pressedAt = 0, holdTimer = 0, holdDone = false;
 export const estopOn = () => latched;
 function paintEstop() {
   const b = $("btnStop"); if (!b) return;
@@ -48,8 +47,9 @@ function paintEstop() {
   const on = latched || hw;
   b.classList.toggle("pressed", on);
   b.setAttribute("aria-pressed", on ? "true" : "false");
-  $("estopLabel").textContent = on ? "E-STOP ON" : "STOP";
-  b.title = on ? "E-STOP ON. Tap to reset it." : "Emergency stop (Esc or Space)";
+  b.title = on ? "E-STOP ON. To reset it, press and hold the red button for 1.5 seconds." : "Emergency stop (Space)";
+  b.setAttribute("aria-label", on ? "E-STOP ON. Press and hold to reset." : "Emergency stop. The space bar also stops the machine.");
+  if (!holdTimer) $("estopLabel").textContent = on ? "E-STOP ON" : "STOP";
   document.body.classList.toggle("estop-on", on);
 }
 export function estopPaint() { paintEstop(); }
@@ -57,9 +57,11 @@ export function estopPress(source) {
   if (!H) return;
   H.stop();                                    // the existing STOP path (soft reset + torch off); does nothing with no machine connected
   if (screen() === "cut") {
-    if (!latched) pressedAt = Date.now();
+    const fresh = !latched;
+    if (fresh) pressedAt = Date.now();
     latched = true; paintEstop(); H.refresh && H.refresh();
     H.onEstop && H.onEstop(source);
+    if (fresh && H.toast) H.toast("E-STOP ON. Nothing will move or light. To reset it, press and hold the red button for 1.5 seconds.", true);
   }
 }
 export function estopReset() {
@@ -67,11 +69,32 @@ export function estopReset() {
   latched = false; paintEstop(); H.refresh && H.refresh();
   return true;
 }
-function onEstopButton() {
+// A latched E-stop is released only by holding the button (pointer or Enter) for HOLD_MS, and only when it is safe to:
+// the machine's own E-stop is released, the torch is off and nothing is moving (host.canReset returns a reason, or "" when fine).
+function holdCancel() {
+  if (holdTimer) { clearTimeout(holdTimer); holdTimer = 0; }
+  const b = $("btnStop"); if (b) b.classList.remove("holding");
+  paintEstop();
+}
+function holdStart() {
+  if (!latched || holdTimer) return;
+  const b = $("btnStop"); if (b) b.classList.add("holding");
+  $("estopLabel").textContent = "KEEP HOLDING";
+  holdTimer = setTimeout(() => {
+    holdTimer = 0;
+    holdCancel();
+    holdDone = true; setTimeout(() => { holdDone = false; }, 600);     // swallow the click that follows this press
+    const why = H.canReset ? H.canReset() : "";
+    if (why) { H.toast && H.toast(why, true); return; }
+    estopReset(); H.toast && H.toast("E-stop reset. Check everything is safe, then Unlock if the machine is in alarm. Set the start point again before cutting.");
+  }, HOLD_MS);
+}
+function onEstopButton(e) {
+  if (holdDone) { holdDone = false; return; }
   if (latched) {
-    // a second tap straight after the first is a panicked double-tap: stop again, don't release
-    if (Date.now() - pressedAt < 1200) { H.stop(); return; }
-    estopReset(); H.toast && H.toast("E-stop reset. Check everything is safe, then Unlock if the machine is in alarm.");
+    // a tap (or a double tap) never releases: it just stops again. Releasing takes a deliberate press-and-hold.
+    H.stop();
+    H.toast && H.toast("Still stopped. To reset the E-stop, press and hold the red button for 1.5 seconds.", true);
     return;
   }
   if (H.hardwareEstop && H.hardwareEstop()) { H.toast("The machine's own E-stop is pressed. Twist it to release it, then press Unlock.", true); return; }
@@ -115,7 +138,20 @@ export function showScreen(name, opts = {}) {
 }
 export function initFlow(host) {
   H = host;
-  const stopBtn = $("btnStop"); if (stopBtn) stopBtn.onclick = onEstopButton;
+  const stopBtn = $("btnStop");
+  if (stopBtn) {
+    stopBtn.onclick = onEstopButton;
+    stopBtn.addEventListener("pointerdown", (e) => { if (latched && (e.button === 0 || e.button == null)) holdStart(); });
+    for (const t of ["pointerup", "pointercancel", "pointerleave"]) stopBtn.addEventListener(t, () => { if (holdTimer) holdCancel(); });
+    stopBtn.addEventListener("keydown", (e) => {                       // keyboard: hold Enter on the focused button
+      if (e.key !== "Enter" || !latched) return;
+      e.preventDefault();
+      if (!e.repeat) holdStart();
+    });
+    stopBtn.addEventListener("keyup", (e) => { if (e.key === "Enter" && holdTimer) holdCancel(); });
+    stopBtn.addEventListener("contextmenu", (e) => { if (latched) e.preventDefault(); });   // a long press on a phone must not open a menu
+    stopBtn.addEventListener("blur", () => { if (holdTimer) holdCancel(); });
+  }
   $("btnHome").onclick = () => { if (!navLocked()) showScreen("menu"); };
   $("menuMake").onclick = () => showScreen("make");
   $("menuCut").onclick = () => showScreen("cut");

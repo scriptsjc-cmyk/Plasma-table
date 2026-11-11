@@ -37,7 +37,9 @@ const S = {
   cfg: null, chart: null, jogStep: 10, status: { state: "Disconnected" }, job: null, prepared: null,
   gcode: null, design: null, fileName: "", safety: {}, src: "file", showMachine: true, cur: 1, material: null, thickness: null, connected: false, currentPart: null, cutStep: 1,
   lastAlarm: null, lastAlarmCode: null, speed: null, lastFeedOv: 100,
-  zeroSet: false, fluidnc: false, shapeFs: false,
+  // work zero lives in the machine model (M.zeroConfirmed) so startJob can enforce it; STOP / reset / home / alarm clear it there
+  get zeroSet() { return !!(M && M.zeroConfirmed); }, set zeroSet(v) { if (M) M.zeroConfirmed = !!v; },
+  fluidnc: false, shapeFs: false,
   cam: { tabs: 0, tabW: 3, leadOut: 0, over: 0, starts: {}, tabOver: {} }, cutOrder: null, cutSkip: [], startCut: 1, resume: null, jobSeq: 0,
 };
 const MAT_TIPS = {
@@ -246,6 +248,8 @@ function exportGcode() {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   toast("Downloaded " + dialect.toUpperCase() + " file");
+  const sm = scoreMarkCount();
+  if (sm) toast(`Careful: ${sm} shape${sm === 1 ? " is" : "s are"} set to Score or Mark. The G-code cuts them through at full power.`, true);
 }
 
 // ------------------------------------------------------------------ screens (login -> menu -> make | cut)
@@ -1169,6 +1173,10 @@ function sendConsoleLine(raw, inputEl) {
   const live = l === "!" || l === "?" || l === "~" || l === "\x18";
   if (!live && !requireMachine(lockText())) return;
   let f = filterConsoleCommand(l);
+  if (!live && estopOn()) {
+    const p = filterConsoleCommand(l, { allowTorch: true });
+    if (p.send === "$H" || p.moves || p.needsTorchConfirm || /(^|\s)M0*[34](?!\d)/i.test(p.send || "")) { toast("E-STOP is ON. Press and hold the red button to reset it first.", true); return; }
+  }
   if (!live) {
     // Same rules as the admin console: nothing is queued behind a running cut, and anything that moves the machine,
     // lights the torch or writes a $ setting needs the controller to be Idle.
@@ -1583,11 +1591,23 @@ function renderChecklist() {
   if (zw) zw.classList.toggle("hidden", !!S.zeroSet);
   refresh();
 }
+// Round 5 (safety): Score and Mark are only labels. The torch here is on/off (M3 S1000 / M5) and the plasma power is set by hand at the
+// unit, so the G-code can't cut a line lighter. Rather than silently cut those lines through at full power, Start is blocked.
+function scoreMarkCount() {
+  if (!sketch || S.src !== "shape") return 0;
+  return sketch.items.filter((it) => (it.op === "score" || it.op === "mark") && !sketch.layerHidden(it)).length;
+}
+export const SCORE_MARK_WHY = "can't be scored or marked: this table's torch only switches on and off (the plasma power is set at the unit), so the line would be cut right through at full power.";
+function scoreMarkProblem() {
+  const n = scoreMarkCount();
+  return n ? `${n} shape${n === 1 ? " is" : "s are"} set to Score or Mark, which ${SCORE_MARK_WHY} Change ${n === 1 ? "it" : "them"} back to Cut, or hide the Score/Mark layer, in the shape settings.` : "";
+}
 function blockers() {
   const b = [];
   if (!S.connected) b.push("Not connected to the table.");
   if (!S.prepared) b.push("No part chosen yet (step 1).");
-  if (estopOn()) b.push("E-STOP is ON – tap the red button to reset it first.");
+  if (estopOn()) b.push("E-STOP is ON – press and hold the red button to reset it first.");
+  const sm = scoreMarkProblem(); if (sm) b.push(sm);
   if (S.connected && !S.zeroSet) b.push("Start point has not been set. Press Start here in “Connect, home and set the start point” above.");
   const st = S.status.state;
   if (S.connected && st === "Alarm") b.push("Machine is in alarm – press Unlock at the top.");
@@ -2278,7 +2298,7 @@ function bind() {
   $("toolCancel").onclick = () => { sketch.setTool(null); renderProTools(); };
   document.addEventListener("keydown", (e) => {
     if (acctOverlayOpen()) {
-      // (Esc is STOP: flow.js handles it first, whatever dialog is open, while a job is live)
+      // (Esc only closes things. The space bar is the one STOP key: flow.js)
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); closeAccountUi(); }
       return;
     }
@@ -2369,7 +2389,7 @@ function bind() {
   const KEYS = { ArrowLeft: ["X", -1], ArrowRight: ["X", 1], ArrowUp: ["Y", 1], ArrowDown: ["Y", -1], PageUp: ["Z", 1], PageDown: ["Z", -1] };
   document.addEventListener("keydown", (e) => {
     if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
-    if (e.key === "Shift") { J.slow = true; return; }                     // (Esc and Space are the E-stop: see flow.js)
+    if (e.key === "Shift") { J.slow = true; return; }                     // (the space bar is the E-stop: see flow.js)
     if (!S.connected || screen() !== "cut") return;
     if (S.job && S.job.running) return;
     const k = KEYS[e.key];
@@ -2447,6 +2467,8 @@ async function init() {
   try { store = window.localStorage; } catch (e) { /* private mode */ }
   M = new Machine(machine, chart, settings, store);
   M.on(onEvent);
+  M.estopProvider = estopOn;
+  M.startGuard = scoreMarkProblem;      // the machine refuses Start too, whatever the buttons say
   document.title = machine.name;
   R2.initR2({
     S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, drawPreview, loadJob, goStep, showSource, setShapeFs, row,
@@ -2475,6 +2497,15 @@ async function init() {
     jobLive: navBusy, dialogOpen: () => !!document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden), .numpad:not(.hidden)"),
     hardwareEstop: () => !!(S.connected && S.status && S.status.inputs && S.status.inputs.estop),
     toast, refresh, onScreen,
+    // the E-stop may only be released when it is safe to: the machine's own E-stop is let go, the torch is off and nothing is moving
+    canReset: () => {
+      if (!(S.connected && M && M.grbl)) return "";
+      const st = S.status || {};
+      if (st.inputs && st.inputs.estop) return "The machine's own E-stop is still pressed. Twist it to release it first.";
+      if (st.torch) return "The torch still shows ON. Wait until it shows TORCH OFF, then try again.";
+      if (st.state && /^(Run|Jog|Home|Cycle)/i.test(st.state)) return `The machine is still moving (${st.state}). Wait until it has stopped, then try again.`;
+      return "";
+    },
   });
   initSettings({
     toast,
@@ -2544,6 +2575,7 @@ async function init() {
     setLead: (v) => { $("ovLead").value = String(v); },
     setSpeed: (v) => setSpeed(v),
     loadJob,
+    note: (m) => toast(m, true),
   });
   renderShapeTiles();
   setAppMode(sketch.opts.pro ? "pro" : "beginner", { persist: false, autoFs: false });

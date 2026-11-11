@@ -64,7 +64,10 @@ export function makeInspector(h) {
         if ("count" in tb && !(num(tb.count) && tb.count >= 0 && tb.count <= 20)) return false;
         if ("width" in tb && !(num(tb.width) && tb.width >= 0.5 && tb.width <= 20)) return false;
       }
-      if ("operation" in p) { if (p.operation === "cut") delete it.op; else it.op = p.operation; sk().commit(); }
+      if ("operation" in p) {
+        if (p.operation === "cut") delete it.op; else it.op = p.operation; sk().commit();
+        if (p.operation !== "cut" && h.note) h.note(`${p.operation === "mark" ? "Mark" : "Score"} can't be cut lighter on this table (the torch only switches on and off), so Start stays blocked while any shape is set to it. Change it back to Cut, or hide the layer.`);
+      }
       if ("amps" in p) h.setAmps(p.amps);
       if ("leadOut" in p) S.cam.leadOut = p.leadOut;
       if (tb && "count" in tb) S.cam.tabs = Math.round(tb.count);

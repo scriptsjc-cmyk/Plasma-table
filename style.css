@@ -1900,3 +1900,10 @@ body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text
 /* Round 5 (CAD): the cut check and job warnings belong to cutting, not to designing */
 body[data-screen="make"] #warnings, body[data-screen="make"] #cutCheck { display: none !important; }
 .holeadd button { min-height: 44px; }
+
+/* Round 5 (safety): the TORCH ON pill must always be visible while the torch is lit, even on the short landscape phone screen */
+body.short-land[data-screen="cut"] #torchPill.on:not([hidden]) { display: inline-block !important; }
+/* the E-stop reset is a press-and-hold: show it while it is being held */
+#btnStop.holding { filter: brightness(1.25); }
+/* ...and with it showing, the long "Practice, nothing moves" pill gives way (ellipsis) instead of running under it */
+body.short-land[data-screen="cut"] #topMenu #connPill { flex: 0 1 auto; min-width: 0; }

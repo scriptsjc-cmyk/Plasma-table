@@ -9,6 +9,12 @@ import { filterConsoleCommand } from "./admin-machine.js";
 export const POSITION_LOST_ALARMS = new Set([1, 3, 10, 13]);
 export { JobError, SafetyError };
 
+// Round 5 (safety). While the app's E-stop is latched nothing may move, light the torch or start a job; the only things still
+// allowed are the ones that make the machine safer or let a person recover (stop, reset, hold, unlock, jog cancel, speed down).
+export const LATCH_MSG = "E-STOP is ON. Press and hold the red button to reset it first.";
+const LATCH_BLOCKED = new Set(["resume", "jog", "jog_dir", "home", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test", "zero_xy", "set_origin"]);
+export const NO_ZERO_MSG = "Work zero isn't confirmed. Move the torch over the start of the work and press Start here first.";
+
 export class Machine {
   constructor(machineCfg, chart, settingsText, store) {
     this.cfg = machineCfg;
@@ -17,6 +23,9 @@ export class Machine {
     this.safety = new Safety(store);
     this.requireReference = machineCfg.require_reference_to_cut !== false;
     this.listeners = [];
+    this.estopProvider = null;      // () => true while the app's E-stop is latched (set by the app)
+    this.startGuard = null;         // () => reason string when the app knows the job must not start (e.g. Score/Mark lines)
+    this.zeroConfirmed = false;     // work zero has been set since the last stop / reset / home / alarm / reconnect
     this.grbl = null;
     this.prepared = null;
     this.prevState = null;
@@ -29,8 +38,11 @@ export class Machine {
     for (const fn of this.listeners) { try { fn(kind, data); } catch (e) { console.error(e); } }
   }
 
+  estopLatched() { try { return !!(this.estopProvider && this.estopProvider()); } catch (e) { return false; } }
+
   async connect(transport) {
     await this.disconnect(false);
+    this.zeroConfirmed = false;
     this.safety.clearReference();
     this.emit("safety", this.safety.state());
     this.grbl = new GrblLink(transport, this.cfg.rx_buffer_size || 127, (k, d) => this.onGrbl(k, d));
@@ -48,6 +60,7 @@ export class Machine {
       } catch (e) { /* already gone */ }
     }
     if (this.grbl) { await this.grbl.close(); this.grbl = null; }
+    this.zeroConfirmed = false;
   }
 
   onGrbl(kind, data) {
@@ -58,11 +71,16 @@ export class Machine {
         this.emit("log", { text: this.safety.limits ? "Homed - boundaries active." : "Homed.", level: "info" });
         this.emit("safety", this.safety.state());
       }
+      if (st === "Alarm") this.zeroConfirmed = false;
       this.prevState = st;
     } else if (kind === "alarm" && POSITION_LOST_ALARMS.has(data.code) && this.safety.referenced) {
+      this.zeroConfirmed = false;
       this.loseReference("Position may be lost");
-    } else if (kind === "log" && (data.text || "").toLowerCase().startsWith("grbl") && this.safety.referenced) {
-      this.loseReference("Controller restarted");
+    } else if (kind === "alarm") {
+      this.zeroConfirmed = false;
+    } else if (kind === "log" && (data.text || "").toLowerCase().startsWith("grbl")) {
+      this.zeroConfirmed = false;           // the controller restarted: work zero has to be confirmed again
+      if (this.safety.referenced) this.loseReference("Controller restarted");
     }
     this.emit(kind, data);
   }
@@ -117,11 +135,12 @@ export class Machine {
   command(body) {
     const cmd = body.cmd, g = this.grbl, m = this.cfg;
     if (!g) throw new JobError("Not connected. Press Connect.");
+    if (LATCH_BLOCKED.has(cmd) && this.estopLatched()) throw new JobError(LATCH_MSG);
     switch (cmd) {
       case "hold": g.hold(); return { ok: true };
       case "resume": g.resume(); return { ok: true };
-      case "stop": g.stop(); return { ok: true };
-      case "reset": g.reset(); return { ok: true };
+      case "stop": this.zeroConfirmed = false; g.stop(); return { ok: true };       // a stop (soft reset) can lose the place: work zero must be confirmed again
+      case "reset": this.zeroConfirmed = false; g.reset(); return { ok: true };
       case "jog_cancel": g.realtime(RT.JOG_CANCEL); return { ok: true };
       case "feed_override": {
         const map = { "+10": RT.FEED_UP10, "-10": RT.FEED_DOWN10, "+1": RT.FEED_UP1, "-1": RT.FEED_DOWN1, reset: RT.FEED_100 };
@@ -161,14 +180,15 @@ export class Machine {
         g.send(`$J=G53 G21 ${parts.join(" ")} F${feed}`);
         break;
       }
-      case "home": g.send("$H"); break;
-      case "unlock": g.send("$X"); break;
-      case "zero_xy": g.send("G10 L20 P1 X0 Y0"); break;
+      case "home": this.zeroConfirmed = false; g.send("$H"); break;
+      case "unlock": this.zeroConfirmed = false; g.send("$X"); break;
+      case "zero_xy": g.send("G10 L20 P1 X0 Y0"); this.zeroConfirmed = true; break;
       case "set_origin": {      // put the start point anywhere (machine coordinates) without moving
         if (this.state() !== "Idle") throw new JobError("Wait for the machine to stop first.");
         const x = Number(body.x), y = Number(body.y);
         if (!Number.isFinite(x) || !Number.isFinite(y)) throw new JobError("Bad start point.");
         g.send(`G10 L2 P1 X${x.toFixed(3)} Y${y.toFixed(3)}`);
+        this.zeroConfirmed = true;
         break;
       }
       case "goto_zero": {
@@ -181,6 +201,7 @@ export class Machine {
       case "raise": g.sendLines(this.raiseLines()); break;
       case "set_reference":
         if (this.state() !== "Idle") throw new JobError("Machine must be Idle.");
+        this.zeroConfirmed = false;
         this.safety.setReference(g.status.MPos, "manual");
         this.emit("log", { text: "Home corner set by hand.", level: "info" });
         this.emit("safety", this.safety.state());
@@ -228,12 +249,17 @@ export class Machine {
       case "console": {
         const line = String(body.line || "").trim();
         if (!line) break;
+        if (this.estopLatched()) {           // latched: no torch, no move, no cycle start, no homing from the console either
+          const probe = filterConsoleCommand(line, { allowTorch: true });
+          if (probe.send === "~" || probe.send === "$H" || probe.moves || probe.needsTorchConfirm || /(^|\s)M0*[34](?!\d)/i.test(probe.send || "")) throw new JobError(LATCH_MSG);
+        }
         const r = filterConsoleCommand(line, { allowTorch: !!body.allowTorch });
         if (!r.ok) throw new JobError(r.reason || "That command isn't allowed in the console.");
         // nothing but realtime bytes is queued behind a running cut (it would run after the job, or between its lines)
         if (this.jobRunning() && !["!", "?", "~", "\x18"].includes(r.send)) throw new JobError("A job is running. Press STOP, or wait until it finishes.");
-        if (r.send === "!" ) { g.stop(); break; }
-        if (r.send === "\x18") { g.reset(); break; }
+        if (r.send === "!" ) { this.zeroConfirmed = false; g.stop(); break; }
+        if (r.send === "\x18") { this.zeroConfirmed = false; g.reset(); break; }
+        if (r.send === "$H" || r.send === "$X") this.zeroConfirmed = false;
         if (r.send === "?" || r.send === "~") { g.realtime(r.send); break; }
         g.send(r.send);
         break;
@@ -262,7 +288,10 @@ export class Machine {
   startJob(opts = {}) {
     if (!this.grbl) throw new JobError("Not connected. Press Connect.");
     if (!this.prepared) throw new JobError("Load a job first.");
+    if (this.estopLatched()) throw new JobError(LATCH_MSG);
     if (this.state() !== "Idle") throw new JobError(`Machine must be Idle to start (it is ${this.state()}).`);
+    if (!this.zeroConfirmed) throw new JobError(NO_ZERO_MSG);
+    if (this.startGuard) { const why = this.startGuard(); if (why) throw new JobError(why); }
     const inp = this.grbl.status.inputs || {};
     if (inp.estop) throw new JobError("E-stop is pressed. Release it and press Unlock.");
     if (inp.probe) throw new JobError("The floating head is pushed up. Check the torch isn't touching anything or stuck.");

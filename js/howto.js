@@ -32,7 +32,7 @@ const STEPS = [
   { id: "cut", title: "A first real cut", body: [
     "Untick Practice run. Confirm material and thickness, air on, plasma set to the listed amps, earth clamp on the sheet, and hands clear.",
     "A red TORCH ON pill in the header lights whenever the controller says the torch is firing — on every tab, not just the run screen.",
-    "Pause holds motion and the torch. STOP, Esc or the space bar cancels the job at once (the red mushroom shows E-STOP ON until you tap it to reset). Do not close the tab while a job is running. If you Disconnect mid-cut, the torch may stay on until you stop it.",
+    "Pause holds motion and the torch. STOP or the space bar cancels the job at once (the red mushroom shows E-STOP ON until you press and hold it for 1.5 seconds to reset; Esc never stops the machine). Do not close the tab while a job is running. If you Disconnect mid-cut, the torch may stay on until you stop it.",
   ]},
   { id: "materials", title: "Materials and settings", body: [
     "Pick a material and thickness. If the admin has published cut presets, those become the default pierce delay, height, speed and kerf — the cut flow uses them.",
