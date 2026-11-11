@@ -925,6 +925,7 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
   }
 }
 
+body.app-shell .stepPane { scroll-padding-bottom: 96px; }   /* scrolling to a control (or opening FluidNC) never leaves it under the sticky Back / Start bar */
 /* ROUND 5 item 13: the cutting screen has no tool bar, so on a phone in portrait the "tools" grid row was an empty gap that squeezed the Part step into ~100px.
    Give that height to the controls, and keep a sticky Next/Start bar from covering the control that was just scrolled to. */
 @media (max-width: 899px) and (orientation: portrait) {
@@ -933,7 +934,6 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
     grid-template-areas: "preview" "step" !important;
   }
   body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) { grid-template-rows: minmax(0, 0.62fr) minmax(0, 1.38fr) !important; }
-  body.app-shell .stepPane { scroll-padding-bottom: 96px; }
   /* full-screen editor on a portrait phone: the Step pane is hidden there, so the picture and the tool list share the screen (Beginner's canvas used to collapse to 2px) */
   body.app-shell.shape-fs:not(.short-land) .cutgrid.editing { grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr) !important; grid-template-areas: "preview" "tools" !important; }
 }
@@ -1490,7 +1490,7 @@ body.beginner .batchbtn { min-height: var(--tap, 44px); }
   #torchPill, #stateBadge { flex: none; }
   body.app-shell:not(.short-land)[data-step="3"] .cutgrid,
   body.app-shell.beginner:not(.short-land)[data-step="3"] .cutgrid {
-    grid-template-rows: minmax(210px, 1.2fr) minmax(140px, 1fr) !important;
+    grid-template-rows: minmax(min(210px, 28dvh), 1.2fr) minmax(min(140px, 20dvh), 1fr) !important;
   }
   body.beginner[data-step="3"] .guidehead { padding: 4px 10px 6px; }
   body.beginner[data-step="3"] .guidehead #ghTitle { font-size: 18px; }
