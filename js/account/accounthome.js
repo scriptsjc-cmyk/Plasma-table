@@ -1,5 +1,5 @@
 // The account dialog itself (signed-in view), claim and gate dialogs, and the account chrome (pill, gating).
-import { $, $$, closeAll, declineMigrate, esc, host, openDlg, pane, setPendingMigrate, toast } from "./uibase.js";
+import { $, $$, askKeepDrawing, closeAll, declineMigrate, esc, host, openDlg, pane, toast } from "./uibase.js";
 import { CONFIG } from "./config.js";
 import { currentAdminTab, refreshAdmin, refreshAdminAnnounce, refreshAdminPresets, refreshAdminStats, refreshAdminUsers, showAdminTab } from "./adminview.js";
 import { metaCache, refreshPartsList, setPartsRows } from "./partslist.js";
@@ -91,10 +91,19 @@ export async function afterAuth(migratable) {
   if (host && host.refreshGate) host.refreshGate();
   pane("home");
   await refreshPartsList();
-  if (migratable && host && host.getDesign) {
-    const items = host.getDesign();
-    if (items && items.length) setPendingMigrate(true);
-  }
+  claimWorkspace(migratable);
+}
+// round 5 item 10: the drawing, recent files and material on this device belong to whoever last signed in here. When someone else
+// signs in, a drawing is offered once ("Keep this drawing?"); "Start fresh", or no drawing at all, clears the lot.
+const OWNER_KEY = "plasma.workspaceOwner";
+function claimWorkspace(migratable) {
+  const u = A.currentUser(); if (!u) return;
+  let owner = null; try { owner = localStorage.getItem(OWNER_KEY); } catch (e) { /* ignore */ }
+  if (owner === u.id) return;
+  try { localStorage.setItem(OWNER_KEY, u.id); } catch (e) { /* ignore */ }
+  const items = host && host.getDesign ? host.getDesign() : [];
+  if (migratable && items && items.length) askKeepDrawing();
+  else if (owner && host && host.startFresh) host.startFresh();
 }
 export function bindDialogs() {
   $("acctPill").onclick = () => openAccount();
@@ -164,5 +173,5 @@ export function bindHome() {
       openAccount();
     } catch (err) { toast(err.message, true); }
   };
-  $("migrateNo").onclick = declineMigrate;
+  $("migrateNo").onclick = () => { declineMigrate(); if (host && host.startFresh) host.startFresh(); };
 }

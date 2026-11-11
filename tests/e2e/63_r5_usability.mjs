@@ -4,6 +4,7 @@
 //  6  Add a hole lands inside the part (even a ring), is picked; with several parts and none picked, Beginner is asked which
 //  7  Beginner always shows the size boxes: with nothing picked the only part is picked
 //  W  Put the table on your Wi-Fi: FluidNC value encoding, the scan list, the $ lines sent, the password never logged / kept / shown
+//  10 a different account signing in gets "Keep this drawing?" once; Start fresh clears drawing, undo, recent files and material; the mode follows the account
 //  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Zoom to fit, Expand picture, scroll zoom
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
@@ -215,6 +216,45 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   ck("W closing the box (Esc) empties the password box", await T(page, `document.getElementById("wifiDlg").classList.contains("hidden") && document.getElementById("wifiPw").value === ""`));
   ck("W no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await page.context().close();
+}
+
+// ================================================================== 10: the workspace belongs to the account that signed in
+{
+  const ctx = await br.newContext({ viewport: { width: 1280, height: 900 } }); const page = await ctx.newPage(); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
+  await page.goto(s.base + "/?test=1&gate=1&turn=0", { waitUntil: "load" }); await sleep(700);
+  const prompt = () => T(page, `!document.getElementById("migrateDlg").classList.contains("hidden")`);
+  const ws = () => T(page, `({ items: window.plasmaTest.sketch.items.length, undo: window.plasmaTest.sketch.past.length, recent: localStorage.getItem("plasma.recent"), material: window.plasmaTest.S.material, pro: window.plasmaTest.sketch.opts.pro })`);
+  const up = async (email) => { await T(page, `(() => { document.getElementById("acctPill").click(); document.getElementById("goSignUp").click(); upEmail.value = ${JSON.stringify(email)}; upPin.value = "letmein1"; formSignUp.requestSubmit(); })()`);
+    await page.waitForFunction(() => window.plasmaTest.account.isSignedIn(), null, { timeout: 10000 }); await sleep(400); await T(page, `document.querySelector("#accountDlg .acct-close").click()`); await sleep(300); };
+  const signIn = async (email) => { await T(page, `(() => { document.getElementById("acctPill").click(); inEmail.value = ${JSON.stringify(email)}; inPin.value = "letmein1"; formSignIn.requestSubmit(); })()`);
+    await page.waitForFunction(() => window.plasmaTest.account.isSignedIn(), null, { timeout: 10000 }); await sleep(400); await T(page, `document.querySelector("#accountDlg .acct-close").click()`); await sleep(300); };
+  const out = async () => { await T(page, `(() => { document.getElementById("acctPill").click(); document.getElementById("btnSignOut").click(); })()`); await sleep(400); };
+  const firstMat = await T(page, `window.plasmaTest.S.material`);
+  // someone was here before (another account owned the workspace), left a drawing, a recent file and a material choice
+  await T(page, `(() => { localStorage.setItem("plasma.workspaceOwner", "someone-else"); localStorage.setItem("plasma.recent", JSON.stringify([{ name: "theirs.dxf", text: "0" }])); const s = window.plasmaTest.sketch; s.add("rect"); s.add("disc"); })()`);
+  await up("ws-a@example.com");
+  ck("10 a different account signs in with a drawing on screen: 'Keep this drawing?' is asked", await prompt() && /Keep this drawing/.test(await T(page, `document.getElementById("migrateTitle").textContent`)));
+  await snap(page, "keep-drawing");
+  await page.click("#migrateNo"); await sleep(400);
+  const fresh = await ws();
+  ck("10 Start fresh: no drawing, no undo back to it, no recent files, material back to the first one", fresh.items === 0 && fresh.undo === 0 && !fresh.recent && fresh.material === firstMat, fresh);
+  // A works in Pro; B signs in on the same browser and keeps the drawing A left; A comes back in Pro
+  await T(page, `(() => { const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { autoFs: false }); T.sketch.add("slot"); })()`); await sleep(300);
+  await out();
+  await up("ws-b@example.com");
+  ck("10 the next account is asked once too", await prompt());
+  await page.click("#migrateYes"); await sleep(600);
+  ck("10 Keep it: the drawing stays and is saved to that account", (await ws()).items === 1 && await T(page, `document.querySelectorAll("#partsList .partrow").length`) >= 0);
+  ck("10 the mode follows the account: B (new) is in Beginner even though A left Pro on", (await ws()).pro === false);
+  await T(page, `document.querySelectorAll(".acctdlg:not(.hidden) .acct-close").forEach((b) => b.click())`);
+  await out(); await signIn("ws-b@example.com");
+  ck("10 the same account signing in again is not asked, and its drawing is still there", !(await prompt()) && (await ws()).items === 1);
+  await out(); await signIn("ws-a@example.com");
+  if (await prompt()) await page.click("#migrateNo");
+  await sleep(300);
+  ck("10 A signs back in: Pro again (stored on the account, not the browser)", (await ws()).pro === true);
+  ck("10 no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
+  await ctx.close();
 }
 
 const failed = rec.done();

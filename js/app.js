@@ -41,7 +41,7 @@ import { bindProTools, renderProTools, setShapeFs } from "./make/protools.js";
 import { applyMatchingPreset, applyPresetRow, bindMaterial, defaultSpeed, renderMaterials, row, saveSpeed, setSpeed } from "./cut/material.js";
 import { bindJog, mountJogPads } from "./machine/jog.js";
 import { bindGate, paintWhy, refreshGate } from "./ui/gate.js";
-import { addPartsFlow, bindFiles, editDrawing, handleFiles, openEditor, renderRecent, startOver } from "./make/files.js";
+import { addPartsFlow, bindFiles, clearRecent, editDrawing, handleFiles, openEditor, renderRecent, startOver } from "./make/files.js";
 import { bindLibrary, openMakeTool } from "./make/library.js";
 import { applyDimEdit, bindDimEdit, closeDimEdit, closeNumPad, openDimEdit, openNumPad } from "./make/dimedit.js";
 import { bindCad, runPro } from "./make/cad.js";
@@ -294,6 +294,15 @@ if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } }
     },
     addPattern: addTestPattern,
     getDesign: () => (sketch && sketch.items) ? sketch.items : [],
+    // round 5 item 10: a different account signed in and chose "Start fresh": no drawing (nor its undo history), recent files or material choice carries over
+    startFresh: () => {
+      if (sketch) { sketch.items.forEach((i) => { i.lock = false; }); sketch.clear(); sketch.past = []; sketch.future = []; sketch.save(); }
+      clearRecent();
+      S.currentPart = null; S.fileName = "";
+      try { localStorage.removeItem("plasma.material"); } catch (e) { /* ignore */ }
+      S.material = chart.materials[0].name; S.thickness = chart.materials[0].rows[0].thickness_mm; defaultSpeed();
+      renderMaterials(); refresh();
+    },
     designMeta: () => { try { return sketch && sketch.items.length ? metaFromContours(sketch.contours()) : null; } catch { return null; } },
     metaOfItems: (items) => { try { const cs = items.map((i) => sketch.sanitizeItem(JSON.parse(JSON.stringify(i)))).filter(Boolean).flatMap((i) => sketch.contoursOf(i)); return metaFromContours(cs); } catch { return null; } },
     fileName: () => S.fileName || "",

@@ -172,6 +172,11 @@ function saveRecent(name, text, scale) {
   } catch (e) { /* storage full - fine */ }
   renderRecent();
 }
+// a fresh workspace for the next account: the recent-files list goes too
+export function clearRecent() {
+  try { localStorage.removeItem("plasma.recent"); } catch (e) { /* ignore */ }
+  renderRecent();
+}
 export function renderRecent() {
   const list = recentList();
   $("recentWrap").classList.toggle("hidden", !list.length);
