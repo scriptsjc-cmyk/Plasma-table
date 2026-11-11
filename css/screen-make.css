@@ -53,11 +53,8 @@ body:not(.short-land) .toolbar { bottom: 0; }
 body.beginner .pro-only {
     display: none !important; }
 body.beginner #proTools { display: none !important; }
-.partrow { display: flex; justify-content: space-between; gap: 10px; align-items: center;
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
 @media (max-width: 520px) {
   .sktools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .partrow { flex-direction: column; align-items: stretch; }
   .quickbar button { flex-basis: calc(25% - 4px); }
 }
 .admtab { min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); background: var(--well); color: var(--text); border-radius: 6px; font-weight: 650; }
@@ -86,15 +83,6 @@ body.beginner #proTools { display: none !important; }
 @media (min-width: 900px) {
   .cutgrid.with-qb #quickBar .qb-group { flex: 0 0 auto; }
 }
-@media (orientation: landscape) and (max-height: 540px) {
-  body.short-land.running-job #exportRow,
-  body.short-land.running-job #showMachWrap,
-  body.short-land.running-job .fit { display: none !important; }
-}
-@media (max-width: 899px) {
-  body.running-job #exportRow, body.running-job #showMachWrap { display: none !important; }
-  body.running-job .runctl { position: sticky; bottom: 0; background: var(--card); padding: 8px 0; z-index: 8; }
-}
 body.shape-fs #quickBar { display: flex !important; grid-column: 1; grid-row: 1; flex-direction: column; overflow: auto; max-height: none; }
 body.shape-fs #fsBar { display: flex !important; }
 .fsbar { position: fixed; top: calc(var(--topbar-h, 56px) + 8px); right: 12px; z-index: 40;
@@ -109,11 +97,9 @@ body.shape-fs #fsBar { display: flex !important; }
 .dimedit input { width: 100%; min-height: 44px; font-size: 16px; }
 .settab { min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); background: var(--well); border-radius: 6px; font-weight: 650; }
 .settab.sel { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
-.set-field { display: grid; gap: 4px; }
 .howto-step.sel { background: var(--accent-weak); border-color: var(--accent); }
 /* jog looks disabled when locked */
 .jogwrap.locked .j, .jogwrap.locked .steps button { opacity: .4; pointer-events: none; }
-body.app-shell { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
 @media (min-width: 900px) {
   body.app-shell .cutgrid.with-qb #quickBar,
@@ -131,11 +117,6 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
     margin: 0; box-shadow: 0 -1px 4px rgba(16,24,40,.06);
   }
 }
-@media (max-width: 899px) {
-  /* keep the run-screen STOP in view without growing the page */
-  body.app-shell.running-job .previewPane { max-height: none; }
-  body.app-shell.running-job .stepPane { max-height: none; flex: 1; }
-}
 /* ---- UX2: Pro / Beginner mode switch ---- */
 .modesw { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--well); }
 .modesw-btn { min-height: 44px; min-width: 44px; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; font-weight: 700; font-size: 12px; color: var(--muted); }
@@ -149,8 +130,6 @@ body.pro-mode .beginner-help, body.pro-mode .guide.howto, body.pro-mode .mattip,
 body.pro-mode p.skhelp, body.pro-mode .step[data-step="2"] > p.muted,
 body.pro-mode .step[data-step="3"] > p.muted { display: none !important; }
 body.pro-mode #btnShapeFs { display: none; }
-/* ===================================================================================================== ROUND 2 ===================================================================================================== */
-.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .beginner-only { display: none; }
 body.beginner .beginner-only { display: block; }
 body.pro-mode .beginner-only { display: none !important; }
@@ -227,7 +206,6 @@ body.bg-picked .bgmore { display: none; }
 @media (max-width: 899px) and (orientation: portrait) {
   body.beginner .nav .next, body.beginner #btnStart { min-height: 64px; font-size: 20px; }
 }
-#saveDlg label { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
 .fsbar #fsSave { margin-left: 6px; }
 #btnEditDrawing { border-color: var(--accent, #4aa3ff); }
 @media (max-width: 899px) and (orientation: portrait) {

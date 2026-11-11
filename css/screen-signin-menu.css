@@ -17,7 +17,12 @@
 .locknote { margin: 10px 0 0; color: var(--warn); font-weight: 700; }
 .acctdlg { z-index: 120; top: var(--topbar-h, 56px); }
 .acctcard.wide { width: min(860px, 100%); }
+.partrow { display: flex; justify-content: space-between; gap: 10px; align-items: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
 #connectLock { margin-top: 14px; }
+@media (max-width: 520px) {
+  .partrow { flex-direction: column; align-items: stretch; }
+}
 @media (max-width: 400px) {
   #demoAcctBar { font-size: 13px; padding: 8px 10px; }
 }
@@ -25,15 +30,33 @@
   .acctcard.wide { width: 100%; }
 }
 .locknote, .locknote.hidden + * { }
+@media (orientation: landscape) and (max-height: 540px) {
+  body.short-land.running-job #exportRow,
+  body.short-land.running-job #showMachWrap,
+  body.short-land.running-job .fit { display: none !important; }
+}
+@media (max-width: 899px) {
+  body.running-job #exportRow, body.running-job #showMachWrap { display: none !important; }
+  body.running-job .runctl { position: sticky; bottom: 0; background: var(--card); padding: 8px 0; z-index: 8; }
+}
 .lockexplain { background: var(--well); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; margin: 8px 0 12px; }
 .lockexplain ul { margin: 6px 0 0; padding-left: 20px; }
+body.app-shell { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 body.app-shell .banner { max-width: none; margin: 0; border-radius: 0; flex: none; padding: 6px 12px; }
 @media (orientation: landscape) and (max-height: 540px) {
   body.app-shell.short-land #demoAcctBar { display: none; }
 }
+@media (max-width: 899px) {
+  /* keep the run-screen STOP in view without growing the page */
+  body.app-shell.running-job .previewPane { max-height: none; }
+  body.app-shell.running-job .stepPane { max-height: none; flex: 1; }
+}
+/* ===================================================================================================== ROUND 2 ===================================================================================================== */
+.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 /* ---- ROUND 2: editing an imported drawing, save over / copy, undo bar */
 .undosave { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; align-items: center; background: var(--panel, #1f2a37); color: var(--fg, #eee); border: 1px solid var(--accent, #4aa3ff); border-radius: 10px; padding: 8px 12px; box-shadow: 0 6px 24px #0008; max-width: calc(100vw - 20px); font-size: 14px; }
 .undosave.hidden { display: none; }
+#saveDlg label { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
 #saveDlg input { font-size: 16px; padding: 10px; }
 @media (max-width: 560px) {
   #demoAcctBar { padding: 4px 8px; font-size: 12px; }
