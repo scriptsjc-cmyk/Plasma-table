@@ -1152,7 +1152,7 @@ function useStraight(dir, L, sx, sy) {
 function useCoupon(contours, name, meta) {
   if (S.shapeFs) setShapeFs(false);
   showSource("file");
-  S.design = { name, contours, warnings: [], coupon: { ...meta } };
+  S.design = { name, contours, warnings: [], straight: true, coupon: { ...meta } };      // "straight": stays as one fixed piece (not turned into movable bed parts), like a straight cut
   S.gcode = null; S.fileName = name;
   R2.designChanged(-2);
   loadJob();
@@ -1868,7 +1868,7 @@ function paintStartWhy(b) {
 function paintBedStatus() {
   const box = $("bedStatus"); if (!box) return;
   const n = (sketch && S.src === "shape") ? Setup.partCount(sketch) : 0;
-  const what = S.prepared ? (S.src === "file" ? (S.design && S.design.straight ? "a straight cut" : "1 file loaded") : (n ? `${n} part${n === 1 ? "" : "s"} on the bed` : "a file loaded")) : "";
+  const what = S.prepared ? (S.src === "file" ? (S.design && S.design.coupon ? "a cut-test coupon" : S.design && S.design.straight ? "a straight cut" : "1 file loaded") : (n ? `${n} part${n === 1 ? "" : "s"} on the bed` : "a file loaded")) : "";
   box.classList.toggle("hidden", !what || screen() !== "cut");
   if (what) $("bedStatusText").textContent = "On the bed now: " + what + ".";
 }
@@ -2584,7 +2584,7 @@ async function init() {
     useStraight, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
   });
   CFH = CF.initCutFeatures({
-    S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, loadJob, esc, row, saveSpeed, useCoupon, continueFromCut: R2.continueFromCut,
+    S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, loadJob, esc, row, setSpeed: (v) => { saveSpeed(v); S.speed = v; }, useCoupon, continueFromCut: R2.continueFromCut,
     confirm: (m) => window.confirm(m), wcoNow, toView, fromView, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
   });
   try { if (new URLSearchParams(location.search).get("turn") !== "0" && localStorage.getItem("plasma.turnOverlay") !== "0") document.body.classList.add("turn-on"); } catch (e) { document.body.classList.add("turn-on"); }

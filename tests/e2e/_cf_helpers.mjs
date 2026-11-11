@@ -10,9 +10,9 @@ export const prime = async (page, parts = ["rect", "disc"]) => {
   await page.evaluate(() => window.plasmaTest.R2.demoEdges()); await sleep(6000);
   await page.evaluate(() => { window.plasmaTest.goStep(3); document.getElementById("layAuto").click(); }); await sleep(500);
 };
-export const zeroAndTick = async (page) => {
+export const zeroAndTick = async (page, js = false) => {
   await page.evaluate(() => document.getElementById("btnZero").scrollIntoView({ block: "center" }));
-  await page.click("#btnZero"); await sleep(400);
+  if (js) await page.evaluate(() => document.getElementById("btnZero").click()); else await page.click("#btnZero"); await sleep(400);
   await page.evaluate(() => { document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById("checklist").dispatchEvent(new Event("change", { bubbles: true })); });
   await sleep(300);
 };

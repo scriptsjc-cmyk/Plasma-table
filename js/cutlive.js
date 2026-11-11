@@ -55,7 +55,7 @@ export function liveView(w, st, ctx = {}) {
   const off = { text: NOT_CONNECTED, cls: "nc" };
   const out = { arc: off, volts: off, height: off, note: "" };
   if (!ctx.connected || !st) return out;
-  const demo = ctx.demo ? " (made up)" : "";
+  const demo = ctx.demo ? " (demo)" : "";
   if (w.thcSeen && st.thc) {
     const t = st.thc;
     if (!st.torch) out.arc = { text: "torch off", cls: "idle" };

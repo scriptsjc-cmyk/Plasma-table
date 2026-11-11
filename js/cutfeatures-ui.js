@@ -204,7 +204,7 @@ function saveCouponResult() {
     const row = effRow();
     const rec = couponPresetRow({ material: S.material, thickness: S.thickness, row, chart: S.chart, usedSpeed: c.usedSpeed || S.speed, result: w.dataset.res, speed: $("cpSpeed").value.trim(), amps: $("cpAmps").value.trim() });
     upsertLocalPreset(rec);                  // the local cut-chart entry for this material and thickness (what "Save to cut chart" writes)
-    if (H.saveSpeed) H.saveSpeed(rec.cut_speed_mm_min);
+    if (H.setSpeed) H.setSpeed(rec.cut_speed_mm_min);       // the saved speed wins over the chart, so it has to follow too
     hideCouponResult();
     H.applyPresetsAndRender();
     H.toast(`Saved to the cut chart: ${S.material.toLowerCase()} ${S.thickness} mm at ${Math.round(rec.cut_speed_mm_min)} mm/min, ${rec.amps} A ✓`);
