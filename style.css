@@ -2017,3 +2017,36 @@ body.short-land .dimedit .dimops { margin-top: 4px; }
 .mtdlg .row.wrap { align-items: center; gap: 8px; }
 .tiles button.mktool i { font-style: normal; font-weight: 700; }
 @media (max-height: 560px) { .mtdlg canvas { max-height: 24dvh; } .mtdlg .mt-guide { display: none; } }
+
+/* ===== B5 35-37: live torch/arc panel, job origin + saved start points, cut-test coupon ===== */
+.livepanel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 0 4px; }
+.livepanel .lp { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 8px; min-width: 0; }
+.livepanel .lp span { display: block; font-size: 12px; color: var(--muted); }
+.livepanel .lp b { display: block; font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+.livepanel .lp.nc b { font-weight: 500; font-style: italic; color: var(--muted); }
+.livepanel .lp.ok { border-color: var(--go); background: var(--ok-bg); } .livepanel .lp.ok b { color: var(--ok-text); }
+.livepanel .lp.bad { border-color: var(--alarm); background: var(--alarm-bg); } .livepanel .lp.bad b { color: var(--alarm); }
+.lpnote { margin: 0 0 6px; }
+.lostarc { background: var(--warn-bg); border: 2px solid var(--warn); border-radius: var(--r); padding: 8px 10px; margin: 6px 0 8px; }
+.lostarc p { margin: 0 0 6px; }
+.lostarc button { min-height: 48px; }
+.originbox { margin: 6px 0; }
+.originbox summary { cursor: pointer; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
+.grid9 { display: inline-grid; grid-template-columns: repeat(3, 44px); gap: 4px; margin: 4px 10px 6px 0; vertical-align: middle; }
+.grid9 button { width: 44px; height: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; }
+.grid9 button i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+.grid9 button.sel { background: var(--accent-weak); border-color: var(--accent); }
+.grid9 button.sel i { background: var(--accent); width: 14px; height: 14px; }
+.woform { gap: 6px; margin: 4px 0; } .woform input { flex: 1 1 180px; min-height: 44px; }
+.wolist { list-style: none; margin: 4px 0; padding: 0; }
+.wolist li { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-top: 1px solid var(--line); }
+.wolist .woname { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.wolist button { min-height: 40px; }
+.couponresult { background: var(--card); border: 1px solid var(--accent); border-radius: var(--r); padding: 8px 10px; margin: 10px 0; }
+.couponresult .resbtns { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.couponresult .resbtns button { flex: 1 1 140px; min-height: 48px; }
+.couponresult .resbtns button.sel { background: var(--accent-weak); border-color: var(--accent); font-weight: 700; }
+.couponresult label { display: flex; flex-direction: column; gap: 2px; flex: 1 1 140px; font-size: 13px; }
+.couponresult input { min-height: 44px; }
+@media (max-width: 520px) { .livepanel { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-height: 460px) { .livepanel .lp { padding: 2px 6px; } .livepanel .lp span { font-size: 11px; } .livepanel .lp b { font-size: 13px; } .lpnote { display: none; } }

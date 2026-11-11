@@ -24,7 +24,10 @@ export function paintLive() {
   const job = pierces ? pierces.job : 0, life = pierces ? pierces.lifetime : 0;
   $("lpPierce").querySelector("b").textContent = `${job}${tot ? " of " + tot : ""} this job · ${life.toLocaleString("en-GB")} total`;
   $("lpPierce").title = S.demo ? "Practice runs are counted for this job only, never in the total." : "Lifetime total of arc starts on this machine, kept in this browser.";
-  $("lpNote").textContent = connected ? v.note : "Connect the table to see live readings.";
+  const anyNC = [v.arc, v.volts, v.height].some((c) => c.text === NOT_CONNECTED);
+  const note = connected ? v.note : "Connect the table to see live readings.";
+  $("lpNote").textContent = anyNC ? note : "";            // the explanation only takes room while something is "not connected"
+  $("livePanel").title = note;
   paintLost();
 }
 function paintLost() {
@@ -57,6 +60,7 @@ function onMachineEvent(kind, d) {
     const total = S.prepared && S.prepared.stats ? S.prepared.stats.pierces : 0;
     if (watch.noteMessage(d.text, Date.now(), cutNumber(M.runFrom, S.run ? S.run.ons : 0, total))) paintLost();
   } else if (kind === "probe") { watch.noteProbe(d.text); }
+  else if (kind === "safety") { paintSaved(); }
   else if (kind === "job") { paintLive(); if (!d.running) maybeAskCouponResult(d); }
 }
 function bindLive() {

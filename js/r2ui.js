@@ -469,17 +469,20 @@ export function paintStartCut() {
 }
 function bindRestart() {
   $("restartCut").onchange = () => { $("btnRestart").textContent = `Continue from cut ${$("restartCut").value}`; };
-  $("btnRestart").onclick = () => {
-    const n = Number($("restartCut").value) || 1, S = H.S;
-    S.startCut = n;
-    // Round 3 safety: Continue NEVER marks work zero as set. A STOP (soft reset), an alarm (ALARM 3 too) or a lost reference means the
-    // controller may no longer know where it is, so work zero has to be confirmed again (and the machine homed if edges are on).
-    // Work zero is only kept when the machine is still homed with edges on and no position-lost alarm has come in since.
-    if (!positionStillKnown()) S.zeroSet = false;
-    H.goStep(3);
-    H.toast(S.zeroSet ? `Ready to continue from cut ${n}. Check the boxes, then press Start.` : `Before continuing from cut ${n}: ${resumeNeeds().join(", then ")}.`, !S.zeroSet);
-  };
+  $("btnRestart").onclick = () => continueFromCut(Number($("restartCut").value) || 1);
   $("startCut").onchange = () => { H.S.startCut = Number($("startCut").value) || 1; H.drawPreview(); };
+}
+// "Continue from cut N" (also used by the lost-arc box): picks the cut and goes to Get set up. Starts nothing.
+export function continueFromCut(n) {
+  const S = H.S;
+  n = Math.max(1, Math.trunc(Number(n) || 1));
+  S.startCut = n;
+  // Round 3 safety: Continue NEVER marks work zero as set. A STOP (soft reset), an alarm (ALARM 3 too) or a lost reference means the
+  // controller may no longer know where it is, so work zero has to be confirmed again (and the machine homed if edges are on).
+  // Work zero is only kept when the machine is still homed with edges on and no position-lost alarm has come in since.
+  if (!positionStillKnown()) S.zeroSet = false;
+  H.goStep(3);
+  H.toast(S.zeroSet ? `Ready to continue from cut ${n}. Check the boxes, then press Start.` : `Before continuing from cut ${n}: ${resumeNeeds().join(", then ")}.`, !S.zeroSet);
 }
 export function positionStillKnown() {
   const S = H.S;

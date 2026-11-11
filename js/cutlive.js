@@ -70,10 +70,10 @@ export function liveView(w, st, ctx = {}) {
   if (wz !== null && mz !== null) {
     if (w.probe && Number.isFinite(ctx.switchOffset)) {
       const h = mz - (w.probe.z + ctx.switchOffset);
-      out.height = { text: `${h.toFixed(1)} mm above sheet`, cls: "" };
+      out.height = { text: `${h.toFixed(1)} mm above sheet${demo}`, cls: "" };
       out.note = `Height is worked out from the last touch-off. Z is ${wz.toFixed(1)} mm from the work zero.`;
     } else {
-      out.height = { text: `Z ${wz.toFixed(1)} mm`, cls: "" };
+      out.height = { text: `Z ${wz.toFixed(1)} mm${demo}`, cls: "" };
       out.note = "Z is the controller's position from work zero. No touch-off yet, so the height above the sheet is not known.";
     }
   }

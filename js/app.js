@@ -22,6 +22,7 @@ import { bindHowto, openHowto, closeHowto } from "./howto.js";
 import * as R2 from "./r2ui.js";
 import * as Setup from "./setup.js";
 import { syncWhy, watchWhy } from "./whyoff.js";
+import * as CF from "./cutfeatures-ui.js";      // B5 35-37: live torch/arc panel, work origins, cut-test coupon
 import { makeInspector } from "./inspector-api.js";
 import { connectInspector } from "./inspector-ui.js";
 import { contoursToEditable } from "./editable.js";
@@ -49,7 +50,7 @@ const MAT_TIPS = {
   "Stainless steel": "Stainless: cuts about 20% slower than mild steel. A dark edge is normal with air plasma.",
   "Aluminium": "Aluminium: keep the speed up and the amps high – going slow makes a messy, melted edge. Never cut over water.",
 };
-let M = null;
+let M = null, CFH = null;
 
 // ------------------------------------------------------------------ small helpers
 let toastTimer;
@@ -1147,6 +1148,16 @@ function useStraight(dir, L, sx, sy) {
   }
   goStep(3);
 }
+// B5 37: the one-tap cut-test coupon. A small design in the current material/thickness; it lands on the bed like any other part and is never started for you.
+function useCoupon(contours, name, meta) {
+  if (S.shapeFs) setShapeFs(false);
+  showSource("file");
+  S.design = { name, contours, warnings: [], coupon: { ...meta } };
+  S.gcode = null; S.fileName = name;
+  R2.designChanged(-2);
+  loadJob();
+  if (S.prepared) goStep(3);
+}
 function showSource(src, opts) {
   S.src = src; S.bgChoosing = false;
   $("srcShape").classList.toggle("hidden", src !== "shape");
@@ -1267,7 +1278,7 @@ function renderMaterials() {
   $("ovPierce").placeholder = auto(r.pierce_height_mm ?? S.chart.pierce_height_mm); $("ovCut").placeholder = auto(r.cut_height_mm ?? S.chart.cut_height_mm);
   $("ampsCard").innerHTML = `
     <div>Set the plasma to</div>
-    <div class="big">${r.amps} A</div>
+    <div class="big">${ampsNow()} A</div>
     <div class="sub"><span>Air <b>${r.air_bar ?? S.chart.air_bar} bar</b></span><span>Pierce <b>${o.pierce_delay_s || r.pierce_delay_s} s</b> at <b>${ph} mm</b></span><span>Cut height <b>${ch} mm</b></span></div>
     ${r.note ? `<div class="ampsnote">⚠ ${esc(r.note)}</div>` : ""}`;
   try { localStorage.setItem("plasma.material", JSON.stringify({ m: S.material, t: S.thickness })); } catch (e) { /* ignore */ }
@@ -1281,6 +1292,8 @@ function overrides() {
 
 // ------------------------------------------------------------------ cut speed (recommended, saved, chosen)
 const speedKey = () => `${S.material}|${S.thickness}`;
+// amps to set on the plasma: the cut chart row, unless a saved cut-chart entry (e.g. from a cut-test coupon) says otherwise
+function ampsNow() { const p = matchPreset(S.material, S.thickness); return (p && Number(p.amps) > 0 ? Number(p.amps) : row().amps); }
 function savedSpeeds() { try { return JSON.parse(localStorage.getItem("plasma.speeds") || "{}"); } catch (e) { return {}; } }
 function savedSpeed() { return savedSpeeds()[speedKey()] || null; }
 function saveSpeed(v) {
@@ -1394,11 +1407,19 @@ function loadJob() {
     }
     S.prepared = M.loadJob({ gcode, name: S.fileName, material: S.material, thickness: S.thickness,
       dry_run: $("dryRun").checked, overrides: overrides() });
+    // B5 36: 9-point job origin. Shift the whole program so the chosen point of the job's box sits at work zero, then load it again so every check sees the real moves.
+    const og = CF.jobOriginShift(S.prepared.stats && S.prepared.stats.bounds);
+    if (og) {
+      gcode = CF.shiftGcode(gcode, og[0], og[1]);
+      S.prepared = M.loadJob({ gcode, name: S.fileName, material: S.material, thickness: S.thickness, dry_run: $("dryRun").checked, overrides: overrides() });
+      if (cam) cam = { ...cam, shift: [cam.shift[0] + og[0], cam.shift[1] + og[1]], outline: CF.shiftOutline(cam.outline, og) };
+      else S.prepared.shift = null;
+    }
     if (cam) { Object.assign(S.prepared, { outline: cam.outline, summary: cam.summary, shift: cam.shift, cutInfo: cam.cutInfo, allCuts: cam.allCuts, autoOrder: cam.autoOrder }); }
     S.check = S.design ? runCheck(S.design.contours) : null;
     if (S.check && cam) S.prepared.marks = S.check.issues.map((m) => ({ ...m, at: [m.at[0] + cam.shift[0], m.at[1] + cam.shift[1]] }));
     // the "left of zero" warning doesn't apply to parts we laid out ourselves
-    const ws = [...pre, ...S.prepared.warnings.filter((w) => !(cam && /zero point/.test(w)))];
+    const ws = [...pre, ...S.prepared.warnings.filter((w) => !((cam || og) && /zero point/.test(w)))];
     $("warnings").innerHTML = ws.map((w) => `<li>${esc(w)}</li>`).join("");
     renderCutCheck();
   } catch (e) {
@@ -1632,7 +1653,7 @@ function renderChecklist() {
     ? `Start point set at ${Number(w[0]).toFixed(1)}, ${Number(w[1]).toFixed(1)} mm`
     : "Start point set (press Start here in “Connect, home and set the start point” above)";
   const items = dry ? [zeroLine, "Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
-    : [zeroLine, ...(row().check ? [row().check] : []), `Plasma ON and set to ${row().amps} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
+    : [zeroLine, ...(row().check ? [row().check] : []), `Plasma ON and set to ${ampsNow()} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
   $("checklist").innerHTML = items.map((t, i) => {
     const auto = i === 0 && S.zeroSet;
     return `<li><label><input type="checkbox" data-chk="${i}" ${auto ? "checked disabled" : ""}> ${esc(t)}</label></li>`;
@@ -2562,6 +2583,10 @@ async function init() {
     dirtyDesign: () => !!(sketch && sketch.items.length && !S.currentPart),
     useStraight, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
   });
+  CFH = CF.initCutFeatures({
+    S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, loadJob, esc, row, saveSpeed, useCoupon, continueFromCut: R2.continueFromCut,
+    confirm: (m) => window.confirm(m), wcoNow, toView, fromView, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
+  });
   try { if (new URLSearchParams(location.search).get("turn") !== "0" && localStorage.getItem("plasma.turnOverlay") !== "0") document.body.classList.add("turn-on"); } catch (e) { document.body.classList.add("turn-on"); }
   initPartsFolders({ toast, esc, openSignIn: () => openAccount("in"), uiBlock: () => { S.uiBlockUntil = Date.now() + 450; } });
   Setup.initSetup({
@@ -2655,6 +2680,7 @@ async function init() {
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
   if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, openMakeTool, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   inspectorApi = makeInspector({
     sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),
     setLead: (v) => { $("ovLead").value = String(v); },
