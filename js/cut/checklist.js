@@ -8,34 +8,33 @@ import { $, $$, esc } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
 
 // ------------------------------------------------------------------ step 3 (second half): checks
+// Round 5 (safety): the first line, "Start point set", is not a box you tick. It follows the machine's zeroConfirmed flag
+// (S.zeroSet): ticked by Start here, unticked by STOP / reset / home / alarm, and never editable by hand.
+function zeroLineText() {
+  if (!S.zeroSet) return "Start point set (press Start here in “Connect, home and set the start point” above)";
+  const w = wcoNow();
+  return `Start point set at ${Number(w[0]).toFixed(1)}, ${Number(w[1]).toFixed(1)} mm`;
+}
 export function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;
-  const w = wcoNow();
-  const zeroLine = S.zeroSet
-    ? `Start point set at ${Number(w[0]).toFixed(1)}, ${Number(w[1]).toFixed(1)} mm`
-    : "Start point set (press Start here in “Connect, home and set the start point” above)";
-  const items = dry ? [zeroLine, "Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
-    : [zeroLine, ...(row().check ? [row().check] : []), `Plasma ON and set to ${ampsNow()} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
-  $("checklist").innerHTML = items.map((t, i) => {
-    const auto = i === 0 && S.zeroSet;
-    return `<li><label><input type="checkbox" data-chk="${i}" ${auto ? "checked disabled" : ""}> ${esc(t)}</label></li>`;
-  }).join("");
+  const items = dry ? ["Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
+    : [...(row().check ? [row().check] : []), `Plasma ON and set to ${ampsNow()} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
+  $("checklist").innerHTML = `<li class="autochk"><label><input type="checkbox" data-chk="zero" disabled> <span>${esc(zeroLineText())}</span></label></li>`
+    + items.map((t, i) => `<li><label><input type="checkbox" data-chk="${i + 1}"> ${esc(t)}</label></li>`).join("");
   const cm = $("checkMat");
   if (cm) cm.textContent = S.material && S.thickness != null ? `${S.material} · ${S.thickness} mm` : "";
   paintZeroWarn();
   refresh();
 }
-// B5 16: the "start point not set" warning follows S.zeroSet on every refresh, not only when the checklist is redrawn
+// Every refresh: the start-point line and the "start point not set" warning follow S.zeroSet (so a STOP unticks it at once)
 export function paintZeroWarn() {
   const zw = $("zeroWarn");
   if (zw) zw.classList.toggle("hidden", !!S.zeroSet);
-}
-// B5 16: Start here pressed - redraw the checklist's first line (keeping the ticks already made) so "Tick every box" and the warning clear at once
-export function zeroJustSet() {
-  const ticks = $$("#checklist input").map((x) => x.checked);
-  renderChecklist();
-  $$("#checklist input").forEach((x, i) => { if (ticks[i] && !x.disabled) x.checked = true; });
-  refresh();
+  const box = document.querySelector('#checklist input[data-chk="zero"]');
+  if (!box) return;
+  box.checked = !!S.zeroSet;
+  const label = box.nextElementSibling, text = zeroLineText();
+  if (label && label.textContent !== text) label.textContent = text;
 }
 // Round 5 (safety): Score and Mark are only labels. The torch here is on/off (M3 S1000 / M5) and the plasma power is set by hand at the
 // unit, so the G-code can't cut a line lighter. Rather than cut those lines through at full power, Start and Download G-code are blocked.
@@ -64,7 +63,7 @@ export function blockers() {
   if (S.safety.limits && !S.safety.referenced) b.push("Machine needs homing – press Home.");
   if (fit().bad) b.push("The part doesn't fit the machine – move the parts or the sheet's start corner.");
   for (const t of Setup.blockText()) b.push(t);
-  const boxes = $$("#checklist input");
+  const boxes = $$("#checklist input:not([disabled])");      // the start-point line ticks itself (the blocker above covers it)
   if (boxes.some((x) => !x.checked)) b.push("Tick every box above.");
   return b;
 }

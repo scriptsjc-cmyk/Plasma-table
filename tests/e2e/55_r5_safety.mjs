@@ -3,6 +3,7 @@
 //  7 the TORCH ON pill is visible on the landscape-phone cutting screen
 //  8 Score / Mark lines block Start and Download G-code with a clear warning (the G-code can't cut them lighter)
 //  9 STOP / reset / home / alarm clear work zero; startJob (and Continue from cut N) refuse without it
+//  9b the checklist's "Start point set" line follows work zero by itself (never a hand tick) and unticks on STOP / reset
 // 10 Space is the one STOP key; Esc never stops
 // 11 STOP is only on the cutting screen (the only screen the machine can move from)
 import { serve, open, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
@@ -31,6 +32,7 @@ const zeroAndTick = async (page) => {
   await page.click("#btnZero"); await sleep(400);
   await page.evaluate(() => { document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById("checklist").dispatchEvent(new Event("change")); }); await sleep(300);
 };
+const zeroLine = (page) => T(page, `(() => { const b = document.querySelector('#checklist input[data-chk="zero"]'); return b ? { on: b.checked, locked: b.disabled, text: b.closest("label").textContent.trim() } : null; })()`);
 const startable = (page) => T(page, "!document.getElementById('btnStart').disabled");
 const blockersText = (page) => T(page, "document.getElementById('blockers').textContent");
 const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while (Date.now() - t0 < 90000) { v = await T(page, "window.plasmaTest.S.run ? window.plasmaTest.S.run.ons : 0"); if (v >= n) return true; await sleep(250); } return false; };
@@ -42,6 +44,8 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   await zeroAndTick(page);
   ck("setup: ready to start (zero set, boxes ticked)", await startable(page), await blockersText(page));
   ck("9 zero is a machine flag now: M.zeroConfirmed mirrors S.zeroSet", await T(page, "window.plasmaTest.getM().zeroConfirmed === true && window.plasmaTest.S.zeroSet === true"));
+  let zl = await zeroLine(page);
+  ck("9b Start here ticked the \"Start point set\" line by itself, and it can't be edited", zl && zl.on && zl.locked && /Start point set at/.test(zl.text), JSON.stringify(zl));
   await hook(page);
 
   // ---- 10: Esc is not STOP; Space is
@@ -53,6 +57,10 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   ck("10 the button title / label say Space only", await T(page, "(() => { const b = document.getElementById('btnStop'); return !/Esc/.test(b.title + b.getAttribute('aria-label')); })()"));
   ck("9 the STOP cleared work zero (machine flag and UI)", await T(page, "window.plasmaTest.getM().zeroConfirmed === false && window.plasmaTest.S.zeroSet === false"));
   ck("9 Start is blocked and the reason is the start point", !(await startable(page)) && /Start point/.test(await blockersText(page)), await blockersText(page));
+  zl = await zeroLine(page);
+  ck("9b the STOP unticked the \"Start point set\" line at once (no redraw needed)", zl && !zl.on && zl.locked && /press Start here/.test(zl.text), JSON.stringify(zl));
+  await page.locator('#checklist input[data-chk="zero"]').click({ force: true, timeout: 2000 }).catch(() => {}); await sleep(200);
+  ck("9b tapping the line does not tick it by hand", !(await zeroLine(page)).on && !(await startable(page)));
   await T(page, "window.__keepToast = true");
   await snap(page, "estop-latched-laptop");
   await T(page, "window.__keepToast = false");
@@ -132,6 +140,8 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   // home and unlock and alarm clear it
   await page.evaluate(() => { window.plasmaTest.getM().command({ cmd: "home" }); }); await sleep(300);
   ck("9 Home clears work zero", await T(page, "window.plasmaTest.getM().zeroConfirmed === false && window.plasmaTest.S.zeroSet === false"));
+  await T(page, "window.plasmaTest.refresh()");
+  ck("9b ...and unticks the \"Start point set\" line", !(await zeroLine(page)).on);
   await sleep(5500);
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "zero_xy" })); await sleep(200);
   ck("9 zero_xy sets it", await T(page, "window.plasmaTest.getM().zeroConfirmed === true"));
@@ -142,6 +152,8 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   ck("9 set_origin keeps it set", await T(page, "window.plasmaTest.getM().zeroConfirmed === true"));
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "reset" })); await sleep(200);
   ck("9 soft reset clears it", await T(page, "window.plasmaTest.getM().zeroConfirmed === false"));
+  await T(page, "window.plasmaTest.refresh()");
+  ck("9b the reset unticks the \"Start point set\" line", !(await zeroLine(page)).on);
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "zero_xy" })); await sleep(100);
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "console", line: "!" })); await sleep(200);
   ck("9 a console ! (feed hold/stop) clears it", await T(page, "window.plasmaTest.getM().zeroConfirmed === false"));

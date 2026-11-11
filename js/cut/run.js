@@ -3,7 +3,7 @@ import { afterStart, startCut } from "./restart.js";
 import { $, toast } from "../core/dom.js";
 import { cmd, requireMachine } from "../machine/access.js";
 import { M, S } from "../core/state.js";
-import { blockers, zeroJustSet } from "./checklist.js";
+import { blockers } from "./checklist.js";
 import { refresh } from "../ui/refresh.js";
 import { goStep, markFirstJobDone } from "../ui/nav.js";
 import { keepAwake } from "../machine/connection.js";
@@ -12,7 +12,7 @@ import { startOver } from "../make/files.js";
 
 export function bindRun() {
   // step 3
-  $("btnZero").onclick = () => { if (cmd("zero_xy")) { S.zeroSet = true; toast("Start point set ✓"); zeroJustSet(); } };
+  $("btnZero").onclick = () => { if (cmd("zero_xy")) { S.zeroSet = true; toast("Start point set ✓"); refresh(); } };
   $("btnTrace").onclick = () => cmd("trace_outline");
   // step 4
   $("checklist").addEventListener("change", refresh);
