@@ -18,8 +18,8 @@ cat > js/version.js <<JS
 export const VERSION = { id: "$ID", commit: "$COMMIT", built: "$BUILT" };
 JS
 sed -i "s|^const CACHE = .*|const CACHE = \"plasma-cad-$ID\";|" sw.js
-# precache list: the page, styles (style.css and css/**), scripts (js/**), config and icons that are really there (so a renamed, moved or new file can never be missed or 404 the install)
-LIST=$( { echo "./"; echo index.html; [ -f style.css ] && echo style.css; echo manifest.json; echo version.json
+# precache list: the page, styles (css/**), scripts (js/**), config and icons that are really there (so a renamed, moved or new file can never be missed or 404 the install)
+LIST=$( { echo "./"; echo index.html; echo manifest.json; echo version.json
           ls favicon.svg favicon-32.png icon-*.png logo.svg 2>/dev/null
           find css -type f -name '*.css' 2>/dev/null | LC_ALL=C sort            # every stylesheet, in any sub-folder
           find js -type f -name '*.js' | LC_ALL=C sort                          # every module, in any sub-folder (js/core, js/make, js/cut, ...)

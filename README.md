@@ -5,7 +5,7 @@ A static site (no build step) that works offline once loaded. Live: https://scri
 
 | | |
 |---|---|
-| `index.html`, `style.css` (or `css/`), `sw.js`, `manifest.json` | the page, styles, offline service worker |
+| `index.html`, `css/`, `sw.js`, `manifest.json` | the page, its styles (`css/`: tokens, base, layout, components, one file per screen), offline service worker |
 | `js/` | the app, grouped by area: `core/ machine/ make/ cut/ ui/ account/` (+ `app.js` entry) |
 | `config/` | machine, cut chart, controller settings (served to the app) |
 | `docs/` | **`ARCHITECTURE.md`** (start here), `DEPLOY-STAMP.md`, `FLUIDNC.md`, `ACCOUNTS-SETUP.md` |

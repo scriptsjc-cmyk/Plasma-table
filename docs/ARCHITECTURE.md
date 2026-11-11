@@ -1,6 +1,6 @@
 # Architecture
 
-A static web app: `index.html` + ES modules in `js/` + `style.css` (or `css/`), no build step. It runs the operator screen for a plasma
+A static web app: `index.html` + ES modules in `js/` + CSS in `css/`, no build step. It runs the operator screen for a plasma
 table (FluidNC / grblHAL), entirely in the browser. This file is the map: where things live, how data flows, which safety rules are
 enforced where, how it is deployed and how to test it. Keep it up to date when you add or move a module.
 
@@ -49,6 +49,15 @@ name; `tests/unit/90_module_graph.mjs` enforces it).
 4. **Big classes are split by area** with a tiny mixin: `make/sketch.js` is the `Sketch` class core; `sketch-geom/edit/view/edge/input`
    hold the rest of its methods and `mixin(Sketch, …)` joins them; `sketch-lock.js` installs the layout lock last.
 
+## 2b. Stylesheets (`css/`)
+
+Eight plain files, linked from `index.html` **in this order** (later files win ties, so the order is part of the design; each file's
+header says what it holds and which rules must stay in cascade order): `tokens.css` (colours, type, spacing variables), `base.css`
+(resets, utilities, buttons, forms), `layout.css` (app shell, step grid, stepper, nav bar), `components.css` (dialogs, keypad, jog pad,
+chips, lists), then one file per screen: `screen-signin-menu.css`, `screen-make.css`, `screen-cut.css`, `screen-admin.css`.
+Put a new rule in the file of the screen it styles; a new colour or size becomes a token. A new `css/*.css` file must be linked in
+`index.html`; the offline list picks it up by itself.
+
 ## 3. Data flow
 
 ```
@@ -94,7 +103,7 @@ The browser UI is never the only guard: the same rule is also enforced in the mo
 * GitHub Pages runs from `.github/workflows/pages.yml` (workflow mode): checkout → `./scripts/stamp-version.sh` → `./scripts/harden-csp.sh`
   → upload `.`. There is no build step and no separate "stamp" commit.
 * `scripts/stamp-version.sh` writes `version.json`, `js/version.js`, the service-worker cache name and the **precache list** in `sw.js`
-  (between `/* precache:start */` and `/* precache:end */`). The list is built from what exists: `index.html`, `style.css`, **every
+  (between `/* precache:start */` and `/* precache:end */`). The list is built from what exists: `index.html`, **every
   `css/**/*.css`**, **every `js/**/*.js`** (any depth), icons, manifest and config. A new or moved file is picked up automatically.
   After adding or moving a module just run `./scripts/stamp-version.sh` locally if you want to see it; the deploy does it anyway.
 * `sw.js`: atomic install (a broken release never half-installs), per-release cache, network-first, `version.json` never cached for
@@ -113,6 +122,7 @@ Tests find modules by file name (`tests/lib/site.mjs`), so moving a module betwe
 * **New module**: put it in the folder of its layer, start it with a one-line comment, keep the name unique, import only downwards.
   If it needs something from `app.js`, add an `init…({…})` host or a hook (last resort). Wire it in `app.js` (`init()`/`bind()`).
 * **New control in `index.html`**: bind it in the `bind…()` function of the module that owns the screen area (each area exports one).
+* **New style**: add it to the `css/` file of its screen (see 2b); a new file also needs its `<link>` in `index.html`, in cascade order.
 * **New safety rule**: enforce it in `machine/machine.js` (or `safety.js`) as well as in the UI, and add a check to a `tests/e2e/5x` suite.
 * **Moving files**: nothing hard-codes folders except `index.html` (`js/app.js`, `js/sw-register.js`, `js/ui/inspector-ui.js`) and the
   imports; run `node tests/unit/90_module_graph.mjs`.

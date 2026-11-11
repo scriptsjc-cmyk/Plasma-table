@@ -15,7 +15,7 @@ Nothing needs stamping by hand any more.
 ## Offline cache and the public page's policy
 
 `./scripts/stamp-version.sh` also rewrites the **precache list** in `sw.js` (between the `precache:start/end` markers) from the files that
-exist: `index.html`, `style.css`, every `css/**/*.css`, every `js/**/*.js` (any folder depth), icons, manifest and config. So every deployed release caches
+exist: `index.html`, every `css/**/*.css`, every `js/**/*.js` (any folder depth), icons, manifest and config. So every deployed release caches
 exactly its own app shell and a new, moved or renamed file can never be forgotten (`tests/e2e/59` fails if a module is missing from the list). Old `plasma-cad-*` caches are
 deleted when the new worker activates.
 
