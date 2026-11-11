@@ -91,6 +91,11 @@ function holeHostHtml(it, sh) {
     <div class="skbtns"><button data-sk="centreInHost">◎ Centre in the part</button><button data-sk="pickHost">↩ Select the part</button><button data-pro="linarray">Row of copies</button><button data-pro="polar">Circle of copies</button></div>`;
 }
 export function renderShapeForm() {
+  // round 5 item 7: Beginner always sees the size boxes: with nothing picked, the only part is picked for you
+  if (!sketch.opts.pro && !sketch.layout && !sketch.picked().length) {
+    const parts = sketch.items.filter((o) => !sketch.isHole(o));
+    if (parts.length === 1) { sketch.pick([parts[0].id]); sketch.draw(); }
+  }
   const list = sketch.picked(), it = sketch.selected();
   $("skUndo").disabled = !sketch.past.length; $("skRedo").disabled = !sketch.future.length;
   $("skClear").disabled = !sketch.items.length; $("skAll").disabled = !sketch.items.length;

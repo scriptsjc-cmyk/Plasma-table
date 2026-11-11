@@ -2,6 +2,7 @@
 //  L  phone on its side: sign-in fits, Settings scrolls with Close / Save in reach, the toast never covers Start, slim Start row
 //  16 touch targets on the phone cutting screen are at least 44 px, text at least 13-14 px
 //  6  Add a hole lands inside the part (even a ring), is picked; with several parts and none picked, Beginner is asked which
+//  7  Beginner always shows the size boxes: with nothing picked the only part is picked
 //  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Zoom to fit, Expand picture, scroll zoom
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
@@ -145,6 +146,20 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   const two = await T(page, parts);
   const msg = await T(page, `(document.getElementById("toast").textContent || "")`);
   ck("6 nothing picked, two parts: no stray hole, and the Beginner is told to tap the part first", two.n === 2 && /Tap the part/.test(msg), { two, msg });
+  await page.context().close();
+}
+
+// ================================================================== 7: the size boxes are there without clicking the shape
+{
+  const page = await phone(390, 664); await makeBeginner(page);
+  await T(page, `(() => { const s = window.plasmaTest.sketch; s.pick([]); s.onSelect(); })()`); await sleep(250);
+  const f = await T(page, `({ inputs: document.querySelectorAll("#shapeForm input[data-p]").length, sel: !!window.plasmaTest.sketch.selected() })`);
+  ck("7 Beginner, one part, nothing picked: its size boxes still show (the part is picked for you)", f.inputs >= 2 && f.sel, f);
+  await T(page, `(() => { const s = window.plasmaTest.sketch; s.add("disc"); s.pick([]); s.onSelect(); })()`); await sleep(250);
+  const g = await T(page, `({ inputs: document.querySelectorAll("#shapeForm input[data-p]").length, text: document.getElementById("shapeForm").textContent.trim().slice(0, 60) })`);
+  ck("7 Beginner, two parts, nothing picked: it says to tap one (no guessing)", g.inputs === 0 && /Click a shape/.test(g.text), g);
+  await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("pro", { persist: false, autoFs: false }); T.setShapeFs(false); const s = T.sketch; s.clear(); s.add("rect"); s.pick([]); s.onSelect(); })()`); await sleep(250);
+  ck("7 Pro keeps nothing picked when you tap empty space", await T(page, `!window.plasmaTest.sketch.selected()`));
   await page.context().close();
 }
 
