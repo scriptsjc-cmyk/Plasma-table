@@ -1896,3 +1896,7 @@ body.short-land[data-screen="cut"] #stepper { display: none; }
 body.short-land .tabs .tab { min-height: 30px; padding-top: 2px; padding-bottom: 2px; font-size: 13px; }
 body.short-land[data-screen="cut"] #torchPill, body.short-land[data-screen="cut"] #stateBadge { display: none !important; }
 body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Round 5 (CAD): the cut check and job warnings belong to cutting, not to designing */
+body[data-screen="make"] #warnings, body[data-screen="make"] #cutCheck { display: none !important; }
+.holeadd button { min-height: 44px; }

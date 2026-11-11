@@ -1,33 +1,10 @@
 // Shape maker: common plasma parts from a few sizes. Each shape returns contours (mm).
 import { arcPoints, circleContour, signedArea } from "./geom.js";
+import { roundedRect, chamferRect, slot, roundCorners, dedupe } from "./shape-helpers.js";
+import { FAB_SHAPES } from "./shapes-fab.js";
 
 const MIN = 2;
 const SIZE_KEYS = new Set(["w", "h", "d", "a", "b", "len", "wid", "s"]);
-
-function roundedRect(x, y, w, h, r) {
-  r = Math.max(0, Math.min(r, w / 2 - 0.01, h / 2 - 0.01));
-  if (r <= 0.01) return { pts: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], closed: true };
-  const p = [[x + r, y], [x + w - r, y], ...arcPoints(x + w - r, y + r, r, -Math.PI / 2, 0, true),
-    [x + w, y + h - r], ...arcPoints(x + w - r, y + h - r, r, 0, Math.PI / 2, true),
-    [x + r, y + h], ...arcPoints(x + r, y + h - r, r, Math.PI / 2, Math.PI, true),
-    [x, y + r], ...arcPoints(x + r, y + r, r, Math.PI, 1.5 * Math.PI, true)];
-  p.pop(); // last arc point equals the first point
-  return { pts: p, closed: true };
-}
-
-function chamferRect(x, y, w, h, c) {
-  c = Math.max(0, Math.min(c, w / 2 - 0.01, h / 2 - 0.01));
-  if (c <= 0.01) return { pts: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], closed: true };
-  return { pts: [[x + c, y], [x + w - c, y], [x + w, y + c], [x + w, y + h - c], [x + w - c, y + h], [x + c, y + h], [x, y + h - c], [x, y + c]], closed: true };
-}
-function slot(cx, cy, len, wid) {
-  const r = wid / 2, s = Math.max(0, len - wid) / 2;
-  if (s <= 0) return circleContour(cx, cy, r);
-  const p = [[cx - s, cy - r], [cx + s, cy - r], ...arcPoints(cx + s, cy, r, -Math.PI / 2, Math.PI / 2, true),
-    [cx - s, cy + r], ...arcPoints(cx - s, cy, r, Math.PI / 2, 1.5 * Math.PI, true)];
-  p.pop();
-  return { pts: p, closed: true };
-}
 
 export const SHAPES = [
   {
@@ -78,7 +55,7 @@ export const SHAPES = [
       id = Math.min(Math.max(0, id), maxId);
       return { ...p, d, id, pcd, hole, n: Math.max(0, Math.min(36, Math.round(p.n || 0))) };
     },
-    params: [["d", "Outside Ø", 150], ["id", "Centre hole Ø", 60], ["pcd", "Bolt circle Ø (PCD)", 115], ["n", "Number of bolt holes", 4], ["hole", "Bolt hole Ø", 12]],
+    params: [["d", "Outside Ø (OD)", 150], ["id", "Centre hole Ø (ID)", 60], ["pcd", "Bolt circle Ø (PCD)", 115], ["n", "Number of bolt holes", 4], ["hole", "Bolt hole Ø", 12], ["start", "First hole angle °", 90]],
     make: (p) => {
       const d = p.d, hole = Math.max(0, p.hole || 0);
       const maxPcd = Math.max(0, d - hole - 2);
@@ -90,7 +67,7 @@ export const SHAPES = [
       const n = Math.max(0, Math.min(36, Math.round(p.n || 0)));
       if (pcd > 0 && hole > 0) {
         for (let i = 0; i < n; i++) {
-          const a = (i / n) * 2 * Math.PI + Math.PI / 2;
+          const a = (i / n) * 2 * Math.PI + (Number.isFinite(p.start) ? p.start : 90) * Math.PI / 180;
           c.push(circleContour(R + (pcd / 2) * Math.cos(a), R + (pcd / 2) * Math.sin(a), hole / 2));
         }
       }
@@ -561,50 +538,7 @@ export const SHAPES = [
       return out;
     },
   },
-];
-
-// fillet only convex corners (leave concave / re-entrant corners sharp)
-function roundCorners(pts, r) {
-  const n = pts.length, out = [];
-  if (!(r > 0) || n < 3) return pts;
-  let area = 0;
-  for (let i = 0; i < n; i++) { const q = pts[(i + 1) % n]; area += pts[i][0] * q[1] - q[0] * pts[i][1]; }
-  const ccw = area > 0;
-  for (let i = 0; i < n; i++) {
-    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n];
-    const v1 = [p0[0] - p1[0], p0[1] - p1[1]], v2 = [p2[0] - p1[0], p2[1] - p1[1]];
-    const l1 = Math.hypot(...v1), l2 = Math.hypot(...v2);
-    if (l1 < 1e-9 || l2 < 1e-9) { out.push(p1); continue; }
-    const cross = v1[0] * v2[1] - v1[1] * v2[0];
-    const convex = ccw ? cross > 1e-9 : cross < -1e-9;
-    if (!convex) { out.push(p1); continue; }
-    const ang = Math.acos(Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2))));
-    if (!(ang > 1e-3) || !Number.isFinite(ang)) { out.push(p1); continue; }
-    let d = r / Math.tan(ang / 2);
-    d = Math.min(d, l1 / 2 - 0.01, l2 / 2 - 0.01);
-    if (!(d > 0.01)) { out.push(p1); continue; }
-    const rr = d * Math.tan(ang / 2);
-    const a = [p1[0] + (v1[0] / l1) * d, p1[1] + (v1[1] / l1) * d], b = [p1[0] + (v2[0] / l2) * d, p1[1] + (v2[1] / l2) * d];
-    const bis = [v1[0] / l1 + v2[0] / l2, v1[1] / l1 + v2[1] / l2], bl = Math.hypot(...bis);
-    if (!(bl > 1e-9)) { out.push(p1); continue; }
-    const cd = Math.hypot(d, rr);
-    const c = [p1[0] + (bis[0] / bl) * cd, p1[1] + (bis[1] / bl) * cd];
-    const a0 = Math.atan2(a[1] - c[1], a[0] - c[0]), a1 = Math.atan2(b[1] - c[1], b[0] - c[0]);
-    const arcA = arcPoints(c[0], c[1], rr, a0, a1, true);
-    const arcB = arcPoints(c[0], c[1], rr, a0, a1, false);
-    const score = (arc) => arc.reduce((s, q) => s + Math.hypot(q[0] - p1[0], q[1] - p1[1]), 0) / Math.max(1, arc.length);
-    const arc = score(arcA) <= score(arcB) ? arcA : arcB;
-    if (arc.some((q) => Math.hypot(q[0] - p1[0], q[1] - p1[1]) > Math.abs(d) + rr * 2 + 0.5)) { out.push(p1); continue; }
-    out.push(a, ...arc);
-  }
-  return dedupe(out);
-}
-
-function dedupe(pts) {
-  const out = [];
-  for (const q of pts) if (!out.length || Math.hypot(q[0] - out[out.length - 1][0], q[1] - out[out.length - 1][1]) > 1e-6) out.push(q);
-  return out;
-}
+].concat(FAB_SHAPES);
 
 // several copies in a grid
 export function copies(contours, cols, rows, gap) {
@@ -646,9 +580,25 @@ export function makeShape(id, values) {
 
 export const SHAPE_GROUPS = [
   { id: "basic", name: "Basic", ids: ["square", "rect", "roundrect", "chamfer", "disc", "ellipse", "eqtriangle", "rtriangle", "triangle", "polygon", "hexagon", "octagon", "star", "slot", "sector", "ring"] },
-  { id: "plasma", name: "Plasma / fab", ids: ["plate", "slotted", "tab", "lbracket", "bracket", "gusset", "shelf", "flange", "ring", "keyhole", "dshape", "plus", "arrow", "link", "sign", "hook", "heart"] },
-  { id: "holes", name: "Holes", ids: ["hole", "slothole", "boltcircle", "holegrid"] },
+  { id: "plasma", name: "Plasma / fab", ids: ["plate", "slotted", "slot2", "baseplate", "tab", "lbracket", "bracket", "tplate", "strap", "gusset", "wgusset", "shelf", "lug", "banjo", "keyhole", "dshape", "plus", "arrow", "link", "sign", "hook", "heart"] },
+  { id: "flanges", name: "Flanges & washers", ids: ["flange4", "flange6", "flange8", "flange10", "flange12", "flangeblind", "flange", "ring", "sqwasher", "frame"] },
+  { id: "duct", name: "Duct & rolled", ids: ["s2r", "cone", "tube"] },
+  { id: "holes", name: "Holes", ids: ["hole", "slothole", "boltcircle", "cornerholes", "holerow", "holegrid"] },
 ];
+
+// Library tiles that are a shape with some sizes already set (so "Flange – 6 holes" is one tap). id -> { base shape, sizes }.
+// Bolt holes start half a step round from the top so they straddle the centre lines, as on a standard flange.
+const flangeP = (n) => ({ n, start: 90 + 180 / n });
+export const SHAPE_PRESETS = {
+  flange4: { base: "flange", name: "Flange – 4 holes", tip: "Round flange with 4 bolt holes. Set the outside Ø, centre hole Ø, bolt circle Ø (PCD) and bolt hole Ø.", p: flangeP(4) },
+  flange6: { base: "flange", name: "Flange – 6 holes", tip: "Round flange with 6 bolt holes. Set the outside Ø, centre hole Ø, bolt circle Ø (PCD) and bolt hole Ø.", p: flangeP(6) },
+  flange8: { base: "flange", name: "Flange – 8 holes", tip: "Round flange with 8 bolt holes. Set the outside Ø, centre hole Ø, bolt circle Ø (PCD) and bolt hole Ø.", p: { ...flangeP(8), d: 200, id: 80, pcd: 160 } },
+  flange10: { base: "flange", name: "Flange – 10 holes", tip: "Round flange with 10 bolt holes. Set the outside Ø, centre hole Ø, bolt circle Ø (PCD) and bolt hole Ø.", p: { ...flangeP(10), d: 250, id: 100, pcd: 200 } },
+  flange12: { base: "flange", name: "Flange – 12 holes", tip: "Round flange with 12 bolt holes. Set the outside Ø, centre hole Ø, bolt circle Ø (PCD) and bolt hole Ø.", p: { ...flangeP(12), d: 300, id: 120, pcd: 250 } },
+  flangeblind: { base: "flange", name: "Blind flange (no centre hole)", tip: "Round flange with bolt holes and no centre hole.", p: { id: 0, n: 8, start: 90 + 22.5, d: 200, pcd: 160 } },
+};
+export const presetOrShape = (id) => (SHAPE_PRESETS[id] ? { ...SHAPES.find((s) => s.id === SHAPE_PRESETS[id].base), ...SHAPE_PRESETS[id], id, presetOf: SHAPE_PRESETS[id].base } : SHAPES.find((s) => s.id === id));
+
 
 export function defaultParams(sh) {
   const p = {};
@@ -657,7 +607,7 @@ export function defaultParams(sh) {
 }
 
 export function shapeThumb(sh, w = 64, h = 48) {
-  const p = defaultParams(sh);
+  const p = { ...defaultParams(sh), ...(sh.presetOf ? sh.p : {}) };
   let cs;
   try { cs = sh.make(p); } catch (e) { return ""; }
   if (!cs || !cs.length) return "";

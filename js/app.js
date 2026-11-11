@@ -7,7 +7,7 @@ import { SimTransport } from "./sim.js";
 import { parseDXF } from "./dxf.js";
 import { parseSVG } from "./svg.js";
 import { designToGcode } from "./cam.js";
-import { SHAPES, copies, SHAPE_GROUPS, shapeThumb } from "./shapes.js";
+import { SHAPES, copies, SHAPE_GROUPS, shapeThumb, SHAPE_PRESETS, presetOrShape } from "./shapes.js";
 import { Sketch, shapeDef } from "./sketch.js";
 import { variantsFor, variantKey } from "./variants.js";
 import { evalExpr } from "./expr.js";
@@ -279,6 +279,7 @@ function onScreen(name, prev) {
     goStep(S.prepared && S.cutStep >= 3 ? Math.min(S.cutStep, S.job ? 4 : 3) : 1);
     renderMaterials();
   }
+  try { renderCutCheck(); } catch (e) { /* ignore */ }
   try { paintChrome(); refresh(); } catch (e) { /* ignore */ }
   window.scrollTo(0, 0);
 }
@@ -567,12 +568,17 @@ function renderBeginnerShapes() {
   box.innerHTML = BEGIN_SHAPES.map(([id, label]) => SHAPES.find((s) => s.id === id)
     ? `<button type="button" data-bshape="${esc(id)}" class="${cur === id ? "sel" : ""}"><i>${shapeThumb(SHAPES.find((s) => s.id === id), 72, 48)}</i><span>${esc(label)}</span></button>` : "").join("");
 }
+// add a shape by id; a library preset like "flange6" adds its base shape with its sizes already set
+function addShapeId(id) {
+  const pr = SHAPE_PRESETS[id];
+  if (pr) sketch.add(pr.base, false, pr.p); else sketch.add(id);
+}
 function beginnerPick(id) {
   if (S.job && S.job.running) return;
   S.bgChoosing = false;
   if (S.src !== "shape") showSource("shape");
   if (sketch.items.length && !sketch.items.some((i) => i.lock)) sketch.clear();     // Beginner: tapping another shape swaps it (Undo brings it back)
-  sketch.add(id);
+  addShapeId(id);
   sketch.fitView();
   useShape();      // build the job now, not 250 ms later: a shape that is picked must enable Next straight away
 }
@@ -591,6 +597,7 @@ function paintGuide() {
   $("ghHelp").textContent = has ? "Type how big it should be, turn it, add holes. When it looks right, press Cut this part." : "Tap a shape, or draw your own.";
   gh.style.setProperty("--prog", has ? "100%" : "0%");
 }
+const HOLE_ADDERS = [["slothole", "Slot hole"], ["cornerholes", "Corner holes (4)"], ["holerow", "Row of holes"], ["boltcircle", "Ring of holes"], ["holegrid", "Grid of holes"]];
 const ALIGN = [["left", "⇤ Left"], ["centre", "↔ Centre"], ["right", "⇥ Right"], ["both", "◎ Dead centre"],
   ["bottom", "⤓ Bottom"], ["middle", "↕ Middle"], ["top", "⤒ Top"]];
 function customSizeHtml(it, b) {
@@ -601,6 +608,18 @@ function customSizeHtml(it, b) {
       <label>Height (mm)<input type="number" step="any" min="2" inputmode="decimal" data-ch="1" value="${H}"></label>
       <label class="check wide2"><input type="checkbox" id="keepProp" ${S.keepProp === false ? "" : "checked"}> Keep proportions</label>
     </div>`;
+}
+// Pro: where a picked hole (or hole pattern) sits in its part, measured from the part's edges
+function holeHostHtml(it, sh) {
+  const host = sketch.hostPart(it); if (!host) return "";
+  const hb = sketch.boxOf(host), b = sketch.boxOf(it);
+  const cx = Math.round(((b[0] + b[2]) / 2 - hb[0]) * 100) / 100, cy = Math.round(((b[1] + b[3]) / 2 - hb[1]) * 100) / 100;
+  return `<h4>Where it sits in the part</h4>
+    <div class="grid2">
+      <label>Centre from the part's left edge<input type="number" step="any" inputmode="decimal" data-hrel="x" value="${cx}"></label>
+      <label>Centre from the part's bottom edge<input type="number" step="any" inputmode="decimal" data-hrel="y" value="${cy}"></label>
+    </div>
+    <div class="skbtns"><button data-sk="centreInHost">◎ Centre in the part</button><button data-sk="pickHost">↩ Select the part</button><button data-pro="linarray">Row of copies</button><button data-pro="polar">Circle of copies</button></div>`;
 }
 function renderShapeForm() {
   const list = sketch.picked(), it = sketch.selected();
@@ -647,9 +666,12 @@ function renderShapeForm() {
         `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}</div>${customSizeHtml(it, b)}
       <div class="skbtns bigbtns">
         <button data-sk="rotateBy" data-arg="90">⟳ Turn it</button>
-        ${!sh.hole && shapeDef("hole") ? `<button data-sk="add" data-arg="hole">◦ Add a hole</button>` : ""}
+        ${!sh.hole && !sh.sheet && shapeDef("hole") ? `<button data-sk="add" data-arg="hole">◦ Add a hole</button>` : ""}
+        ${sh.hole && sketch.hostPart(it) ? `<button data-sk="pickHost">↩ Back to the part</button><button data-sk="centreInHost">◎ Centre it</button>` : ""}
+        ${sh.sheet ? `<button data-sk="explode" title="Make each piece its own part, so you can place them on the bed one by one">✂ Split into parts</button>` : ""}
         <button data-sk="remove" class="danger">🗑 Remove</button>
-      </div>`;
+      </div>
+      ${!sh.hole && !sh.sheet ? `<p class="tip">More holes:</p><div class="skbtns holeadd">${HOLE_ADDERS.map(([id, label]) => shapeDef(id) ? `<button data-sk="add" data-arg="${id}">${esc(label)}</button>` : "").join("")}</div>` : ""}`;
     return;
   }
   const moved = Object.keys(it.holes || {}).length;
@@ -684,8 +706,9 @@ function renderShapeForm() {
       <button data-sk="mirror" title="M">⇋ Mirror</button>
       <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
       ${moved ? `<button data-sk="resetHoles">↺ Holes back</button>` : ""}
+      ${sh.sheet ? `<button data-sk="explode" title="Make each piece its own part, so you can place them on the bed one by one">✂ Split into parts</button>` : ""}
       <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
-    </div>${proOne}`;
+    </div>${proOne}${holeHostHtml(it, sh)}`;
 }
 // keep the boxes in step while dragging, without rebuilding them
 
@@ -712,9 +735,9 @@ function renderLibrary() {
   const cats = [{ id: "all", name: "All" }, ...SHAPE_GROUPS];
   $("libCats").innerHTML = cats.map((c) => `<button type="button" data-cat="${esc(c.id)}" class="${c.id === libCat ? "on" : ""}">${esc(c.name)}</button>`).join("");
   let ids;
-  if (libCat === "all") { const seen = new Set(); ids = SHAPE_GROUPS.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id)); }
+  if (libCat === "all" || q) { const seen = new Set(); ids = SHAPE_GROUPS.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id)); }
   else ids = (SHAPE_GROUPS.find((g) => g.id === libCat) || { ids: [] }).ids;
-  const list = ids.map((id) => SHAPES.find((s) => s.id === id)).filter(Boolean)
+  const list = ids.map((id) => presetOrShape(id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
   $("libGrid").innerHTML = list.length ? list.map((s) => `<button type="button" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 64, 44)}<span class="libname">${esc(s.name)}</span></button>`).join("")
     : `<p class="muted">No shapes match “${esc(q)}”.</p>`;
@@ -1277,9 +1300,13 @@ function renderCutCheck() {
       : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${esc(mat)}.</p>`}`;
   const tabBtn = chk && !S.cam.tabs && chk.groups.some((g) => /slats|tip/i.test(g.text))
     ? `<div class="row"><button type="button" class="small" data-r2act="tabs">Add 2 hold-down tabs per part</button></div>` : "";
-  $("cutCheck").innerHTML = S.src === "shape" ? html + tabBtn : "";
+  // Round 5: the cut check is for cutting, not for designing. While you make a part nothing is flagged (no panel, no marks on the
+  // drawing); it is shown on the cutting screen, when a file is loaded or the part has been sent to be cut.
+  const cutting = screen() === "cut";
+  $("cutCheck").innerHTML = "";
   $("cutCheck2").innerHTML = html + tabBtn;
-  if (sketch) sketch.setMarks(S.src === "shape" && chk ? chk.issues : []);
+  if ($("cutCheck3")) $("cutCheck3").innerHTML = cutting ? html + tabBtn : "";
+  if (sketch) sketch.setMarks(cutting && S.src === "shape" && chk ? chk.issues : []);
   const L = machineLimits(limitsNow());
   const rows = [
     ["Cutting area", `${L.table[0]} × ${L.table[1]} mm${S.safety.limits ? " (your edges)" : ""}`],
@@ -2147,7 +2174,7 @@ function bind() {
   const addTile = (e) => {
     if (Date.now() < (S.uiBlockUntil || 0)) return;      // a second tap just after a sheet closed would hit whatever is under it
     if (e.target.closest("[data-lib]")) { openLibrary(); return; }
-    const b = e.target.closest("[data-shape]"); if (b) sketch.add(b.dataset.shape);
+    const b = e.target.closest("[data-shape]"); if (b) addShapeId(b.dataset.shape);
   };
   $("shapeTiles").onclick = addTile; $("holeTiles").onclick = addTile;
   $("quickBar").addEventListener("click", (e) => { if (Date.now() < (S.uiBlockUntil || 0)) return; const b = e.target.closest("[data-qb]"); if (b && !b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(b.dataset.qb); });
@@ -2155,7 +2182,7 @@ function bind() {
   $("shapeLib").addEventListener("click", (e) => {
     if (e.target === $("shapeLib")) { closeLibrary(); return; }
     const c = e.target.closest("[data-cat]"); if (c) { libCat = c.dataset.cat; renderLibrary(); return; }
-    const b = e.target.closest("[data-shape]"); if (b) { closeLibrary(); if (!isProMode()) beginnerPick(b.dataset.shape); else sketch.add(b.dataset.shape); }
+    const b = e.target.closest("[data-shape]"); if (b) { closeLibrary(); if (!isProMode()) beginnerPick(b.dataset.shape); else addShapeId(b.dataset.shape); }
   });
   $("libSearch").addEventListener("input", renderLibrary);
   $("verClose").onclick = closeVersions;
@@ -2174,7 +2201,7 @@ function bind() {
     const i = e.target, v = evalExpr(i.value) ;
     if (i.value.trim() === "" || !Number.isFinite(v)) return;
     const it = sketch.selected(); if (!it) return;
-    if (i.dataset.angle || i.dataset.cw || i.dataset.ch) return;     // applied on change
+    if (i.dataset.angle || i.dataset.cw || i.dataset.ch || i.dataset.hrel) return;     // applied on change
     if (i.dataset.p) {
       if (it.lock) return;
       const k = i.dataset.p;
@@ -2198,6 +2225,11 @@ function bind() {
       const W = evalExpr($("shapeForm").querySelector("[data-cw]").value), H = evalExpr($("shapeForm").querySelector("[data-ch]").value);
       const keep = !$("keepProp") || $("keepProp").checked;
       if (!it || !sketch.resizeCustomTo(it, W, H, keep, e.target.dataset.cw ? "w" : "h")) toast("That size isn't possible for this part (too small, too big, or locked).", true);
+      editBefore = sketch.snapshot(); renderShapeForm(); useShapeSoon(); return;
+    }
+    if (e.target.dataset.hrel) {
+      const v = evalExpr(e.target.value), it = sketch.selected();
+      if (it && !it.lock && Number.isFinite(v)) sketch.setHoleOffset(e.target.dataset.hrel, v);
       editBefore = sketch.snapshot(); renderShapeForm(); useShapeSoon(); return;
     }
     if (e.target.dataset.angle) { sketch.setAngle(Number(e.target.value)); editBefore = sketch.snapshot(); renderShapeForm(); return; }

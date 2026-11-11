@@ -8,6 +8,7 @@
 import { SHAPES, makeShape } from "./shapes.js";
 import { pointInPoly, bbox, signedArea, unionOutlines, differenceOutlines, offsetPolygon, selfIntersects, polysCross, splitBulge, expandContour, bulgeMidpoint, bulgeFromPoint, bulgeFromRadius, bulgeFromSagitta, bulgeRadius } from "./geom.js";
 import { variantsFor, variantKey } from "./variants.js";
+import { contoursToEditable } from "./editable.js";
 
 const KEY = "plasma.sketch", KEY_OPTS = "plasma.sketch.opts";
 const MIN = 2;                               // smallest size (mm)
@@ -17,6 +18,8 @@ const CUSTOM = {
   params: [["scale", "Size %", 100]],
 };
 const def = (type) => (type === "custom" ? CUSTOM : SHAPES.find((s) => s.id === type));
+// shapes made of several separate outlines (hole patterns, and flat-pattern sets like the square-to-round pieces): size, hit-test and place by ALL their outlines
+const wholeSet = (type) => { const d = def(type); return !!(d && (d.multi || d.sheet)); };
 export const shapeDef = def;
 const short = (it) => def(it.type).name.split(/ [/(]/)[0].replace(/ with .*/, "").toLowerCase();
 const r1 = (v) => Math.round(v * 10) / 10;
@@ -190,7 +193,7 @@ export class Sketch {
     if (it.fy) cs = cs.map((c) => flip(c, false));
     if (it.rot) cs = cs.map((c) => mapC(c, (pt) => rot(pt, it.rot)));
     if (!cs.length) return cs;
-    const b = def(it.type).multi ? bbox(cs) : bbox([cs[0]]);
+    const b = wholeSet(it.type) ? bbox(cs) : bbox([cs[0]]);
     return cs.map((c) => mapC(c, ([x, y]) => [x - b[0] + it.x, y - b[1] + it.y]));
   }
   reverseBulges(n, closed, bulges) {
@@ -214,7 +217,7 @@ export class Sketch {
     }
     return out;
   }
-  holeStart(it) { return def(it.type).multi ? Infinity : 1; }
+  holeStart(it) { return wholeSet(it.type) ? Infinity : 1; }
   contoursOf(it) {
     const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0]);
     if (it._key === key) return it._cs;
@@ -227,7 +230,7 @@ export class Sketch {
       if (it.fx) cs = cs.map((c) => { const m = mapC(c, ([x, y]) => [-x, y]); m.pts.reverse(); return m; });
       if (it.fy) cs = cs.map((c) => { const m = mapC(c, ([x, y]) => [x, -y]); m.pts.reverse(); return m; });
       if (it.rot) cs = cs.map((c) => mapC(c, (p) => rot(p, it.rot)));
-      const b = def(it.type).multi ? bbox(cs) : bbox([cs[0]]);
+      const b = wholeSet(it.type) ? bbox(cs) : bbox([cs[0]]);
       cs = cs.map((c) => mapC(c, ([x, y]) => [x - b[0] + it.x, y - b[1] + it.y]));
     }
     Object.defineProperty(it, "_cs", { value: cs, writable: true, enumerable: false, configurable: true });
@@ -237,7 +240,7 @@ export class Sketch {
   boxOf(it) {
     const c = this.contoursOf(it);
     if (!c.length) return [it.x, it.y, it.x, it.y];
-    return def(it.type).multi ? bbox(c) : bbox([c[0]]);
+    return wholeSet(it.type) ? bbox(c) : bbox([c[0]]);
   }
   pickedBox() { return unionBox(this.picked().map((i) => this.boxOf(i))); }
   allBox() { const cs = this.items.flatMap((i) => this.contoursOf(i)); return cs.length ? bbox(cs) : [0, 0, 200, 120]; }
@@ -268,15 +271,16 @@ export class Sketch {
   }
 
   // ---------------------------------------------------------------- actions (all undoable)
-  newItem(type) {
+  newItem(type, overrides) {
     const d = def(type), p = {};
     for (const [k, , v] of d.params) p[k] = v;
+    if (overrides) for (const [k, v] of Object.entries(overrides)) if (k in p && Number.isFinite(Number(v))) p[k] = Number(v);
     return { id: this.nextId++, type, p, x: 0, y: 0, rot: 0, holes: {} };
   }
-  add(type, quiet) {
+  add(type, quiet, overrides) {
     if (!def(type)) return;
     this.remember();
-    const it = this.newItem(type);
+    const it = this.newItem(type, overrides);
     let host = this.selected();
     if (host && this.isHole(host)) host = this.hostOf(host) || (def(host.type).multi ? this.hostOfBox(host, this.items.filter((o) => !this.isHole(o))) : null);
     this.items.push(it);
@@ -302,6 +306,43 @@ export class Sketch {
     });
     this.pick([]); this.commit(); this.onSelect(); this.fitView();
     return made.length;
+  }
+  // the part a picked hole (or hole pattern) sits in
+  hostPart(it) {
+    if (!it || !this.isHole(it)) return null;
+    return this.hostOf(it) || (wholeSet(it.type) ? this.hostOfBox(it, this.items.filter((o) => !this.isHole(o))) : null);
+  }
+  // pick the part that holds the picked hole (so you can get back to it after adding holes)
+  pickHost() {
+    const host = this.hostPart(this.selected());
+    if (host) { this.pick([host.id]); this.draw(); this.onSelect(); }
+    return !!host;
+  }
+  // put the picked hole (or hole pattern) dead in the middle of its part
+  centreInHost() {
+    const it = this.selected(), host = this.hostPart(it);
+    if (!this.canMutate(it) || !host) return false;
+    this.remember();
+    const hb = this.boxOf(host), b = this.boxOf(it);
+    it.x = r1(it.x + (hb[0] + hb[2]) / 2 - (b[0] + b[2]) / 2);
+    it.y = r1(it.y + (hb[1] + hb[3]) / 2 - (b[1] + b[3]) / 2);
+    this.commit(); this.onSelect();
+    return true;
+  }
+  // a flat-pattern set (like the square-to-round pieces) turned into separate parts, so each can be put on the bed on its own
+  explode() {
+    const it = this.selected();
+    if (!it || it.lock || !def(it.type) || !def(it.type).sheet) return 0;
+    const e = contoursToEditable(this.contoursOf(it));
+    if (!e || !e.parts.length) return 0;
+    this.remember();
+    this.items = this.items.filter((o) => o !== it);
+    const first = this.nextId;
+    this.importParts(e.parts, false);
+    this.past.pop();                                   // importParts took its own undo step; one Undo brings the set back
+    this.pick(this.items.filter((o) => o.id >= first).map((o) => o.id));
+    this.commit(); this.onSelect();
+    return e.parts.length;
   }
   remove() {
     const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
@@ -513,7 +554,7 @@ export class Sketch {
     const it = this.selected(); if (!it || !Number.isFinite(v)) return;
     let host = it, hc = null, cs = this.contoursOf(it);
     if (this.sel.hole != null && cs[this.sel.hole]) { hc = cs[this.sel.hole]; host = it; }
-    else if (this.isHole(it)) { hc = cs[0]; host = this.hostOf(it); }
+    else if (this.isHole(it)) { hc = wholeSet(it.type) ? { pts: [[this.boxOf(it)[0], this.boxOf(it)[1]], [this.boxOf(it)[2], this.boxOf(it)[3]]] } : cs[0]; host = this.hostOf(it) || (wholeSet(it.type) ? this.hostOfBox(it, this.items.filter((o) => !this.isHole(o))) : null); }
     if (!hc || !host) return;
     this.remember();
     const hb = this.boxOf(host), cb = bbox([hc]);
@@ -750,6 +791,7 @@ export class Sketch {
   }
   resizeTo(it, W, H) {
     const d = def(it.type);
+    if (d.noResize) return;                                        // flat-pattern sets: change the sizes, not the box
     W = Math.min(this.maxMm, Math.max(MIN, W)); H = Math.min(this.maxMm, Math.max(MIN, H));
     if (d.uniform) W = H = Math.max(W, H);
     const odd = (it.rot || 0) % 180 !== 0;
@@ -789,7 +831,7 @@ export class Sketch {
     this.commit(); this.onSelect();
     return true;
   }
-  canResize(it) { return it && !it.lock && (it.rot || 0) % 90 === 0 && !!(def(it.type).fit || it.type === "custom"); }
+  canResize(it) { return it && !it.lock && (it.rot || 0) % 90 === 0 && !(def(it.type) && def(it.type).noResize) && !!(def(it.type).fit || it.type === "custom"); }
 
   contours() { return this.items.filter((i) => !this.layerHidden(i)).flatMap((i) => this.contoursOf(i)); }
   // layers = the operation label of a shape (cut / score / mark). A hidden layer is neither drawn nor cut.
@@ -1090,7 +1132,7 @@ export class Sketch {
   // old corner doesn't slide the whole part).
   _renorm(it) {
     const cs = it.shape.cs; if (!cs || !cs.length) return;
-    const src = def(it.type).multi ? cs : [cs[0]];
+    const src = wholeSet(it.type) ? cs : [cs[0]];
     let x0 = Infinity, y0 = Infinity;
     for (const c of src) for (const q of c.pts) { if (q[0] < x0) x0 = q[0]; if (q[1] < y0) y0 = q[1]; }
     if (!Number.isFinite(x0) || !Number.isFinite(y0) || (Math.abs(x0) < 1e-9 && Math.abs(y0) < 1e-9)) return;
@@ -1433,7 +1475,7 @@ export class Sketch {
     const list = this.order().reverse();
     for (const it of list) {
       const cs = this.contoursOf(it); if (!cs.length) continue;
-      if (def(it.type).multi) { if (cs.some((c) => pointInPoly([wx, wy], c.pts))) return { kind: "move", it }; continue; }
+      if (wholeSet(it.type)) { if (cs.some((c) => pointInPoly([wx, wy], c.pts))) return { kind: "move", it }; continue; }
       if (!pointInPoly([wx, wy], cs[0].pts)) continue;
       for (let i = 1; i < cs.length; i++) if (pointInPoly([wx, wy], cs[i].pts)) return { kind: "hole", it, hole: i };
       return { kind: "move", it };
