@@ -272,6 +272,7 @@
           </label>
           <div class="row wrap pickrow">
             <button type="button" id="btnPickSaved" class="xl">📁 Saved parts &amp; folders</button>
+            <button type="button" id="btnCoupon" class="xl" title="Cut a small test part (60 × 40 mm with a hole) in the material and thickness chosen below, then record how it came out">🧪 Cut-test coupon</button>
             <button type="button" id="btnStraight" class="xl" title="Cut a straight line (sheet trim) with no drawing">➖ Straight cut</button>
             <button type="button" id="btnEditDrawing" class="xl hidden" title="Open this drawing in Make a part to change lengths, square corners, curve edges, add holes">✏ Edit in Make a part</button>
           </div>
@@ -533,6 +534,16 @@
           <p class="muted small zerohelp">Put the sheet on the table. Move the torch over the sheet's <b>bottom-left corner</b> and press <b>Start here</b>. That corner is where the sheet picture's 0, 0 is.</p>
           <div class="jogmount"></div>
           <p class="muted small keyhint">Keyboard: arrows move, Page Up / Page Down raise and lower. Tap for one step, hold to glide. Two arrows go diagonal, add Shift to go slow.</p>
+          <details id="originCard" class="originbox">
+            <summary>Job origin &amp; saved start points</summary>
+            <p class="muted small"><span id="originNow"></span> Pick a different spot to measure from:</p>
+            <div id="origin9" class="grid9" role="group" aria-label="Which part of the job goes at the start point"></div>
+            <button type="button" id="originDefault" class="small hidden">Back to default</button>
+            <div class="row wrap woform"><input id="woName" type="text" maxlength="40" placeholder="Name this start point (e.g. left clamp)" aria-label="Name for the saved start point" autocomplete="off"><button type="button" id="woSave" class="small">Save the current start point</button></div>
+            <p id="woNeed" class="muted small">Connect and Home to use saved start points.</p>
+            <ul id="woList" class="wolist"></ul>
+          </details>
+          <p id="originHelp" class="muted small hidden"></p>
           <button id="btnZero" class="xl accent wide">📍 Start here</button>
           <button id="btnTrace" class="wide">Trace the outline (torch off) to check it's on the sheet</button>
           </div>
@@ -557,6 +568,10 @@
 
       <!-- step 4: running / done -->
       <div class="step hidden" data-step="4">
+        <div id="lostArc" class="lostarc hidden" role="alert">
+          <p><b id="lostArcHead">Arc lost.</b> <span id="lostArcText"></span></p>
+          <button type="button" id="btnLostResume" class="xl accent">Continue from cut 1…</button>
+        </div>
         <div id="running">
           <h2 id="runTitle">Cutting…</h2>
           <div class="runnums">
@@ -565,6 +580,13 @@
           </div>
           <div class="progress"><div id="progBar"></div></div>
           <p class="muted" id="runInfo"></p>
+          <div id="livePanel" class="livepanel" role="group" aria-label="Live torch and arc readings">
+            <div class="lp" id="lpArc"><span>Arc OK</span><b>not connected</b></div>
+            <div class="lp" id="lpVolts"><span>Arc volts</span><b>not connected</b></div>
+            <div class="lp" id="lpZ"><span>Torch height</span><b>not connected</b></div>
+            <div class="lp" id="lpPierce"><span>Pierces</span><b>0 this job · 0 total</b></div>
+          </div>
+          <p id="lpNote" class="muted small lpnote"></p>
           <div class="torchbig" id="torchBig">TORCH OFF</div>
           <div class="livespeed">
             <div>Speed <b id="liveSpeed">–</b></div>
@@ -594,6 +616,15 @@
           <p id="doneInfo" class="muted"></p>
           <button id="btnSaveSpeed" class="wide accent hidden"></button>
           <button type="button" id="btnExport4" class="wide">⬇ Download G-code</button>
+          <div id="couponResult" class="couponresult hidden" role="group" aria-labelledby="cpHead">
+            <p><b id="cpHead">How did the test coupon cut?</b></p>
+            <div class="resbtns"></div>
+            <div class="row wrap">
+              <label>Speed to use (mm/min, optional)<input id="cpSpeed" type="number" inputmode="decimal" min="10" max="20000" step="10"></label>
+              <label>Amps (optional)<input id="cpAmps" type="number" inputmode="decimal" min="5" max="500" step="1"></label>
+            </div>
+            <div class="row"><button type="button" id="cpSave" class="xl accent grow" disabled>Save to the cut chart</button><button type="button" id="cpSkip" class="grow">Not now</button></div>
+          </div>
           <div id="restartBox" class="restartbox hidden">
             <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">After a stop the machine may have lost its position, so you will Home it and confirm work zero again in Get set up before the torch can fire. The torch stays off until it is over the start of the cut.</span></p>
             <div class="row">
