@@ -7,7 +7,9 @@ Josh is driving the table with a **DUBEUYEW ESP32-DevKitC V1 (30-pin)** and a sc
 - FluidNC speaks the same GRBL 1.1 status reports (`<Idle|MPos:…>`), `ok` / `error`, and realtime bytes (`?`, `!`, `~`, `0x18`, feed overrides) as a USB grblHAL controller. The app’s existing parser and job sender work over that protocol.
 - In **Connect**, choose **FluidNC (Wi-Fi)** and enter the ESP32’s IP or hostname (for example `192.168.1.50` or `fluidnc.local`). The app opens a raw WebSocket at `ws://<host>:81` (FluidNC’s default: HTTP port + 1).
 - USB serial still works if you plug the ESP32 into the computer and pick the port.
-- FluidNC stores machine settings in **`config.yaml`**, not the usual GRBL `$0…$132` list. When the app sees FluidNC, the raw `$` editor is hidden and Settings offers this repo’s `config/fluidnc-plasma.yaml` template instead. From the filtered console you can still send `$$` and `$I`. `$/` and the other FluidNC config commands are blocked by the console filter on purpose: change config.yaml instead.
+- FluidNC stores machine settings in **`config.yaml`**, not the usual GRBL `$0…$132` list. When the app sees FluidNC, the raw `$` editor is hidden and Settings offers this repo’s `config/fluidnc-plasma.yaml` template instead.
+- The console (the “Controller” card for the admin, and the Pro firmware tools, which use the same filter) is **filtered on purpose**. It accepts only: `$$`, `$I`, `$G`, `$X`, `$H`, `$C`, `$n=value` (a documented GRBL number inside its safe range), `?`, `!`, `~`, short `G0`/`G1` jogs (up to 50 mm), `G90`/`G91`/`G92`/`G21`, `M5`, and `M3` on its own after a confirmation. Anything else is refused with a reason.
+- FluidNC’s own `$` commands are **not** accepted by that filter, so they will not work from the app: `$/…` (read or set a config value by path), `$Config/…`, `$CD`, `$SD/…`, `$LocalFS/…`, `$Bye`, `$Report/…`, `$Firmware/…` and so on. To change a FluidNC setting, edit `config.yaml` and copy it to the board (or use FluidNC’s own web page at `http://<fluidnc-ip>/`), then restart it.
 
 ## The HTTPS mixed-content problem (important)
 
@@ -20,6 +22,15 @@ Ways that **do** work:
 3. **USB serial** does not have this restriction. Use **Connect** → the USB port on any origin, including GitHub Pages.
 
 If you try FluidNC from the live HTTPS site, the app will refuse and show this explanation rather than fail silently.
+
+## Security policy (CSP) and why `ws:` is still allowed in the repo copy
+
+The page's Content-Security-Policy says which hosts scripts may talk to. A CSP cannot say "private LAN addresses only" or "port 81 only"
+(it has no IP ranges, and the port box in Connect can be changed), so a copy that must reach `ws://<any-lan-ip>:<port>` has to allow `ws:`.
+What was tightened: `wss:` is gone everywhere (nothing needs it), and the **public https site** is built without `ws:` at all
+(`scripts/harden-csp.sh` in the deploy), because it cannot open `ws://` anyway. The trade-off is that a copy you serve yourself over http
+keeps `ws:`: a hostile script on *that* copy could try to open a plain WebSocket to another device on your LAN. Mitigation: only serve
+the app you trust, and keep the page free of third-party scripts (the policy already limits scripts to `'self'`).
 
 ## First setup (short)
 

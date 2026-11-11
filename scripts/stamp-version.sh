@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stamp a release: ./scripts/stamp-version.sh [release-id] [commit]
-# Rewrites version.json, js/version.js and the service-worker cache name so the three always agree.
+# Rewrites version.json, js/version.js, the service-worker cache name AND its precache list (the app-shell files that exist) so they always agree.
 # Run it INSIDE the deploy workflow, after checkout and before the files are published, so the id always comes from the commit being deployed:
 #   - name: Stamp version
 #     run: ./scripts/stamp-version.sh
@@ -18,4 +18,12 @@ cat > js/version.js <<JS
 export const VERSION = { id: "$ID", commit: "$COMMIT", built: "$BUILT" };
 JS
 sed -i "s|^const CACHE = .*|const CACHE = \"plasma-cad-$ID\";|" sw.js
+# precache list: the page, styles, scripts, config and icons that are really there (so a renamed or new file can never be missed or 404 the install)
+LIST=$( { echo "./"; echo index.html; echo style.css; echo manifest.json; echo version.json
+          ls favicon.svg favicon-32.png icon-*.png logo.svg 2>/dev/null
+          ls js/*.js config/machine.json config/cut_chart.json config/grblhal_settings.txt config/fluidnc-plasma.yaml 2>/dev/null; } | awk 'NF && !seen[$0]++ { printf "  \"%s\",\n", $0 }' )
+awk -v list="$LIST" '
+  /\/\* precache:start \*\//    { print; print list; skip = 1; next }
+  /\/\* precache:end \*\//      { skip = 0 }
+  !skip { print }' sw.js > sw.js.new && mv sw.js.new sw.js
 echo "stamped $ID ($COMMIT)"

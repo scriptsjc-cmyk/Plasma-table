@@ -1,12 +1,14 @@
 // Pro docked inspector (shell and layout only).
 //
-// This file paints the right-hand panel and talks to the host ONLY through
-// window.ptInspector. It does not read the sketch, the job, or CAM state.
-// window.ptInspector is read lazily (api()). js/app.js assigns the real object
-// from js/inspector-api.js during async init, which is still in flight when
-// this deferred module runs. The sample mock is installed only when that
-// property is still undefined after init has had time to finish, and a later
-// assignment replaces it.
+// This file paints the right-hand panel and talks to the host ONLY through the
+// object js/app.js hands it with connectInspector() (a module variable, NOT a
+// property of window: a script pasted into the console of the live site must not be
+// able to reach the inspector API). app.js publishes it as window.ptInspector only for
+// the local test server (?test=1 on localhost) and for a signed-in admin.
+// It does not read the sketch, the job, or CAM state.
+// connectInspector() is called by app.js during async init, which is still in flight when
+// this deferred module runs. The sample mock is installed only when nothing has been
+// connected after init has had time to finish, and a later connect replaces it.
 //
 // Units are millimetres and degrees. The panel sends partial objects: only the
 // fields the operator changed. The host merges them and then emits "change".
@@ -21,11 +23,10 @@
 //   partial may include any of w, h, x, y, rotation (numbers).
 //   Ignored fields are left as they were. No-op when partial is not an object.
 //
-// getCut() -> null | { operation, speed, amps, leadIn, leadOut, tabs }
+// getCut() -> null | { operation, speed, leadIn, leadOut, tabs }
 //   null when nothing is selected, or the selection has no cut settings.
 //   operation  "cut" | "score" | "mark" (any other string is shown as-is)
 //   speed      mm/min
-//   amps       arc current
 //   leadIn     lead-in length in mm
 //   leadOut    lead-out length in mm
 //   tabs       { count, width }
@@ -67,8 +68,13 @@ function icon(name) {
   return `<svg class="ico" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
 }
 
+let hostApi = null;
 function api() {
-  return window.ptInspector || null;
+  return hostApi;
+}
+export function connectInspector(obj) {
+  hostApi = obj && typeof obj === "object" ? obj : null;
+  try { followHost(); } catch (e) { /* the panel is not mounted yet: start() binds it */ }
 }
 
 function call(name, ...args) {
@@ -386,7 +392,7 @@ function bindFields(aside) {
 let boundHost = null;
 let unsubHost = null;
 
-// Re-bind whenever the object on window.ptInspector changes, so the real API
+// Re-bind whenever the connected object changes, so the real API
 // wins even if the sample mock was installed while app.js was still starting.
 function followHost() {
   const host = api();
@@ -416,7 +422,7 @@ function start() {
   // Mock only if the real API has not appeared. app.js assigns it after the
   // config fetch, which is after this module's first turn.
   setTimeout(() => {
-    if (window.ptInspector == null) installMockIfNeeded();
+    if (hostApi == null) installMockIfNeeded();
     followHost();
   }, 3000);
 }
@@ -424,16 +430,15 @@ function start() {
 // ============================================================
 // MOCK — sample data so the shell can be reviewed before the lead
 // wires the real selection, cut settings and layers.
-// Installed only when window.ptInspector is still undefined.
+// Installed only when nothing has been connected.
 // ============================================================
 function installMockIfNeeded() {
-  if (window.ptInspector != null) return;
+  if (hostApi != null) return;
 
   let selection = { w: 100, h: 60, x: 40, y: 30, rotation: 0 };
   let cut = {
     operation: "cut",
     speed: 2000,
-    amps: 40,
     leadIn: 3,
     leadOut: 0,
     tabs: { count: 0, width: 3 },
@@ -464,10 +469,10 @@ function installMockIfNeeded() {
     const tabs = cut.tabs && typeof cut.tabs === "object"
       ? { count: cut.tabs.count, width: cut.tabs.width }
       : { count: 0, width: 3 };
-    return { operation: cut.operation, speed: cut.speed, amps: cut.amps, leadIn: cut.leadIn, leadOut: cut.leadOut, tabs };
+    return { operation: cut.operation, speed: cut.speed, leadIn: cut.leadIn, leadOut: cut.leadOut, tabs };
   }
 
-  window.ptInspector = {
+  hostApi = {
     getSelection: copySelection,
     setSelection(next) {
       if (next == null) { selection = null; emit(); return; }
@@ -495,7 +500,6 @@ function installMockIfNeeded() {
       cut = {
         operation: next.operation != null && String(next.operation) !== "" ? String(next.operation) : cut.operation,
         speed: num(next.speed, cut.speed),
-        amps: num(next.amps, cut.amps),
         leadIn: num(next.leadIn, cut.leadIn),
         leadOut: num(next.leadOut, cut.leadOut),
         tabs,

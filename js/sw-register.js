@@ -10,7 +10,7 @@ if ("serviceWorker" in navigator) {
     hadController = true;
   });
   navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then(function (reg) {
-    try { reg.update(); } catch (e) { /* ignore */ }
-    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { try { reg.update(); } catch (e) { /* ignore */ } } });
+    try { reg.update().catch(function () { /* offline: keep the installed release */ }); } catch (e) { /* ignore */ }
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") { try { reg.update().catch(function () { /* offline: keep the installed release */ }); } catch (e) { /* ignore */ } } });
   }).catch(function () {});
 }

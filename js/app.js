@@ -23,6 +23,7 @@ import * as R2 from "./r2ui.js";
 import * as Setup from "./setup.js";
 import { syncWhy, watchWhy } from "./whyoff.js";
 import { makeInspector } from "./inspector-api.js";
+import { connectInspector } from "./inspector-ui.js";
 import { contoursToEditable } from "./editable.js";
 import { initPartsFolders, openImport, metaFromContours } from "./partsfolders.js";
 import { initFlow, showScreen, screen, navLocked, estopOn, estopPaint, estopReset, estopPress, paintLock } from "./flow.js";
@@ -166,9 +167,20 @@ function setAppMode(mode, opts) {
   paintGuide(); R2.paintCutList(); R2.paintStartCut();
   try { paintSettings(); } catch (e) { /* settings not ready */ }
   if (persist && Acc.isSignedIn() && (mode === "pro" || mode === "beginner")) {
-    Acc.setMode(mode).catch(() => {});
+    Acc.setMode(mode).catch(proNotAllowed);
   }
   try { paintChrome(); } catch (e) { /* ignore */ }
+}
+// The server refused Pro for this account (supabase/b5-gating.sql, profiles.pro_allowed = false): go back to Beginner and say why.
+function proNotAllowed(e) {
+  if (!e || e.code !== "pro_not_allowed") return;
+  try { setAppMode("beginner", { persist: false, autoFs: false }); } catch (err) { /* ignore */ }
+  toast(e.message, true);
+}
+function firmwareDenied() {
+  if (Acc.canFirmware()) return false;
+  toast(Acc.isAdmin() || Acc.isPro() ? "Firmware tools need a machine linked to your account." : "Pro or admin only", true);
+  return true;
 }
 function applyAccountMode(mode) {
   if (mode === "pro" || mode === "beginner") setAppMode(mode, { persist: false });
@@ -566,7 +578,7 @@ function bindResize() {
 function openEditor() { S.src = "shape"; if (screen() !== "make") showScreen("make"); showSource("shape"); useShape(); setShapeFs(true); }
 
 // ------------------------------------------------------------------ shape maker (drag-and-drop editor)
-let sketch = null, shapeTimer = null, editBefore = null;
+let inspectorApi = null, sketch = null, shapeTimer = null, editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
 function renderShapeTiles() {
   const tile = (sh) => `<button data-shape="${esc(sh.id)}" title="${esc(sh.tip || "Add " + sh.name)}"><i>${shapeThumb(sh, 40, 28) || esc(sh.icon)}</i>${esc(sh.name)}</button>`;
@@ -883,7 +895,7 @@ function quickAction(a) {
   renderQuickBar();
 }
 function syncProToAccount() {
-  if (Acc.isSignedIn()) Acc.setMode(sketch.opts.pro ? "pro" : "beginner").catch(() => {});
+  if (Acc.isSignedIn()) Acc.setMode(sketch.opts.pro ? "pro" : "beginner").catch(proNotAllowed);
 }
 
 // ---- full-screen "Make a shape" editor
@@ -2593,8 +2605,8 @@ async function init() {
   renderMaterials();
   renderRecent();
   sketch = new Sketch($("preview"), {
-    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } Setup.paint(!done); if (done && window.ptInspector) window.ptInspector.emit(); },
-    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); Setup.paint(true); if (window.ptInspector) window.ptInspector.emit(); },
+    onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } Setup.paint(!done); if (done && inspectorApi) inspectorApi.emit(); },
+    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); Setup.paint(true); if (inspectorApi) inspectorApi.emit(); },
     onEdgeChange: () => { fillEdgePanel(); },
     onMessage: (t) => toast(t),
     onDimTap: (dim) => {
@@ -2624,13 +2636,24 @@ async function init() {
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
   if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
-  window.ptInspector = makeInspector({
+  inspectorApi = makeInspector({
     sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),
     setLead: (v) => { $("ovLead").value = String(v); },
     setSpeed: (v) => setSpeed(v),
     loadJob,
     note: (m) => toast(m, true),
   });
+  connectInspector(inspectorApi);                         // the panel gets the API directly, not through a global
+  // window.ptInspector (the test/admin handle) exists only on the local test server (?test=1) and for the signed-in admin.
+  const publishInspector = () => {
+    const allowed = (localTestHost && new URLSearchParams(location.search).has("test")) || !!Acc.isAdmin();
+    try {
+      if (allowed) { if (window.ptInspector !== inspectorApi) window.ptInspector = inspectorApi; }
+      else if (window.ptInspector === inspectorApi) delete window.ptInspector;
+    } catch (e) { /* ignore */ }
+  };
+  publishInspector();
+  Acc.onAccountChange(publishInspector);
   renderShapeTiles();
   setAppMode(sketch.opts.pro ? "pro" : "beginner", { persist: false, autoFs: false });
   bind();
@@ -2641,7 +2664,7 @@ async function init() {
     confirm: (msg) => confirm(msg),
     startDesigning: () => { showScreen("make"); },
     sendAdvanced: (line, meta) => {
-      if (!(Acc.isAdmin() || Acc.isPro())) { toast("Pro or admin only", true); return; }
+      if (firmwareDenied()) return;
       if (!M.grbl) { toast("Connect the table first.", true); return; }
       const f = (meta && meta.send) ? meta : filterConsoleCommand(line, { allowTorch: !!(meta && meta.allowTorch) });
       if (f && f.needsTorchConfirm) { toast(f.reason, true); return; }
@@ -2653,7 +2676,7 @@ async function init() {
       M.grbl.send(f.send);
     },
     readSettings: async () => {
-      if (!(Acc.isAdmin() || Acc.isPro())) { toast("Pro or admin only", true); return; }
+      if (firmwareDenied()) return;
       if (!M.grbl) { toast("Connect the table first.", true); return; }
       if (!adminMayTalk(false)) return;
       const snap = await readControllerSettings();
@@ -2664,8 +2687,9 @@ async function init() {
       toast("Read $ settings");
     },
     writeSettings: async (map) => {
+      await Acc.refreshEntitlements();                  // ask the server again; a stale browser copy must not unlock a write
       if (S.fwWriting) { toast("A settings write is already in progress.", true); return; }
-      if (!(Acc.isAdmin() || Acc.isPro())) { toast("Pro or admin only", true); return; }
+      if (firmwareDenied()) return;
       if (!M.grbl) { toast("Connect the table first.", true); return; }
       if (!adminMayTalk(true)) return;
       S.fwWriting = true;

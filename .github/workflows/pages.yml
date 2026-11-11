@@ -30,6 +30,8 @@ jobs:
         run: ./scripts/stamp-version.sh
       - name: Show what was stamped
         run: cat version.json
+      - name: Tighten the public page's CSP (no WebSockets on the https site)
+        run: ./scripts/harden-csp.sh
       - uses: actions/configure-pages@v5
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3

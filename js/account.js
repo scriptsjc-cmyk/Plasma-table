@@ -119,13 +119,16 @@ function demoState() {
   if (!Array.isArray(s.announcements)) s.announcements = [];
   if (!s.announcementReads || typeof s.announcementReads !== "object") s.announcementReads = {};
   if (!Array.isArray(s.cutPresets)) s.cutPresets = [];
+  for (const m of s.machines) if (m && m.practice == null && /practice table/i.test(m.notes || "")) m.practice = true;   // older saved data
   return s;
 }
 function saveDemo(s) { writeJson(DEMO_KEY, s); }
 
 async function seedDemo() {
   const s = demoState();
-  if (!s.machines.some((m) => m.serial === CONFIG.DEMO_SERIAL)) {
+  const builtIn = s.machines.find((m) => m.serial === CONFIG.DEMO_SERIAL);
+  if (builtIn && !builtIn.practice) { builtIn.practice = true; saveDemo(s); }
+  if (!builtIn) {
     s.machines.push({
       id: uid(),
       serial: CONFIG.DEMO_SERIAL,
@@ -133,6 +136,7 @@ async function seedDemo() {
       owner: null,
       claimed_at: null,
       notes: "Built-in practice table for local demo mode",
+      practice: true,
     });
     saveDemo(s);
   }
@@ -195,7 +199,9 @@ async function refreshIfNeeded() {
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) { saveCloudSess(null); throw new Error(data.msg || data.error_description || "Session expired. Sign in again."); }
-  saveCloudSess(fromAuthPayload(data, sess.profile));
+  const next = fromAuthPayload(data, sess.profile);
+  next.ent = sess.ent || null;                       // a new token must not forget the server's entitlements
+  saveCloudSess(next);
   return cloudSess();
 }
 
@@ -219,8 +225,26 @@ async function loadCloudProfile() {
   const rows = await authFetch("/rest/v1/profiles?id=eq." + encodeURIComponent(sess.user.id) + "&select=*");
   const p = Array.isArray(rows) ? rows[0] : rows;
   sess.profile = p ? { id: p.id, email: sess.user.email, display_name: p.display_name || "", mode: p.mode === "pro" ? "pro" : "beginner", role: p.role === "admin" ? "admin" : "user" } : null;
+  // The server's own answer wins over anything stored in this browser (supabase/b5-gating.sql). Until that SQL has been run the call
+  // fails and we keep the old behaviour, remembered as "client-only" so the Admin panel can say so.
+  sess.ent = null;
+  if (sess.profile) {
+    const e = await fetchEntitlements();
+    if (e) {
+      sess.ent = { pro: !!e.pro, firmware: !!e.firmware, machines: Number(e.machines) || 0, at: Date.now() };
+      sess.profile.mode = e.mode === "pro" ? "pro" : "beginner";
+      sess.profile.role = e.role === "admin" ? "admin" : "user";
+    }
+  }
   saveCloudSess(sess);
   return sess.profile;
+}
+
+async function fetchEntitlements() {
+  try {
+    const r = await authFetch("/rest/v1/rpc/my_entitlements", { method: "POST", body: "{}" });
+    return r && r.server === true && r.signed_in === true ? r : null;
+  } catch (e) { return null; }        // function not installed yet (404 / PGRST202), offline, or signed out: fall back, never block
 }
 
 async function parseHashSession() {
@@ -289,6 +313,27 @@ export function canGrantDemoAdmin() {
 }
 export function isAdmin() { const u = currentUser(); return !!(u && u.role === "admin"); }
 export function isPro() { return accountMode() === "pro"; }
+// What this account may use. With the server SQL applied the answer is the server's (admin, or Pro allowed; firmware also needs a
+// linked machine). Before that, and in local demo mode, it is the browser-side rule the app always had: admin, or Pro mode.
+export function gatingSource() {
+  if (!cloudOn()) return "demo";
+  const s = cloudSess();
+  return s && s.ent ? "server" : "client-only";
+}
+export function canPro() {
+  if (gatingSource() === "server") return !!cloudSess().ent.pro;
+  return isAdmin() || isPro();
+}
+export function canFirmware() {
+  if (gatingSource() === "server") return !!cloudSess().ent.firmware;
+  return isAdmin() || isPro();
+}
+// Ask the server again right now (before a firmware write). Resolves to the current canFirmware(); never throws.
+export async function refreshEntitlements() {
+  if (!cloudOn() || !cloudSess()) return canFirmware();
+  try { await refreshIfNeeded(); await loadCloudProfile(); notify(); } catch (e) { /* offline: keep what we know */ }
+  return canFirmware();
+}
 export function accountMode() { const u = currentUser(); return u && u.mode === "pro" ? "pro" : (u ? "beginner" : null); }
 
 export function snapshot() {
@@ -300,6 +345,7 @@ export function snapshot() {
     admin: !!(u && u.role === "admin"),
     mode: accountMode(),
     linked: hasLinkedMachine(),
+    gating: gatingSource(),
     recovery: !!(readJson(META_KEY, {}) || {}).recovery,
   };
 }
@@ -537,6 +583,11 @@ export async function setMode(mode) {
     });
     await loadCloudProfile();
     notify();
+    if (md === "pro" && accountMode() !== "pro") {
+      const err = new Error("Pro isn't switched on for your account. Ask whoever runs your table.");
+      err.code = "pro_not_allowed";
+      throw err;
+    }
     return;
   }
   const s = demoState();
@@ -748,7 +799,7 @@ export async function claimMachine(code, serial) {
     let rec = s.machines.find((m) => m.serial === CONFIG.DEMO_SERIAL && !m.owner);
     if (!rec) {
       rec = { id: uid(), serial: CONFIG.DEMO_SERIAL + "-" + String(u.id).replace(/[^A-Za-z0-9]/g, "").slice(0, 6).toUpperCase(),
-        hash: await sha256hex(c), owner: null, claimed_at: null, notes: "Practice table (demo account copy)" };
+        hash: await sha256hex(c), owner: null, claimed_at: null, notes: "Practice table (demo account copy)", practice: true };
       s.machines.push(rec);
     }
     rec.owner = u.id; rec.claimed_at = nowIso();
@@ -788,7 +839,7 @@ export async function adminListMachines() {
   const s = demoState();
   return s.machines.map((m) => {
     const u = s.users.find((x) => x.id === m.owner);
-    return { serial: m.serial, owner: m.owner, owner_email: u ? u.email : null, claimed_at: m.claimed_at, notes: m.notes, created_at: m.created_at || null };
+    return { serial: m.serial, owner: m.owner, owner_email: u ? u.email : null, claimed_at: m.claimed_at, notes: m.notes, created_at: m.created_at || null, practice: !!m.practice };
   });
 }
 
@@ -827,6 +878,9 @@ export async function adminUnlinkMachine(serial) {
   const rec = s.machines.find((m) => m.serial === ser);
   if (!rec) throw new Error("Serial not found");
   rec.owner = null; rec.claimed_at = null;
+  // A practice copy made for one demo account is thrown away when it is unlinked (the code makes a fresh one on demand),
+  // so unlinking never leaves orphan practice tables behind. Only the built-in DEMO-TABLE-1 record stays.
+  if (rec.practice && rec.serial !== CONFIG.DEMO_SERIAL) s.machines = s.machines.filter((m) => m !== rec);
   logClaim(s, currentUser().id, true, "unlinked:" + ser);
   saveDemo(s);
   notify();
@@ -848,6 +902,7 @@ export async function adminTransferMachine(serial, email) {
   const rec = s.machines.find((m) => m.serial === ser);
   const u = s.users.find((x) => x.email === email);
   if (!rec) throw new Error("Serial not found");
+  if (rec.practice) throw new Error("A practice table can't be moved to another account. Unlink it; every demo account can get its own with the practice code.");
   if (!u) throw new Error("No account with that email.");
   rec.owner = u.id; rec.claimed_at = nowIso();
   logClaim(s, currentUser().id, true, "transferred:" + ser);

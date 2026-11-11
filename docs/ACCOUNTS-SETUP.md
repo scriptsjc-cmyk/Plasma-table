@@ -143,6 +143,20 @@ The Pi bridge can enforce it for **Wi-Fi** connections:
    checks the user's session and that `machines.owner` matches this serial
    **before it will accept G-code**.
 
+### Pro and firmware limits on the server (`supabase/b5-gating.sql`)
+
+Run **`supabase/b5-gating.sql`** once in the Supabase SQL editor (Dashboard → SQL Editor → New query → paste the file → Run).
+It is safe to run twice, needs no secret key, and changes nothing for anyone today. It adds:
+
+- `profiles.pro_allowed` (default true). If you ever set it to false for someone, the server puts their mode back to Beginner on every
+  write and the app shows Beginner. Users cannot change this column.
+- `my_entitlements()`: the server's own answer to "may this account use Pro / firmware tools?" (admin, or Pro allowed; firmware also
+  needs a linked machine). The app uses it instead of what the browser stored and asks again right before a firmware write.
+
+Until you run it the app works as before and **Admin** says "Pro and firmware limits are only checked in this browser".
+After you run it and reload, Admin says "…enforced by the server". The machine itself still trusts anyone on its own network, so keep
+the Wi-Fi password, the Pi pairing token and the table's STOP as your real protection there.
+
 ### Direct USB (Web Serial)
 
 When the laptop is plugged straight into the controller there is **no server

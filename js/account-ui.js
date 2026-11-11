@@ -126,13 +126,13 @@ async function refreshAdmin() {
     if (!rows.length) { box.innerHTML = "<p class='muted'>No machines yet. Add a serial and claim code.</p>"; return; }
     box.innerHTML = `<table class="accttable"><thead><tr><th>Serial</th><th>Linked account</th><th>Claimed</th><th>Notes</th><th></th></tr></thead><tbody>` +
       rows.map((m) => `<tr data-serial="${esc(m.serial)}">
-        <td><b>${esc(m.serial)}</b></td>
+        <td><b>${esc(m.serial)}</b>${m.practice ? " <span class='small muted'>practice</span>" : ""}</td>
         <td>${esc(m.owner_email || "—")}</td>
         <td class="small">${esc(m.claimed_at ? new Date(m.claimed_at).toLocaleString() : "—")}</td>
         <td class="small">${esc(m.notes || "")}</td>
         <td class="row">
           <button type="button" class="small" data-act="unlink" ${m.owner ? "" : "disabled"}>Unlink</button>
-          <button type="button" class="small" data-act="transfer">Transfer</button>
+          <button type="button" class="small" data-act="transfer" ${m.practice ? "disabled title='Practice tables stay with their own account'" : ""}>Transfer</button>
         </td>
       </tr>`).join("") + "</tbody></table>";
   } catch (e) { box.innerHTML = "<p class='muted'>" + esc(e.message) + "</p>"; }
@@ -356,7 +356,7 @@ export function openClaim() {
   $("claimCode").value = "";
   $("claimSerial").value = "";
   $("claimHint").textContent = A.isDemoMode()
-    ? "Local demo: use claim code " + CONFIG.DEMO_CLAIM_CODE + " to unlock the practice table."
+    ? "Local demo: use the practice code " + CONFIG.DEMO_CLAIM_CODE + ". Each demo account gets its own practice table; it exists only in this browser."
     : "The claim code is on the sticker that came with the table. It can only be used once.";
 }
 
@@ -367,9 +367,20 @@ export function openGate(why) {
   openDlg("gateDlg");
 }
 
+// Says whether Pro / firmware limits are backed by the server (supabase/b5-gating.sql has been run) or only by this browser.
+function paintGating() {
+  const el = $("adminGating"); if (!el) return;
+  const g = A.gatingSource();
+  el.textContent = g === "server" ? "Pro and firmware limits are enforced by the server."
+    : g === "demo" ? "Local demo: Pro and firmware limits are checked in this browser only (there is no server)."
+    : "Pro and firmware limits are only checked in this browser. To enforce them on the server, run supabase/b5-gating.sql once in the Supabase SQL editor.";
+  el.dataset.gating = g;
+}
+
 export function openAdmin(tab) {
   if (!A.isAdmin()) { toast("Admin only", true); return; }
   openDlg("adminDlg");
+  paintGating();
   if (tab) showAdminTab(tab);
   refreshAdmin();
   refreshAdminUsers();
@@ -840,7 +851,7 @@ export async function initAccountUi(opts) {
   initAdminMachine({
     toast,
     isAdmin: () => A.isAdmin(),
-    isPro: () => A.isPro() || A.isAdmin(),
+    isPro: () => A.canPro(),
     send: host.sendAdvanced,
     confirm: host.confirm,
     readSettings: host.readSettings,
