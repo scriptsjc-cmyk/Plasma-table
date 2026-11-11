@@ -9,12 +9,11 @@
 //    you always get the deployed file. The cache is used only when the network fails or is too slow, and only the cache of THIS release
 //    is read, never an older one. Precached files are written once at install, never from later fetches, so the offline copy is always
 //    one consistent release. version.json is always asked of the network (offline it falls back to the installed release's copy).
-const CACHE = "plasma-cad-2026.11.11-e712171";
+const CACHE = "plasma-cad-2026.11.11-1e5c486";
 const PRECACHE = [
   /* precache:start */
   "./",
   "index.html",
-  "style.css",
   "manifest.json",
   "version.json",
   "favicon-32.png",
@@ -23,6 +22,14 @@ const PRECACHE = [
   "icon-192.png",
   "icon-512.png",
   "logo.svg",
+  "css/base.css",
+  "css/components.css",
+  "css/layout.css",
+  "css/screen-admin.css",
+  "css/screen-cut.css",
+  "css/screen-make.css",
+  "css/screen-signin-menu.css",
+  "css/tokens.css",
   "js/account/account-ui.js",
   "js/account/account.js",
   "js/account/accounthome.js",
@@ -148,7 +155,7 @@ const PRECACHE = [
 const PREFIX = "plasma-cad-";
 const SLOW_MS = 6000;
 const scopeUrl = (p) => new URL(p, self.registration.scope).href;
-const isRequired = (p) => p === "./" || p === "index.html" || p === "style.css" || p === "manifest.json" || p === "version.json" || /^(js|config)\//.test(p);
+const isRequired = (p) => p === "./" || p === "index.html" || p === "manifest.json" || p === "version.json" || /^(js|css|config)\//.test(p);
 
 self.addEventListener("install", (e) => {
   e.waitUntil((async () => {
