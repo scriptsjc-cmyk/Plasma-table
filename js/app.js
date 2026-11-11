@@ -2199,7 +2199,11 @@ function bind() {
   $("btnDemo").onclick = connectDemo;
   $("next1").onclick = () => (screen() === "make" ? sendToCutting() : goStep(3));
   $("btnChangeMat").onclick = () => goStep(1);
-  $("btnEditParts").onclick = () => { showScreen("make"); };
+  $("btnEditParts").onclick = () => {          // the layout only places parts: shape and size changes happen in Make a part, with the picked part still picked
+    const it = sketch && sketch.selected(), id = it ? ((sketch.hostPart(it) || it).id) : null;
+    showScreen("make");
+    if (id && sketch.item(id)) { sketch.pick([id]); sketch.onSelect(); sketch.draw(); }
+  };
   $("btnClearBed").onclick = () => { if (!bedHasParts() || confirm("Take everything off the bed and start over?")) startOver(); };
   $("btnPickSaved").onclick = () => addPartsFlow(null);
   $("layAdd").addEventListener("click", () => { /* Setup opens the Add parts dialog itself */ });

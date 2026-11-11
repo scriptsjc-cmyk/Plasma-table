@@ -15,7 +15,7 @@ const STEPS = [
   ]},
   { id: "layout", title: "Step 3: Get set up (sheet layout)", body: [
     "The picture shows your sheet (blue) and the machine's work area (green dashes). Add parts with Add parts…: tick saved parts and/or choose several DXF or SVG files at once, and type how many of each. Arrange for me packs them with the right gaps.",
-    "Drag a part to move it (mouse or finger). Blue lines show when it lines up with the sheet edges, the middle, or another part's edges and centres; the numbers are the gaps in mm. Turn 90° either way, turn to any angle, mirror, copy and delete are under the picture. Pro also has arrow-key nudge and a grid snap.",
+    "Drag a part to move it (mouse or finger). Blue lines show when it lines up with the sheet edges, the middle, or another part's edges and centres; the numbers are the gaps in mm. Turn 90° either way, turn to any angle, copy and delete are under the picture. This step only places parts: to change a part's shape or size press Edit in Make a part, which opens the picked part there. Pro also has arrow-key nudge and a grid snap.",
     "A part turns red when it is closer to another part than the kerf plus clearance, overlaps one, or hangs off the sheet or the machine's work area. Start stays locked until nothing is red.",
     "The sheet's bottom-left corner is your start point: every part is cut exactly where it sits on the sheet picture.",
   ]},

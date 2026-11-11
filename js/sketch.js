@@ -141,7 +141,7 @@ export class Sketch {
   save() { try { localStorage.setItem(KEY, JSON.stringify({ items: this.items })); } catch (e) { /* ignore */ } }
   saveOpts() { try { localStorage.setItem(KEY_OPTS, JSON.stringify(this.opts)); } catch (e) { /* ignore */ } }
   snapshot() { return JSON.stringify(this.items); }
-  remember() { this.past.push(this.snapshot()); if (this.past.length > 150) this.past.shift(); this.future = []; }
+  remember() { this.past.push(this.snapshot()); if (this.past.length > 150) { this.past.shift(); if (this.layoutBase) this.layoutBase--; } this.future = []; }
   restore(json) {
     this.items = JSON.parse(json);
     this.sel.ids = this.sel.ids.filter((id) => this.item(id));
@@ -149,8 +149,17 @@ export class Sketch {
     this.normalizeEdgeSel();
     this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
   }
-  undo() { if (this.past.length) { this.future.push(this.snapshot()); this.restore(this.past.pop()); } }
-  redo() { if (this.future.length) { this.past.push(this.snapshot()); this.restore(this.future.pop()); } }
+  // In the sheet layout undo only takes back what was done there (moves, turns, nests), never a shape edit made earlier in Make a part.
+  undo() {
+    if (!this.past.length) return;
+    if (this.layout) { if (this.past.length <= (this.layoutBase || 0)) { this.onMessage("Nothing to undo here. Shape edits are undone in Make a part."); return; } this._layUndone = (this._layUndone || 0) + 1; }
+    this.future.push(this.snapshot()); this.restore(this.past.pop());
+  }
+  redo() {
+    if (!this.future.length) return;
+    if (this.layout) { if (!(this._layUndone > 0)) return; this._layUndone--; }
+    this.past.push(this.snapshot()); this.restore(this.future.pop());
+  }
   commit() { this.save(); this.draw(); this.onChange(true); }
 
   item(id) { return this.items.find((i) => i.id === id); }
@@ -158,7 +167,10 @@ export class Sketch {
   canMutate(it) { return !!(it && !it.lock); }
   selected() { return this.sel.ids.length === 1 ? this.item(this.sel.ids[0]) : null; }
   isPicked(it) { return this.sel.ids.includes(it.id); }
-  pick(ids, hole = null) { this.sel = { ids: [...ids], hole: ids.length === 1 ? hole : null }; this.normalizeEdgeSel(); }
+  pick(ids, hole = null) {
+    if (this.layout && this._holes && this._holes.size) ids = [...new Set(ids.map((id) => { const o = this.item(id), h = o && this.holeOwner(o); return h ? h.id : id; }))];     // in the layout a part's own holes are never picked on their own
+    this.sel = { ids: [...ids], hole: ids.length === 1 ? hole : null }; this.normalizeEdgeSel();
+  }
 
   baseContours(it) {
     if (it.type === "custom") {
@@ -344,17 +356,53 @@ export class Sketch {
     this.commit(); this.onSelect();
     return e.parts.length;
   }
+  // ---- the sheet layout: a hole drawn inside a part belongs to that part (it moves, turns, copies and goes with it; it is never moved on its own)
+  ownedHoles(host) {
+    if (!this.layout || !this._holes || !this._holes.size || !host) return [];
+    return this.items.filter((o) => o !== host && this._holes.has(o.id) && this.isHole(o) && this.hostPart(o) === host);
+  }
+  holeOwner(it) {
+    if (!this.layout || !this._holes || !it || !this._holes.has(it.id) || !this.isHole(it)) return null;
+    return this.hostPart(it) || null;
+  }
+  carryOwned(fn, quarter = null) {                       // run fn (it moves / turns the picked parts), then bring each picked part's own holes along rigidly
+    if (!this.layout || !this._holes || !this._holes.size) return fn();
+    const ref = (h) => { const c = this.contoursOf(h)[0]; return c && c.pts.length > 1 ? [c.pts[0], c.pts[1]] : null; };
+    const mid = (h) => { const b = this.boxOf(h); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]; };
+    const pre = this.picked().filter((i) => !this._holes.has(i.id)).map((h) => ({ h, own: this.ownedHoles(h), p: ref(h), m: mid(h) })).filter((x) => x.own.length && x.p);
+    const r = fn();
+    for (const { h, own, p, m } of pre) {
+      const q = ref(h); if (!q) continue;
+      // a quarter turn swaps width / height (the outline's points are renumbered), so there the turn is known: R(deg) about the old middle, then to the new middle
+      const qt = quarter != null && Math.abs(quarter % 90) < 1e-9;
+      const a = qt ? quarter * Math.PI / 180 : Math.atan2(q[1][1] - q[0][1], q[1][0] - q[0][0]) - Math.atan2(p[1][1] - p[0][1], p[1][0] - p[0][0]), ca = Math.cos(a), sa = Math.sin(a);
+      const m2 = mid(h);
+      const T = qt ? (x, y) => [m2[0] + ca * (x - m[0]) - sa * (y - m[1]), m2[1] + sa * (x - m[0]) + ca * (y - m[1])]
+        : (x, y) => [q[0][0] + ca * (x - p[0][0]) - sa * (y - p[0][1]), q[0][1] + sa * (x - p[0][0]) + ca * (y - p[0][1])];
+      for (const o of own) {
+        const b = this.boxOf(o), c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2], t = T(c[0], c[1]);
+        if (Math.abs(a) > 1e-9) {
+          o.rot = ((((o.rot || 0) + a * 180 / Math.PI) % 360) + 360) % 360;
+          const nb = this.boxOf(o); o.x = r1(o.x + t[0] - (nb[0] + nb[2]) / 2); o.y = r1(o.y + t[1] - (nb[1] + nb[3]) / 2);
+        } else { o.x = r1(o.x + t[0] - c[0]); o.y = r1(o.y + t[1] - c[1]); }
+      }
+    }
+    if (pre.length) this.commit();
+    return r;
+  }
   remove() {
     const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();
-    this.items = this.items.filter((i) => !list.includes(i));
+    const gone = new Set([...list, ...list.flatMap((i) => this.ownedHoles(i))]);
+    this.items = this.items.filter((i) => !gone.has(i));
     this.pick(this.sel.ids.filter((id) => this.item(id))); this.commit(); this.onSelect();
   }
   // copies of everything picked, keeping their layout, placed beside them
   duplicate() { this.copy(); this.paste(true); }
   copy() {
     const list = this.picked(); if (!list.length) return false;
-    this.clip = { items: clone(list), box: this.pickedBox() };
+    const box = this.pickedBox();
+    this.clip = { items: clone([...list, ...list.flatMap((i) => this.ownedHoles(i)).filter((o) => !list.includes(o))]), box };
     return true;
   }
   paste(beside) {
@@ -370,6 +418,7 @@ export class Sketch {
       const c = { ...clone(src), id: this.nextId++ };
       c.x += dx; c.y += dy;
       this.items.push(c); ids.push(c.id);
+      if (this.layout && this._holes && this._holes.has(src.id)) this._holes.add(c.id);          // a copied part's hole stays that part's hole
     }
     this.clip.box = [b[0] + dx, b[1] + dy, b[2] + dx, b[3] + dy];
     this.pick(ids);
@@ -758,6 +807,7 @@ export class Sketch {
     this.commit(); this.onSelect();
   }
   hitDim(sx, sy, touch) {
+    if (this.layout) return null;                 // no size / hole-position tags to tap in the sheet layout
     const pad = touch ? 14 : 6;
     let best = null, bestA = Infinity;
     for (const d of this.dimHits || []) {
@@ -832,7 +882,7 @@ export class Sketch {
     this.commit(); this.onSelect();
     return true;
   }
-  canResize(it) { return it && !it.lock && (it.rot || 0) % 90 === 0 && !(def(it.type) && def(it.type).noResize) && !!(def(it.type).fit || it.type === "custom"); }
+  canResize(it) { return it && !this.layout && !it.lock && (it.rot || 0) % 90 === 0 && !(def(it.type) && def(it.type).noResize) && !!(def(it.type).fit || it.type === "custom"); }
 
   contours() { return this.items.filter((i) => !this.layerHidden(i)).flatMap((i) => this.contoursOf(i)); }
   // layers = the operation label of a shape (cut / score / mark). A hidden layer is neither drawn nor cut.
@@ -1001,8 +1051,8 @@ export class Sketch {
         const yr = this.tag(ctx, `Y ${r1(b[1])}`, x0 + 80, y1 + 20, C.partLine);
         this.dimHits.push({ ...yr, kind: "y", it: one, label: "Bottom edge Y (mm)" });
       }
-      // where's the hole? dimension lines from the part's corner
-      if (one) {
+      // where's the hole? dimension lines from the part's corner (Make a part only: the sheet layout never edits a part)
+      if (one && !this.layout) {
         const cs = this.contoursOf(one);
         let hc = null, host = one;
         if (this.sel.hole != null && cs[this.sel.hole]) hc = cs[this.sel.hole];
@@ -1360,6 +1410,7 @@ export class Sketch {
     it._key = null;
   }
   hitCustomHandles(sx, sy, touch, onlySelected) {
+    if (this.layout) return null;                 // the sheet layout only places parts: no corner / edge / curve handles
     const R = touch ? 22 : 12;
     const [wx, wy] = this.toWorld(sx, sy);
     const tol = R / (this.view && this.view.s ? this.view.s : 1);
@@ -1407,6 +1458,7 @@ export class Sketch {
 
   drawEdgeHandles(ctx, C, S) {
     const one = this.selected();
+    if (this.layout) return;
     if (!this.isEditableCustom(one)) return;
     const world = this.rawWorld(one);
     const e = this.edgeSel && this.edgeSel.id === one.id ? this.edgeSel : null;
@@ -1480,10 +1532,10 @@ export class Sketch {
     const list = this.order().reverse();
     for (const it of list) {
       const cs = this.contoursOf(it); if (!cs.length) continue;
-      if (wholeSet(it.type)) { if (cs.some((c) => pointInPoly([wx, wy], c.pts))) return { kind: "move", it }; continue; }
+      if (wholeSet(it.type)) { if (cs.some((c) => pointInPoly([wx, wy], c.pts))) return { kind: "move", it: this.holeOwner(it) || it }; continue; }
       if (!pointInPoly([wx, wy], cs[0].pts)) continue;
-      for (let i = 1; i < cs.length; i++) if (pointInPoly([wx, wy], cs[i].pts)) return { kind: "hole", it, hole: i };
-      return { kind: "move", it };
+      if (!this.layout) for (let i = 1; i < cs.length; i++) if (pointInPoly([wx, wy], cs[i].pts)) return { kind: "hole", it, hole: i };
+      return { kind: "move", it: this.holeOwner(it) || it };
     }
     const tol = R / this.view.s;         // near a thin part's edge
     for (const it of list) {
@@ -1604,7 +1656,8 @@ export class Sketch {
       if (h.kind !== "hole" && (h.kind === "resize" ? it.lock : this.picked().every((m) => m.lock))) {
         this.onSelect(); this.draw(); return;
       }
-      const moving = (h.kind === "hole" || h.kind === "resize" ? [it] : this.picked()).map((m) => ({ it: m, x: m.x, y: m.y, b0: this.boxOf(m) }));
+      const base = h.kind === "hole" || h.kind === "resize" ? [it] : this.picked();
+      const moving = [...base, ...base.flatMap((m) => this.ownedHoles(m)).filter((o) => !base.includes(o))].map((m) => ({ it: m, x: m.x, y: m.y, b0: this.boxOf(m) }));
       this.drag = { ...h, before, wx, wy, moving, holes: clone(it.holes || {}), moved: false };
       this.onSelect();
       this.draw();
@@ -1734,6 +1787,7 @@ export class Sketch {
       if (!this.active) return;
       const [sx, sy] = pos(e);
       const h = this.hit(sx, sy, e.pointerType === "touch");
+      if (this.layout) { if (!h) this.fitView(); return; }       // the sheet layout: double-click never edits a part
       if (h && (h.kind === "edge" || h.kind === "vertex")) {
         const [wx, wy] = this.toWorld(sx, sy);
         this.selectEdge(h.it.id, h.ci, h.ei != null ? h.ei : h.vi);
@@ -1758,7 +1812,7 @@ export class Sketch {
       if (ctrl && k === "c") { if (this.copy()) { stop(); this.onMessage("Copied – press Ctrl+V to paste."); } return; }
       if (ctrl && k === "v") { stop(); this.paste(false); return; }
       if (ctrl && k === "d") { stop(); this.duplicate(); return; }
-      if (ctrl && k === "j") { stop(); this.join(); return; }
+      if (ctrl && k === "j") { stop(); this.join(); return; }          // (join is refused in the sheet layout)
       const isArrow = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown"].includes(e.key);
       if (!this.sel.ids.length) { if (isArrow) stop(); return; }
       if (e.key === "PageUp" || e.key === "PageDown") { stop(); return; }
@@ -1766,10 +1820,28 @@ export class Sketch {
       const st = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
       const mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] }[e.key];
       if (mv) { stop(); this.nudge(...mv); return; }
-      if (e.key === "Delete" || e.key === "Backspace") { stop(); if (this.edgeSel && this.edgeSel.vi != null) this.deleteVertex(); else this.remove(); return; }
+      if (e.key === "Delete" || e.key === "Backspace") { stop(); if (!this.layout && this.edgeSel && this.edgeSel.vi != null) this.deleteVertex(); else this.remove(); return; }
       if (k === "r") { stop(); this.rotateBy(e.shiftKey ? -90 : 90); return; }
       if (k === "m") { stop(); this.mirror(); return; }
       if (e.key === "Escape") { e.stopImmediatePropagation(); this.pick([]); this.onSelect(); this.draw(); }
     }, true);
   }
+}
+
+// B5: the sheet layout (Get set up / Bed & start) only PLACES parts. Every route that changes a part's shape or size is refused there;
+// shapes are edited in Make a part ("Edit in Make a part" takes the picked part there). Moving, turning, copies, removing, nesting stay.
+export const LAYOUT_LOCK_MSG = "Shapes are edited in Make a part. Here you only place them. Use Edit in Make a part.";
+for (const name of ["nudge", "setPos", "rotateBy", "setAngle"]) {          // turning / moving a part takes its own holes with it
+  const f = Sketch.prototype[name];
+  Sketch.prototype[name] = function (...a) { return this.carryOwned(() => f.apply(this, a), name === "rotateBy" ? Number(a[0]) : null); };
+}
+for (const name of ["resizeTo", "resizeCustomTo", "setWidth", "setHeight", "setDiameter", "setParam", "applyVariant", "setHoleOffset", "moveHole",
+  "mirror", "flipV", "resetHoles", "join", "subtract", "offsetBy", "explode", "centreInHost", "finishDraw",
+  "setEdgeLength", "squareUpEdge", "setEdgeAngle", "setEdgeCurve", "straightenEdge", "addVertexOnEdge", "deleteVertex", "moveVertex", "moveBulge"]) {
+  const f = Sketch.prototype[name];
+  if (typeof f !== "function") throw new Error("layout lock: Sketch." + name + " does not exist");
+  Sketch.prototype[name] = function (...a) {
+    if (this.layout) { this.onMessage(LAYOUT_LOCK_MSG); return false; }
+    return f.apply(this, a);
+  };
 }

@@ -24,6 +24,7 @@ a fake origin (`https://fake-live.example`, `https://plasma-live.test`) and a mo
 | 50 accounts_security | live host + demo, cloud mode with stubbed Supabase through the sign-in gate, forged flags, shared device, CSP, secrets, STOP position |
 | 55 r5_safety | round-5 safety group (92 checks): hold-to-release, latch blocks, work zero, Space = STOP, STOP only on the cutting screen, Score/Mark block Start |
 | 56 cut_features | features 35-37 (140 checks): THC status + arc watch + lost-arc resume, 9-point job origin G-code offsets, saved start points, cut-test coupon write-back, pierce counter. Part A is pure logic; part B uses the practice machine; screenshots go to `$SHOTS` (default /workspace/b5-features-shots/). `_cf_helpers.mjs` is its shared helper |
+| 57 layout_lock | the cutting screen's sheet layout / Bed & start only PLACES parts (46 checks): every shape-or-size route is refused (resize handles, corner/edge/curve handles, double-click, size tags, keys M and Ctrl+J, Ctrl+Z into Make edits, inspector size/operation/cut settings, 27 Sketch mutators); dragging, turning, copies, delete, Arrange, Nest and the 9-point origin still work; a part's own holes follow it; Edit in Make a part opens the picked part with the lock off |
 | 62 admin_security | console filter, restore validation, announcements XSS, STOP above admin dialogs, live-origin gating, job_events (cloud, mocked), phone edge edit |
 
 Known app bugs that tests report as `KNOWN` instead of failing: see `KNOWN-BUGS.md`.

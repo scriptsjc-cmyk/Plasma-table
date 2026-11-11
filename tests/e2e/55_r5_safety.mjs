@@ -238,7 +238,7 @@ for (const view of ["laptop", "phone"]) {
   await prime(page, ["rect", "disc"]);
   await zeroAndTick(page);
   ck("8 (setup) with every shape set to Cut, Start is allowed", await startable(page), await blockersText(page));
-  const setOp = async (op) => { await page.evaluate(() => { const k = window.plasmaTest.sketch; k.pick([k.items[1].id]); }); const r = await T(page, `window.ptInspector.setCut({ operation: '${op}' })`); await T(page, "window.plasmaTest.refresh()"); return r; };
+  const setOp = async (op) => { await page.evaluate(() => { const k = window.plasmaTest.sketch; k.pick([k.items[1].id]); }); const refused = await T(page, `window.ptInspector.setCut({ operation: '${op}' })`); if (refused !== false) throw new Error("the layout must refuse operation changes"); const r = await T(page, `(() => { const k = window.plasmaTest.sketch, L = k.layout; k.layout = null; try { return window.ptInspector.setCut({ operation: '${op}' }); } finally { k.layout = L; } })()`); await T(page, "window.plasmaTest.refresh()"); return r; };   // an operation is chosen in Make a part; the cutting screen's layout refuses it (tests/e2e/57_layout_lock.mjs)
   const tick = async () => { await page.evaluate(() => { document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById("checklist").dispatchEvent(new Event("change")); }); await sleep(300); };
   // make the disc a Score line through the real inspector API
   const r = await setOp("score");

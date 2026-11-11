@@ -23,6 +23,7 @@ export function makeInspector(h) {
       const k = sk(); if (!k) return false;
       if (p === null) { k.pick([]); k.draw(); k.onSelect(); emit(); return true; }
       const it = sel(); if (!it || !p || typeof p !== "object" || !k.canMutate(it)) return false;
+      if (k.layout && ("w" in p || "h" in p)) { k.onMessage("Sizes are changed in Make a part. Here you only place and turn parts."); return false; }
       const max = k.maxMm || 3000;
       for (const key of Object.keys(p)) {
         if (!["w", "h", "x", "y", "rotation"].includes(key)) continue;
@@ -53,6 +54,7 @@ export function makeInspector(h) {
     },
     setCut(p) {
       const it = sel(); if (!it || !p || typeof p !== "object" || h.jobRunning()) return false;      // nothing selected, or a job is running: no-op
+      if (sk().layout) { sk().onMessage("Cut settings are changed in Make a part and the Cut settings, not while placing parts."); return false; }
       const S = h.S, tb = p.tabs && typeof p.tabs === "object" ? p.tabs : null;
       if ("operation" in p && !OPS.includes(p.operation)) return false;
       if ("speed" in p && !(num(p.speed) && p.speed >= 50 && p.speed <= 20000)) return false;

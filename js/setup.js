@@ -1,4 +1,4 @@
-// Step 3 "Get set up": lay the parts out on the sheet (drag, turn, mirror, copy, delete, snap guides, live gaps,
+// Step 3 "Get set up": lay the parts out on the sheet (drag, turn, copy, delete, snap guides, live gaps,
 // red when parts touch / overlap / hang off the sheet or the machine's work area), add parts from the account list or
 // from several drawing files at once (with a quantity for each), then the start point and the final checks.
 // The sheet's bottom-left corner is the work zero, so every part is cut exactly where it sits on the sheet picture.
@@ -211,7 +211,7 @@ export function enter() {
   if (!can) { sk.layout = null; return; }
   $("sheetW").value = sheet.w; $("sheetH").value = sheet.h; $("sheetClr").value = sheet.clearance;
   paintNest();
-  sk.layout = LAYOUT; sk.opts.guides = true; sk.tool = null;
+  sk.layout = LAYOUT; sk.layoutBase = sk.past.length; sk._layUndone = 0; sk.opts.guides = true; sk.tool = null;
   $("layGrid").value = String(sk.opts.snap || 0);
   // shapes that sit inside another part's outline when the layout opens are holes of that part; anything new is a part
   sk._holes = sk._holes || new Set(); sk._seen = sk._seen || new Set();
@@ -433,7 +433,7 @@ function bind() {
     if (n) { const [x, y] = n.dataset.nudge.split(",").map(Number), st = Number($("layNudge").value) || 1; s.nudge(x * st, y * st); paint(); H.useShapeSoon(); return; }
     if (!b) return;
     const act = b.dataset.lay;
-    if (act === "rot90") s.rotateBy(90); else if (act === "rotm90") s.rotateBy(-90); else if (act === "mirror") s.mirror();
+    if (act === "rot90") s.rotateBy(90); else if (act === "rotm90") s.rotateBy(-90);
     else if (act === "del") s.remove();
     else if (act === "dup") { const before = new Set(s.items.map((i) => i.id)); s.duplicate(); const fresh = s.items.filter((i) => !before.has(i.id)); if (placeFree(s, fresh)) { s.commit(); } else H.toast("No free room on the sheet for the copy; it sits next to the original (red).", true); }
     paint(); H.useShapeSoon();
