@@ -22,6 +22,12 @@ export function initR2(host) {
   fetchLatest().then((j) => { if (j) { RUN = { id: j.id, commit: j.commit || VERSION.commit, built: j.built || VERSION.built }; paintVersionLines(); paintAbout(); } });
   bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindWhy(); bindDemoFit(); bindTopMenu(); bindPierceJump(); installLabelGuard(); installIcons();
   paintVersionLines();
+  bindFnScroll();
+}
+// B5 14: opening the FluidNC (Wi-Fi) box brings its host / port fields clear of the sticky Back / Start bar
+function bindFnScroll() {
+  const d = $("fnBox"); if (!d) return;
+  d.addEventListener("toggle", () => { if (d.open) setTimeout(() => { try { d.scrollIntoView({ block: "nearest" }); } catch (e) { /* ignore */ } }, 0); });
 }
 
 // ================================================================ version + update banner

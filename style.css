@@ -925,6 +925,33 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
   }
 }
 
+body.app-shell .stepPane { scroll-padding-bottom: 96px; }   /* scrolling to a control (or opening FluidNC) never leaves it under the sticky Back / Start bar */
+/* ROUND 5 item 13: the cutting screen has no tool bar, so on a phone in portrait the "tools" grid row was an empty gap that squeezed the Part step into ~100px.
+   Give that height to the controls, and keep a sticky Next/Start bar from covering the control that was just scrolled to. */
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell:not(.short-land)[data-screen="cut"] .cutgrid:not(.with-qb):not(.editing) {
+    grid-template-rows: minmax(0, 0.7fr) minmax(0, 1.3fr) !important;
+    grid-template-areas: "preview" "step" !important;
+  }
+  body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) { grid-template-rows: minmax(0, 0.62fr) minmax(0, 1.38fr) !important; }
+  /* full-screen editor on a portrait phone: the Step pane is hidden there, so the picture and the tool list share the screen (Beginner's canvas used to collapse to 2px) */
+  body.app-shell.shape-fs:not(.short-land) .cutgrid.editing { grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr) !important; grid-template-areas: "preview" "tools" !important; }
+}
+/* a small portrait phone (320x568, iPhone SE): the picture would leave the Part step ~100px, so on that step the controls get the whole pane */
+@media (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) { grid-template-rows: minmax(0, 1fr) !important; grid-template-areas: "step" !important; }
+  body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) .previewPane { display: none; }
+}
+
+/* ROUND 5 item 14: on a laptop-wide screen the "Put the parts on the bed" and "Connect, home and set the start point" cards sit side by side, so the connect buttons
+   and the FluidNC (Wi-Fi) host box are in view without scrolling past the whole layout card first. */
+@media (min-width: 1280px) {
+  body.app-shell:not(.short-land)[data-screen="cut"] .step[data-step="3"]:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
+  body.app-shell[data-screen="cut"] .step[data-step="3"] > h2, body.app-shell[data-screen="cut"] .step[data-step="3"] > #checkCard, body.app-shell[data-screen="cut"] .step[data-step="3"] > .nav { grid-column: 1 / -1; }
+  body.app-shell[data-screen="cut"] .step[data-step="3"] > #layoutCard { grid-column: 1; grid-row: 1; }
+  body.app-shell[data-screen="cut"] .step[data-step="3"] > #zeroCard { grid-column: 2; grid-row: 1; }
+}
+
 /* short landscape: give the canvas the row; dock overlays the bottom of the preview */
 @media (orientation: landscape) and (max-height: 540px) {
   body.app-shell.short-land .previewDock {
@@ -1339,12 +1366,13 @@ body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
 body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
 body[data-step="3"] #exportRow { display: none; }
 
-/* ---- ROUND 2: optional portrait "turn your phone sideways" cover. A clean full-screen overlay: no STOP, no banners, nothing else on top
+/* ---- ROUND 2: optional portrait "turn your phone sideways" cover. Only on the cutting bed (cut screen, "Bed & start" step, Cut tab):
+   sign-in, the menu, Make a part and the Part step all work upright. A clean full-screen overlay: no STOP, no banners, nothing else on top
    of it. It is only paint (nothing is paused, hidden from the app or reset), so a running job carries on underneath. Off unless
    body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
 .turnoverlay { display: none; }
 @media (max-width: 599px) and (orientation: portrait) {
-  body.turn-on:not(.job-live) .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+  body.turn-on[data-screen="cut"][data-step="3"]:not(.job-live):has(.tab[data-tab="cut"].sel) .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
   body.turn-on .turnoverlay .turnicon { font-size: 72px; line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
   body.turn-on .turnoverlay .turntext { font-size: 26px; font-weight: 700; }
 }
@@ -1430,7 +1458,7 @@ body.beginner .batchbtn { min-height: var(--tap, 44px); }
 .topmenu { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; flex-wrap: nowrap; }
 @media (max-width: 560px) {
   .topbar { flex-wrap: nowrap; align-items: center; }
-  .topbar-main { flex-wrap: nowrap !important; align-items: center; overflow: visible; gap: 8px; }
+  .topbar-main { flex-wrap: wrap !important; align-items: center; overflow: visible; gap: 4px 8px; }   /* wraps, so Ready / TORCH OFF never fall off the edge */
   #btnTopMenu { display: inline-flex; align-items: center; justify-content: center; }
   .topmenu {
     display: none;
@@ -1459,15 +1487,46 @@ body.beginner .batchbtn { min-height: var(--tap, 44px); }
   .topmenu .modesw-btn[data-mode="beginner"] { font-size: 13px; }
   .topmenu .modesw-btn[data-mode="beginner"]::after { content: none; }
   #topMenu #connPill, body.demo-on #topMenu #connPill { max-width: none; font-size: 13px; white-space: normal; }
-  #torchPill { flex: none; }
+  #torchPill, #stateBadge { flex: none; }
   body.app-shell:not(.short-land)[data-step="3"] .cutgrid,
   body.app-shell.beginner:not(.short-land)[data-step="3"] .cutgrid {
-    grid-template-rows: minmax(210px, 1.2fr) minmax(140px, 1fr) !important;
+    grid-template-rows: minmax(min(210px, 28dvh), 1.2fr) minmax(min(140px, 20dvh), 1fr) !important;
   }
   body.beginner[data-step="3"] .guidehead { padding: 4px 10px 6px; }
   body.beginner[data-step="3"] .guidehead #ghTitle { font-size: 18px; }
   #demoAcctBar { padding: 4px 8px; font-size: 12px; }
   .appfoot { display: none; }
+}
+
+/* ROUND 5 item 15: between a phone and a laptop (and at 200% zoom) the header wraps and condenses, so the Ready / TORCH status is always in view */
+@media (min-width: 561px) and (max-width: 899px) {
+  .topbar-main { flex-wrap: wrap; overflow: visible; gap: 4px; }
+  .topmenu { flex-wrap: wrap; gap: 4px; }
+  #machineName { display: none; }
+  #btnHome span { display: none; }                      /* arrow only; it keeps its "Back to the main menu" label */
+  #btnHome.homebtn { min-width: 40px; padding-left: 10px; padding-right: 10px; }
+  #connPill, body.demo-on #connPill { max-width: 10em; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #acctPill { max-width: 7em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #stateBadge, #torchPill { flex: none; }
+}
+#torchPill { max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap; }   /* TORCH ON / TORCH OFF is never cut short */
+body.short-land[data-screen="cut"] #stateBadge:not(.hidden) { display: inline-block !important; }   /* the Ready / Paused / Alarm word stays on a phone on its side */
+
+/* ROUND 5 item 18: why Start is greyed, as text right under the buttons */
+.step[data-step="3"] > .nav { flex-wrap: wrap; }
+.startwhy { flex: 1 1 100%; order: 9; margin: 2px 0 0; font-size: 13px; line-height: 1.3; font-weight: 650; color: var(--warn-text); overflow-wrap: anywhere; }
+body.short-land .startwhy { font-size: 12px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.startwhy.hidden { display: none; }
+/* phone on its side: Back / Start / Download share one slim row, so the reasons and the layout controls both fit */
+body.short-land .step[data-step="3"] > .nav { gap: 6px; margin-top: 4px; padding-top: 4px; padding-bottom: 0; flex-wrap: wrap; }
+body.short-land .step[data-step="3"] > .nav button { min-height: 40px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
+body.short-land .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; }
+body.short-land .step[data-step="3"] > .nav .locknote { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.2; order: 8; }
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell .step[data-step="3"] > .nav { gap: 6px; margin-top: 4px; padding-top: 4px; padding-bottom: 0; flex-wrap: wrap; }
+  body.app-shell .step[data-step="3"] > .nav button { min-height: 40px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
+  body.app-shell .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; }
+  body.app-shell .step[data-step="3"] > .nav .locknote { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.2; order: 8; }
 }
 
 /* ---- ROUND 3 item 8: one icon weight, AA text, status account, visible focus ---- */
@@ -1591,6 +1650,15 @@ body.pro-mode #ptInspector {
   color: var(--text);
 }
 body.pro-mode.shape-fs .fsbar { right: calc(var(--pt-insp-w, 252px) + 8px); }
+/* ROUND 5 item 13: the Done / Save bar floated over the Beginner/Pro switch. It now sits in the make bar's free left slot (the "Make a part" title steps aside)
+   and the Esc hint, which a phone has no use for, drops out on narrow screens. */
+body.shape-fs[data-screen="make"] #makeBar h2 { display: none; }
+body.shape-fs[data-screen="make"] #makeBar { justify-content: flex-end; }
+body.shape-fs[data-screen="make"] .fsbar { top: calc(var(--topbar-h, 56px) + 5px); left: 12px; right: auto; padding: 0; border: 0; background: transparent; gap: 6px; max-width: calc(100vw - 210px); }
+body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
+@media (max-width: 899px) { body.shape-fs[data-screen="make"] .fsbar > span { display: none; } }
+@media (max-width: 400px) { body.shape-fs[data-screen="make"] #makeBar .modesw-btn { min-width: 62px; padding-left: 8px; padding-right: 8px; }
+  body.shape-fs[data-screen="make"] .fsbar { left: 8px; gap: 4px; } body.shape-fs[data-screen="make"] .fsbar button { padding-left: 10px; padding-right: 10px; min-width: 0; } body.shape-fs[data-screen="make"] .fsbar #fsSave { margin-left: 0; } }
 #ptInspector .pt-insp-toggle {
   display: flex;
   align-items: center;

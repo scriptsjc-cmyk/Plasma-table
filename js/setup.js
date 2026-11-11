@@ -111,7 +111,12 @@ export function blockText() {
 export const layoutActive = () => layoutOn;
 
 // ------------------------------------------------------------------ drawing on the sketch canvas
-let zoomParts = false;
+let zoomParts = true;                                          // B5 19: open zoomed to the parts (with a margin); "Whole sheet" shows the whole sheet again
+function paintZoomBtns() {
+  const fit = $("layFit"), zoom = $("layZoom");
+  if (fit) fit.classList.toggle("hidden", !zoomParts);        // zoomed in: offer "Whole sheet"
+  if (zoom) { zoom.classList.toggle("hidden", zoomParts); zoom.textContent = "🔍 Zoom to parts"; }   // whole sheet showing: offer "Zoom to parts"
+}
 function viewBox(sk) {
   if (zoomParts && sk && sk.items.length) {                    // just the parts, with a margin, instead of the whole sheet
     const b = sk.allBox(), m = Math.max(20, Math.max(b[2] - b[0], b[3] - b[1]) * 0.08);
@@ -192,6 +197,7 @@ export function enter() {
   for (const it of sk.items) { if (!sk._seen.has(it.id) && sk.isHole(it)) sk._holes.add(it.id); }
   if (!sk._layoutPlaced) { sk._layoutPlaced = true; bringOnSheet(sk); }
   sk.pick([]);
+  zoomParts = true; paintZoomBtns();
   paint();
   H.loadJob();
   H.refresh();
@@ -388,8 +394,9 @@ function bind() {
   const sk = () => H.sketch();
   $("layAdd").onclick = openAdd;
   $("layAuto").onclick = arrangeAll;
-  $("layFit").onclick = () => { zoomParts = false; sk().fitView(); $("layZoom").textContent = "🔍 Zoom to parts"; };
-  $("layZoom").onclick = () => { zoomParts = !zoomParts; sk().fitView(); $("layZoom").textContent = zoomParts ? "▣ Whole sheet" : "🔍 Zoom to parts"; };
+  $("layFit").onclick = () => { zoomParts = false; paintZoomBtns(); sk().fitView(); };
+  $("layZoom").onclick = () => { zoomParts = true; paintZoomBtns(); sk().fitView(); };
+  paintZoomBtns();
   const sheetChange = () => {
     const w = Number($("sheetW").value), h = Number($("sheetH").value), c = Number($("sheetClr").value);
     if (w >= 50) sheet.w = w; if (h >= 50) sheet.h = h; if (c >= 0) sheet.clearance = c;
