@@ -391,3 +391,65 @@ body.short-land .dimedit .dimops { margin-top: 4px; }
   .mtdlg canvas { max-height: 24dvh; }
   .mtdlg .mt-guide { display: none; }
 }
+/* ---- Round 5 item 5: in Beginner the picture fills the free space ---- */
+/* picture tools (Zoom to fit / Expand picture) sit over the picture on Make a part; pinch or scroll also zooms */
+.pictools { display: none; }
+body[data-screen="make"].beginner .pictools { display: flex; position: absolute; top: 8px; left: 8px; z-index: 3; gap: 6px; flex-wrap: wrap; }
+body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
+.pictools button { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: 14px; font-weight: 650; background: color-mix(in srgb, var(--card) 92%, transparent); }
+@media (max-width: 899px), (max-height: 540px) {
+  /* phones: icon buttons in the top-left corner, clear of the size label over the part */
+  .pictools .picword { display: none; }
+  .pictools button { padding: 4px; }
+}
+.makesplit { display: none; }
+@media (min-width: 900px) and (min-height: 541px) {
+  /* laptop / desktop: controls on the left, a divider, the picture takes the rest of the width */
+  body.app-shell.beginner[data-screen="make"]:not(.shape-fs) .cutgrid,
+  body.app-shell.beginner[data-screen="make"]:not(.shape-fs) .cutgrid.editing,
+  body.app-shell.beginner[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb {
+    grid-template-columns: clamp(300px, var(--make-ctl-w, 34%), calc(100% - 376px)) 12px minmax(0, 1fr);   /* a remembered width never squeezes the picture on a smaller window */
+    grid-template-rows: minmax(0, 1fr); grid-template-areas: "step split preview"; gap: 0 4px;
+  }
+  body.app-shell.beginner[data-screen="make"]:not(.shape-fs) .stepPane { grid-area: step; order: 0; }
+  body.app-shell.beginner[data-screen="make"]:not(.shape-fs) .previewPane { grid-area: preview; order: 0; position: relative; }
+  body.app-shell.beginner[data-screen="make"]:not(.shape-fs) #quickBar { display: none; }
+  body.app-shell.beginner[data-screen="make"]:not(.shape-fs) .makesplit {
+    display: block; grid-area: split; cursor: col-resize; touch-action: none; border-radius: 6px; position: relative; }
+  .makesplit::after { content: ""; position: absolute; top: 50%; left: 4px; width: 4px; height: 48px; margin-top: -24px; border-radius: 2px; background: var(--line-strong); }
+  .makesplit:hover::after, .makesplit:focus-visible::after, .makesplit.dragging::after { background: var(--accent); }
+  .makesplit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  /* phone: the picture gets well over half the pane (its status and buttons already sit under it, not over it) */
+  body.app-shell.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid,
+  body.app-shell.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.with-qb,
+  body.app-shell.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.editing {
+    grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr) !important; grid-template-areas: "preview" "step" !important; }
+  body.beginner[data-screen="make"]:not(.short-land) .nav .next { min-height: 56px; font-size: 20px; }
+  body.beginner[data-screen="make"]:not(.short-land) #bgChange { min-height: 44px; margin-bottom: 6px; }
+  /* and the heading above it is two short lines: the Make a part bar already names the screen */
+  body.beginner[data-screen="make"]:not(.short-land) #makeBar { padding: 4px 10px; }
+  body.beginner[data-screen="make"]:not(.short-land) #makeBar .modesw-btn { min-height: 44px; }
+  body.beginner[data-screen="make"]:not(.short-land) .guidehead { padding: 4px 12px 8px; }
+  body.beginner[data-screen="make"]:not(.short-land) .guidehead #ghStep { display: none; }
+  body.beginner[data-screen="make"]:not(.short-land) .guidehead #ghTitle { font-size: 20px; margin: 0; }
+  body.beginner[data-screen="make"]:not(.short-land) .guidehead p { font-size: 14px; line-height: 1.3; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  /* phone on its side: the mode switch sits at the end of the guide line and the status under the picture is one line, so the picture gets the height */
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #cutView { position: relative; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar { position: absolute; top: 0; right: 0; z-index: 4; padding: 2px 8px; background: transparent; border: 0; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar h2 { display: none; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar .modesw-btn { min-height: 44px; min-width: 76px; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) .guidehead { min-height: 48px; padding-right: 180px; align-items: center; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) .cutgrid,
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) .cutgrid.editing { grid-template-columns: minmax(0, 1.25fr) minmax(250px, 40vw); }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) .previewPane { grid-column: 1; order: 0; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) .stepPane { grid-column: 2; order: 0; }
+  body.short-land.beginner[data-screen="make"] .previewDock { flex-wrap: nowrap; overflow: hidden; gap: 6px; }
+  body.short-land.beginner[data-screen="make"] .previewDock .fit { flex: 1 1 120px; min-width: 0; font-size: 12px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  body.short-land.beginner[data-screen="make"] .previewDock .fit:empty { display: none; }
+  body.short-land.beginner[data-screen="make"] .previewDock #jobStats { display: none; }
+  body.short-land.beginner[data-screen="make"] .previewDock .exportrow { flex: none; flex-wrap: nowrap; }
+}

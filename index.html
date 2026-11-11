@@ -229,6 +229,10 @@
     <div class="previewPane">
       <canvas id="preview"></canvas>
       <label class="showmach" id="showMachWrap"><input type="checkbox" id="showMach" checked> Show machine</label>
+      <div id="picTools" class="pictools" role="group" aria-label="Picture">
+        <button type="button" id="btnPicFit" class="small" aria-label="Zoom to fit" title="Show the whole part (pinch or scroll to zoom)">🔍<span class="picword"> Zoom to fit</span></button>
+        <button type="button" id="btnPicFs" class="small" aria-label="Expand picture" title="Make the picture fill the screen">⤢<span class="picword"> Expand picture</span></button>
+      </div>
       <div class="previewDock">
       <p id="qbWhy" class="qbwhy hidden" role="status" aria-live="polite"></p>
       <div id="fit" class="fit"></div>
@@ -258,6 +262,7 @@
       </div>
     </div>
 
+    <div id="makeSplit" class="makesplit" role="separator" aria-orientation="vertical" aria-label="Drag to make the picture bigger or smaller" aria-valuemin="0" aria-valuemax="100" aria-valuenow="34" tabindex="0"></div>
     <nav id="quickBar" class="quickbar hidden" aria-label="Design tools"></nav>
 
     <div class="stepPane">

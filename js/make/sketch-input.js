@@ -302,6 +302,7 @@ export class InputMethods {
       // the type-in size box owns the keys from the moment it opens (its input only takes focus on the next frame, so focus alone isn't enough)
       if (overlay("dimEdit") || overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop") || document.querySelector(".acctdlg:not(.hidden)")) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+      if (document.activeElement.getAttribute("role") === "separator") return;      // the focused picture divider owns its arrow keys
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
       if (e.key === " ") { this.spaceDown = true; stop(); return; }
