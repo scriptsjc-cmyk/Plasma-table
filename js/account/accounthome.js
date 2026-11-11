@@ -1,5 +1,5 @@
 // The account dialog itself (signed-in view), claim and gate dialogs, and the account chrome (pill, gating).
-import { $, $$, closeAll, esc, host, openDlg, pane, setPendingMigrate, toast } from "./uibase.js";
+import { $, $$, closeAll, declineMigrate, esc, host, openDlg, pane, setPendingMigrate, toast } from "./uibase.js";
 import { CONFIG } from "./config.js";
 import { currentAdminTab, refreshAdmin, refreshAdminAnnounce, refreshAdminPresets, refreshAdminStats, refreshAdminUsers, showAdminTab } from "./adminview.js";
 import { metaCache, refreshPartsList, setPartsRows } from "./partslist.js";
@@ -163,5 +163,5 @@ export function bindHome() {
       openAccount();
     } catch (err) { toast(err.message, true); }
   };
-  $("migrateNo").onclick = closeAll;
+  $("migrateNo").onclick = declineMigrate;
 }

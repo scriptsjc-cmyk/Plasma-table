@@ -5,6 +5,7 @@ export const $ = (id) => document.getElementById(id);
 export const $$ = (sel, root) => [...(root || document).querySelectorAll(sel)];
 export let host = null; // { toast, esc, applyMode, getDesign, loadDesign, fileName, refreshGate }
 export let pendingMigrate = false;
+let migrateDeclined = false; // "Not now" was pressed: don't offer again this session
 export function toast(msg, err) { if (host && host.toast) host.toast(msg, err); }
 export function esc(s) { return host && host.esc ? host.esc(s) : String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 export function acctOverlayOpen() {
@@ -32,4 +33,5 @@ export function pane(name) {
 }
 export function when(iso) { if (!iso) return "—"; try { return new Date(iso).toLocaleString(); } catch (e) { return String(iso); } }
 export const setHost = (h) => { host = h; };
-export const setPendingMigrate = (v) => { pendingMigrate = v; };
+export const setPendingMigrate = (v) => { pendingMigrate = v && !migrateDeclined; };
+export function declineMigrate() { migrateDeclined = true; pendingMigrate = false; closeAll(); }
