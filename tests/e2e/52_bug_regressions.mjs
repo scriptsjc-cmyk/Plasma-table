@@ -120,7 +120,7 @@ const cutFile = async (page, file) => {
   await T(p, "(() => { const c = document.getElementById('dryRun'); c.checked = false; c.dispatchEvent(new Event('change')); window.plasmaTest.showScreen('menu'); window.plasmaTest.showScreen('cut'); })()"); await sleep(500);
   ck("21 unticking sticks until the first job has started", !(await T(p, "document.getElementById('dryRun').checked")));
   // run the first job (demo): afterwards the flag is set and later visits don't re-tick it
-  await T(p, "window.plasmaTest.R2.demoEdges()"); await sleep(6000);
+  await T(p, "window.plasmaTest.demoEdges()"); await sleep(6000);
   await T(p, "window.plasmaTest.goStep(3)"); await sleep(400);
   await T(p, "(() => { document.getElementById('btnZero').click(); })()"); await sleep(500);
   await T(p, "(() => { document.querySelectorAll('#checklist input').forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById('checklist').dispatchEvent(new Event('change')); })()"); await sleep(300);

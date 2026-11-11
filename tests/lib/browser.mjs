@@ -31,6 +31,7 @@ export const PROFILES = {
 export async function launch() { return chromium.launch({ channel: "chrome", headless: true }); }
 // Hooks that prove nothing real is touched in demo mode: WebSocket constructions and Web Serial calls are logged.
 const JMAP = () => JSON.stringify(Object.fromEntries(jsRel().map((f) => [f.split("/").pop().replace(/\.js$/, ""), "/" + f])));   // module name -> url, so page-side import() never hard-codes a folder
+export const J_INIT = () => `window.__J = ${JMAP()};`;   // for contexts a test makes by hand
 const INIT = (safariLike) => `
   window.__J = ${JMAP()};
   window.__net = { ws: [], serial: [], fetch: [], beacon: [] };

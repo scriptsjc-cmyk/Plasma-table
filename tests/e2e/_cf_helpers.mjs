@@ -7,7 +7,7 @@ export const prime = async (page, parts = ["rect", "disc"]) => {
   await demoToShape(page, { stay: "cut" });
   await page.evaluate((parts) => { const t = window.plasmaTest, sk = t.sketch; t.showScreen("make"); t.setShapeFs(false); sk.clear(); for (const p of parts) sk.add(p); t.sendToCutting(); }, parts);
   await sleep(300);
-  await page.evaluate(() => window.plasmaTest.R2.demoEdges()); await sleep(6000);
+  await page.evaluate(() => window.plasmaTest.demoEdges()); await sleep(6000);
   await page.evaluate(() => { window.plasmaTest.goStep(3); document.getElementById("layAuto").click(); }); await sleep(500);
 };
 export const zeroAndTick = async (page, js = false) => {

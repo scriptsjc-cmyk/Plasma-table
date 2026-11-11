@@ -30,7 +30,7 @@ const refresh = (page) => page.evaluate(() => window.plasmaTest.refreshGate());
   await page.evaluate(() => { const S = window.plasmaTest.S; S.status = { ...S.status, state: "Idle", torch: false }; window.plasmaTest.refresh(); });
   ck("1a back to idle: overlay returns", await overlayShown(page));
   // a real demo job
-  await page.evaluate(() => window.plasmaTest.R2.demoEdges()); await sleep(6000);
+  await page.evaluate(() => window.plasmaTest.demoEdges()); await sleep(6000);
   await page.evaluate(() => { window.plasmaTest.goStep(3); }); await sleep(600);
   await page.evaluate(() => document.getElementById("btnZero").click()); await sleep(500);
   await page.evaluate(() => { document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById("checklist").dispatchEvent(new Event("change")); }); await sleep(300);
@@ -55,7 +55,7 @@ async function jobToStop(view) {
   await demoToShape(page, { stay: "cut" });
   await page.evaluate(() => { const t = window.plasmaTest, sk = t.sketch; t.showScreen("make"); t.setShapeFs(false); sk.clear(); sk.add("rect"); sk.add("disc"); sk.add("rect"); t.sendToCutting(); });
   await sleep(300);
-  await page.evaluate(() => window.plasmaTest.R2.demoEdges()); await sleep(6000);
+  await page.evaluate(() => window.plasmaTest.demoEdges()); await sleep(6000);
   await page.evaluate(() => { window.plasmaTest.goStep(3); document.getElementById("layAuto").click(); }); await sleep(500);
   await page.evaluate(() => document.getElementById("btnZero").scrollIntoView({ block: "center" }));
   await page.click("#btnZero"); await sleep(400);

@@ -1,7 +1,7 @@
 // The compact API the older "r2tools" style suites use (serve / open / launch / VIEWS / demoToShape), on top of the shared harness (browser.mjs).
-import { startServer, launch as chromeLaunch, newPage, demoToShape as dts, PROFILES, SHOTS } from "./browser.mjs";
+import { J_INIT, startServer, launch as chromeLaunch, newPage, demoToShape as dts, PROFILES, SHOTS } from "./browser.mjs";
 export { SITE, REPO, DATA, mod, readJs, allJsText, jsRel, jsUrl } from "./site.mjs";
-export { SHOTS };
+export { SHOTS, J_INIT };
 PROFILES.laptopchrome ||= { viewport: { width: 1366, height: 648 } };
 const MAP = { laptop: "d1366", laptopchrome: "laptopchrome", phone: "iphone14", phoneland: "iphone14land" };
 const strip = ({ safariLike, ...o }) => o;

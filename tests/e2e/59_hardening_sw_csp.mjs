@@ -4,7 +4,7 @@
 //  31 docs/FLUIDNC.md agrees with the console filter
 import fs from "node:fs"; import path from "node:path"; import http from "node:http"; import { execFileSync } from "node:child_process";
 import { WebSocketServer } from "ws";
-import { serve, open, launch, REPO, SITE, DATA, SHOTS, mod } from "../lib/r2compat.mjs";
+import { serve, open, launch, REPO, SITE, DATA, SHOTS, mod, readJs, jsRel, allJsText, J_INIT } from "../lib/r2compat.mjs";
 const br = await launch(), s = await serve();
 let pass = 0, fail = 0;
 const ck = (n, ok, i = "") => { ok ? pass++ : fail++; console.log((ok ? "PASS " : "FAIL ") + n + (ok ? "" : "  -> " + (typeof i === "string" ? i : JSON.stringify(i)))); };
@@ -70,27 +70,27 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   const t = await open(br, "laptop", s.base, "?test=1&turn=0");
   ck("29 ?test=1 on localhost: the test handle window.ptInspector exists (harnesses keep working)", await hasApi(t));
   await t.context().close();
-  const ctx = await br.newContext({ viewport: { width: 1366, height: 768 } }); const p = await ctx.newPage(); p.errors = [];
+  const ctx = await br.newContext({ viewport: { width: 1366, height: 768 } }); const p = (await ctx.addInitScript(J_INIT()), await ctx.newPage()); p.errors = [];
   p.on("pageerror", (e) => p.errors.push(String(e)));
   await p.goto(s.base + "/?demo=1&turn=0"); await sleep(1500);
   ck("29 a normal page (no ?test): no window.ptInspector API for the console", !(await hasApi(p)));
-  const signup = await T(p, `(async () => { const A = await import("/js/account.js"); await A.signUp({ email: "i@x.test", pin: "secret1", display_name: "I", mode: "pro" }); await new Promise((r) => setTimeout(r, 400)); return A.isAdmin(); })()`);
+  const signup = await T(p, `(async () => { const A = await import(window.__J["account"]); await A.signUp({ email: "i@x.test", pin: "secret1", display_name: "I", mode: "pro" }); await new Promise((r) => setTimeout(r, 400)); return A.isAdmin(); })()`);
   ck("29 signed in as an ordinary Pro user: still no API on window", signup === false && !(await hasApi(p)));
-  ck("29 ...but the Pro inspector panel is mounted and talks to the app (module link, not a global)", await T(p, `(async () => { const m = await import("/js/inspector-ui.js"); return typeof m.connectInspector === "function" && !!document.getElementById("ptInspector"); })()`));
+  ck("29 ...but the Pro inspector panel is mounted and talks to the app (module link, not a global)", await T(p, `(async () => { const m = await import(window.__J["inspector-ui"]); return typeof m.connectInspector === "function" && !!document.getElementById("ptInspector"); })()`));
   // drive the panel for real: make a rectangle on the Make screen and see the panel fill in
   const filled = await T(p, `(async () => {
-    const A = await import("/js/account.js");
+    const A = await import(window.__J["account"]);
     const bodyShot = () => document.querySelector("#ptInspector input") ? [...document.querySelectorAll("#ptInspector input")].map((i) => i.value).join("|") : "";
     document.querySelector('[data-pick="menu-make"], #menuMake, [data-go="make"]') && document.querySelector('[data-pick="menu-make"], #menuMake, [data-go="make"]').click();
     return bodyShot();
   })()`);
-  const adminNow = await T(p, `(async () => { const A = await import("/js/account.js"); await A.grantDemoAdmin(); await new Promise((r) => setTimeout(r, 400)); return A.isAdmin(); })()`);
+  const adminNow = await T(p, `(async () => { const A = await import(window.__J["account"]); await A.grantDemoAdmin(); await new Promise((r) => setTimeout(r, 400)); return A.isAdmin(); })()`);
   ck("29 when the signed-in account is an admin the handle is published", adminNow === true && await hasApi(p));
-  await T(p, `(async () => { const A = await import("/js/account.js"); await A.signOut(); await new Promise((r) => setTimeout(r, 400)); })()`);
+  await T(p, `(async () => { const A = await import(window.__J["account"]); await A.signOut(); await new Promise((r) => setTimeout(r, 400)); })()`);
   ck("29 ...and withdrawn again when the admin signs out", !(await hasApi(p)));
   ck("29 no page errors", p.errors.length === 0, p.errors);
   await ctx.close();
-  const ui = read("js/inspector-ui.js");
+  const ui = readJs("inspector-ui");
   ck("29 inspector-ui.js no longer reads or writes window.ptInspector", !/window\.ptInspector\s*(=|==|!=|\))/.test(ui.replace(/\/\/.*$/gm, "")) && !/window\.ptInspector/.test(ui.replace(/\/\/.*$/gm, "")));
   const dom = await open(br, "laptop", s.base, "?test=1&turn=0");
   await T(dom, "window.plasmaTest.showScreen('make'); window.plasmaTest.setAppMode('pro'); const k = window.plasmaTest.sketch; k.clear(); k.add('rect'); k.onSelect();"); await sleep(500);
@@ -127,7 +127,7 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   const after = await T(page, `(async () => { const A = window.plasmaTest.account; await A.signOut(); await A.signIn({ email: "d2@x.test", pin: "secret1" }); const c = await A.claimMachine("DEMO-0000"); return c; })()`);
   ck("28 after being unlinked the account can get a fresh practice table with the same code", after.ok && !after.already, after);
   ck("28 the server schema never knows the practice code, so it can never unlock a real table in the cloud", !/DEMO-0000|DEMO-TABLE/i.test(read("supabase/schema.sql")) && !/DEMO-0000/i.test(read("supabase/b5-gating.sql")));
-  const hint = await T(page, "(async () => { const UI = await import('/js/account-ui.js'); await window.plasmaTest.account.signOut(); window.plasmaTest.account.signIn; return typeof UI.openClaim; })()");
+  const hint = await T(page, "(async () => { const UI = await import(window.__J['accounthome']); await window.plasmaTest.account.signOut(); window.plasmaTest.account.signIn; return typeof UI.openClaim; })()");
   await page.context().close();
 }
 
@@ -149,18 +149,18 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
     if (u.pathname.startsWith("/rest/v1/rpc/")) return j(200, null);
     return j(404, {});
   });
-  const page = await ctx.newPage(); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
+  const page = (await ctx.addInitScript(J_INIT()), await ctx.newPage()); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
   await page.goto(s.base + "/?turn=0"); await sleep(1500);
-  const A = (code) => T(page, `(async () => { const A = await import("/js/account.js"); ${code} })()`);
+  const A = (code) => T(page, `(async () => { const A = await import(window.__J["account"]); ${code} })()`);
   // --- before the SQL is applied
   await A(`await A.signIn({ email: "pat@x.test", pin: "secret1" }); return 1;`);
   const pre = await A(`return { src: A.gatingSource(), mode: A.accountMode(), pro: A.canPro(), fw: A.canFirmware(), snap: A.snapshot().gating };`);
   ck("26 before the SQL is applied the app signs in and works exactly as before (browser-side rule)", pre.src === "client-only" && pre.mode === "pro" && pre.pro === true && pre.fw === true && pre.snap === "client-only", pre);
   ck("26 it asked the server once and fell back on the 404 without breaking", mock.calls.includes("POST /rest/v1/rpc/my_entitlements") && page.errors.length === 0, { calls: mock.calls.slice(-6), errs: page.errors });
-  await T(page, `(async () => { const A = await import("/js/account.js"); window.__admin = 0; })()`);
+  await T(page, `(async () => { const A = await import(window.__J["account"]); window.__admin = 0; })()`);
   // admin panel text (pretend admin)
   mock.profile.role = "admin"; await A(`await A.refreshEntitlements(); return 1;`);
-  await T(page, `(async () => { const UI = await import("/js/account-ui.js"); UI.openAdmin(); })()`); await sleep(500);
+  await T(page, `(async () => { const UI = await import(window.__J["accounthome"]); UI.openAdmin(); })()`); await sleep(500);
   const g1 = await T(page, "document.getElementById('adminGating').textContent");
   ck("26 Admin says plainly that limits are only checked in the browser and names the SQL file", /only checked in this browser/.test(g1) && /supabase\/b5-gating\.sql/.test(g1), g1);
   await T(page, "document.querySelector('#adminDlg .acct-close').click()");
@@ -188,7 +188,7 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   // Admin panel after
   mock.profile.role = "admin"; mock.ent = { server: true, signed_in: true, role: "admin", mode: "beginner", pro: true, firmware: true, machines: 0 };
   await A(`await A.refreshEntitlements(); return 1;`);
-  await T(page, `(async () => { const UI = await import("/js/account-ui.js"); UI.openAdmin(); })()`); await sleep(500);
+  await T(page, `(async () => { const UI = await import(window.__J["accounthome"]); UI.openAdmin(); })()`); await sleep(500);
   const g2 = await T(page, "document.getElementById('adminGating').textContent");
   ck("26 after the SQL, Admin says the limits are enforced by the server", /enforced by the server/.test(g2), g2);
   await T(page, "document.querySelector('#adminDlg .acct-close').click()");
@@ -197,7 +197,8 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   mock.ent = { server: true, signed_in: true, role: "user", mode: "beginner", pro: false, firmware: false, machines: 0 };
   const sm = await A(`try { await A.setMode("pro"); return "no error"; } catch (e) { return { code: e.code, msg: e.message, mode: A.accountMode() }; }`);
   ck("26 asking for Pro when the server has it switched off throws pro_not_allowed with a plain message", sm && sm.code === "pro_not_allowed" && /isn't switched on/.test(sm.msg) && sm.mode === "beginner", sm);
-  ck("26 no service_role / secret key anywhere in the client or SQL", !/service_role/.test(read("js/account.js") + read("js/config.js")) || /never/i.test(read("js/account.js")), "");
+  const accTxt = allJsText().filter(([f]) => f.startsWith("js/account/")).map((x) => x[1]).join("\n");
+  ck("26 no service_role / secret key anywhere in the client or SQL", !/service_role/.test(accTxt) || /never/i.test(accTxt), "");
   await ctx.close();
   // SQL file shape (the real run against Postgres is done separately; see data/sql)
   const sql = read("supabase/b5-gating.sql");
@@ -217,7 +218,7 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   const gen = [...fs.readFileSync(path.join(tmp, "sw.js"), "utf8").matchAll(/^\s*"([^"]+)",\s*$/gm)].map((m) => m[1]);
   ck("30 the committed precache list is exactly what stamp-version.sh generates from the files", JSON.stringify(list) === JSON.stringify(gen), { missing: gen.filter((x) => !list.includes(x)), extra: list.filter((x) => !gen.includes(x)) });
   ck("30 every precache entry exists on disk", list.every((f) => f === "./" || fs.existsSync(path.join(REPO, f))), list.filter((f) => f !== "./" && !fs.existsSync(path.join(REPO, f))));
-  ck("30 every js module is in the list", fs.readdirSync(path.join(REPO, "js")).filter((f) => f.endsWith(".js")).every((f) => list.includes("js/" + f)));
+  ck("30 every js module is in the list", jsRel().every((f) => list.includes(f)));
   const html = read("index.html");
   const refs = [...html.matchAll(/(?:src|href)="([^"#:]+\.(?:js|css|json|svg|png))"/g)].map((m) => m[1]);
   ck("30 every file index.html loads is in the list", refs.every((f) => list.includes(f)), refs.filter((f) => !list.includes(f)));
@@ -243,7 +244,7 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   const base = `http://127.0.0.1:${srv.address().port}`;
   stamp("2026.01.01-aaaaaaa");
   const ctx = await br.newContext({ viewport: { width: 1366, height: 768 } });
-  const page = await ctx.newPage(); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
+  const page = (await ctx.addInitScript(J_INIT()), await ctx.newPage()); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
   await page.goto(base + "/?test=1&turn=0", { waitUntil: "load" });
   await page.waitForFunction(() => window.plasmaTest, null, { timeout: 15000 });
   await page.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 15000 });
@@ -282,7 +283,7 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   const shown = await T(page, "getComputedStyle(document.body).display");
   ck("30 the reloaded page loads without errors", page.errors.length === 0, page.errors);
   // v3: broken release (a file in the list is missing on the server) => install fails, v2 keeps working
-  const lost = path.join(site, "js/whyoff.js"); const keep = fs.readFileSync(lost);
+  const lost = path.join(site, jsRel().find((f) => f.endsWith("/whyoff.js"))); const keep = fs.readFileSync(lost);
   stamp("2026.01.03-ccccccc");              // list still contains whyoff.js
   fs.unlinkSync(lost);
   await T(page, "navigator.serviceWorker.getRegistration().then((r) => r.update().catch(() => {}))"); await sleep(2500);

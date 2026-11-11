@@ -30,7 +30,7 @@ async function connectPractice(page) {
   await hook(page);
 }
 async function startJob(page) {   // bed screen, practice connected -> press Start
-  await page.evaluate(() => { window.plasmaTest.R2.demoEdges(); }); await sleep(5500);
+  await page.evaluate(() => { window.plasmaTest.demoEdges(); }); await sleep(5500);
   await page.evaluate(() => document.getElementById("layAuto").click()); await sleep(300);
   await page.click("#btnZero"); await sleep(300);
   for (const cb of await page.locator("#checklist input").all()) await cb.check();

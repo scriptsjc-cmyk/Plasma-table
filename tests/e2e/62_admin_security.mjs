@@ -1,6 +1,6 @@
 // Admin-powers security + layout: raw console filter, STOP from every admin screen, restore validation, announcement XSS,
 // live-origin gating (demo admin can't arm; UI role is not trusted), job_events flooding, phone layouts.
-import { T } from "../lib/t.mjs"; import { startServer, launchKillable, newPage, demoToShape, enterDemo, SITE, PROFILES } from "../lib/browser.mjs";
+import { T } from "../lib/t.mjs"; import { startServer, launchKillable, newPage, demoToShape, enterDemo, SITE, PROFILES, J_INIT } from "../lib/browser.mjs";
 import fs from "node:fs"; import path from "node:path";
 const t = new T("62_admin_security");
 const SITE_DIR = process.env.SITE_DIR || SITE;
@@ -130,7 +130,7 @@ try {
     const dom = await p.evaluate(() => ({ xss: window.__xss, bar: document.getElementById("announceBar").innerHTML, imgs: document.querySelectorAll("#announceBar img, #announceBar script, #announceBar svg, #announceBar a").length }));
     t.check("announcement banner never executes injected HTML", dom.xss === undefined && dom.imgs === 0, JSON.stringify(dom).slice(0, 300), "ANN-XSS");
     await p.evaluate(() => window.plasmaTest.openAdmin("announce")); await sleep(300);
-    await p.evaluate(async () => { const m = await import(window.__J["account-ui"]); m.openAnnounceInbox(); }); await sleep(400);
+    await p.evaluate(async () => { const m = await import(window.__J["announceui"]); m.openAnnounceInbox(); }); await sleep(400);
     const dom2 = await p.evaluate(() => ({ xss: window.__xss, n: document.querySelectorAll("#announceInbox img, #announceInbox script, #announceInbox svg, #announceInbox a, #adminAnnList img, #adminAnnList script, #adminAnnList svg, #adminAnnList a").length, txt: document.getElementById("announceInbox").textContent.includes("<img src=x") }));
     t.check("inbox and admin list render announcements as plain text", dom2.xss === undefined && dom2.n === 0 && dom2.txt === true, JSON.stringify(dom2), "ANN-XSS");
     await p.context().close();
@@ -264,7 +264,7 @@ try {
     });
     // (a) ?demo=1 on a live origin cannot arm the fake admin, cannot unlock real control, and exposes no test hooks
     {
-      const page = await ctx.newPage(); page.errors = [];
+      const page = (await ctx.addInitScript(J_INIT()), await ctx.newPage()); page.errors = [];
       page.on("pageerror", (e) => page.errors.push(String(e)));
       await page.goto(LIVE + "/index.html?demo=1&test=1", { waitUntil: "load" }); await sleep(800);
       const r = await page.evaluate(async () => {
@@ -288,7 +288,7 @@ try {
     }
     // (b) real cloud mode as an ordinary user: UI role can be forged, the server is what refuses
     {
-      const page = await ctx.newPage(); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
+      const page = (await ctx.addInitScript(J_INIT()), await ctx.newPage()); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
       await page.goto(LIVE + "/index.html", { waitUntil: "load" }); await sleep(800);
       const r = await page.evaluate(async () => {
         const A = await import(window.__J["account"]);
