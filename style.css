@@ -2017,3 +2017,10 @@ body.short-land .dimedit .dimops { margin-top: 4px; }
 .mtdlg .row.wrap { align-items: center; gap: 8px; }
 .tiles button.mktool i { font-style: normal; font-weight: 700; }
 @media (max-height: 560px) { .mtdlg canvas { max-height: 24dvh; } .mtdlg .mt-guide { display: none; } }
+
+/* ---- Round 5: Nest to fit and saved remnants (js/nestui.js) ---- */
+.nestbox { margin: 8px 0; border: 1px solid var(--line, #cbd5df); border-radius: 12px; padding: 6px 10px; background: var(--well, #f4f7fa); }
+.nestbox > summary { min-height: var(--tap, 44px); display: flex; align-items: center; gap: 8px; cursor: pointer; flex-wrap: wrap; }
+.nestbox .row { align-items: flex-end; gap: 8px; margin: 6px 0; }
+.nestbox .nesth { margin: 10px 0 2px; font-size: var(--fs-md, 16px); }
+.nestbox select { min-width: 0; max-width: 100%; }

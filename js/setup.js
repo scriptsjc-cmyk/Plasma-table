@@ -9,23 +9,33 @@ import { groupParts, thumbSvg, sizeText, MY } from "./partsfolders.js";
 import { parseSVG } from "./svg.js";
 import { contoursToEditable } from "./editable.js";
 import * as Acc from "./account.js";
+import { insideRegion } from "./nest.js";
+import { initNestUi, paintNest, nestNow } from "./nestui.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
 const r1 = (v) => Math.round(v * 10) / 10;
 const KEY = "plasma.sheet";
 
-export const sheet = { w: 1250, h: 2500, clearance: 2 };
+export const sheet = { w: 1250, h: 2500, clearance: 2, remnant: null, plain: null };     // remnant: a saved leftover shape used as the sheet (outline in rings, lower-left at 0,0)
 let layoutOn = false, last = { ok: true, bad: new Set(), problems: [], units: [] };
 
 export function initSetup(host) {
   H = host;
-  try { const j = JSON.parse(localStorage.getItem(KEY) || "null"); if (j && j.w > 0 && j.h > 0) { sheet.w = j.w; sheet.h = j.h; sheet.clearance = j.clearance ?? 2; } else defaultSheet(); }
+  try { const j = JSON.parse(localStorage.getItem(KEY) || "null"); if (j && j.w > 0 && j.h > 0) {
+    sheet.w = j.w; sheet.h = j.h; sheet.clearance = j.clearance ?? 2;
+    if (j.remnant && Array.isArray(j.remnant.rings) && j.remnant.rings.length) { sheet.remnant = j.remnant; sheet.plain = j.plain || null; }
+  } else defaultSheet(); }
   catch { defaultSheet(); }
   bind();
 }
 function defaultSheet() { const t = H.S.cfg && H.S.cfg.travel_mm; if (t) { sheet.w = t.x; sheet.h = t.y; } }
 const saveSheet = () => { try { localStorage.setItem(KEY, JSON.stringify(sheet)); } catch { /* ignore */ } };
+// the usable area as the packer and the checks see it: the sheet (or the saved remnant shape), clipped to the machine's work area
+export function region(withClip = true) {
+  const wa = withClip ? workArea() : null;
+  return { w: sheet.w, h: sheet.h, rings: sheet.remnant ? sheet.remnant.rings : undefined, clip: wa ? [wa.x[0], wa.y[0], wa.x[1], wa.y[1]] : undefined };
+}
 const gapMm = () => Math.max(0, (Number(H.kerf()) || 0) + (Number(sheet.clearance) || 0));
 
 // ------------------------------------------------------------------ geometry checks
@@ -90,6 +100,7 @@ export function analyze(sk) {
   for (const u of units) {
     const b = u.box;
     if (b[0] < -eps || b[1] < -eps || b[2] > sheet.w + eps || b[3] > sheet.h + eps) { bad.add(u.id); problems.push({ ids: [u.id], text: `Part ${u.n} is off the sheet.` }); }
+    else if (sheet.remnant && !insideRegion(u.rings, b, region(false), 0)) { bad.add(u.id); problems.push({ ids: [u.id], text: `Part ${u.n} is outside the saved remnant's outline.` }); }
     else if (wa && (b[0] < wa.x[0] - eps || b[2] > wa.x[1] + eps || b[1] < wa.y[0] - eps || b[3] > wa.y[1] + eps)) { bad.add(u.id); problems.push({ ids: [u.id], text: `Part ${u.n} is outside the machine's work area.` }); }
   }
   for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) {
@@ -131,11 +142,19 @@ function viewBox(sk) {
 }
 function drawBg(sk, ctx, S, C, w, h) {
   const [x0, y0] = S(0, sheet.h), [x1, y1] = S(sheet.w, 0);
-  ctx.fillStyle = "rgba(90,130,190,.10)"; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
-  ctx.strokeStyle = "#5b7fb0"; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  if (sheet.remnant) {                                                    // a saved leftover: draw its real outline
+    ctx.beginPath();
+    for (const r of sheet.remnant.rings) { r.forEach(([x, y], i) => { const [X, Y] = S(x, y); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.closePath(); }
+    ctx.fillStyle = "rgba(90,130,190,.16)"; ctx.fill("evenodd");
+    ctx.strokeStyle = "#5b7fb0"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.setLineDash([2, 6]); ctx.lineWidth = 1; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0); ctx.setLineDash([]);
+  } else {
+    ctx.fillStyle = "rgba(90,130,190,.10)"; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.strokeStyle = "#5b7fb0"; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+  }
   ctx.fillStyle = "#3d5a85"; ctx.font = "bold 12px Barlow, system-ui"; ctx.textAlign = "left";
   const mat = H.S.material ? ` · ${H.S.material.toLowerCase()} ${H.S.thickness} mm` : "";
-  ctx.fillText(`Sheet ${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(4, x0 + 6), Math.max(14, y0 + 16));
+  ctx.fillText(`${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(4, x0 + 6), Math.max(14, y0 + 16));
   const wa = workArea();
   if (wa) {
     const [a0, b0] = S(wa.x[0], wa.y[1]), [a1, b1] = S(wa.x[1], wa.y[0]);
@@ -191,6 +210,7 @@ export function enter() {
   H.S.sheetMode = can;
   if (!can) { sk.layout = null; return; }
   $("sheetW").value = sheet.w; $("sheetH").value = sheet.h; $("sheetClr").value = sheet.clearance;
+  paintNest();
   sk.layout = LAYOUT; sk.opts.guides = true; sk.tool = null;
   $("layGrid").value = String(sk.opts.snap || 0);
   // shapes that sit inside another part's outline when the layout opens are holes of that part; anything new is a part
@@ -244,6 +264,7 @@ export function placeFree(sk, items) {
   return false;
 }
 function arrangeAll() {
+  if (sheet.remnant) { nestNow({ turn: 0, holes: false }); return; }      // the row packer only knows rectangles: on a remnant use the outline packer
   const sk = H.sketch(); sk.remember();
   const gap = gapMm() + 0.5;
   // biggest first, each with the things nested inside it
@@ -395,6 +416,8 @@ function bind() {
   const sk = () => H.sketch();
   $("layAdd").onclick = openAdd;
   $("layAuto").onclick = arrangeAll;
+  initNestUi({ sketch: sk, unitsOf, sheet, gapMm, region, kerf: () => H.kerf(), esc: (t) => H.esc(t), toast: (m, e) => H.toast(m, e), saveSheet, material: () => (H.S.material ? `${H.S.material} ${H.S.thickness} mm` : ""),
+    repaint: () => paint(), after: () => H.useShapeSoon() });
   $("layFit").onclick = () => { zoomParts = false; paintZoomBtns(); sk().fitView(); };
   $("layZoom").onclick = () => { zoomParts = true; paintZoomBtns(); sk().fitView(); };
   paintZoomBtns();

@@ -460,6 +460,22 @@
             <button type="button" id="layAuto" title="Pack every part onto the sheet with the right gaps">⊞ Arrange for me</button>
             <button type="button" id="btnEditParts" title="Change lengths, corners, holes in Make a part, then come back here">✏ Edit parts</button>
           </div>
+          <details class="nestbox" id="nestBox">
+            <summary><b>Nest to fit</b> <span class="muted small">pack by outline, use the holes, save the leftover</span></summary>
+            <div class="row wrap">
+              <label>Turn parts <select id="nestTurn"><option value="0">Don't turn them</option><option value="90" selected>Quarter turns</option><option value="45">45° steps</option><option value="15">15° steps</option><option value="5">5° steps (slower)</option></select></label>
+              <label class="check"><input type="checkbox" id="nestHoles" checked> Put small parts inside the holes of bigger ones</label>
+            </div>
+            <div class="row wrap"><button type="button" id="nestGo" class="accent">▦ Nest to fit</button><button type="button" id="nestStop" class="hidden">Stop</button></div>
+            <p class="muted small" id="nestInfo" role="status">Packs the parts by their real outline, keeping the cut-check gap between them. Locked parts stay where they are.</p>
+            <h4 class="nesth">Leftover sheet</h4>
+            <p class="muted small" id="remInfo"></p>
+            <div class="row wrap">
+              <button type="button" id="remSave">Save the leftover as a remnant</button>
+              <label class="grow">Lay out on <select id="remPick"></select></label>
+              <button type="button" id="remDel" class="small danger" title="Delete the picked saved remnant">Delete</button>
+            </div>
+          </details>
           <p class="muted small layhelp beginner-help">Drag a part to move it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet.</p>
           <div id="layoutSel" class="layoutsel hidden">
             <div class="selhead"><b id="laySelName">Part</b></div>
