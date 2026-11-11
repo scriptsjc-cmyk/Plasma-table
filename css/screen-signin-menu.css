@@ -1,0 +1,76 @@
+/* Sign-in page, account dialogs and the main menu. */
+
+.drop b { font-size: var(--fs-lg); font-weight: 650; }
+/* speed */
+.speedval b { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cutcheck li b { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; margin-top: 1px; }
+@media (orientation: landscape) and (max-height: 540px) {
+  body.short-land #demoAcctBar { font-size: 12px; padding: 4px 10px; margin-top: 4px; }
+}
+/* accounts / gating */
+.pill.acct { background: var(--well); border-color: var(--line-strong); color: var(--text); }
+.pill.acct.in { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+.locknote { margin: 10px 0 0; color: var(--warn); font-weight: 700; }
+.acctdlg { z-index: 120; top: var(--topbar-h, 56px); }
+.acctcard.wide { width: min(860px, 100%); }
+#connectLock { margin-top: 14px; }
+@media (max-width: 400px) {
+  #demoAcctBar { font-size: 13px; padding: 8px 10px; }
+}
+@media (max-width: 640px) {
+  .acctcard.wide { width: 100%; }
+}
+.locknote, .locknote.hidden + * { }
+.lockexplain { background: var(--well); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; margin: 8px 0 12px; }
+.lockexplain ul { margin: 6px 0 0; padding-left: 20px; }
+body.app-shell .banner { max-width: none; margin: 0; border-radius: 0; flex: none; padding: 6px 12px; }
+@media (orientation: landscape) and (max-height: 540px) {
+  body.app-shell.short-land #demoAcctBar { display: none; }
+}
+/* ---- ROUND 2: editing an imported drawing, save over / copy, undo bar */
+.undosave { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; align-items: center; background: var(--panel, #1f2a37); color: var(--fg, #eee); border: 1px solid var(--accent, #4aa3ff); border-radius: 10px; padding: 8px 12px; box-shadow: 0 6px 24px #0008; max-width: calc(100vw - 20px); font-size: 14px; }
+.undosave.hidden { display: none; }
+#saveDlg input { font-size: 16px; padding: 10px; }
+@media (max-width: 560px) {
+  #demoAcctBar { padding: 4px 8px; font-size: 12px; }
+}
+@media (min-width: 561px) and (max-width: 899px) {
+  #acctPill { max-width: 7em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+body.short-land .step[data-step="3"] > .nav .locknote { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.2; order: 8; }
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell .step[data-step="3"] > .nav .locknote { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.2; order: 8; }
+}
+#acctPill.pill.in::before { background: var(--go); }
+/* ---- ROUND 3 item 9: signup button, fixed settings, dense cut ticks, pierce jump ---- */
+#formSignUp .signup-submit { position: static; margin-top: 14px; }
+/* ---- sign-in page: the account dialog, full-screen and not dismissable ---- */
+.loginbrand { display: none; text-align: center; margin: 4px 0 12px; }
+.loginbrand h1 { margin: 6px 0 2px; font-size: var(--fs-2xl); }
+#accountDlg.loginpage { top: 0; background: var(--bg); align-items: center; }
+#accountDlg.loginpage .acctcard { max-height: 100dvh; background: transparent; border: 0; box-shadow: none; padding-top: 0; }
+#accountDlg.loginpage .loginbrand { display: block; }
+#accountDlg.loginpage .shapelib-head { display: none; }
+@media (max-height: 540px) {
+  #accountDlg.loginpage .loginbrand h1 { font-size: var(--fs-xl); }
+}
+/* ---- main menu ---- */
+body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-width: none; padding: 8px 12px 16px; }
+.menuwrap { max-width: 760px; margin: 28px auto; text-align: center; }
+.menuwrap h1 { font-size: var(--fs-2xl); margin: 0 0 18px; }
+.menubtns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.menubig .ico { width: 44px; height: 44px; margin: 0; }
+.menubig b { font-size: 28px; line-height: 1.1; }
+.menubig:hover { filter: brightness(1.04); }
+@media (max-width: 640px) {
+  .menubtns { grid-template-columns: 1fr; }
+  .menubig b { font-size: 24px; }
+  .menuwrap { margin: 12px auto; }
+}
+@media (max-height: 540px) {
+  .menuwrap { margin: 6px auto; }
+  .menuwrap h1 { font-size: var(--fs-lg); margin-bottom: 8px; }
+  .menubtns { grid-template-columns: 1fr 1fr; }
+  .menubig b { font-size: 22px; }
+  .menubig .ico { width: 30px; height: 30px; }
+}

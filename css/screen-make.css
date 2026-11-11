@@ -1,0 +1,413 @@
+/* Make a part: bar + Beginner / Pro switch, shape picker, size boxes, sketch toolbar and palette, Pro inspector, make tools. */
+
+.log .tx { color: var(--accent); }
+.shapeform { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--well); }
+.shapeform:empty { display: none; }
+.shapeform p { margin: 0; }
+.skbtns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.skhelp { margin: 0 0 8px; }
+.sktools { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+.skopts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin: 8px 0; }
+.skopts label { flex-direction: row; align-items: center; gap: 8px; color: var(--text); }
+.skopts select { background: var(--well); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; color: var(--text); min-height: var(--tap); width: auto; }
+.skopts .check { margin: 0; min-height: var(--tap); }
+.shapeform .tip { margin: 0 0 10px; color: var(--muted); font-size: var(--fs-sm); }
+.shapeform h4 { margin: 14px 0 0; font-size: var(--fs-sm); color: var(--muted); font-weight: 650; }
+.cutcheck:empty { display: none; }
+.cutcheck .cchead span { font-size: var(--fs-sm); color: var(--muted); font-weight: 400; }
+.cutcheck li.error b { background: var(--alarm); color: #fff; }
+.cutcheck li.warn b { background: var(--warn); color: #fff; }
+.cutcheck li.info b { background: var(--accent); color: #fff; }
+.cutcheck li.error { color: #7A1A12; }
+/* variants — wrap so nothing sits off-screen */
+.varbox { margin: 0 0 12px; }
+.varbox h4 { margin: 0 0 8px; font-size: var(--fs-sm); color: var(--muted); font-weight: 650; }
+.varrow, .varrow.wrap { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; padding: 2px 0 8px; }
+.protools { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin: 8px 0 4px; }
+.toolbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; gap: 8px;
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); }
+.toolbar.hidden { display: none !important; }
+.quickbar button i { font-style: normal; font-size: 16px; line-height: 1; display: grid; place-items: center; }
+.quickbar button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.quickbar button:disabled { opacity: .4; }
+body:not(.short-land) .cutgrid.with-qb ~ #toolBar,
+body:not(.short-land) .toolbar { bottom: 0; }
+@media (min-width: 900px) {
+  .cutgrid.with-qb #quickBar button i { font-size: 16px; line-height: 1; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  body.short-land .quickbar button i { font-size: 14px; line-height: 1; }
+  body.short-land .toolbar { left: max(8px, env(safe-area-inset-left)); right: auto; bottom: max(8px, env(safe-area-inset-bottom)); width: auto; }
+}
+#libSearch { width: 100%; min-height: var(--tap); background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 10px 12px; font-size: 16px; color: inherit; margin-bottom: 8px; }
+.libcats { display: flex; flex-wrap: wrap; gap: 6px; overflow: visible; padding: 2px 0 8px; }
+.libcats button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.libgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; overflow: auto; min-height: 0; flex: 1; padding-bottom: 8px; }
+.libgrid button svg { color: var(--text); display: block; }
+.libgrid button .libname { text-align: center; line-height: 1.2; }
+body.beginner .pro-only {
+    display: none !important; }
+body.beginner #proTools { display: none !important; }
+.partrow { display: flex; justify-content: space-between; gap: 10px; align-items: center;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
+@media (max-width: 520px) {
+  .sktools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .partrow { flex-direction: column; align-items: stretch; }
+  .quickbar button { flex-basis: calc(25% - 4px); }
+}
+.admtab { min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); background: var(--well); color: var(--text); border-radius: 6px; font-weight: 650; }
+.admtab.sel { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+.statcard span { color: var(--muted); font-size: 12px; font-weight: 650; }
+#announceBar.sev-info { background: var(--accent-weak); border: 1px solid var(--accent); color: var(--text); }
+#announceBar.sev-update { background: var(--ok-bg); border: 1px solid var(--go); color: var(--ok-text); }
+#announceBar.sev-warning { background: var(--warn-bg); border: 1px solid var(--warn); color: #7A3B00; }
+/* ---- UX2: contrast, sticky chrome, palette, editor, settings ---- */
+.warntext { color: var(--warn-text); font-weight: 650; margin: 8px 0; }
+.pill.torch.on { background: var(--alarm); border-color: var(--alarm); color: #fff; animation: torchpulse 1s ease-in-out infinite; }
+@media (max-width: 899px) and (orientation: portrait) {
+  /* phone portrait: fixed bottom palette, keep canvas in view */
+  body:not(.short-land) .cutgrid.with-qb #quickBar.quickbar {
+    position: sticky; bottom: 0; z-index: 20;
+    max-height: 40dvh; overflow: auto;
+    margin-bottom: 0;
+    box-shadow: 0 -2px 8px rgba(16,24,40,.08);
+  }
+}
+/* palette groups */
+.qb-group { flex: 0 0 100%; width: 100%; font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .04em; padding: 6px 4px 2px; }
+.qb-search { flex: 1 1 100%; width: 100%; margin: 0 0 4px; }
+.qb-search input { width: 100%; min-height: 44px; font-size: 16px; }
+@media (min-width: 900px) {
+  .cutgrid.with-qb #quickBar .qb-group { flex: 0 0 auto; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  body.short-land.running-job #exportRow,
+  body.short-land.running-job #showMachWrap,
+  body.short-land.running-job .fit { display: none !important; }
+}
+@media (max-width: 899px) {
+  body.running-job #exportRow, body.running-job #showMachWrap { display: none !important; }
+  body.running-job .runctl { position: sticky; bottom: 0; background: var(--card); padding: 8px 0; z-index: 8; }
+}
+body.shape-fs #quickBar { display: flex !important; grid-column: 1; grid-row: 1; flex-direction: column; overflow: auto; max-height: none; }
+body.shape-fs #fsBar { display: flex !important; }
+.fsbar { position: fixed; top: calc(var(--topbar-h, 56px) + 8px); right: 12px; z-index: 40;
+  display: flex; gap: 8px; align-items: center; background: var(--well); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 6px 8px; }
+.fsbar.hidden { display: none !important; }
+/* dimension typing */
+.dimedit { position: fixed; z-index: 140; background: var(--well); border: 1px solid var(--accent);
+  border-radius: var(--r); padding: 8px 10px; box-shadow: var(--shadow); min-width: 200px; }
+.dimedit.hidden { display: none !important; }
+.dimedit label { display: block; font-weight: 650; margin-bottom: 4px; }
+.dimedit input { width: 100%; min-height: 44px; font-size: 16px; }
+.settab { min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); background: var(--well); border-radius: 6px; font-weight: 650; }
+.settab.sel { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+.set-field { display: grid; gap: 4px; }
+.howto-step.sel { background: var(--accent-weak); border-color: var(--accent); }
+/* jog looks disabled when locked */
+.jogwrap.locked .j, .jogwrap.locked .steps button { opacity: .4; pointer-events: none; }
+body.app-shell { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
+@media (min-width: 900px) {
+  body.app-shell .cutgrid.with-qb #quickBar,
+  body.app-shell .cutgrid.editing .previewPane,
+  body.app-shell .cutgrid.with-qb .previewPane {
+    position: static; max-height: none; top: auto; align-self: stretch;
+  }
+  body.app-shell .cutgrid.with-qb #quickBar { height: 100%; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell:not(.short-land) .cutgrid.with-qb #quickBar.quickbar,
+  body.app-shell:not(.short-land) #quickBar.quickbar,
+  body.app-shell:not(.short-land) #quickBar {
+    grid-area: tools; position: static; top: auto; max-height: none; overflow: auto;
+    margin: 0; box-shadow: 0 -1px 4px rgba(16,24,40,.06);
+  }
+}
+@media (max-width: 899px) {
+  /* keep the run-screen STOP in view without growing the page */
+  body.app-shell.running-job .previewPane { max-height: none; }
+  body.app-shell.running-job .stepPane { max-height: none; flex: 1; }
+}
+/* ---- UX2: Pro / Beginner mode switch ---- */
+.modesw { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--well); }
+.modesw-btn { min-height: 44px; min-width: 44px; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; font-weight: 700; font-size: 12px; color: var(--muted); }
+.modesw-btn.sel, .modesw-btn.sel:hover:not(:disabled), .modesw-btn.sel:focus-visible { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+@media (max-width: 640px) {
+  /* UX2 fix: button:hover (0,2,1) used to beat .sel and left white text on a pale background */
+  .modesw-btn[data-mode="beginner"] { font-size: 0; padding: 4px 10px; min-width: 36px; }
+  .modesw-btn[data-mode="beginner"]::after { content: "Bgn"; font-size: 11px; }
+}
+body.pro-mode .beginner-help, body.pro-mode .guide.howto, body.pro-mode .mattip,
+body.pro-mode p.skhelp, body.pro-mode .step[data-step="2"] > p.muted,
+body.pro-mode .step[data-step="3"] > p.muted { display: none !important; }
+body.pro-mode #btnShapeFs { display: none; }
+/* ===================================================================================================== ROUND 2 ===================================================================================================== */
+.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.beginner-only { display: none; }
+body.beginner .beginner-only { display: block; }
+body.pro-mode .beginner-only { display: none !important; }
+.qbwhy { margin: 4px 0 0; padding: 6px 10px; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); color: var(--warn-text); font-size: 14px; }
+.qbwhy.hidden { display: none; }
+.quickbar button[aria-disabled="true"],
+[aria-disabled="true"][data-why] { opacity: .5; cursor: help; }
+#fit .fit-demo-btn { display: inline-flex; align-items: center; width: auto; max-width: 100%; min-height: 40px;
+  margin-top: 4px; padding: 8px 12px; font-size: 14px; text-align: left; }
+.cutlist .grip { cursor: grab; color: var(--muted); font-size: 18px; padding: 0 4px; touch-action: none; }
+/* ---- size check + straight cut dialogs ---- */
+#sizeDlg, #straightDlg, #resizeDlg { top: var(--topbar-h, 56px); z-index: 125; }
+.sizetext { font-size: 20px; margin: 4px 0 8px; }
+.sizescale { align-items: flex-end; margin-top: 8px; }
+.sizescale input { max-width: 110px; }
+/* ===================================================================================================== BEGINNER One thing at a time. Big plain buttons, short sentences, advanced things not on the page at all. */
+.guidehead { position: relative; margin: 0; padding: 12px 16px 14px; background: var(--accent-weak); border-bottom: 1px solid var(--line); }
+.guidehead b { display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.guidehead p { margin: 2px 0 0; font-size: 17px; line-height: 1.35; }
+.guidehead::after { content: ""; position: absolute; left: 0; bottom: 0; height: 5px; width: calc(var(--prog, 0%) + 12%); background: var(--accent); border-radius: 0 3px 3px 0; transition: width .25s; }
+/* step 1: shapes first */
+.bgpick { margin: 0 0 10px; }
+.bgshapes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.bgshapes button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 112px;
+  padding: 10px 6px; background: var(--well); border: 2px solid var(--line-strong); border-radius: 12px; font-size: 17px; font-weight: 700; }
+.bgshapes button i { font-style: normal; display: block; color: var(--text); line-height: 0; }
+.bgshapes button.sel { border-color: var(--accent); background: var(--accent-weak); }
+.bgmore { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+body.beginner .drop .small { display: none; }
+body.beginner #srcShape > *:not(#shapeForm):not(#cutCheck) { display: none !important; }
+body.beginner .shapeform .tip { font-size: 16px; }
+body.beginner .shapeform .grid2 label { font-size: 16px; }
+body.beginner .shapeform input { min-height: 52px; font-size: 20px; }
+body.beginner #btnSavePartQuick, body.beginner #btnExportMenu, body.beginner .showmach { display: none; }
+body.beginner .nav .next, body.beginner #btnStart { flex: 1 1 auto; max-width: none; min-height: 72px; font-size: 22px; font-weight: 800; background: var(--accent); border-color: var(--accent); color: var(--on-accent); border-radius: 12px; }
+body.beginner .nav .next:disabled, body.beginner #btnStart:disabled { background: var(--well); border-color: var(--line-strong); color: var(--muted); }
+body.beginner .livespeed .row, body.beginner .livespeed > .muted { display: none; }
+body.beginner .step[data-step="4"] .nav { display: none; }
+/* ===================================================================================================== PRO Everything on one screen, tight spacing, no explanations. Preview left, panels right. */
+body.pro-mode .guidehead { display: none; }
+@media (max-width: 899px) {
+  .guidehead { padding: 8px 12px 10px; }
+  .guidehead b { font-size: 12px; }
+  .guidehead p { font-size: 15px; line-height: 1.3; }
+  .bgshapes { gap: 8px; }
+  .bgshapes button { min-height: 92px; font-size: 15px; }
+}
+@media (min-width: 900px) and (max-height: 800px) {
+  .guidehead { padding: 6px 16px 10px; }
+  .guidehead p { font-size: 15px; }
+  .bgshapes button { min-height: 84px; font-size: 16px; padding: 6px; }
+  .bgshapes button svg { height: 40px; width: auto; }
+  body.beginner .nav .next, body.beginner #btnStart { min-height: 60px; font-size: 20px; }
+}
+/* Beginner: once a shape is picked the picker folds away and the size boxes come first */
+#bgChange { display: none; width: 100%; margin-bottom: 8px; min-height: 52px; font-size: 16px; }
+body.bg-picked #bgChange { display: block; }
+body.bg-picked .bgshapes,
+body.bg-picked .bgmore { display: none; }
+@media (max-width: 899px) {
+  body.beginner .previewDock .stats span:first-child { display: none; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  /* phone landscape, Beginner: one-line guide, shapes in a single row */
+  body.short-land .guidehead { padding: 4px 12px 8px; display: flex; align-items: baseline; gap: 10px; }
+  body.short-land .guidehead b { flex: none; }
+  body.short-land .guidehead p { display: none; }
+  body.short-land .bgshapes { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  body.short-land .bgshapes button { min-height: 62px; font-size: 12px; padding: 4px 2px; gap: 2px; }
+  body.short-land .bgshapes button svg { height: 28px; width: auto; }
+  body.short-land.beginner #bgChange { min-height: 44px; }
+  body.short-land.beginner .nav .next, body.short-land.beginner #btnStart { min-height: 52px; font-size: 18px; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  body.beginner .nav .next, body.beginner #btnStart { min-height: 64px; font-size: 20px; }
+}
+#saveDlg label { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.fsbar #fsSave { margin-left: 6px; }
+#btnEditDrawing { border-color: var(--accent, #4aa3ff); }
+@media (max-width: 899px) and (orientation: portrait) {
+  /* phone portrait, step 3: the picture and the controls both need room, so the long help line goes and the nav scrolls with the content */
+  body.beginner[data-step="3"] #ghHelp { display: none; }
+  body.beginner[data-step="3"] .guidehead { padding-top: 4px; padding-bottom: 6px; }
+}
+.pftoggle .caret { width: 1em; display: inline-block; }
+.pthumb { width: 56px; height: 44px; color: var(--accent, #2a6cf0); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.pthumb.none { color: var(--muted); font-size: 20px; }
+.pthumb.sm { width: 34px; height: 26px; padding: 1px; vertical-align: middle; }
+.errchip { color: var(--danger, #c0392b); font-weight: 650; }
+.warnchip { color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 1px 6px; }
+@media (max-width: 560px) {
+  .topbar.menu-open .topmenu { display: flex; }
+  .topmenu .modesw { display: flex; width: 100%; }
+  .topmenu .modesw-btn[data-mode="beginner"]::after { content: none; }
+  body.beginner[data-step="3"] .guidehead { padding: 4px 10px 6px; }
+}
+@media (min-width: 561px) and (max-width: 899px) {
+  #btnHome span { display: none; }
+}
+.quickbar button i .ico { width: 18px; height: 18px; margin: 0; }
+.badge.Run, .badge.Jog, .badge.Home,
+.pill.chip:not(.practice),
+.settab.sel, .admtab.sel,
+.guidehead b { color: var(--accent-text); }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-color: var(--accent);
+}
+body.pro-mode.pt-insp-collapsed { --pt-insp-w: 40px; }
+#ptInspector { display: none; }
+body.beginner #ptInspector { display: none !important; }
+body.pro-mode:not(.beginner) #cutView:has(#ptInspector) > #ptInspector {
+  grid-column: 2; grid-row: 1 / span 3; min-width: 0; min-height: 0;
+}
+body.pro-mode #ptInspector {
+  display: flex;
+  flex-direction: column;
+  width: var(--pt-insp-w, 252px);
+  min-height: 0;
+  overflow: hidden;
+  background: var(--card);
+  border-left: 1px solid var(--line);
+  color: var(--text);
+}
+body.pro-mode.shape-fs .fsbar { right: calc(var(--pt-insp-w, 252px) + 8px); }
+/* ROUND 5 item 13: the Done / Save bar floated over the Beginner/Pro switch. It now sits in the make bar's free left slot (the "Make a part" title steps aside) and the Esc hint, which a phone has no use for, drops out on narrow screens. */
+body.shape-fs[data-screen="make"] #makeBar h2 { display: none; }
+body.shape-fs[data-screen="make"] #makeBar { justify-content: flex-end; }
+body.shape-fs[data-screen="make"] .fsbar { top: calc(var(--topbar-h, 56px) + 5px); left: 12px; right: auto; padding: 0; border: 0; background: transparent; gap: 6px; max-width: calc(100vw - 210px); }
+@media (max-width: 899px) {
+  body.shape-fs[data-screen="make"] .fsbar > span { display: none; }
+}
+@media (max-width: 400px) {
+  body.shape-fs[data-screen="make"] #makeBar .modesw-btn { min-width: 62px; padding-left: 8px; padding-right: 8px; }
+  body.shape-fs[data-screen="make"] .fsbar { left: 8px; gap: 4px; }
+  body.shape-fs[data-screen="make"] .fsbar #fsSave { margin-left: 0; }
+}
+#ptInspector .pt-insp-toggle .ico:last-child { margin-left: auto; }
+#ptInspector .pt-insp-title { min-width: 0; }
+#ptInspector.is-collapsed .pt-insp-toggle .ico:last-child { margin-left: 0; }
+#ptInspector.is-collapsed .pt-insp-title {
+  writing-mode: vertical-rl;
+  letter-spacing: .08em;
+}
+#ptInspector .pt-insp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 2px 8px 6px;
+}
+#ptInspector h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+#ptInspector h3 .ico { width: 14px; height: 14px; }
+#ptInspector .pt-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+}
+#ptInspector .pt-span { grid-column: 1 / -1; }
+#ptInspector .pt-empty {
+  margin: 8px 0;
+  padding: 14px 8px;
+  text-align: center;
+  background: var(--well);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r);
+}
+#ptInspector .pt-empty .ico { width: 22px; height: 22px; color: var(--muted); }
+#ptInspector .pt-note { margin: 0 0 4px; font-size: 12px; }
+#ptInspector .pt-layers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+#ptInspector .pt-layer-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+#ptInspector .pt-layer-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#ptInspector .pt-layer-row.is-hidden .pt-layer-name { opacity: .55; }
+#ptInspector .pt-swatch {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
+  border: 1px solid var(--line-strong);
+  background: var(--accent);
+}
+body[data-screen="cut"] #modeChip:not(.hidden), body[data-screen="cut"] #practiceChip:not(.hidden) { display: inline-block; }
+body[data-screen="make"] #makeBar { display: flex; }
+@media (max-width: 520px) {
+  #btnHome span { display: none; }
+}
+body[data-screen="cut"] #srcShape, body[data-screen="cut"] #bgPick, body[data-screen="cut"] #guideHead, body[data-screen="cut"] #quickBar,
+body[data-screen="cut"] #fsBar, body[data-screen="cut"] #toolBar { display: none !important; }
+/* make bar: title + the Beginner / Pro switch (the only place it lives) */
+.makebar { align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; background: var(--card); border-bottom: 1px solid var(--line); flex: none; }
+.makebar h2 { margin: 0; font-size: var(--fs-lg); }
+body.shape-fs .makebar { display: none; }
+@media (max-height: 540px) {
+  #accountDlg.loginpage .loginbrand p { display: none; }
+}
+@media (max-width: 640px) {
+  .menubig > span { display: none; }
+}
+body[data-screen="cut"] .step[data-step="4"] .nav { display: none; }
+/* Round 5 (CAD): the cut check and job warnings belong to cutting, not to designing */
+body[data-screen="make"] #warnings, body[data-screen="make"] #cutCheck { display: none !important; }
+/* Round 5 (safety): the TORCH ON pill must always be visible while the torch is lit, even on the short landscape phone screen */
+body.short-land[data-screen="cut"] #torchPill.on:not([hidden]) { display: inline-block !important; }
+/* Round 5 (bugs 20): the inspector's job-wide cut settings sit in their own labelled box */
+#ptInspector .pt-jobset { margin: 8px 0 0; padding: 6px 8px 8px; border: 1px dashed var(--line); border-radius: 8px; min-width: 0; }
+#ptInspector .pt-jobset legend { padding: 0 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+/* Round 5 (bugs 23): maths keys under the size box on touch screens (the iOS decimal keypad has no operators or Return) */
+.dimops { display: none; gap: 6px; margin-top: 6px; }
+@media (pointer: coarse), (hover: none) {
+  .dimops { display: flex; }
+}
+/* the size box (with its maths row) must fit on a phone on its side: drop the keyboard-hint line and tighten the rows */
+body.short-land .dimedit { padding: 6px 10px; }
+body.short-land .dimedit > p.small { display: none; }
+body.short-land .dimedit .dimops { margin-top: 4px; }
+/* ---- Round 5: Add text and Trace a picture (js/maketools.js) ---- */
+.mtdlg { z-index: 140; }
+.mtdlg .shapelib-card { max-height: calc(100dvh - 24px); overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.mtdlg textarea { width: 100%; min-height: 64px; resize: vertical; }
+.mtdlg canvas { width: 100%; height: auto; max-height: 34dvh; border: 1px solid var(--line, #cbd5df); border-radius: 10px; background: #fff; }
+.mtdlg .mt-pro { display: none; }
+.mtdlg.is-pro .mt-pro { display: block; }
+.mtdlg.is-pro .mt-guide, .mtdlg.is-pro .mt-step { display: none; }
+.mt-lab { display: flex; align-items: center; }
+.mt-cols { display: flex; flex-direction: column; gap: 8px; }
+.mt-ctl, .mt-view { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+@media (min-width: 820px) {
+  .mtdlg .shapelib-card { width: min(960px, 100%); }
+  .mt-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .mt-view { position: sticky; top: 0; }
+}
+.mt-step { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 6px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; flex: none; }
+.tiles button.mktool i { font-style: normal; font-weight: 700; }
+@media (max-height: 560px) {
+  .mtdlg canvas { max-height: 24dvh; }
+  .mtdlg .mt-guide { display: none; }
+}

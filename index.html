@@ -11,7 +11,15 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>Plasma Table</title>
-<link rel="stylesheet" href="style.css">
+<!-- Stylesheets: the ORDER matters (later files win ties). See the header of each file in css/. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/screen-signin-menu.css">
+<link rel="stylesheet" href="css/screen-make.css">
+<link rel="stylesheet" href="css/screen-cut.css">
+<link rel="stylesheet" href="css/screen-admin.css">
 <script src="js/sw-register.js"></script>
 </head>
 <body class="app-shell" data-screen="boot">

@@ -1,0 +1,649 @@
+/* Cutting screen: Part / Bed & start / Cut steps, set-up cards, run screen, STOP + E-stop, live torch panel, start points, coupon. */
+
+.arcmark.brand-mark { width: 56px; height: 56px; }
+canvas#preview.placing { touch-action: none; }
+.fit { margin-top: 8px; font-weight: 700; font-size: var(--fs-md); }
+.drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.amps { margin-top: 16px; padding: 14px 16px; border-radius: var(--r); background: var(--well);
+  border: 1px solid var(--line); }
+/* jog */
+.jogwrap { margin-top: 8px; }
+#spSlider::-webkit-slider-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; }
+#spSlider::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; }
+/* step 4 / 5 */
+.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.checklist label:has(input:checked) { border-color: var(--go); background: var(--ok-bg); }
+.blockers ul { margin: 6px 0 0; padding-left: 20px; }
+.bigpct { font-size: 64px; font-weight: 700; line-height: 1; margin: 10px 0; font-variant-numeric: tabular-nums; }
+.runnums { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 6px 0 10px; }
+.runnums > div:last-child { text-align: right; }
+.runnums .bigpct { margin: 0; }
+.progress { height: 16px; background: var(--well); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
+.wizard li.done > b::after { content: " ✓"; color: var(--ok-text); }
+.cutcheck { margin-top: 14px; padding: 12px 14px; border-radius: var(--r); background: var(--well); border: 1px solid var(--line); }
+.cutcheck .cchead { font-size: var(--fs-lg); font-weight: 650; margin-bottom: 6px; }
+@media (orientation: landscape) and (max-height: 540px) {
+  body.short-land .stats, body.short-land .fit { margin-top: 2px; font-size: 12px; }
+  body.short-land #fit,
+  body.short-land #jobStats,
+  body.short-land #exportRow {
+    position: absolute; z-index: 3; left: 4px; right: 4px; margin: 0;
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    border: 1px solid var(--line); border-radius: var(--r); padding: 2px 6px;
+  }
+  body.short-land #exportRow { bottom: 4px; gap: 4px; }
+  body.short-land #jobStats { bottom: 44px; font-size: 11px; }
+  body.short-land #fit { top: 4px; bottom: auto; font-size: 11px; padding: 2px 6px; }
+}
+/* ================= ROUND 3: parts folders + batch DXF import ================= */
+.partlist { display: grid; gap: 8px; margin-top: 10px; overflow: auto; max-height: 52vh; }
+#exportRow { margin-top: 8px; }
+@media (max-width: 520px) {
+  .shapeform .alignrow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 400px) {
+  .stop { padding: 8px 10px; min-width: 52px; letter-spacing: 0.4px; }
+}
+.signupchart i { display: block; flex: 1; background: var(--accent); min-height: 2px; border-radius: 2px 2px 0 0; }
+.annrow .muted, .userrow .muted { font-size: 12px; }
+.edgepanel h3 { margin: 0 0 6px; }
+.adv-set .muted { font-size: 12px; }
+@media (max-width: 640px) {
+  .admtab, .edgepanel button, #announceBar button { min-height: 44px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .admtab { min-height: 36px; }
+}
+.checkmat { margin: 0 0 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 650; }
+@media (orientation: landscape) and (max-height: 540px) {
+  /* landscape: compact stats, don't cover 28% of the canvas */
+  body.short-land #fit,
+  body.short-land #jobStats,
+  body.short-land #exportRow {
+    position: static; left: auto; right: auto;
+  }
+  body.short-land .stats, body.short-land .fit { font-size: 12px; margin-top: 2px; }
+  body.short-land .exportrow { gap: 4px; }
+}
+/* phone run screen: STOP is the biggest control and stays in view */
+.runctl { display: flex; gap: 8px; align-items: stretch; }
+.runctl #btnPause { flex: 1 1 auto; }
+body.shape-fs #jobStats, body.shape-fs #exportRow { display: none !important; }
+.howto-step { text-align: left; min-height: 44px; }
+.howto-body p { margin: 0 0 12px; }
+@media (max-width: 640px) {
+  .settab, .howto-step, #btnSettings, #btnHowto { min-height: 44px; }
+}
+.exportrow { position: relative; }
+.exportpop { position: absolute; bottom: 100%; left: 0; z-index: 16; background: var(--well);
+  border: 1px solid var(--line); border-radius: var(--r); padding: 10px; min-width: 240px; box-shadow: var(--shadow); }
+.exportpop.hidden { display: none !important; }
+body.app-shell .previewDock { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
+  padding: 4px 6px 2px; flex: none; border-top: 1px solid var(--line); background: var(--card); min-height: 32px; }
+body.app-shell .previewDock .fit, body.app-shell .previewDock .stats, body.app-shell .previewDock .exportrow { margin: 0; }
+body.app-shell .previewDock .fit { font-size: 13px; font-weight: 650; }
+body.app-shell .previewDock .stats { font-size: 12px; gap: 2px 12px; }
+body.app-shell .previewDock .exportrow { gap: 6px; }
+body.app-shell .previewDock .small { min-height: 36px; padding: 4px 8px; }
+body.app-shell .drop { min-height: 88px; padding: 10px; }
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell:not(.short-land) .previewDock {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+    max-height: 42%; overflow: auto;
+    background: color-mix(in srgb, var(--card) 94%, transparent);
+  }
+}
+@media (min-width: 1280px) {
+  body.app-shell[data-screen="cut"] .step[data-step="3"] > #layoutCard { grid-column: 1; grid-row: 1; }
+  body.app-shell[data-screen="cut"] .step[data-step="3"] > #zeroCard { grid-column: 2; grid-row: 1; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  /* short landscape: give the canvas the row; dock overlays the bottom of the preview */
+  body.app-shell.short-land .previewDock {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
+    max-height: 58%; overflow: auto;   /* never cover the top of the preview (the Show-machine tick lives there) */
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    border-top: 1px solid var(--line);
+  }
+}
+.matpreset-wrap { display: none; }
+body.pro-mode .matpreset-wrap { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; font-weight: 650; }
+body.pro-mode #materials, body.pro-mode .step[data-step="2"] > h3 { /* keep chips as a compact backup */ }
+body.pro-mode details.guide:not(.adjust) { display: none; }
+/* ---- STOP: the biggest control at every width (72 x 72 minimum on phones) ---- */
+.stop { min-height: 56px; min-width: 88px; font-size: 20px; }
+@media (max-width: 899px) {
+  #btnStop.stop { min-height: 72px; min-width: 72px; width: 80px; font-size: 20px; padding: 6px; }
+}
+@media (min-width: 900px) {
+  #btnStop.stop { min-height: 60px; min-width: 100px; font-size: 22px; }
+}
+body.short-land #btnStop.stop { min-height: 72px; min-width: 72px; }
+/* ---- playable preview ---- */
+.playrow { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: nowrap; }
+.playrow.hidden { display: none; }
+.playrow button { min-height: 44px; flex: none; }
+.playrow input[type="range"] { flex: 1 1 auto; min-width: 60px; accent-color: var(--accent); height: 28px; }
+.playtime { flex: none; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* ---- Pro: cut list, CAM panel, toolbar, delay row ---- */
+.cutlist { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; max-height: 240px; overflow: auto; }
+.cutlist li { display: flex; align-items: center; gap: 8px; background: var(--well); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; min-height: 40px; }
+.cutlist li.off { opacity: .55; }
+.cutlist label { flex: 1; display: flex; align-items: center; gap: 8px; margin: 0; min-height: 36px; }
+.cutlist label b { min-width: 22px; text-align: right; }
+.cutlist .mv { display: flex; gap: 2px; }
+.cutlist .mv button { min-height: 32px; min-width: 32px; padding: 0 6px; font-size: 12px; }
+.campanel, .cutlistcard, .delayrow, .startcut { margin-top: 10px; }
+.campanel h3, .cutlistcard h3 { margin: 0 0 6px; }
+.delayrow .row { margin-top: 4px; }
+.delayrow button { min-height: 48px; }
+.startcut { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); padding: 8px 12px; }
+.startcut select { min-height: 44px; font-size: 16px; }
+.restartbox { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); padding: 10px 12px; margin: 10px 0; }
+.restartbox select { min-height: 48px; font-size: 18px; }
+.guidehead #ghTitle { display: block; font-size: 26px; font-weight: 800; line-height: 1.15; margin: 2px 0; }
+body.beginner .drop { min-height: 0; padding: 14px 12px; }
+body.beginner #recentWrap h3 { display: none; }
+body.beginner #btnStart:not(:disabled) { background: var(--go); border-color: var(--go); color: var(--on-go); }
+/* step 2: material */
+body.beginner .matline { font-size: 18px; margin: 0 0 10px; }
+body.beginner #materials button { min-height: 76px; font-size: 22px; }
+body.beginner #thicknesses { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+body.beginner #thicknesses button { min-height: 64px; font-size: 20px; }
+body.beginner #cutCheck2, body.beginner .step[data-step="2"] details, body.beginner .step[data-step="2"] .matpreset-wrap { display: none !important; }
+body.beginner .amps .big { font-size: 40px; }
+body.beginner #btnZero { min-height: 72px; font-size: 22px; }
+body.beginner #btnTrace { min-height: 56px; font-size: 16px; }
+/* step 4 / 5 */
+body.beginner .checklist label { font-size: 18px; padding: 10px 6px; min-height: 52px; }
+body.beginner .step[data-step="3"] #startCutRow { display: none; }
+body.beginner .step[data-step="3"] #startCutRow:not(.hidden) { display: block; }
+body.beginner .step[data-step="4"] .runnums .bigpct { font-size: 56px; }
+body.pro-mode .amps { padding: 6px 10px; }
+body.pro-mode .amps .big { font-size: 24px; }
+body.pro-mode .stepPane h3 { font-size: 13px; margin: 8px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+body.pro-mode .campanel input, body.pro-mode .adjust input, body.pro-mode .cutlistcard input[type="number"] { min-height: 36px; font-size: 14px; }
+body.pro-mode .s2cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 14px; }
+@media (min-width: 1100px) {
+  body.pro-mode .s2cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}
+body.pro-mode .s2a > *:first-child, body.pro-mode .s2b > *:first-child { margin-top: 0; }
+body.pro-mode .step[data-step="3"] .jogmount { margin-top: 4px; }
+body.pro-mode .checklist label { min-height: 36px; padding: 4px 6px; font-size: 14px; }
+@media (max-width: 899px) {
+  .guidehead #ghTitle { font-size: 22px; }
+  .bgmore button { min-height: 52px; font-size: 16px; }
+}
+@media (min-width: 900px) and (max-height: 800px) {
+  .guidehead #ghTitle { font-size: 22px; }
+  .bgmore button { min-height: 50px; font-size: 16px; }
+}
+body.beginner .previewDock .exportrow { display: none; }
+@media (min-width: 900px) {
+  body.beginner .previewDock .exportrow { display: flex; }
+  body.beginner #btnExportMenu, body.beginner #btnSavePartQuick { display: none; }
+}
+@media (max-width: 899px) {
+  /* a picture imported from a file can still be edited in Beginner on a phone */
+  body.beginner .previewDock .exportrow { display: flex; }
+  body.beginner #btnExport, body.beginner #btnExportMenu, body.beginner #btnSavePartQuick { display: none; }
+}
+body.beginner[data-step="3"] #exportRow, body.beginner[data-step="4"] #exportRow { display: none; }
+@media (max-width: 899px) {
+  body.beginner .previewDock { position: static !important; max-height: none !important; background: var(--card) !important; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  body.short-land .guidehead #ghTitle { font-size: 18px; margin: 0; }
+  body.short-land .bgmore { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+  body.short-land .bgmore button { min-height: 44px; font-size: 13px; padding: 4px; }
+}
+/* Beginner position step: arrows on the left, Start here on the right (laptop); readouts and lamps are not needed */
+body.beginner .jogwrap .small-pos, body.beginner .jogwrap .lamps.mini { display: none; }
+body.beginner #zeroState { font-size: 14px; }
+@media (min-width: 900px) {
+  body.beginner .zerobody { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-content: start; gap: 8px 14px; }
+  body.beginner .zerobody .jogmount { grid-column: 1; grid-row: 1 / span 3; }
+  body.beginner .zerobody > :not(.jogmount) { grid-column: 2; }
+}
+@media (max-height: 800px) {
+  body.beginner .checklist label { min-height: 44px; padding: 6px; font-size: 16px; }
+  body.beginner #materials button { min-height: 60px; font-size: 20px; }
+  body.beginner #thicknesses button { min-height: 52px; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  body.beginner .previewDock .stats { display: none; }
+  body.beginner:not([data-step="2"]) #playRow { display: none; }
+  body.beginner .previewDock { padding: 2px 6px; min-height: 0; }
+  body.beginner .previewDock .fit:empty { display: none; }
+  body.beginner #materials { grid-template-columns: 1fr; }
+  body.beginner #materials button { min-height: 56px; }
+  body.beginner[data-step="1"] .previewDock .fit, body.beginner[data-step="2"] .previewDock .fit { display: none; }
+}
+/* more room for the steps: rotate to portrait for Move and Setup */
+body.pro-mode .speedhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+body.pro-mode .speedrow button.xl { min-height: 40px; min-width: 52px; }
+body.pro-mode .speedrow { gap: 8px; }
+.partrow .row { flex-wrap: wrap; gap: 6px; }
+.custsize .wide2 { grid-column: 1 / -1; }
+/* ---- ROUND 2: step 3 "Get set up" (sheet layout + start point + checks) */
+.setupcard { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 6px 10px; background: var(--card); }
+.setupcard > summary { cursor: pointer; padding: 6px 0; font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; list-style: none; }
+.setupcard > summary::-webkit-details-marker { display: none; }
+.setupcard > summary::before { content: "▾"; color: var(--muted, #667); }
+.setupcard:not([open]) > summary::before { content: "▸"; }
+.layoutstate { font-size: 13px; font-weight: 600; }
+.layoutstate.good { color: #1e7a46; }
+.layoutstate.bad { color: #c42b1c; }
+.sheetrow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 4px 0; }
+.sheetrow label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.sheetrow input { width: 86px; padding: 8px; font-size: 16px; }
+.laybtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.laybtns button { flex: 1 1 140px; min-height: 52px; font-size: 16px; }
+.layoutsel { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px; }
+.layoutsel.hidden { display: none; }
+.laytools { display: flex; flex-wrap: wrap; gap: 6px; }
+.laytools button { flex: 1 1 88px; min-height: 48px; font-size: 15px; }
+.layangle, .layfine, .laygrid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
+.layangle input { width: 90px; padding: 8px; font-size: 16px; }
+.layfine button { min-width: 44px; min-height: 44px; }
+.layproblems { margin: 6px 0 0; padding-left: 18px; color: #c42b1c; font-size: 14px; }
+.layproblems:empty { display: none; }
+.addlist .addrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.addlist .qty { display: flex; align-items: center; gap: 6px; }
+.addlist .qty input { width: 64px; padding: 8px; font-size: 16px; }
+.addsaved { overflow: auto; display: flex; flex-direction: column; gap: 2px; max-height: max(22dvh, 130px); }
+#addPartsDlg .shapelib-card { max-height: calc(100dvh - 24px); overflow: auto; }
+body.beginner #zeroCard .keyhint { display: none; }
+body.pro-mode .setupcard { margin: 4px 0; padding: 2px 8px; }
+body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
+@media (min-width: 1100px) {
+  body.pro-mode .zerobody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 12px; }
+  body.pro-mode .zerobody .jogmount { grid-row: 1 / span 3; }
+  body.pro-mode .zerobody > :not(.jogmount) { grid-column: 2; }
+}
+body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
+body[data-step="3"] #exportRow { display: none; }
+/* ---- ROUND 2: optional portrait "turn your phone sideways" cover. Only on the cutting bed (cut screen, "Bed & start" step, Cut tab): sign-in, the menu, Make a part and the Part step all work upright. A clean full-screen overlay: no STOP, no banners, nothing else on top of it. It is only paint (nothing is paused, hidden from the app or reset), so a running job carries on underneath. Off unless body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
+.turnoverlay { display: none; }
+@media (max-width: 599px) and (orientation: portrait) {
+  body.turn-on[data-screen="cut"][data-step="3"]:not(.job-live):has(.tab[data-tab="cut"].sel) .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+  body.turn-on .turnoverlay .turnicon { font-size: 72px; line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
+  body.turn-on .turnoverlay .turntext { font-size: 26px; font-weight: 700; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  body[data-step="3"] .previewDock .fit { font-size: 12px; margin: 0; }
+}
+.pfolder { border: 1px solid var(--line); border-radius: var(--r); background: var(--well); }
+.pfhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 6px; }
+.pftoggle { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; text-align: left; min-height: var(--tap, 44px); background: transparent; border: 0; }
+.pfbody { display: grid; gap: 6px; padding: 0 6px 8px; }
+.pfolder.closed .pfbody { display: none; }
+.pfempty { margin: 4px 6px; }
+.partrow { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 6px 10px; align-items: center; justify-content: stretch; }
+.partrow > .row { grid-column: 1 / -1; flex-wrap: wrap; gap: 6px; }
+.partinfo { min-width: 0; overflow-wrap: anywhere; }
+.movesel { min-height: 36px; max-width: 150px; }
+.partstools { margin: 6px 0; }
+.addfolder { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; margin-bottom: 6px; }
+.savedrow.folderrow { font-weight: 600; }
+/* the import dialog always fits under the top bar: the file list scrolls, the Import button stays on screen */
+.impdlg { z-index: 125; align-items: flex-start; padding: 6px; }
+.impdrop { min-height: 70px !important; margin: 8px 0; }
+.implist { display: grid; gap: 6px; max-height: 38vh; overflow: auto; margin: 8px 0; }
+.improw { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.improw.bad { border-color: var(--danger, #c0392b); }
+.improw .grow { min-width: 0; overflow-wrap: anywhere; }
+.unitbtns { display: flex; gap: 4px; flex: none; }
+.unitbtns button.sel { background: var(--accent-weak); border-color: var(--accent); font-weight: 700; }
+.unitall { flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+#impNote.bad { color: var(--danger, #c0392b); font-weight: 650; }
+@media (max-width: 640px) {
+  .improw { flex-wrap: wrap; }
+  .unitbtns { width: 100%; }
+  .unitbtns button { flex: 1; min-height: 40px; }
+}
+@media (max-height: 520px) {
+  .implist { max-height: 30vh; }
+  .impdrop { min-height: 44px !important; padding: 6px !important; }
+}
+.impdlg .shapelib-card { display: flex; flex-direction: column; max-height: calc(100dvh - var(--topbar-h, 56px) - 12px); overflow: hidden; }
+.impdlg .shapelib-card > * { flex: none; }
+.impdlg .shapelib-card > .implist { flex: 1 1 auto; min-height: 96px; max-height: none; }
+.impmeta { display: grid; gap: 6px; }
+@media (max-height: 520px) {
+  .impintro { display: none; }
+  .impmeta { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 10px; }
+  .impdlg .shapelib-head { margin-bottom: 2px; position: sticky; top: 0; background: var(--well); z-index: 2; }
+  .impdlg .shapelib-head h2 { font-size: 18px; margin: 0; }
+  .impdlg .unitall { margin: 0; }
+  .impdlg .improw { padding: 3px 6px; }
+  .impdlg #impGo { min-height: 44px; }
+  .impdlg .implist { margin: 4px 0; }
+  .impdlg .shapelib-card { overflow-y: auto; }
+  .impdlg .shapelib-card > .implist { flex: none; overflow: visible; min-height: 0; }
+  .impdlg .shapelib-card > .row:last-child { position: sticky; bottom: 0; background: var(--well); padding: 4px 0 2px; z-index: 2; }
+}
+.savedrow { display: flex; align-items: center; gap: 8px; min-height: 40px; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; margin: 0; }
+.savedrow input[type=checkbox] { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
+@media (max-height: 520px) {
+  /* Add parts on a short landscape phone: the whole card scrolls, the saved list does not scroll inside it (its folder ticks stay reachable) */
+  .addsaved { max-height: none; overflow: visible; }
+  #addPartsDlg .shapelib-card { max-height: calc(100dvh - 70px); margin-top: 58px; }
+}
+@media (max-width: 560px) {
+  .topmenu .modesw-btn { flex: 1; }
+  .topmenu .modesw-btn[data-mode="beginner"] { font-size: 13px; }
+  #topMenu #connPill, body.demo-on #topMenu #connPill { max-width: none; font-size: 13px; white-space: normal; }
+  body.beginner[data-step="3"] .guidehead #ghTitle { font-size: 18px; }
+}
+@media (min-width: 561px) and (max-width: 899px) {
+  /* arrow only; it keeps its "Back to the main menu" label */
+  #btnHome.homebtn { min-width: 40px; padding-left: 10px; padding-right: 10px; }
+  #connPill, body.demo-on #connPill { max-width: 10em; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+.startwhy { flex: 1 1 100%; order: 9; margin: 2px 0 0; font-size: 13px; line-height: 1.3; font-weight: 650; color: var(--warn-text); overflow-wrap: anywhere; }
+body.short-land .startwhy { font-size: 12px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.startwhy.hidden { display: none; }
+body.short-land .step[data-step="3"] > .nav button { min-height: 40px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
+body.short-land .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; }
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell .step[data-step="3"] > .nav button { min-height: 40px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
+  body.app-shell .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; }
+}
+.topbar .pill, .topbar .modesw-btn { font-weight: 650; }
+.topbar .pill { font-size: 13px; }
+#acctPill.pill, #acctPill.pill.in {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-weight: 650;
+}
+#acctPill.pill:hover, #acctPill.pill:focus-visible { background: var(--accent-weak); border-color: transparent; }
+.setupcard > summary::before {
+  content: "";
+  display: inline-block;
+  width: 0; height: 0;
+  margin-right: 6px;
+  vertical-align: 0.15em;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--text);
+  color: transparent;
+}
+.setupcard:not([open]) > summary::before {
+  content: "";
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid var(--text);
+  border-right: 0;
+}
+button.warn, .locknote, .badge.Hold, .log .warn { color: var(--warn-text); }
+.lamp.on { color: var(--warn-text) !important; }
+.lamp.on[data-in="estop"] { color: #7A1A12 !important; }
+.lamp.on[data-in="torch"] { color: #7A3B00 !important; }
+.cutlist input[type="checkbox"] {
+  width: 18px; height: 18px; min-width: 18px; min-height: 18px; margin: 0;
+}
+.cutlist label.cuttick { flex-direction: row; align-items: center; gap: 6px; flex-wrap: nowrap; min-height: 0; }
+.cutlist label.cuttick b { min-width: 1.25em; text-align: right; flex: none; }
+.cutlist .cutname { min-width: 0; }
+.cutlist .mv button { min-height: 28px; min-width: 28px; padding: 0 4px; }
+.cutlist .mv .ico { margin: 0; width: 14px; height: 14px; }
+body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
+@media (max-width: 400px) {
+  body.shape-fs[data-screen="make"] .fsbar button { padding-left: 10px; padding-right: 10px; min-width: 0; }
+}
+#ptInspector .pt-insp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  width: 100%;
+  min-height: 36px;
+  margin: 0;
+  padding: 4px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  text-align: left;
+}
+#ptInspector.is-collapsed .pt-insp-toggle {
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 2px;
+  border-bottom: 0;
+}
+#ptInspector label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+}
+#ptInspector input,
+#ptInspector select {
+  width: 100%;
+  min-height: 30px;
+  padding: 2px 6px;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--well);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r);
+}
+#ptInspector .pt-empty p { margin: 4px 0 0; font-size: 13px; color: var(--text); }
+#ptInspector .pt-empty .muted { color: var(--muted); font-size: 12px; font-weight: 500; }
+#ptInspector .pt-layers-empty { font-size: 12px; padding: 4px 0; }
+#ptInspector .pt-layer {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 2px 6px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--text);
+  background: var(--well);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+#ptInspector .pt-layer[aria-pressed="true"] {
+  background: var(--accent-weak);
+  border-color: var(--accent);
+  color: var(--text);
+}
+#ptInspector .pt-hide {
+  flex: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--muted);
+}
+#ptInspector .pt-hide input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 0;
+}
+body[data-screen="make"] #btnHome, body[data-screen="cut"] #btnHome { display: inline-flex; align-items: center; gap: 4px; }
+body[data-screen="cut"] #btnStop { display: flex; }
+#btnHome { min-height: var(--tap); }
+#btnHome:disabled { opacity: .45; }
+body.nav-locked #btnHome { cursor: not-allowed; }
+#btnHome span { font-weight: 700; }
+/* what each screen shows inside the shared view */
+body[data-screen="make"] #pickPane { display: none; }
+body[data-screen="cut"] #exportRow, body[data-screen="cut"] #showMachWrap.hidden { display: none; }
+body[data-screen="cut"][data-step="1"] .previewDock .stats { display: none; }
+.makebar .modesw-btn { min-height: 40px; min-width: 88px; font-weight: 700; }
+.loginbrand .arcmark { display: block; margin: 0 auto; }
+@media (max-height: 540px) {
+  #accountDlg.loginpage .loginbrand .arcmark { width: 36px; height: 36px; }
+}
+.menuwrap .arcmark { display: block; margin: 0 auto 8px; }
+.menubig { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 190px; padding: 18px 14px;
+  border-radius: 16px; border: 2px solid var(--line-strong); background: var(--card); color: var(--text); text-align: center; }
+.menubig span { font-size: var(--fs-md); color: var(--muted); font-weight: 500; }
+.menubig.go { background: var(--go); border-color: var(--go); color: var(--on-go); }
+.menubig.go span { color: var(--on-go); opacity: .9; }
+@media (max-width: 640px) {
+  .menubig { min-height: 120px; flex-direction: row; text-align: left; justify-content: flex-start; gap: 14px; }
+}
+@media (max-height: 540px) {
+  .menuwrap .arcmark { width: 32px; height: 32px; margin-bottom: 2px; }
+  .menubig { min-height: 96px; padding: 8px; flex-direction: column; text-align: center; }
+}
+body[data-screen="cut"] .stepper li span { width: 30px; height: 30px; font-size: 15px; }
+body[data-screen="cut"] .drop { min-height: 0; padding: 18px 12px; }
+body[data-screen="cut"] .nav .next, body[data-screen="cut"] #btnStart { flex: 1 1 auto; max-width: none; min-height: 64px; font-size: 20px; font-weight: 800; background: var(--accent); border-color: var(--accent); color: var(--on-accent); border-radius: 12px; }
+body[data-screen="cut"] .nav .next:disabled, body[data-screen="cut"] #btnStart:disabled { background: var(--well); border-color: var(--line-strong); color: var(--muted); }
+body[data-screen="cut"] #btnStart:not(:disabled) { background: var(--go); border-color: var(--go); color: var(--on-go); }
+body[data-screen="cut"] .nav .back { min-height: 64px; min-width: 96px; font-size: 18px; }
+body[data-screen="cut"] .matline { font-size: 17px; margin: 0 0 8px; }
+body[data-screen="cut"] #materials button { min-height: 64px; font-size: 20px; }
+body[data-screen="cut"] #thicknesses { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+body[data-screen="cut"] #thicknesses button { min-height: 56px; font-size: 18px; }
+body[data-screen="cut"] .amps .big { font-size: 34px; }
+body[data-screen="cut"] #btnZero { min-height: 64px; font-size: 20px; }
+body[data-screen="cut"] #btnTrace { min-height: 52px; font-size: 16px; }
+body[data-screen="cut"] .checklist label { font-size: 17px; padding: 8px 6px; min-height: 48px; }
+body[data-screen="cut"] .step[data-step="4"] .runnums .bigpct { font-size: 56px; }
+.pickpane h3:first-child { margin-top: 0; }
+.pickrow { gap: 10px; margin-top: 10px; }
+.pickrow button { flex: 1 1 180px; min-height: 56px; font-size: 17px; }
+.bedstatus { margin: 10px 0 0; padding: 8px 12px; background: var(--ok-bg); color: var(--ok-text); border: 1px solid var(--go); border-radius: var(--r); font-weight: 650; }
+.bedstatus button { margin-left: 8px; }
+.connectcard .xl { min-height: 56px; }
+.homerow { gap: 8px; margin: 0 0 10px; }
+.homerow button { min-height: 52px; }
+#advCut .speed { margin: 8px 0; }
+#advCut .campanel, #advCut .cutlistcard { margin-top: 10px; }
+body[data-screen="cut"] .delayrow { display: block; }
+/* ---- the E-stop: a real red mushroom on a yellow plate. It sits in the top bar on the cutting screen only. ---- */
+#btnStop.estop { flex: none; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  min-width: 72px; min-height: 72px; width: auto; padding: 2px 6px 3px; background: transparent; border: 2px solid transparent; border-radius: 18px; color: var(--text);
+  line-height: 1; letter-spacing: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#btnStop.estop:hover { background: transparent; filter: none; }
+#btnStop.estop .estop-svg { width: 72px; height: 72px; display: block; overflow: visible; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+#btnStop.estop .estop-label { font-size: 12px; font-weight: 900; letter-spacing: .08em; margin-top: -6px; padding: 1px 7px; border-radius: 6px; background: var(--stop); color: #fff; white-space: nowrap; }
+#btnStop .es-top { transform: translateY(-7px); transition: transform .16s cubic-bezier(.3, 1.7, .5, 1); transform-origin: 60px 56px; }
+#btnStop .es-shadow { transition: opacity .12s, transform .16s; transform-origin: 60px 70px; }
+#btnStop .es-on, #btnStop .es-hi { transition: opacity .15s; }
+#btnStop:active:not(.pressed) .es-top { transform: translateY(-1px) scale(.97); }
+#btnStop.pressed .es-top { transform: translateY(3px) scale(.95); }
+#btnStop.pressed .es-on { opacity: 1; }
+#btnStop.pressed .es-hi { opacity: .18; }
+#btnStop.pressed .es-shadow { opacity: .15; transform: scale(.7); }
+#btnStop.pressed { border-color: var(--stop); background: rgba(196, 43, 28, .12); animation: esPulse 1.1s ease-in-out infinite; }
+#btnStop.pressed .estop-label { background: #7a0b08; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) {
+  #btnStop.pressed { animation: none; }
+  #btnStop .es-top, #btnStop .es-shadow { transition: none; }
+}
+@media (max-width: 899px) {
+  #btnStop.estop { min-width: 72px; min-height: 72px; width: 84px; }
+}
+@media (min-width: 900px) {
+  #btnStop.estop { min-width: 92px; min-height: 92px; }
+  #btnStop.estop .estop-svg { width: 84px; height: 84px; }
+  #btnStop.estop .estop-label { font-size: 13px; }
+}
+body.short-land #btnStop.estop { min-width: 72px; min-height: 72px; padding: 0 4px; }
+body.short-land #btnStop.estop .estop-svg { width: 58px; height: 58px; }
+body.short-land #btnStop.estop .estop-label { font-size: 10px; margin-top: -5px; }
+/* Saving and downloading are part of making a part, in both modes */
+body[data-screen="make"].beginner #btnSavePartQuick, body[data-screen="make"].beginner #btnExport { display: inline-flex; }
+@media (min-width: 900px) {
+  #btnStop.estop { min-width: 84px; min-height: 84px; }
+  #btnStop.estop .estop-svg { width: 72px; height: 72px; }
+}
+body.short-land .tabs .tab { min-height: 30px; padding-top: 2px; padding-bottom: 2px; font-size: 13px; }
+body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.holeadd button { min-height: 44px; }
+/* the E-stop reset is a press-and-hold: show it while it is being held */
+#btnStop.holding { filter: brightness(1.25); }
+/* ...and with it showing, the long "Practice, nothing moves" pill gives way (ellipsis) instead of running under it */
+body.short-land[data-screen="cut"] #topMenu #connPill { flex: 0 1 auto; min-width: 0; }
+.dimops button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; font-size: 20px; font-weight: 700; }
+.dimops button.go { flex: 1.6 1 0; font-size: 16px; }
+.warnline { color: #8a5a00; margin-top: 2px; }
+body.short-land .dimedit label { margin-bottom: 2px; }
+.mtdlg.kind-letters .mt-plate { display: none; }
+.mtdlg .row.wrap { align-items: center; gap: 8px; }
+/* ---- Round 5: Nest to fit and saved remnants (js/nestui.js) ---- */
+.nestbox { margin: 8px 0; border: 1px solid var(--line, #cbd5df); border-radius: 12px; padding: 6px 10px; background: var(--well, #f4f7fa); }
+.nestbox > summary { min-height: var(--tap, 44px); display: flex; align-items: center; gap: 8px; cursor: pointer; flex-wrap: wrap; }
+.nestbox .row { align-items: flex-end; gap: 8px; margin: 6px 0; }
+.nestbox .nesth { margin: 10px 0 2px; font-size: var(--fs-md, 16px); }
+.nestbox select { min-width: 0; max-width: 100%; }
+/* ===== B5 35-37: live torch/arc panel, job origin + saved start points, cut-test coupon ===== */
+.livepanel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 0 4px; }
+.livepanel .lp { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 8px; min-width: 0; }
+.livepanel .lp span { display: block; font-size: 12px; color: var(--muted); }
+.livepanel .lp b { display: block; font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+.livepanel .lp.nc b { font-weight: 500; font-style: italic; color: var(--muted); }
+.livepanel .lp.ok { border-color: var(--go); background: var(--ok-bg); }
+.livepanel .lp.ok b { color: var(--ok-text); }
+.livepanel .lp.bad { border-color: var(--alarm); background: var(--alarm-bg); }
+.livepanel .lp.bad b { color: var(--alarm); }
+.lpnote { margin: 0 0 6px; }
+.lostarc { background: var(--warn-bg); border: 2px solid var(--warn); border-radius: var(--r); padding: 8px 10px; margin: 6px 0 8px; }
+.lostarc p { margin: 0 0 6px; }
+.lostarc button { min-height: 48px; }
+.originbox { margin: 6px 0; }
+.originbox summary { cursor: pointer; font-weight: 600; min-height: 36px; display: flex; align-items: center; }
+.grid9 { display: inline-grid; grid-template-columns: repeat(3, 44px); gap: 4px; margin: 4px 10px 6px 0; vertical-align: middle; }
+.grid9 button { width: 44px; height: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; }
+.grid9 button i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+.grid9 button.sel { background: var(--accent-weak); border-color: var(--accent); }
+.grid9 button.sel i { background: var(--accent); width: 14px; height: 14px; }
+.woform { gap: 6px; margin: 4px 0; }
+.woform input { flex: 1 1 180px; min-height: 44px; }
+.wolist { list-style: none; margin: 4px 0; padding: 0; }
+.wolist li { display: flex; align-items: center; gap: 6px; padding: 3px 0; border-top: 1px solid var(--line); }
+.wolist .woname { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.wolist button { min-height: 40px; }
+.couponresult { background: var(--card); border: 1px solid var(--accent); border-radius: var(--r); padding: 8px 10px; margin: 10px 0; }
+.couponresult .resbtns { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.couponresult .resbtns button { flex: 1 1 140px; min-height: 48px; }
+.couponresult .resbtns button.sel { background: var(--accent-weak); border-color: var(--accent); font-weight: 700; }
+.couponresult label { display: flex; flex-direction: column; gap: 2px; flex: 1 1 140px; font-size: 13px; }
+.couponresult input { min-height: 44px; }
+@media (max-width: 520px) {
+  .livepanel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-height: 460px) {
+  .livepanel .lp {
+    padding: 1px 5px; }
+  .livepanel .lp span { font-size: 11px; }
+  .livepanel .lp b {
+    font-size: 12.5px;
+    line-height: 1.15; }
+  .lpnote { display: none; }
+  .livepanel { gap: 4px; margin-bottom: 3px; }
+  .lostarc { display: flex; align-items: center; gap: 8px; padding: 4px 8px; margin: 3px 0 5px; }
+  .lostarc p { margin: 0; font-size: 13px; line-height: 1.25; flex: 1 1 auto; }
+  .lostarc button { flex: 0 0 auto; min-height: 44px; max-width: 38%; padding: 4px 8px; font-size: 14px; }
+}

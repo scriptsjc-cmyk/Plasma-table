@@ -1,0 +1,84 @@
+/* Components shared by more than one screen: dialogs and sheets, keypad, jog pad, lamps, chips, choice tiles, lists. */
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* step 2 */
+.choice { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.choice.small { grid-template-columns: repeat(auto-fit, minmax(62px, 1fr)); }
+.pos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pos b { font: 700 28px/1.05 var(--font); font-variant-numeric: tabular-nums; }
+.steps { display: flex; gap: 6px; margin: 10px 0; }
+.jog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.log { height: 200px; overflow-y: auto; background: var(--well); border-radius: var(--r); padding: 8px; margin-top: 12px;
+  font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; border: 1px solid var(--line); }
+/* lamps */
+.lamps.mini { display: flex; gap: 6px; margin-top: 8px; }
+.lamps.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.lamps.grid .lamp::before { content: ""; position: absolute; left: 12px; top: 14px; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--line-strong); }
+.lamps.grid .lamp.on::before { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.lamps.grid .lamp.on[data-in="estop"]::before { background: var(--alarm); box-shadow: 0 0 8px var(--alarm); }
+/* shape maker / inspector */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.tiles.small { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.selhead { margin-bottom: 10px; font-size: var(--fs-md); }
+/* keypad / cad dialogs */
+.numpad { position: fixed; inset: 0; z-index: 150; background: rgba(20, 28, 36, .45); display: flex;
+  align-items: flex-end; justify-content: center; padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.numpad.hidden { display: none !important; }
+.numpad-card { width: min(420px, 100%); background: var(--well); border: 1px solid var(--line);
+  border-radius: var(--r); padding: 14px; box-shadow: 0 16px 40px rgba(16, 24, 40, .18);
+  overflow: auto; max-height: min(92dvh, 100%); }
+.numpad-label { font-size: var(--fs-sm); color: var(--muted); margin-bottom: 6px; }
+.numpad-value { font-size: 32px; font-weight: 700; min-height: 48px; padding: 6px 10px; background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--r); letter-spacing: .5px; word-break: break-all; }
+.numpad-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+.numpad-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.cadfields { display: grid; gap: 10px; margin: 12px 0; }
+@media (min-width: 800px) {
+  .numpad { align-items: center; }
+}
+/* shape library */
+.shapelib { position: fixed; inset: 0; z-index: 120; background: rgba(20, 28, 36, .45); display: flex;
+  align-items: flex-end; justify-content: center; padding: 8px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  padding-left: max(8px, env(safe-area-inset-left));
+  padding-right: max(8px, env(safe-area-inset-right)); }
+.shapelib.hidden { display: none !important; }
+.shapelib-card { width: min(720px, 100%); max-height: min(92dvh, 860px); background: var(--well);
+  border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column;
+  min-height: 0; box-shadow: 0 16px 40px rgba(16, 24, 40, .18); }
+.shapelib-card.slim { max-height: 60dvh; }
+.shapelib-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+@media (min-width: 800px) {
+  .shapelib { align-items: center; }
+}
+/* below the top bar so STOP stays visible and clickable */
+.acctcard { width: min(520px, 100%); overflow: auto; max-height: calc(100dvh - var(--topbar-h, 56px) - 16px); display: flex; flex-direction: column; }
+@media (orientation: landscape) and (max-height: 540px) {
+  /* phone in landscape: the keypad was ~500px tall on a 360-390px screen (Done key off-screen). Same keys, same sizes: label/value/Cancel/Enter go in a left column, the keys in a right column. */
+  .numpad { padding: 6px; padding-bottom: max(6px, env(safe-area-inset-bottom)); align-items: center; }
+  .numpad-card { padding: 10px 12px; }
+  #numPad .numpad-card { width: min(640px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); grid-template-rows: auto auto 1fr; column-gap: 12px; align-content: start; }
+  #numPad .numpad-label { grid-column: 1; grid-row: 1; }
+  #numPad .numpad-value { grid-column: 1; grid-row: 2; }
+  #numPad .numpad-keys { grid-column: 2; grid-row: 1 / 4; margin: 0; gap: 6px; }
+  #numPad .numpad-row { grid-column: 1; grid-row: 3; align-self: end; margin-top: 8px; }
+}
+@media (max-width: 640px) {
+  .shapelib-card.slim { max-height: min(86dvh, 860px); }
+}
+#cadDialog .numpad-card { display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 2; }
+#cadDialog .numpad-row { position: relative; z-index: 3; }
+#cadOk, #cadCancel { position: relative; z-index: 4; }
+body.pro-mode .choice { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
+.okchip { color: var(--go, #1e8e3e); font-weight: 650; }
+#acctPill.pill::before {
+  content: "";
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: 0.05em;
+}
+body[data-screen="boot"]::before { content: "Loading…"; display: block; margin: 40vh auto 0; text-align: center; color: var(--muted); font-size: var(--fs-lg); }
+.connectcard { margin: 0 0 12px; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
