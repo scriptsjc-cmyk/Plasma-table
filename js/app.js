@@ -215,6 +215,7 @@ function refreshGate() {
   if (send) send.classList.toggle("locked", runLocked);
   document.body.classList.toggle("run-locked", runLocked);
   $$(".jogwrap, .jogmount").forEach((el) => el.classList.toggle("locked", runLocked && !S.connected));
+  paintMenu();                                   // B5 17: the main menu's "machine linked" line follows a claim at once
 }
 function exportDialect() {
   const sel = $("exportDialect");
@@ -1587,8 +1588,19 @@ function renderChecklist() {
   }).join("");
   const cm = $("checkMat");
   if (cm) cm.textContent = S.material && S.thickness != null ? `${S.material} · ${S.thickness} mm` : "";
+  paintZeroWarn();
+  refresh();
+}
+// B5 16: the "start point not set" warning follows S.zeroSet on every refresh, not only when the checklist is redrawn
+function paintZeroWarn() {
   const zw = $("zeroWarn");
   if (zw) zw.classList.toggle("hidden", !!S.zeroSet);
+}
+// B5 16: Start here pressed - redraw the checklist's first line (keeping the ticks already made) so "Tick every box" and the warning clear at once
+function zeroJustSet() {
+  const ticks = $$("#checklist input").map((x) => x.checked);
+  renderChecklist();
+  $$("#checklist input").forEach((x, i) => { if (ticks[i] && !x.disabled) x.checked = true; });
   refresh();
 }
 // Round 5 (safety): Score and Mark are only labels. The torch here is on/off (M3 S1000 / M5) and the plasma power is set by hand at the
@@ -1712,7 +1724,9 @@ function refresh() {
 
   // start button + reasons
   const b = blockers();
+  paintZeroWarn();
   $("btnStart").disabled = b.length > 0 || !machineAllowed();
+  paintStartWhy(b);
   $("blockers").innerHTML = b.length && S.cur === 3 ? `Can't start yet:<ul>${b.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
 
 
@@ -1770,6 +1784,15 @@ function refresh() {
   drawPreview();
 }
 
+// B5 18: the reasons Start is greyed, as visible text next to the button (the full list is still under "Check, then cut")
+function paintStartWhy(b) {
+  const el = $("startWhy"); if (!el) return;
+  const off = $("btnStart").disabled && b.length > 0;
+  el.classList.toggle("hidden", !off);
+  if (!off) { el.textContent = ""; return; }
+  const first = String(b[0]).replace(/\s+/g, " ");
+  el.textContent = "Can't start yet: " + first + (b.length > 1 ? ` (+${b.length - 1} more below)` : "");
+}
 function paintBedStatus() {
   const box = $("bedStatus"); if (!box) return;
   const n = (sketch && S.src === "shape") ? Setup.partCount(sketch) : 0;
@@ -2359,7 +2382,7 @@ function bind() {
   };
 
   // step 3
-  $("btnZero").onclick = () => { if (cmd("zero_xy")) { S.zeroSet = true; toast("Start point set ✓"); refresh(); } };
+  $("btnZero").onclick = () => { if (cmd("zero_xy")) { S.zeroSet = true; toast("Start point set ✓"); zeroJustSet(); } };
   $("btnTrace").onclick = () => cmd("trace_outline");
 
   // step 4
