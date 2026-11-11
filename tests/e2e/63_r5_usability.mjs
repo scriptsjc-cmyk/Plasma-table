@@ -1,5 +1,6 @@
 // Round 5 stage 2 (USABILITY) tests. Takes the r5-use-*.png screenshots.
 //  L  phone on its side: sign-in fits, Settings scrolls with Close / Save in reach, the toast never covers Start, slim Start row
+//  16 touch targets on the phone cutting screen are at least 44 px, text at least 13-14 px
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
 const s = await serve(), br = await launch();
@@ -36,6 +37,10 @@ for (const [w, h] of [[844, 390], [667, 375]]) {
   const st = await T(page, `(() => { const b = document.getElementById("btnStart").getBoundingClientRect(), z = document.getElementById("btnZero"); return { startH: Math.round(b.height), zeroFits: z.scrollHeight <= z.clientHeight + 2 }; })()`);
   ck(`L ${w}x${h}: slim Start row (<= 56 px) and "Start here" fits its label`, st.startH <= 56 && st.startH >= 44 && st.zeroFits, st);
   await snap(page, `bed-${w}x${h}`);
+  // 16: touch targets and text on the cutting screen
+  const small = await T(page, `(() => { const bad = []; for (const el of document.querySelectorAll(".topbar button, .tabs .tab, .step:not(.hidden) button, .step:not(.hidden) summary")) { const r = el.getBoundingClientRect(), cs = getComputedStyle(el); if (!r.width || !r.height || cs.visibility === "hidden" || el.closest(".hidden")) continue; if (r.height < 43.5 || r.width < 43.5) bad.push((el.id || el.className) + " " + Math.round(r.width) + "x" + Math.round(r.height)); } return bad; })()`);
+  ck(`16 ${w}x${h}: every button / tab on the cutting screen is at least 44 x 44`, small.length === 0, small.slice(0, 8));
+  ck(`16 ${w}x${h}: the STOP label is at least 13 px`, await T(page, "parseFloat(getComputedStyle(document.getElementById('estopLabel')).fontSize) >= 13"));
   // Settings: the whole card scrolls, Close and Save stay in reach, Machine & axes fields can be reached
   await T(page, "window.plasmaTest.openSettings()"); await sleep(400);
   await T(page, "document.querySelector('#settingsDlg .shapelib-card').scrollTop = 99999"); await sleep(200);

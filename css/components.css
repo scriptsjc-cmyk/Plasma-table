@@ -86,3 +86,13 @@ body.pro-mode .choice { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr
 }
 body[data-screen="boot"]::before { content: "Loading…"; display: block; margin: 40vh auto 0; text-align: center; color: var(--muted); font-size: var(--fs-lg); }
 .connectcard { margin: 0 0 12px; padding: 10px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); }
+/* Round 5 item 16: on a touch screen every control is at least 44 x 44 px and its text at least 14 px */
+@media (pointer: coarse) {
+  .cutlist .mv button { min-height: 44px; min-width: 44px; }
+  .cutlist label { min-height: 44px; }
+  .settab, .admtab, .movesel, body.pro-mode .choice.small button { min-height: 44px; font-size: 14px; }
+  .modesw-btn[data-mode="pro"] { font-size: 14px; }
+  .modesw-btn[data-mode="beginner"] { min-width: 44px; }
+  .modesw-btn[data-mode="beginner"]::after { font-size: 14px; }
+  .qb-group { font-size: 13px; }
+}
