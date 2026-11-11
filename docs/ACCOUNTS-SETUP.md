@@ -9,8 +9,8 @@ claims live in the **Supabase** project you already created:
 - Site URL: `https://scriptsjc-cmyk.github.io/Plasma-table/`
 - Redirect URL: `https://scriptsjc-cmyk.github.io/Plasma-table/**`
 
-The publishable key and the legacy anon JWT are already in `js/config.js`.
-Never put the **service_role** key in the website, in `js/config.js`, or on
+The publishable key and the legacy anon JWT are already in `js/account/config.js`.
+Never put the **service_role** key in the website, in `js/account/config.js`, or on
 the Pi. Only the public/anon key is used in the client. All permission rules
 are enforced by Row Level Security and the SQL functions in
 `supabase/schema.sql`.
@@ -53,7 +53,7 @@ allows 8 tries per account per 15 minutes, and every try is logged.
 After this has run, live sign-up against the project will work. Until then,
 use `?demo=1` (or leave the tests to use `?test=1`).
 
-## 3. Keys — already in `js/config.js`
+## 3. Keys — already in `js/account/config.js`
 
 `SUPABASE_URL`, the publishable key (`sb_publishable_…`) and the legacy anon
 JWT are filled in. The REST Auth calls use the JWT form of the anon key
@@ -129,7 +129,7 @@ page if a table changes hands.
 
 Download G-code stays free so someone can still take a file to another
 controller. To lock export as well, set `ALLOW_GCODE_EXPORT_WITHOUT_MACHINE`
-to `false` in `js/config.js` and reload. That is the only switch.
+to `false` in `js/account/config.js` and reload. That is the only switch.
 
 ## 7. Real enforcement (because the website is public)
 
@@ -138,7 +138,7 @@ The Pi bridge can enforce it for **Wi-Fi** connections:
 
 1. Create `pi/bridge.account.json` on the Pi (see `pi/README.md`) with this
    table's serial, the project URL and the **anon JWT** (the `eyJ…` value in
-   `js/config.js`, not the service_role key).
+   `js/account/config.js`, not the service_role key).
 2. Restart the bridge. It keeps requiring the usual pairing token, and also
    checks the user's session and that `machines.owner` matches this serial
    **before it will accept G-code**.
@@ -194,7 +194,7 @@ and point `SUPABASE_URL` at it. No licence fee, and you keep the data.
 - [x] Project created (region `eu-central-1`)
 - [x] Site URL and redirect URLs set for GitHub Pages
 - [x] Email auth on, Confirm email on
-- [x] `js/config.js` has the Project URL, publishable key and anon JWT (no service_role key)
+- [x] `js/account/config.js` has the Project URL, publishable key and anon JWT (no service_role key)
 - [ ] `supabase/schema.sql` ran cleanly in the SQL Editor
 - [ ] Your account (`jchappell2003@gmail.com`) exists, is confirmed, and is the only admin (`supabase/make-admin.sql`, or `select public.set_admin('jchappell2003@gmail.com');`). Then run `supabase/admin-powers.sql` after `schema-fixes.sql` if those have not been applied yet, and then `supabase/admin-powers-fixes.sql` (idempotent; a fresh `schema.sql` already contains all of it). The admin account must have a **confirmed** email: `is_admin()` is false until it is.
 - [ ] Five (or however many) serials added, codes written on the stickers

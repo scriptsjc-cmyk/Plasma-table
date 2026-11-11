@@ -1,4 +1,4 @@
-import { T } from "../lib/t.mjs"; import { startServer, launchKillable, newPage, demoToShape, shot, SITE } from "../lib/browser.mjs";
+import { T } from "../lib/t.mjs"; import { startServer, launchKillable, newPage, demoToShape, shot, SITE } from "../lib/browser.mjs"; import { allJsText, readJs } from "../lib/site.mjs";
 import { spawn } from "node:child_process"; import fs from "node:fs"; import http from "node:http";
 const t = new T("30_security"); const srv = await startServer(); const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const K = await launchKillable();
@@ -44,7 +44,7 @@ const ext = [...html.matchAll(/<(?:script|link)[^>]+(?:src|href)="(https?:[^"]+)
 t.check("third-party resources carry SRI (integrity=)", ext.every((e) => /integrity=/.test(e)), ext.join(" | ").slice(0, 300), "SRI-MISSING");
 t.check("no inline event handlers in index.html", !/\son[a-z]+="/i.test(html), "", "INLINE-HANDLERS");
 t.check("referrer-policy meta", /name="referrer"/.test(html), "", "REFERRER");
-const jsAll = fs.readdirSync(SITE + "js").filter((f) => f.endsWith(".js")).map((f) => [f, fs.readFileSync(SITE + "js/" + f, "utf8")]);
+const jsAll = allJsText().map(([f, txt]) => [f.replace(/^js\//, ""), txt]);
 for (const [f, src] of jsAll) { const m = src.match(/\b(eval\s*\(|new Function\s*\(|(?<![.\w])Function\s*\()/g); if (m) t.check(`${f}: no eval / Function()`, false, `${f}: ${m.join(",")}`, "EVAL"); }
 const secrets = jsAll.flatMap(([f, s]) => {
   const hits = (s.match(/(api[_-]?key|secret|auth_?token|Bearer\s+\w+|AKIA[0-9A-Z]{12,}|ghp_\w{20,})/gi) || []).map((m) => f + ":" + m);
@@ -77,8 +77,8 @@ try {
   // raw-lines path: unsafe codes through 'w'
   t.check("Pi bridge: auth token / shared secret required", /token|auth|secret/i.test(fs.readFileSync(SITE + "pi/bridge.py", "utf8")), "bridge.py has no auth of any kind; it listens on 0.0.0.0:80", "BRIDGE-AUTH");
   t.check("Pi bridge: site is served over http, so ws:// is plain-text on the LAN (no TLS) — documented/accepted?", /wss|tls|ssl/i.test(fs.readFileSync(SITE + "pi/bridge.py", "utf8")), "no TLS option", "BRIDGE-TLS");
-  const ws = fs.readFileSync(SITE + "js/grbl.js", "utf8").match(/ws:\/\/[^"'`]*|wss:\/\/[^"'`]*/g); t.note("ws URLs in grbl.js", JSON.stringify(ws));
-  const app = fs.readFileSync(SITE + "js/app.js", "utf8"); t.note("how the bridge URL is chosen", (app.match(/new WifiLink\([^)]*\)|location\.host[^;]*|ws:\/\/[^;]*/g) || []).join(" | ").slice(0, 300));
+  const ws = readJs("grbl").match(/ws:\/\/[^"'`]*|wss:\/\/[^"'`]*/g); t.note("ws URLs in grbl.js", JSON.stringify(ws));
+  const app = allJsText().map((x) => x[1]).join("\n"); t.note("how the bridge URL is chosen", (app.match(/new WifiLink\([^)]*\)|location\.host[^;]*|ws:\/\/[^;]*/g) || []).join(" | ").slice(0, 300));
   await ctx.close(); attacker.close();
 } finally { fc.kill("SIGTERM"); await sleep(300); fs.rmSync("/tmp/bridge_local.py", { force: true }); }
 K.kill(); await srv.close(); process.exit(t.done() ? 1 : 0);

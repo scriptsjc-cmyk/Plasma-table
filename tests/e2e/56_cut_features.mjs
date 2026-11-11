@@ -5,9 +5,9 @@ import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const SHOTS = process.env.SHOTS || "/workspace/b5-features-shots/"; fs.mkdirSync(SHOTS, { recursive: true });
 const rec = new Rec("56_cut_features");
 const ck = (n, ok, i = "") => rec.check(n, ok, typeof i === "string" ? i : JSON.stringify(i));
-const J = new URL("../../js/", import.meta.url).href;
-const { parseStatus, parseThc } = await import(J + "grbl.js");
-const CL = await import(J + "cutlive.js"), OR = await import(J + "origins.js"), CP = await import(J + "coupon.js");
+import { mod } from "../lib/site.mjs";
+const { parseStatus, parseThc } = await mod("grbl");
+const CL = await mod("cutlive"), OR = await mod("origins"), CP = await mod("coupon");
 const mem = () => { const d = {}; return { d, getItem: (k) => (k in d ? d[k] : null), setItem: (k, v) => { d[k] = String(v); }, removeItem: (k) => { delete d[k]; } }; };
 
 // ================================================================== A. pure logic

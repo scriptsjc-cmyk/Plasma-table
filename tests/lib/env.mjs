@@ -1,6 +1,6 @@
 // Node environment stubs so the Sketch class (canvas editor) can run headless against the real site code.
-import { pathToFileURL } from "node:url";
-export const SITE = (process.env.SITE_DIR || new URL("../../", import.meta.url).pathname).replace(/\/?$/, "/");
+import { SITE, mod } from "./site.mjs";
+export { SITE };
 const store = new Map();
 globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k), clear: () => store.clear(), _m: store };
 globalThis.devicePixelRatio = 1; globalThis.window = globalThis;
@@ -13,8 +13,8 @@ function mockCanvas() {
     getBoundingClientRect: () => ({ left: 0, top: 0, width: 390, height: 400 }), addEventListener() {}, setPointerCapture() {}, releasePointerCapture() {}, offsetParent: {}, closest: () => null };
 }
 export async function load() {
-  const imp = (f) => import(pathToFileURL(SITE + f).href);
-  const [shapes, geom, variants, expr, sketch, cam, job, check] = await Promise.all(["js/shapes.js", "js/geom.js", "js/variants.js", "js/expr.js", "js/sketch.js", "js/cam.js", "js/job.js", "js/check.js"].map(imp));
+  const imp = (f) => mod(f);
+  const [shapes, geom, variants, expr, sketch, cam, job, check] = await Promise.all(["shapes", "geom", "variants", "expr", "sketch", "cam", "job", "check"].map(imp));
   const fs = await import("node:fs");
   const machine = JSON.parse(fs.readFileSync(SITE + "config/machine.json", "utf8"));
   const chart = JSON.parse(fs.readFileSync(SITE + "config/cut_chart.json", "utf8"));

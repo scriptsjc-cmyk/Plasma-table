@@ -1,6 +1,6 @@
 // Accounts-build security checks in a real browser. NO real network: the Supabase project is a local route stub,
 // "the live site" is a fake host served from the local copy. Never touches a real device or the live project.
-import { T } from "../lib/t.mjs"; import { startServer, launchKillable, newPage, enterDemo, SITE, PROFILES } from "../lib/browser.mjs";
+import { allJsText } from "../lib/site.mjs"; import { T } from "../lib/t.mjs"; import { startServer, launchKillable, newPage, enterDemo, SITE, PROFILES } from "../lib/browser.mjs";
 import fs from "node:fs"; import path from "node:path";
 const t = new T("50_accounts_security");
 const srv = await startServer(); const K = await launchKillable();
@@ -155,7 +155,7 @@ try {
     t.check("page itself triggers no CSP violations", cspMsgs.length === 0, cspMsgs.slice(0, 3).join(" | "), "CSP");
     t.check("no uncaught page errors in cloud mode", p.errors.length === 0, p.errors.slice(0, 2).join(" | "));
     // secrets in served client files
-    const files = ["js/config.js", "js/account.js", "js/account-ui.js", "js/app.js", "js/flow.js", "index.html"].map((f) => fs.readFileSync(SITE + f, "utf8")).join("\n");
+    const files = [...allJsText().map((x) => x[1]), fs.readFileSync(SITE + "index.html", "utf8")].join("\n");
     const jwts = [...files.matchAll(/eyJ[A-Za-z0-9_-]{10,}\.([A-Za-z0-9_-]{10,})\./g)].map((m) => JSON.parse(Buffer.from(m[1], "base64url").toString()).role);
     t.check("only the anon role JWT is embedded in the client (no service_role)", jwts.length > 0 && jwts.every((r) => r === "anon"), JSON.stringify(jwts), "SECRETS");
     t.check("no sb_secret_ / service_role key material in the client", !/sb_secret_|service_role"\s*[:=]\s*"ey/.test(files));
