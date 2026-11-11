@@ -335,7 +335,7 @@ label.check.prominent { display: flex; align-items: center; gap: 8px; margin: 12
   body.short-land .cutgrid:not(.with-qb) { grid-template-columns: minmax(0, 1fr) minmax(220px, 40vw); }
 }
 @media (max-width: 899px) {
-  body.running-job .previewPane { max-height: 28dvh; overflow: hidden; }
+  body.running-job:not(.short-land) .previewPane { max-height: 28dvh; overflow: hidden; }
   body.running-job .step[data-step="4"] { padding-bottom: 8px; }
   body.running-job .torchbig { min-height: 48px; }
 }
@@ -438,7 +438,7 @@ body.app-shell .nav { margin-top: 8px; }
   }
 }
 @media (max-width: 899px) {
-  body.app-shell.running-job .cutgrid { grid-template-rows: minmax(0, 32dvh) auto; }
+  body.app-shell.running-job:not(.short-land) .cutgrid { grid-template-rows: minmax(0, 32dvh) auto; }
 }
 body.app-shell.shape-fs #cutView { height: auto; flex: 1; }
 body.app-shell.shape-fs .cutgrid { flex: 1; }

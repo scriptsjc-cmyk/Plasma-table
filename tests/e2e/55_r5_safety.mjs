@@ -1,6 +1,6 @@
 // Round 5 group 2 (SAFETY) tests, items 6-11. Takes the r5-safety-*.png screenshots.
 //  6 E-stop release is a deliberate press-and-hold; Torch test / jog / console M3 are blocked while it is latched
-//  7 the TORCH ON / TORCH OFF pill is always visible on the landscape-phone cutting screen
+//  7 the TORCH ON / TORCH OFF pill is always visible on the landscape-phone cutting screen; % done, time left and the bar show while cutting
 //  8 Score / Mark lines block Start and Download G-code with a clear warning (the G-code can't cut them lighter)
 //  9 STOP / reset / home / alarm clear work zero; startJob (and Continue from cut N) refuse without it
 //  9b the checklist's "Start point set" line follows work zero by itself (never a hand tick) and unticks on STOP / reset
@@ -238,6 +238,23 @@ for (const [w, h] of [[844, 390], [683, 384], [667, 375], [640, 360]]) {
   await snap(page, `torch-next-to-ready-${w}x${h}`);
   ck(`7 ${w}x${h}: no page errors`, page.errors.filter((e) => !/404|favicon|Failed to load resource/i.test(e)).length === 0, page.errors.join("|"));
   await ctx.close();
+}
+// a real (practice) job on the landscape phone: % done, time left, the bar, TORCH and STOP are all in view, none hidden under Pause
+{
+  const page = await open(br, "phoneland", s.base, "?test=1&turn=0");
+  await prime(page, ["rect", "disc", "rect"]);
+  await zeroAndTick(page);
+  await page.evaluate(() => { const d = document.getElementById("dryRun"); d.checked = true; d.dispatchEvent(new Event("change")); }); await sleep(300);
+  await page.evaluate(() => document.getElementById("btnStart").click());
+  await page.waitForFunction(() => window.plasmaTest.S.job && window.plasmaTest.S.job.running && parseFloat(document.getElementById("pct").textContent) >= 5, null, { timeout: 30000 }).catch(() => {});
+  const seen = await T(page, `(() => { const top = document.querySelector(".topbar").getBoundingClientRect(); const out = {}; for (const id of ["pct", "timeLeft", "progBar", "torchPill", "btnStop"]) { const e = id === "progBar" ? document.querySelector(".progress") : document.getElementById(id); const r = e.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + Math.min(10, r.width / 2), r.top + r.height / 2); out[id] = { inView: r.width > 0 && r.height > 0 && r.top >= 0 && r.bottom <= innerHeight, onTop: !!hit && (hit === e || e.contains(hit)), text: e.textContent.trim().slice(0, 12) }; } out.running = !!(window.plasmaTest.S.job && window.plasmaTest.S.job.running); return out; })()`);
+  ck("7 landscape phone, job running: % done is in view and not covered", seen.running && seen.pct.inView && seen.pct.onTop && /%/.test(seen.pct.text), JSON.stringify(seen));
+  ck("7 landscape phone, job running: time left is in view and not covered", seen.timeLeft.inView && seen.timeLeft.onTop && /\d/.test(seen.timeLeft.text), JSON.stringify(seen));
+  ck("7 landscape phone, job running: the progress bar is in view", seen.progBar.inView && seen.progBar.onTop, JSON.stringify(seen));
+  ck("7 landscape phone, practice job running: TORCH OFF and STOP are in view", seen.torchPill.inView && seen.torchPill.onTop && /TORCH/.test(seen.torchPill.text) && seen.btnStop.inView && seen.btnStop.onTop, JSON.stringify(seen));
+  await snap(page, "running-readout-phoneland");
+  await page.click("#btnStop"); await sleep(1500);
+  await page.context().close();
 }
 // the same on the other layouts: the pill shows when the torch is on
 for (const view of ["laptop", "phone"]) {

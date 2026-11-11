@@ -22,6 +22,12 @@ canvas#preview.placing { touch-action: none; }
 .runnums { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 6px 0 10px; }
 .runnums > div:last-child { text-align: right; }
 .runnums .bigpct { margin: 0; }
+/* Round 5 (safety): phone on its side while cutting: % done, time left and the bar stay in view above Pause */
+body.short-land #runTitle { font-size: 15px; margin: 0 0 2px; }
+body.short-land .runnums { margin: 0 0 4px; gap: 8px; }
+body.short-land[data-screen="cut"] .step[data-step="4"] .runnums .bigpct, body.short-land .bigleft { font-size: 34px; }
+body.short-land .runnums span { font-size: 12px; }
+body.short-land .progress { height: 10px; }
 .progress { height: 16px; background: var(--well); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
 .wizard li.done > b::after { content: " ✓"; color: var(--ok-text); }
 .cutcheck { margin-top: 14px; padding: 12px 14px; border-radius: var(--r); background: var(--well); border: 1px solid var(--line); }
