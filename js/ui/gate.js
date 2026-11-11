@@ -42,9 +42,7 @@ export function refreshGate() {
   $("connectLock").classList.toggle("hidden", !needLink);
   const runLocked = needLink && !S.demo;
   $("btnStart").classList.toggle("locked", runLocked);
-  $("startLock").classList.toggle("hidden", !runLocked);
-  $("startLock").textContent = "🔒 " + lockText();
-  $("connectLock").textContent = "🔒 " + lockText();
+  $("connectLockText").textContent = "🔒 " + lockText();      // round 5: the one lock note, next to Connect (Start says why under the button)
   const send = $("btnConsoleSend");
   if (send) send.classList.toggle("locked", runLocked);
   document.body.classList.toggle("run-locked", runLocked);
@@ -52,6 +50,5 @@ export function refreshGate() {
   paintMenu();                                   // B5 17: the main menu's "machine linked" line follows a claim at once
 }
 export function bindGate() {
-  $("connectLock").onclick = () => { if (!Acc.hasLinkedMachine()) openGate("Link your machine to run jobs"); };
-  $("startLock").onclick = () => openGate("Link your machine to run jobs");
+  $("btnLinkMachine").onclick = () => openGate("Link your machine to run jobs");
 }

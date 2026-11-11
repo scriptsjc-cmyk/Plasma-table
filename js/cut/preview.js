@@ -30,6 +30,7 @@ function viewArea() {
 export function fit() {
   if (!S.prepared) return { cls: "", text: "" };
   if (!S.safety.limits) return { cls: "unknown", text: S.demo ? "Demo: tap here and the edges are set up for you." : "Edges not set up – can't check it fits (Machine setup tab)." };
+  if (!S.connected && !S.safety.referenced) return { cls: "unknown", text: "Connect to the table to check it fits." };    // round 5 item 11: no homing prompt without a machine
   if (!S.safety.referenced) return { cls: "unknown", text: "Home the machine to check it fits." };
   const b = S.prepared.stats.bounds, w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
   const x0 = b[0] + w[0] - ref[0], x1 = b[2] + w[0] - ref[0], y0 = b[1] + w[1] - ref[1], y1 = b[3] + w[1] - ref[1];

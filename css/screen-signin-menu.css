@@ -19,7 +19,11 @@
 .acctcard.wide { width: min(860px, 100%); }
 .partrow { display: flex; justify-content: space-between; gap: 10px; align-items: center;
   background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
-#connectLock { margin-top: 14px; }
+#connectLock { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+#connectLock.hidden { display: none; }
+#connectLock .locknote { margin: 0; flex: 1 1 220px; }
+/* round 5 item 11: with no machine linked, "Link a machine" is the green action and Connect steps back */
+#btnConnect.locked { background: var(--card); border-color: var(--line-strong); color: var(--text); }
 @media (max-width: 520px) {
   .partrow { flex-direction: column; align-items: stretch; }
 }
@@ -63,10 +67,6 @@ body.app-shell .banner { max-width: none; margin: 0; border-radius: 0; flex: non
 }
 @media (min-width: 561px) and (max-width: 899px) {
   #acctPill { max-width: 7em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-body.short-land .step[data-step="3"] > .nav .locknote { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.2; order: 8; }
-@media (max-width: 899px) and (orientation: portrait) {
-  body.app-shell .step[data-step="3"] > .nav .locknote { flex: 1 1 100%; margin: 0; font-size: 12px; line-height: 1.2; order: 8; }
 }
 #acctPill.pill.in::before { background: var(--go); }
 /* ---- ROUND 3 item 9: signup button, fixed settings, dense cut ticks, pierce jump ---- */

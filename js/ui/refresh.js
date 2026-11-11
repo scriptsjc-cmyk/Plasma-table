@@ -72,7 +72,7 @@ export function paintChrome() {
 export function refresh() {
   paintChrome();
   setTimeout(paintWhy, 0);
-  try { const lt = "🔒 " + lockText(); if ($("startLock").textContent !== lt) { $("startLock").textContent = lt; $("connectLock").textContent = lt; } } catch (e) { /* ignore */ }
+  try { const lt = "🔒 " + lockText(); if ($("connectLockText").textContent !== lt) $("connectLockText").textContent = lt; } catch (e) { /* ignore */ }
   // stats + fit (preview pane)
   const f = fit();
   $("fit").className = "fit " + f.cls;
@@ -152,8 +152,10 @@ export function refresh() {
   drawPreview();
 }
 // B5 18: the reasons Start is greyed, as visible text next to the button (the full list is still under "Check, then cut")
-function paintStartWhy(b) {
+function paintStartWhy(blocked) {
   const el = $("startWhy"); if (!el) return;
+  // round 5: when the machine is locked, that reason shows here (under Start), not as a second lock note
+  const b = machineAllowed() ? blocked : [Acc.hasLinkedMachine() ? "Demo accounts can't control a real machine. Use Practice (no machine)." : "Link a machine to run jobs (Link a machine, above).", ...blocked];
   const off = $("btnStart").disabled && b.length > 0;
   el.classList.toggle("hidden", !off);
   if (!off) { el.textContent = ""; return; }

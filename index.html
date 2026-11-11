@@ -525,7 +525,10 @@
               <button id="btnDemo" class="xl">Practice (no machine)</button>
               <button type="button" id="btnDisconnect" class="xl hidden">Disconnect</button>
             </div>
-            <p id="connectLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p>
+            <div id="connectLock" class="lockcard hidden">
+              <p id="connectLockText" class="locknote">🔒 Locked: sign in, then link a machine to run jobs.</p>
+              <button type="button" id="btnLinkMachine" class="xl go">Link a machine</button>
+            </div>
             <details id="fnBox" class="fnbox">
               <summary>FluidNC (Wi-Fi)</summary>
               <p class="muted small">ESP32 running FluidNC on the same Wi-Fi. Default socket is <code>ws://&lt;ip&gt;:81</code>.</p>
@@ -575,7 +578,7 @@
         </div>
           <div id="blockers" class="blockers"></div>
         </details>
-        <div class="nav"><button class="back" data-go="1">← Back</button><button id="btnStart" class="xl go" disabled aria-describedby="startWhy">▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><p id="startLock" class="locknote hidden">🔒 Locked: sign in, then link a machine to run jobs.</p><p id="startWhy" class="startwhy hidden" role="status"></p></div>
+        <div class="nav"><button class="back" data-go="1">← Back</button><button id="btnStart" class="xl go" disabled aria-describedby="startWhy">▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><p id="startWhy" class="startwhy hidden" role="status"></p></div>
       </div>
 
       <!-- step 4: running / done -->

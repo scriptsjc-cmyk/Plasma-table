@@ -55,11 +55,14 @@ try {
     await p.click("#gateDlg .acct-close");
     t.check("Make a part (free) works without connecting", await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("menu"); T.showScreen("make"); return T.screen() === "make" && !T.S.connected; }));
     await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("cut"); T.goStep(3); T.refreshGate(); });
-    await p.waitForSelector("#startLock:not(.hidden)", { timeout: 5000 }).catch(async () => { await p.evaluate(() => { window.plasmaTest.goStep(3); window.plasmaTest.refreshGate(); }); });
-    await p.waitForSelector("#startLock:not(.hidden)", { timeout: 5000 });
-    t.check("Start cutting shows the lock prompt when no machine is linked", /link (your |a )?machine/i.test(await p.locator("#startLock").textContent()));
+    await sleep(300);
+    const lockUi = await p.evaluate(() => ({ notes: [...document.querySelectorAll(".locknote")].filter((e) => e.offsetParent && /Locked/.test(e.textContent)).length, why: document.getElementById("startWhy").textContent, startOff: document.getElementById("btnStart").disabled, linkGo: document.getElementById("btnLinkMachine").classList.contains("go") && !!document.getElementById("btnLinkMachine").offsetParent, connectGreen: getComputedStyle(document.getElementById("btnConnect")).backgroundColor }));
+    t.check("item 11: one lock note on the bed screen (not repeated by Start)", lockUi.notes === 1, JSON.stringify(lockUi));
+    t.check("item 11: Start is off and says why right under it (link a machine)", lockUi.startOff && /link a machine/i.test(lockUi.why), JSON.stringify(lockUi));
+    t.check("item 11: 'Link a machine' is the green primary button; Connect steps back", lockUi.linkGo && lockUi.connectGreen !== "rgb(15, 123, 58)", JSON.stringify(lockUi));
+    t.check("item 11: with no machine there is no 'Home the machine' prompt", !/Home the machine/.test(await p.evaluate(() => document.body.innerText)));
     await snap(p, "locked-run");
-    await p.evaluate(() => document.getElementById("startLock").click());
+    await p.click("#btnLinkMachine");
     await p.waitForSelector("#gateDlg:not(.hidden)", { timeout: 5000 });
     t.check("tapping the locked Run prompt opens the link-machine message", /link (your |a )?machine/i.test(await p.locator("#gateWhy").textContent()));
     await p.click("#gateDlg .acct-close");
@@ -165,9 +168,9 @@ try {
       }
       window.plasmaTest.showScreen("cut"); window.plasmaTest.goStep(3); window.plasmaTest.refreshGate();
     });
-    await p.waitForSelector("#startLock:not(.hidden)", { timeout: 8000 });
-    t.check(`${prof}: Run stays locked until claim`, /link (your |a )?machine/i.test(await p.locator("#startLock").textContent()));
-    await p.evaluate(() => document.getElementById("startLock").click());
+    await p.waitForSelector("#connectLock:not(.hidden)", { timeout: 8000 });
+    t.check(`${prof}: Run stays locked until claim`, /link (your |a )?machine/i.test(await p.locator("#connectLockText").textContent()) && await p.evaluate(() => document.getElementById("btnStart").disabled));
+    await p.evaluate(() => document.getElementById("btnLinkMachine").click());
     await p.waitForSelector("#gateDlg:not(.hidden)", { timeout: 5000 });
     await p.click("#gateClaim");
     await p.waitForSelector("#claimDlg:not(.hidden)");
