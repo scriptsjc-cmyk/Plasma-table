@@ -71,10 +71,12 @@ for (const prof of ["w320", "iphoneSE", "iphone14", "iphone14land", "ipad", "des
   const ready = await page.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 15000 }).then(() => true).catch(() => false);
   if (!ready) await page.reload({ waitUntil: "load" });      // first load is uncontrolled until the worker has claimed the page; one reload routes every file through it
   await page.reload({ waitUntil: "load" });
-  // wait until the worker has really cached the shell and the main script (runtime caching is asynchronous), instead of sleeping and hoping
-  await page.waitForFunction(async () => { const ks = await caches.keys(); for (const k of ks) { const c = await caches.open(k); if ((await c.match("js/app.js")) && (await c.match("index.html") || await c.match("./"))) return true; } return false; }, null, { timeout: 15000, polling: 250 }).catch(() => {});
-  await page.context().setOffline(true); const r = await page.reload({ timeout: 8000 }).catch((e) => "fail");
-  t.check("OFFLINE reload: after one online visit the page still loads from the service worker cache", r !== "fail" && (await page.evaluate(() => !!document.querySelector("#btnDemo") && !!window.plasmaTest).catch(() => false)), "offline reload failed even though sw.js + manifest are present (sw.js is network-first with runtime caching)", "OFFLINE");
+  // wait until the worker has really installed (precaching ~150 files with cache: "reload" can take well over 15 s on a loaded test box) and cached the shell, instead of sleeping and hoping
+  await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
+  await page.waitForFunction(async () => { const ks = await caches.keys(); for (const k of ks) { const c = await caches.open(k); if ((await c.match("js/app.js")) && (await c.match("index.html") || await c.match("./"))) return true; } return false; }, null, { timeout: 45000, polling: 250 }).catch(() => {});
+  await page.context().setOffline(true); let why = ""; const r = await page.reload({ timeout: 8000 }).catch((e) => { why = String(e && e.message || e).split("\n")[0]; return "fail"; });
+  // the app boots after the load event (it awaits its machine profile first), so wait for it rather than look at once
+  t.check("OFFLINE reload: after one online visit the page still loads from the service worker cache", r !== "fail" && (await page.waitForFunction(() => !!document.querySelector("#btnDemo") && !!window.plasmaTest, null, { timeout: 15000 }).then(() => true).catch(() => false)), `offline reload failed (${why || "page came up without the app"})`, "OFFLINE");
   await page.context().close(); await s3.close(); }
 { const html = fs.readFileSync(SITE + "index.html", "utf8"); t.check("PWA manifest / apple-touch-icon / theme-color present", /rel="manifest"/.test(html) && /apple-touch-icon/.test(html), "", "PWA");
   t.check("viewport meta allows zoom (no user-scalable=no)", !/user-scalable=no|maximum-scale=1[^0-9]/.test(html), (html.match(/<meta name="viewport"[^>]*>/) || [""])[0], "A11Y-ZOOM");
