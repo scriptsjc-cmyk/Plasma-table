@@ -1,6 +1,6 @@
 // Demo mode: a pretend grblHAL controller in the browser (same as plasma/sim.py).
 // Status reports, jogging, G0-G3 with roughly real timing, G38.2 onto a pretend
-// sheet, M3/M5, G4, G10 L20, $H, $X, $$, $pins.
+// sheet, M3/M5, G4, G10 L20, $H, $X, $$, $pins, and FluidNC's Wi-Fi set-up ($Wifi/ListAPs, $Hostname, $Sta/..., $WiFi/Mode).
 
 const WORD = /([A-Z])([-+]?\d*\.?\d+)/g;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -149,7 +149,7 @@ export class SimTransport {
   }
   async _exec(line) {
     const u = line.toUpperCase().replace(/ /g, "");
-    this.log.push(u);
+    this.log.push(/^\$STA\/PASSWORD=/.test(u) ? "$STA/PASSWORD=********" : u);     // a Wi-Fi password is never kept, not even here
     if (u.startsWith("$")) return this._dollar(u);
     if (this.alarm) return this._send("error:9");
     const words = [...u.matchAll(WORD)].map((m) => [m[1], parseFloat(m[2])]);
@@ -230,6 +230,12 @@ export class SimTransport {
       const m = u.match(/^\$(\d+)=(-?[\d.]+)$/);
       if (!m || !(Number(m[1]) in this.settings)) return this._send("error:3");
       this.settings[Number(m[1])] = Number(m[2]);
+    } else if (u === "$WIFI/LISTAPS") {           // FluidNC's Wi-Fi scan, with made-up neighbours for the practice table
+      this._send('{"AP_LIST":[{"SSID":"Practice-Home","SIGNAL":"84","IS_PROTECTED":"1"},{"SSID":"Workshop Guest","SIGNAL":"52","IS_PROTECTED":"0"},{"SSID":"Practice-Home","SIGNAL":"40","IS_PROTECTED":"1"},{"SSID":"Next Door","SIGNAL":"21","IS_PROTECTED":"1"}]}');
+    } else if (u === "$HOSTNAME") {
+      this._send("$Hostname=fluidnc");
+    } else if (/^\$(STA\/SSID|STA\/PASSWORD|STA\/IPMODE|WIFI\/MODE)=/.test(u)) {
+      this.wifiSet = (this.wifiSet || 0) + 1;
     } else if (u === "$PINS") {
       for (const s of ["[PIN:PA0,X step]", "[PIN:PA1,Y step]", "[PIN:PA2,Z step]", "[PIN:PB0,Probe]", "[PIN:PB1,Spindle on]"]) this._send(s);
     }

@@ -55,6 +55,7 @@ import { bindDialogKeys } from "./ui/dialogs.js";
 import { bindRun } from "./cut/run.js";
 import { bindViewport } from "./ui/viewport.js";
 import { bindPicture } from "./make/picture.js";
+import { bindWifiSetup } from "./ui/wifisetup.js";
 
 // Late-bound calls (see core/hooks.js): the real functions are registered here once, before anything runs.
 provide({ goStep, loadJob, paintChrome, paintGuide, refresh, renderProTools, renderQuickBar, renderShapeForm, runPro, setShapeFs, showSource, useShape, useShapeSoon });
@@ -80,6 +81,7 @@ function bind() {
   bindJog();
   bindViewport();
   bindPicture();
+  bindWifiSetup();
 }
 
 async function init() {

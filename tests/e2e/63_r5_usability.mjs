@@ -3,6 +3,7 @@
 //  16 touch targets on the phone cutting screen are at least 44 px, text at least 13-14 px
 //  6  Add a hole lands inside the part (even a ring), is picked; with several parts and none picked, Beginner is asked which
 //  7  Beginner always shows the size boxes: with nothing picked the only part is picked
+//  W  Put the table on your Wi-Fi: FluidNC value encoding, the scan list, the $ lines sent, the password never logged / kept / shown
 //  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Zoom to fit, Expand picture, scroll zoom
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
@@ -160,6 +161,59 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   ck("7 Beginner, two parts, nothing picked: it says to tap one (no guessing)", g.inputs === 0 && /Click a shape/.test(g.text), g);
   await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("pro", { persist: false, autoFs: false }); T.setShapeFs(false); const s = T.sketch; s.clear(); s.add("rect"); s.pick([]); s.onSelect(); })()`); await sleep(250);
   ck("7 Pro keeps nothing picked when you tap empty space", await T(page, `!window.plasmaTest.sketch.selected()`));
+  await page.context().close();
+}
+
+// ================================================================== W: put the table on your Wi-Fi
+{
+  const page = await phone(390, 664);
+  const enc = await T(page, `import("./js/machine/wifi.js").then((W) => ({ space: W.encodeFluidValue("Flying Pinguin"), umlaut: W.encodeFluidValue("Säx"), pct: W.encodeFluidValue("100%"), plain: W.encodeFluidValue("Home-5G_x=1"),
+    list: W.parseApList(["junk", '{"AP_LIST":[{"SSID":"A","SIGNAL":"30","IS_PROTECTED":"1"},{"SSID":"B","SIGNAL":"90","IS_PROTECTED":"0"},{"SSID":"A","SIGNAL":"60","IS_PROTECTED":"1"},{"SSID":"","SIGNAL":"99"}]}']),
+    none: W.parseApList(["error:3"]), cmds: W.wifiCommands("My Net", "pa ss%"), open: W.wifiCommands("Cafe", "").map((c) => c.line), host: W.parseHostname(["$Hostname=plasma"]),
+    block: [W.wifiBlocker({ connected: false }), W.wifiBlocker({ connected: true, viaPi: true }), W.wifiBlocker({ connected: true, jobRunning: true }), W.wifiBlocker({ connected: true })] }))`);
+  ck("W FluidNC values: a space is %20, non-ASCII is its UTF-8 bytes, % itself is %25, plain ASCII is left alone", enc.space === "Flying%20Pinguin" && enc.umlaut === "S%c3%a4x" && enc.pct === "100%25" && enc.plain === "Home-5G_x=1", enc);
+  ck("W the scan list: strongest first, one row per name, no blank names", JSON.stringify(enc.list) === JSON.stringify([{ ssid: "B", signal: 90, locked: false }, { ssid: "A", signal: 60, locked: true }]) && enc.none === null, enc.list);
+  ck("W the lines sent: SSID, password (marked secret), DHCP, then STA>AP so it falls back to its own Wi-Fi", JSON.stringify(enc.cmds) === JSON.stringify([{ line: "$Sta/SSID=My%20Net" }, { line: "$Sta/Password=pa%20ss%25", secret: true }, { line: "$Sta/IPMode=DHCP" }, { line: "$WiFi/Mode=STA>AP" }]), enc.cmds);
+  ck("W an open Wi-Fi sends no password line", !enc.open.some((l) => /Password/.test(l)) && enc.open.length === 3, enc.open);
+  ck("W hostname and blockers read right", enc.host === "plasma" && /USB/.test(enc.block[0]) && /Pi/.test(enc.block[1]) && /job/.test(enc.block[2]) && enc.block[3] === "", enc.block);
+  // not connected: the screen opens and says to connect first
+  await T(page, `(() => { const T = window.plasmaTest; T.showScreen("cut", { force: true }); T.goStep(3); document.getElementById("fnBox").open = true; })()`); await sleep(300);
+  await T(page, `document.getElementById("btnWifiSetup").click()`); await sleep(300);
+  const off = await T(page, `({ open: !document.getElementById("wifiDlg").classList.contains("hidden"), gate: !document.getElementById("gateDlg").classList.contains("hidden") })`);
+  ck("W signed out with no machine: the Wi-Fi button asks to sign in / link a machine first", !off.open && off.gate, off);
+  await T(page, `document.querySelector("#gateDlg .acct-close").click()`);
+  // the practice table: scan, pick, password, send
+  await demoToShape(page, { stay: "cut" }); await T(page, "window.plasmaTest.goStep(3)"); await sleep(300);
+  await T(page, `(() => { const d = window.plasmaTest.S.demo; d.__tx = []; const w = d.write.bind(d); d.write = (x) => { d.__tx.push(typeof x === "string" ? x : new TextDecoder().decode(x)); return w(x); }; document.getElementById("fnBox").open = true; document.getElementById("btnWifiSetup").click(); })()`); await sleep(300);
+  await page.click("#wifiScan");
+  await page.waitForSelector("#wifiList button[data-ap]", { timeout: 15000 }).catch(() => {});
+  const names = await T(page, `[...document.querySelectorAll("#wifiList button[data-ap] b")].map((b) => b.textContent)`);
+  ck("W the scan lists what the controller sees, strongest first, each name once", JSON.stringify(names) === JSON.stringify(["Practice-Home", "Workshop Guest", "Next Door"]), names);
+  await snap(page, "wifi-list-phone");
+  await page.click("#wifiList button[data-ap='0']"); await sleep(200);
+  const PW = "Sup3r-Secret pw";
+  await page.fill("#wifiPw", PW);
+  await page.click(".pwshow[data-pw='wifiPw']");
+  ck("W the password box has a Show button", await T(page, `document.getElementById("wifiPw").type === "text"`));
+  await page.fill("#wifiPw", "short"); await page.click("#wifiJoin"); await sleep(200);
+  ck("W a too-short password is caught before anything is sent", await T(page, `!document.getElementById("wifiFormErr").classList.contains("hidden") && !window.plasmaTest.S.demo.__tx.join("").includes("Sta/Password")`));
+  await page.fill("#wifiPw", PW); await snap(page, "wifi-password-phone");
+  await page.click("#wifiJoin");
+  await page.waitForFunction(() => !document.getElementById("wifiDone").classList.contains("hidden"), null, { timeout: 15000 }).catch(() => {});
+  const sent = await T(page, `window.plasmaTest.S.demo.__tx.join("").split("?").join("")`);     // without the status polls written in between
+  ck("W the controller got SSID, password, DHCP and STA>AP, in that order", /\$Sta\/SSID=Practice-Home\n\$Sta\/Password=Sup3r-Secret%20pw\n\$Sta\/IPMode=DHCP\n\$WiFi\/Mode=STA>AP\n/.test(sent), JSON.stringify(sent.split("?").join("")).slice(-400));
+  const leak = await T(page, `(() => { const pw = ${JSON.stringify(PW)}, enc = "Sup3r-Secret%20pw"; const where = { page: document.documentElement.outerHTML, text: document.body.innerText, local: JSON.stringify({ ...localStorage }), session: JSON.stringify({ ...sessionStorage }), simLog: JSON.stringify(window.plasmaTest.S.demo.log || []), box: document.getElementById("wifiPw").value };
+    return Object.entries(where).filter(([, v]) => v.includes(pw) || v.includes(enc) || v.toUpperCase().includes(enc.toUpperCase())).map(([k]) => k); })()`);
+  ck("W the password is nowhere on the page, in storage or in any log after sending (the box is emptied)", leak.length === 0, leak);
+  ck("W the console shows the password line masked", await T(page, `document.body.innerHTML.includes("$Sta/Password=********")`));
+  const done = await T(page, `({ ssid: document.getElementById("wifiDoneSsid").textContent, host: document.getElementById("wifiDoneHost").textContent, fn: document.getElementById("fnHost").value, restart: !!document.getElementById("wifiRestart").offsetParent })`);
+  ck("W done: says restart, names the Wi-Fi, shows http://fluidnc.local and fills the FluidNC host box", done.ssid === "Practice-Home" && done.host === "http://fluidnc.local" && done.fn === "fluidnc.local" && done.restart, done);
+  await snap(page, "wifi-done-phone");
+  // typed name; Esc empties the password
+  await T(page, `(() => { document.getElementById("wifiClose").click(); document.getElementById("btnWifiSetup").click(); document.getElementById("wifiOther").click(); })()`); await sleep(200);
+  await page.fill("#wifiPw", "another-secret"); await page.keyboard.press("Escape"); await sleep(200);
+  ck("W closing the box (Esc) empties the password box", await T(page, `document.getElementById("wifiDlg").classList.contains("hidden") && document.getElementById("wifiPw").value === ""`));
+  ck("W no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await page.context().close();
 }
 
