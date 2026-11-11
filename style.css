@@ -943,6 +943,15 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
   body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) .previewPane { display: none; }
 }
 
+/* ROUND 5 item 14: on a laptop-wide screen the "Put the parts on the bed" and "Connect, home and set the start point" cards sit side by side, so the connect buttons
+   and the FluidNC (Wi-Fi) host box are in view without scrolling past the whole layout card first. */
+@media (min-width: 1280px) {
+  body.app-shell:not(.short-land)[data-screen="cut"] .step[data-step="3"]:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
+  body.app-shell[data-screen="cut"] .step[data-step="3"] > h2, body.app-shell[data-screen="cut"] .step[data-step="3"] > #checkCard, body.app-shell[data-screen="cut"] .step[data-step="3"] > .nav { grid-column: 1 / -1; }
+  body.app-shell[data-screen="cut"] .step[data-step="3"] > #layoutCard { grid-column: 1; grid-row: 1; }
+  body.app-shell[data-screen="cut"] .step[data-step="3"] > #zeroCard { grid-column: 2; grid-row: 1; }
+}
+
 /* short landscape: give the canvas the row; dock overlays the bottom of the preview */
 @media (orientation: landscape) and (max-height: 540px) {
   body.app-shell.short-land .previewDock {
@@ -1449,7 +1458,7 @@ body.beginner .batchbtn { min-height: var(--tap, 44px); }
 .topmenu { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; flex-wrap: nowrap; }
 @media (max-width: 560px) {
   .topbar { flex-wrap: nowrap; align-items: center; }
-  .topbar-main { flex-wrap: nowrap !important; align-items: center; overflow: visible; gap: 8px; }
+  .topbar-main { flex-wrap: wrap !important; align-items: center; overflow: visible; gap: 4px 8px; }   /* wraps, so Ready / TORCH OFF never fall off the edge */
   #btnTopMenu { display: inline-flex; align-items: center; justify-content: center; }
   .topmenu {
     display: none;
@@ -1478,7 +1487,7 @@ body.beginner .batchbtn { min-height: var(--tap, 44px); }
   .topmenu .modesw-btn[data-mode="beginner"] { font-size: 13px; }
   .topmenu .modesw-btn[data-mode="beginner"]::after { content: none; }
   #topMenu #connPill, body.demo-on #topMenu #connPill { max-width: none; font-size: 13px; white-space: normal; }
-  #torchPill { flex: none; }
+  #torchPill, #stateBadge { flex: none; }
   body.app-shell:not(.short-land)[data-step="3"] .cutgrid,
   body.app-shell.beginner:not(.short-land)[data-step="3"] .cutgrid {
     grid-template-rows: minmax(210px, 1.2fr) minmax(140px, 1fr) !important;
@@ -1488,6 +1497,20 @@ body.beginner .batchbtn { min-height: var(--tap, 44px); }
   #demoAcctBar { padding: 4px 8px; font-size: 12px; }
   .appfoot { display: none; }
 }
+
+/* ROUND 5 item 15: between a phone and a laptop (and at 200% zoom) the header wraps and condenses, so the Ready / TORCH status is always in view */
+@media (min-width: 561px) and (max-width: 899px) {
+  .topbar-main { flex-wrap: wrap; overflow: visible; gap: 4px; }
+  .topmenu { flex-wrap: wrap; gap: 4px; }
+  #machineName { display: none; }
+  #btnHome span { display: none; }                      /* arrow only; it keeps its "Back to the main menu" label */
+  #btnHome.homebtn { min-width: 40px; padding-left: 10px; padding-right: 10px; }
+  #connPill, body.demo-on #connPill { max-width: 10em; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #acctPill { max-width: 7em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #stateBadge, #torchPill { flex: none; }
+}
+#torchPill { max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap; }   /* TORCH ON / TORCH OFF is never cut short */
+body.short-land[data-screen="cut"] #stateBadge:not(.hidden) { display: inline-block !important; }   /* the Ready / Paused / Alarm word stays on a phone on its side */
 
 /* ---- ROUND 3 item 8: one icon weight, AA text, status account, visible focus ---- */
 button .ico, .tab .ico, .pill .ico, .locknote .ico, .ampsnote .ico { margin-right: 0.35em; }
