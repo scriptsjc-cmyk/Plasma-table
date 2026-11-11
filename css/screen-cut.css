@@ -355,7 +355,7 @@ body[data-step="3"] #exportRow { display: none; }
 body.short-land .startwhy { font-size: 12px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .startwhy.hidden { display: none; }
 body.short-land .step[data-step="3"] > .nav button { min-height: 40px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
-body.short-land .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; }
+body.short-land .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; min-height: 48px; }   /* round 5 (look H2): a slim row leaves the height to "Start here" and the checklist */
 @media (max-width: 899px) and (orientation: portrait) {
   body.app-shell .step[data-step="3"] > .nav button { min-height: 40px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
   body.app-shell .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; }

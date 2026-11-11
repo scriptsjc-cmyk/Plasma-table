@@ -267,7 +267,8 @@ body.short-land #setupView {
     position: absolute; inset: 0; width: 100%; height: 100% !important; flex: none; min-height: 0;
   }
   body.short-land #exportRow button { min-height: 36px; padding: 4px 8px; font-size: 12px; }
-  body.short-land .toast { bottom: max(12px, env(safe-area-inset-bottom)); }
+  /* round 5 (look H2): on a phone on its side a toast sits under the header, never over Start / the checklist */
+  body.short-land .toast { bottom: auto; top: calc(var(--topbar-h, 56px) + 6px); }
   body.short-land .pill.acct { min-height: 36px; }
 }
 .shapelib-head button { min-height: var(--tap); }
