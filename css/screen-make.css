@@ -356,8 +356,6 @@ body.shape-fs .makebar { display: none; }
 body[data-screen="cut"] .step[data-step="4"] .nav { display: none; }
 /* Round 5 (CAD): the cut check and job warnings belong to cutting, not to designing */
 body[data-screen="make"] #warnings, body[data-screen="make"] #cutCheck { display: none !important; }
-/* Round 5 (safety): the TORCH ON pill must always be visible while the torch is lit, even on the short landscape phone screen */
-body.short-land[data-screen="cut"] #torchPill.on:not([hidden]) { display: inline-block !important; }
 /* Round 5 (bugs 20): the inspector's job-wide cut settings sit in their own labelled box */
 #ptInspector .pt-jobset { margin: 8px 0 0; padding: 6px 8px 8px; border: 1px dashed var(--line); border-radius: 8px; min-width: 0; }
 #ptInspector .pt-jobset legend { padding: 0 4px; font-size: 12px; font-weight: 700; color: var(--muted); }

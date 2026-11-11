@@ -1,6 +1,6 @@
 // Round 5 group 2 (SAFETY) tests, items 6-11. Takes the r5-safety-*.png screenshots.
 //  6 E-stop release is a deliberate press-and-hold; Torch test / jog / console M3 are blocked while it is latched
-//  7 the TORCH ON pill is visible on the landscape-phone cutting screen
+//  7 the TORCH ON / TORCH OFF pill is always visible on the landscape-phone cutting screen
 //  8 Score / Mark lines block Start and Download G-code with a clear warning (the G-code can't cut them lighter)
 //  9 STOP / reset / home / alarm clear work zero; startJob (and Continue from cut N) refuse without it
 //  9b the checklist's "Start point set" line follows work zero by itself (never a hand tick) and unticks on STOP / reset
@@ -206,19 +206,20 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   const pill = () => T(page, `(() => { const e = document.getElementById("torchPill"); const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return { w: Math.round(r.width), h: Math.round(r.height), display: cs.display, text: e.textContent, on: e.classList.contains("on"), hidden: e.hidden, atTop: top === e || e.contains(top), shortLand: document.body.classList.contains("short-land") }; })()`);
   const p0 = await pill();
   ck("7 (setup) this really is the short landscape layout", p0.shortLand, JSON.stringify(p0));
-  ck("7 torch off: the quiet TORCH OFF pill stays out of the way (as designed)", p0.display === "none" && p0.on === false, JSON.stringify(p0));
+  ck("7 torch off: TORCH OFF is showing on the landscape phone (round 5: the torch state is always in view)", p0.display !== "none" && p0.on === false && /TORCH OFF/.test(p0.text) && p0.w > 40 && p0.atTop, JSON.stringify(p0));
   await T(page, "window.plasmaTest.S.demo.torch = true"); await sleep(600);
   const p1 = await pill();
   ck("7 torch lit: TORCH ON is visible on the landscape phone cutting screen", p1.on && /TORCH ON/.test(p1.text) && p1.display !== "none" && p1.w > 40 && p1.h > 10 && p1.atTop, JSON.stringify(p1));
   ck("7 the pill doesn't run over the connection pill or the STOP button", await T(page, `(() => { const r = (id) => document.getElementById(id).getBoundingClientRect(); const t = r("torchPill"); return ["connPill", "btnStop"].every((id) => { const o = r(id); return t.right <= o.left + 1 || t.left >= o.right - 1; }); })()`));
   await snap(page, "torchpill-phoneland");
   await T(page, "window.plasmaTest.S.demo.torch = false"); await sleep(600);
-  ck("7 torch off again: pill hides again", (await pill()).display === "none");
+  const p2 = await pill();
+  ck("7 torch off again: the pill goes back to TORCH OFF and stays visible", p2.display !== "none" && !p2.on && /TORCH OFF/.test(p2.text), JSON.stringify(p2));
   ck("7 STOP button stays visible and tappable on the landscape phone", await T(page, "(() => { const r = document.getElementById('btnStop').getBoundingClientRect(); return r.width >= 56 && r.height >= 56; })()"));
   await page.context().close();
 }
 // merged with the layout work: TORCH ON sits next to the Ready badge on a phone on its side (844x390 and 683x384), nothing overlaps
-for (const [w, h] of [[844, 390], [683, 384]]) {
+for (const [w, h] of [[844, 390], [683, 384], [667, 375], [640, 360]]) {
   const ctx = await br.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const page = await ctx.newPage(); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e))); page.on("dialog", (d) => d.accept());
   await ctx.route((u) => !u.href.startsWith(s.base) && !u.href.startsWith("data:"), (r) => r.abort());
@@ -231,6 +232,9 @@ for (const [w, h] of [[844, 390], [683, 384]]) {
   ck(`7 ${w}x${h}: TORCH ON and the Ready badge are both showing`, g.torch.show && g.badge.show && /Ready/i.test(g.badgeText), JSON.stringify(g));
   ck(`7 ${w}x${h}: TORCH ON sits right next to Ready (same row, side by side)`, Math.abs(g.torch.t - g.badge.t) < 12 && Math.abs(g.torch.l - g.badge.r) < 30 || Math.abs(g.badge.l - g.torch.r) < 30, JSON.stringify(g));
   ck(`7 ${w}x${h}: nothing in the header overlaps (torch / ready / connection / STOP) and all fit on screen`, !hit(g.torch, g.badge) && !hit(g.torch, g.conn) && !hit(g.torch, g.stop) && !hit(g.badge, g.stop) && g.stop.r <= g.w + 1 && g.torch.r <= g.w, JSON.stringify(g));
+  await T(page, "window.plasmaTest.S.demo.torch = false"); await sleep(700);
+  const off = await T(page, `(() => { const e = document.getElementById("torchPill"), b = e.getBoundingClientRect(), s = document.getElementById("btnStop").getBoundingClientRect(); return { show: getComputedStyle(e).display !== "none" && b.width > 0, text: e.textContent, oneRow: Math.abs(b.top - document.getElementById("stateBadge").getBoundingClientRect().top) < 12, onScreen: b.right <= innerWidth && b.bottom <= document.querySelector(".topbar").getBoundingClientRect().bottom, clearOfStop: b.right <= s.left + 1 }; })()`);
+  ck(`7 ${w}x${h}: torch off: TORCH OFF still shows on the same header row, clear of STOP`, off.show && /TORCH OFF/.test(off.text) && off.oneRow && off.onScreen && off.clearOfStop, JSON.stringify(off));
   await snap(page, `torch-next-to-ready-${w}x${h}`);
   ck(`7 ${w}x${h}: no page errors`, page.errors.filter((e) => !/404|favicon|Failed to load resource/i.test(e)).length === 0, page.errors.join("|"));
   await ctx.close();

@@ -591,8 +591,13 @@ body.short-land .appfoot { display: none; }
 }
 #torchPill { max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap; }
 /* TORCH ON / TORCH OFF is never cut short */
-body.short-land[data-screen="cut"] #stateBadge:not(.hidden) { display: inline-block !important; }
-/* the Ready / Paused / Alarm word stays on a phone on its side */
+body.short-land[data-screen="cut"] #stateBadge:not(.hidden), body.short-land[data-screen="cut"] #torchPill:not([hidden]) { display: inline-block !important; }
+/* the Ready / Paused / Alarm word and TORCH ON / TORCH OFF always stay on a phone on its side (round 5 safety: other chips shrink first) */
+@media (max-width: 700px) {
+  /* smaller phones on their side: the connection and account pills give way so TORCH stays on the one header row */
+  body.short-land[data-screen="cut"] #topMenu #connPill { max-width: 5.5em; }
+  body.short-land[data-screen="cut"] #acctPill { max-width: 4.5em; }
+}
 /* ROUND 5 item 18: why Start is greyed, as text right under the buttons */
 .step[data-step="3"] > .nav { flex-wrap: wrap; }
 /* phone on its side: Back / Start / Download share one slim row, so the reasons and the layout controls both fit */
@@ -641,4 +646,3 @@ body[data-screen="cut"] .nav { margin-top: 14px; flex-wrap: wrap; }
 body[data-screen="cut"] .stepPane > .step .nav { position: sticky; bottom: 0; background: var(--card); padding: 8px 0 2px; z-index: 3; }
 /* phone on its side: every pixel of height goes to the bed and the buttons */
 body.short-land[data-screen="cut"] #stepper { display: none; }
-body.short-land[data-screen="cut"] #torchPill, body.short-land[data-screen="cut"] #stateBadge { display: none !important; }
