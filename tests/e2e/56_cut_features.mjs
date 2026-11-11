@@ -143,7 +143,13 @@ const vis = (page, id) => T(page, `(() => { const e = document.getElementById('$
   ck("35 controller without THC: arc OK and volts say 'not connected'", p[0] === "not connected" && p[1] === "not connected", p);
   ck("35 ... and the page explains why", /doesn't report arc OK/.test(await T(page, "document.getElementById('lpNote').textContent")), await T(page, "document.getElementById('lpNote').textContent"));
   ck("35 ... no invented number in those two cells", !/\d/.test(p[0] + p[1]));
-  await T(page, "window.plasmaTest.showScreen && 0"); await shot(page, "laptop-1366x768-cut-not-connected");
+  await unlockHome(page); await T(page, "window.plasmaTest.goStep(3)"); await sleep(400); await zeroAndTick(page);
+  await T(page, "document.getElementById('dryRun').checked = false; document.getElementById('dryRun').dispatchEvent(new Event('change', { bubbles: true }))"); await sleep(300);
+  await page.click("#btnStart"); await waitCut(page, 1); await sleep(1500);
+  p = await panel(page);
+  ck("35 while cutting without THC reports: arc and volts stay 'not connected', no lost arc is ever raised", p[0] === "not connected" && p[1] === "not connected" && !(await vis(page, "lostArc")), p);
+  await shot(page, "laptop-1366x768-cut-not-connected");
+  await page.keyboard.press("Space"); await sleep(800);
   ck("no page errors (35)", errs.length === 0, errs);
   await page.close();
 }

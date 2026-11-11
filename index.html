@@ -552,13 +552,6 @@
 
       <!-- step 4: running / done -->
       <div class="step hidden" data-step="4">
-        <div id="livePanel" class="livepanel" role="group" aria-label="Live torch and arc readings">
-          <div class="lp" id="lpArc"><span>Arc OK</span><b>not connected</b></div>
-          <div class="lp" id="lpVolts"><span>Arc volts</span><b>not connected</b></div>
-          <div class="lp" id="lpZ"><span>Torch height</span><b>not connected</b></div>
-          <div class="lp" id="lpPierce"><span>Pierces</span><b>0 this job · 0 total</b></div>
-        </div>
-        <p id="lpNote" class="muted small lpnote"></p>
         <div id="lostArc" class="lostarc hidden" role="alert">
           <p><b id="lostArcHead">Arc lost.</b> <span id="lostArcText"></span></p>
           <button type="button" id="btnLostResume" class="xl accent">Continue from cut 1…</button>
@@ -571,6 +564,13 @@
           </div>
           <div class="progress"><div id="progBar"></div></div>
           <p class="muted" id="runInfo"></p>
+          <div id="livePanel" class="livepanel" role="group" aria-label="Live torch and arc readings">
+            <div class="lp" id="lpArc"><span>Arc OK</span><b>not connected</b></div>
+            <div class="lp" id="lpVolts"><span>Arc volts</span><b>not connected</b></div>
+            <div class="lp" id="lpZ"><span>Torch height</span><b>not connected</b></div>
+            <div class="lp" id="lpPierce"><span>Pierces</span><b>0 this job · 0 total</b></div>
+          </div>
+          <p id="lpNote" class="muted small lpnote"></p>
           <div class="torchbig" id="torchBig">TORCH OFF</div>
           <div class="livespeed">
             <div>Speed <b id="liveSpeed">–</b></div>
