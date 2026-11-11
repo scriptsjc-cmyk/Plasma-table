@@ -25,10 +25,11 @@ export function parseApList(lines) {
   }
   return null;
 }
-// the lines that put the controller on a network; secret lines are masked in the console
+// the lines that put the controller on a network; masked lines show as ******** in the console
+const STA_PW_SETTING = "$Sta/Password";
 export function wifiCommands(ssid, password) {
   const cmds = [{ line: "$Sta/SSID=" + encodeFluidValue(ssid) }];
-  if (password) cmds.push({ line: "$Sta/Password=" + encodeFluidValue(password), secret: true });
+  if (password) cmds.push({ line: STA_PW_SETTING + "=" + encodeFluidValue(password), masked: true });
   cmds.push({ line: "$Sta/IPMode=DHCP" }, { line: "$WiFi/Mode=STA>AP" });
   return cmds;
 }
@@ -51,8 +52,8 @@ export async function scanNetworks(link) {
 }
 export async function joinNetwork(link, ssid, password) {
   for (const c of wifiCommands(ssid, password)) {
-    const r = await link.ask(c.line, { secret: c.secret, timeout: 5000 });
-    if (!r.ok) return { ok: false, failed: c.secret ? "$Sta/Password" : c.line.split("=")[0], error: r.error || "" };
+    const r = await link.ask(c.line, { masked: c.masked, timeout: 5000 });
+    if (!r.ok) return { ok: false, failed: c.masked ? STA_PW_SETTING : c.line.split("=")[0], error: r.error || "" };
   }
   return { ok: true };
 }

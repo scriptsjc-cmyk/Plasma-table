@@ -252,14 +252,14 @@ export class GrblLink {
     this._pump();
   }
   // send one line and wait for its ok / error, with the lines the controller printed before it (e.g. a $ setting's value).
-  // secret: the console shows "> $Name=********" instead of the line (passwords).
-  ask(line, { secret = false, timeout = 5000 } = {}) {
+  // masked: the console shows "> $Name=********" instead of the line (passwords).
+  ask(line, { masked = false, timeout = 5000 } = {}) {
     line = String(line).trim();
     return new Promise((resolve) => {
       let done = false;
       const finish = (r) => { if (!done) { done = true; clearTimeout(timer); resolve(r); } };
       const timer = setTimeout(() => finish({ ok: false, lines: item.got, error: "no answer" }), timeout);
-      const item = { line, source: secret ? "secret" : "manual", got: [], done: (ok, text) => finish({ ok, lines: item.got, error: ok ? "" : text }) };
+      const item = { line, source: masked ? "masked" : "manual", got: [], done: (ok, text) => finish({ ok, lines: item.got, error: ok ? "" : text }) };
       this.pending.push(item);
       this._pump();
     });
@@ -338,7 +338,7 @@ export class GrblLink {
       this.t.write(line + "\n");
       if (source === "job" && this.job) this.job.sent++;
       else if (source === "manual") this._emit("log", { text: "> " + line, level: "tx" });
-      else if (source === "secret") this._emit("log", { text: "> " + line.split("=")[0] + "=********", level: "tx" });
+      else if (source === "masked") this._emit("log", { text: "> " + line.split("=")[0] + "=********", level: "tx" });
     }
   }
 

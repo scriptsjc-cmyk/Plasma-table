@@ -193,7 +193,7 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
     block: [W.wifiBlocker({ connected: false }), W.wifiBlocker({ connected: true, viaPi: true }), W.wifiBlocker({ connected: true, jobRunning: true }), W.wifiBlocker({ connected: true })] }))`);
   ck("W FluidNC values: a space is %20, non-ASCII is its UTF-8 bytes, % itself is %25, plain ASCII is left alone", enc.space === "Flying%20Pinguin" && enc.umlaut === "S%c3%a4x" && enc.pct === "100%25" && enc.plain === "Home-5G_x=1", enc);
   ck("W the scan list: strongest first, one row per name, no blank names", JSON.stringify(enc.list) === JSON.stringify([{ ssid: "B", signal: 90, locked: false }, { ssid: "A", signal: 60, locked: true }]) && enc.none === null, enc.list);
-  ck("W the lines sent: SSID, password (marked secret), DHCP, then STA>AP so it falls back to its own Wi-Fi", JSON.stringify(enc.cmds) === JSON.stringify([{ line: "$Sta/SSID=My%20Net" }, { line: "$Sta/Password=pa%20ss%25", secret: true }, { line: "$Sta/IPMode=DHCP" }, { line: "$WiFi/Mode=STA>AP" }]), enc.cmds);
+  ck("W the lines sent: SSID, password (masked), DHCP, then STA>AP so it falls back to its own Wi-Fi", JSON.stringify(enc.cmds) === JSON.stringify([{ line: "$Sta/SSID=My%20Net" }, { line: "$Sta/Password=pa%20ss%25", masked: true }, { line: "$Sta/IPMode=DHCP" }, { line: "$WiFi/Mode=STA>AP" }]), enc.cmds);
   ck("W an open Wi-Fi sends no password line", !enc.open.some((l) => /Password/.test(l)) && enc.open.length === 3, enc.open);
   ck("W hostname and blockers read right", enc.host === "plasma" && /USB/.test(enc.block[0]) && /Pi/.test(enc.block[1]) && /job/.test(enc.block[2]) && enc.block[3] === "", enc.block);
   // not connected: the screen opens and says to connect first
