@@ -3,7 +3,21 @@ import { $, pane, toast } from "./uibase.js";
 import { afterAuth } from "./accounthome.js";
 import * as A from "./account.js";
 
+// Round 5 item 17: "Show" next to each password box flips it to plain text and back (nothing is stored or logged)
+function bindShowPassword() {
+  document.querySelectorAll(".pwshow").forEach((b) => {
+    b.onclick = () => {
+      const inp = $(b.dataset.pw); if (!inp) return;
+      const show = inp.type === "password";
+      inp.type = show ? "text" : "password";
+      b.textContent = show ? "Hide" : "Show";
+      b.setAttribute("aria-pressed", show ? "true" : "false");
+      b.setAttribute("aria-label", show ? "Hide password" : "Show password");
+    };
+  });
+}
 export function bindAuthForms() {
+  bindShowPassword();
   $("goSignUp").onclick = () => pane("up");
   $("goSignIn").onclick = () => pane("in");
   $("goReset").onclick = () => pane("reset");

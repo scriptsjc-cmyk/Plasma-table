@@ -30,6 +30,7 @@ export function openDlg(id) {
 }
 export function pane(name) {
   $$("#acctBody [data-pane]").forEach((p) => p.classList.toggle("hidden", p.dataset.pane !== name));
+  $$('#acctBody .pwshow[aria-pressed="true"]').forEach((b) => b.click());     // a shown password goes back to dots when you move on
 }
 export function when(iso) { if (!iso) return "—"; try { return new Date(iso).toLocaleString(); } catch (e) { return String(iso); } }
 export const setHost = (h) => { host = h; };

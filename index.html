@@ -825,7 +825,7 @@
         <p class="muted" id="acctDemoTag2">Sign in or create an account to use Plasma Table. Running a real table also needs a linked machine.</p>
         <form id="formSignIn" class="col">
           <label>Email<input id="inEmail" type="email" autocomplete="username" required></label>
-          <label>Password<input id="inPin" type="password" autocomplete="current-password" required minlength="6"></label>
+          <label>Password<span class="pwfield"><input id="inPin" type="password" autocomplete="current-password" required minlength="6"><button type="button" class="pwshow" data-pw="inPin" aria-pressed="false" aria-label="Show password">Show</button></span></label>
           <button type="submit" class="xl go">Sign in</button>
         </form>
         <div class="row">
@@ -840,7 +840,7 @@
         <form id="formSignUp" class="col">
           <label>Name<input id="upName" type="text" autocomplete="name" maxlength="80"></label>
           <label>Email<input id="upEmail" type="email" autocomplete="username" required></label>
-          <label>Password<input id="upPin" type="password" autocomplete="new-password" required minlength="6"></label>
+          <label>Password<span class="pwfield"><input id="upPin" type="password" autocomplete="new-password" required minlength="6"><button type="button" class="pwshow" data-pw="upPin" aria-pressed="false" aria-label="Show password">Show</button></span></label>
           <p class="muted small">At least 6 characters. You can change this later.</p>
           <div class="signup-submit">
             <button type="submit" class="xl go">Create account</button>
@@ -880,7 +880,7 @@
         <h3>Choose a new password</h3>
         <form id="formNewPin" class="col">
           <input id="newPinEmail" type="email" autocomplete="username" class="hidden">
-          <label>New password<input id="newPin" type="password" autocomplete="new-password" required minlength="6"></label>
+          <label>New password<span class="pwfield"><input id="newPin" type="password" autocomplete="new-password" required minlength="6"><button type="button" class="pwshow" data-pw="newPin" aria-pressed="false" aria-label="Show password">Show</button></span></label>
           <button type="submit" class="xl go">Save</button>
         </form>
         <button type="button" id="backIn3" class="small">Back</button>

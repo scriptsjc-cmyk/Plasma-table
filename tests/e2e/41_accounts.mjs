@@ -186,6 +186,15 @@ try {
     await p.click("#goSignUp");
     await p.fill("#upEmail", "notnow@example.com");
     await p.fill("#upPin", "letmein1");
+    // round 5 item 17: Show / Hide password
+    await p.click('.pwshow[data-pw="upPin"]');
+    const shown = await p.evaluate(() => ({ type: upPin.type, label: document.querySelector('.pwshow[data-pw="upPin"]').textContent, pressed: document.querySelector('.pwshow[data-pw="upPin"]').getAttribute("aria-pressed"), value: upPin.value }));
+    t.check("item 17: Show turns the password into plain text (value kept)", shown.type === "text" && shown.label === "Hide" && shown.pressed === "true" && shown.value === "letmein1", JSON.stringify({ ...shown, value: shown.value.length }));
+    await p.click('.pwshow[data-pw="upPin"]');
+    t.check("item 17: Hide puts the dots back", await p.evaluate(() => upPin.type === "password"));
+    await p.click('.pwshow[data-pw="upPin"]'); await p.click("#goSignIn"); await p.click("#goSignUp");
+    t.check("item 17: moving to another pane hides a shown password again", await p.evaluate(() => upPin.type === "password" && document.querySelector('.pwshow[data-pw="upPin"]').textContent === "Show"));
+    t.check("item 17: every password box has the toggle", await p.evaluate(() => [...document.querySelectorAll('input[type="password"]')].every((i) => document.querySelector(`.pwshow[data-pw="${i.id}"]`))));
     await p.click('#formSignUp [type=submit]');
     await p.waitForFunction(() => window.plasmaTest.account.isSignedIn(), null, { timeout: 10000 });
     await p.evaluate(() => window.plasmaTest.showScreen("make"));
