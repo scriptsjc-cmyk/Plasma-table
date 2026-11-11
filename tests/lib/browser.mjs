@@ -1,6 +1,7 @@
 // Browser harness: static server (with optional delay / headers / request log) + Chrome with desktop & iPhone-style profiles.
 import http from "node:http"; import fs from "node:fs"; import path from "node:path";
 import { chromium, devices } from "playwright";
+import { SITE as SITE_, jsRel } from "./site.mjs";
 export const ROOT = new URL("../", import.meta.url).pathname;                       // tests/
 // The site under test is the repo root (one level up) unless SITE_DIR points at another copy of the build.
 export const SITE = (process.env.SITE_DIR || new URL("../../", import.meta.url).pathname).replace(/\/?$/, "/"); export const SHOTS = ROOT + "screenshots/";
@@ -29,7 +30,9 @@ export const PROFILES = {
 };
 export async function launch() { return chromium.launch({ channel: "chrome", headless: true }); }
 // Hooks that prove nothing real is touched in demo mode: WebSocket constructions and Web Serial calls are logged.
+const JMAP = () => JSON.stringify(Object.fromEntries(jsRel().map((f) => [f.split("/").pop().replace(/\.js$/, ""), "/" + f])));   // module name -> url, so page-side import() never hard-codes a folder
 const INIT = (safariLike) => `
+  window.__J = ${JMAP()};
   window.__net = { ws: [], serial: [], fetch: [], beacon: [] };
   const _WS = window.WebSocket; window.WebSocket = function (u, p) { window.__net.ws.push(String(u)); return new _WS(u, p); }; Object.assign(window.WebSocket, _WS); window.WebSocket.prototype = _WS.prototype;
   ${safariLike ? "try { delete Navigator.prototype.serial; } catch (e) {} try { Object.defineProperty(navigator, 'serial', { get: () => undefined }); } catch (e) {}" : ""}
@@ -37,14 +40,14 @@ const INIT = (safariLike) => `
   const _f = window.fetch; window.fetch = (...a) => { window.__net.fetch.push(String(a[0] && a[0].url || a[0])); return _f(...a); };
   const _sb = navigator.sendBeacon && navigator.sendBeacon.bind(navigator); if (_sb) navigator.sendBeacon = (...a) => { window.__net.beacon.push(String(a[0])); return _sb(...a); };
 `;
-export async function newPage(browser, profileName, { base, query = "?test=1&turn=0", blockExternal = true, offline = false, bypassCSP = false, sw = false } = {}) {
+export async function newPage(browser, profileName, { base, query = "?test=1&turn=0", blockExternal = true, offline = false, bypassCSP = false, sw = false, consoleErrors = true } = {}) {
   const prof = PROFILES[profileName]; const { safariLike, ...ctxOpts } = prof;
   const ctx = await browser.newContext({ ...ctxOpts, acceptDownloads: true, bypassCSP, serviceWorkers: sw ? "allow" : "block" });
   await ctx.addInitScript(INIT(!!safariLike));
   const page = await ctx.newPage();
   page.errors = []; page.consoleMsgs = []; page.requests = []; page.dialogs = []; page.failed = [];
   page.on("pageerror", (e) => page.errors.push(String(e && e.stack || e)));
-  page.on("console", (m) => { page.consoleMsgs.push(`${m.type()}: ${m.text()}`); if (m.type() === "error") page.errors.push("console.error: " + m.text()); });
+  page.on("console", (m) => { page.consoleMsgs.push(`${m.type()}: ${m.text()}`); if (consoleErrors && m.type() === "error") page.errors.push("console.error: " + m.text()); });
   page.on("request", (r) => page.requests.push(r.url()));
   page.on("requestfailed", (r) => page.failed.push(r.url() + " " + (r.failure() && r.failure().errorText)));
   page.on("dialog", async (d) => { page.dialogs.push(`${d.type()}: ${d.message()}`); await d.accept(); });
