@@ -925,6 +925,24 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
   }
 }
 
+/* ROUND 5 item 13: the cutting screen has no tool bar, so on a phone in portrait the "tools" grid row was an empty gap that squeezed the Part step into ~100px.
+   Give that height to the controls, and keep a sticky Next/Start bar from covering the control that was just scrolled to. */
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell:not(.short-land)[data-screen="cut"] .cutgrid:not(.with-qb):not(.editing) {
+    grid-template-rows: minmax(0, 0.7fr) minmax(0, 1.3fr) !important;
+    grid-template-areas: "preview" "step" !important;
+  }
+  body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) { grid-template-rows: minmax(0, 0.62fr) minmax(0, 1.38fr) !important; }
+  body.app-shell .stepPane { scroll-padding-bottom: 96px; }
+  /* full-screen editor on a portrait phone: the Step pane is hidden there, so the picture and the tool list share the screen (Beginner's canvas used to collapse to 2px) */
+  body.app-shell.shape-fs:not(.short-land) .cutgrid.editing { grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr) !important; grid-template-areas: "preview" "tools" !important; }
+}
+/* a small portrait phone (320x568, iPhone SE): the picture would leave the Part step ~100px, so on that step the controls get the whole pane */
+@media (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) { grid-template-rows: minmax(0, 1fr) !important; grid-template-areas: "step" !important; }
+  body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) .previewPane { display: none; }
+}
+
 /* short landscape: give the canvas the row; dock overlays the bottom of the preview */
 @media (orientation: landscape) and (max-height: 540px) {
   body.app-shell.short-land .previewDock {
@@ -1339,12 +1357,13 @@ body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
 body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
 body[data-step="3"] #exportRow { display: none; }
 
-/* ---- ROUND 2: optional portrait "turn your phone sideways" cover. A clean full-screen overlay: no STOP, no banners, nothing else on top
+/* ---- ROUND 2: optional portrait "turn your phone sideways" cover. Only on the cutting bed (cut screen, "Bed & start" step, Cut tab):
+   sign-in, the menu, Make a part and the Part step all work upright. A clean full-screen overlay: no STOP, no banners, nothing else on top
    of it. It is only paint (nothing is paused, hidden from the app or reset), so a running job carries on underneath. Off unless
    body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
 .turnoverlay { display: none; }
 @media (max-width: 599px) and (orientation: portrait) {
-  body.turn-on:not(.job-live) .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+  body.turn-on[data-screen="cut"][data-step="3"]:not(.job-live):has(.tab[data-tab="cut"].sel) .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
   body.turn-on .turnoverlay .turnicon { font-size: 72px; line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
   body.turn-on .turnoverlay .turntext { font-size: 26px; font-weight: 700; }
 }
@@ -1591,6 +1610,15 @@ body.pro-mode #ptInspector {
   color: var(--text);
 }
 body.pro-mode.shape-fs .fsbar { right: calc(var(--pt-insp-w, 252px) + 8px); }
+/* ROUND 5 item 13: the Done / Save bar floated over the Beginner/Pro switch. It now sits in the make bar's free left slot (the "Make a part" title steps aside)
+   and the Esc hint, which a phone has no use for, drops out on narrow screens. */
+body.shape-fs[data-screen="make"] #makeBar h2 { display: none; }
+body.shape-fs[data-screen="make"] #makeBar { justify-content: flex-end; }
+body.shape-fs[data-screen="make"] .fsbar { top: calc(var(--topbar-h, 56px) + 5px); left: 12px; right: auto; padding: 0; border: 0; background: transparent; gap: 6px; max-width: calc(100vw - 210px); }
+body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
+@media (max-width: 899px) { body.shape-fs[data-screen="make"] .fsbar > span { display: none; } }
+@media (max-width: 400px) { body.shape-fs[data-screen="make"] #makeBar .modesw-btn { min-width: 62px; padding-left: 8px; padding-right: 8px; }
+  body.shape-fs[data-screen="make"] .fsbar { left: 8px; gap: 4px; } body.shape-fs[data-screen="make"] .fsbar button { padding-left: 10px; padding-right: 10px; min-width: 0; } body.shape-fs[data-screen="make"] .fsbar #fsSave { margin-left: 0; } }
 #ptInspector .pt-insp-toggle {
   display: flex;
   align-items: center;
