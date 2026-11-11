@@ -25,6 +25,7 @@ import { syncWhy, watchWhy } from "./whyoff.js";
 import { makeInspector } from "./inspector-api.js";
 import { connectInspector } from "./inspector-ui.js";
 import { contoursToEditable } from "./editable.js";
+import { initMakeTools } from "./maketools.js";
 import { initPartsFolders, openImport, metaFromContours } from "./partsfolders.js";
 import { initFlow, showScreen, screen, navLocked, estopOn, estopPaint, estopReset, estopPress, paintLock } from "./flow.js";
 
@@ -583,7 +584,9 @@ const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gus
 function renderShapeTiles() {
   const tile = (sh) => `<button data-shape="${esc(sh.id)}" title="${esc(sh.tip || "Add " + sh.name)}"><i>${shapeThumb(sh, 40, 28) || esc(sh.icon)}</i>${esc(sh.name)}</button>`;
   $("shapeTiles").innerHTML = QUICK_PARTS.map((id) => SHAPES.find((s) => s.id === id)).filter(Boolean).map(tile).join("")
-    + `<button data-lib="1" class="libmore" title="Every shape, by category"><i>⋯</i>More shapes (${SHAPES.filter((s) => !s.hole).length})</button>`;
+    + `<button data-lib="1" class="libmore" title="Every shape, by category"><i>⋯</i>More shapes (${SHAPES.filter((s) => !s.hole).length})</button>`
+    + `<button data-tool="text" class="mktool" title="Type words and cut them as a name plate or as letters"><i>Aa</i>Add text</button>`
+    + `<button data-tool="trace" class="mktool" title="Turn a logo or picture into outlines you can cut"><i>▧</i>Trace a picture</button>`;
   $("holeTiles").innerHTML = SHAPES.filter((sh) => sh.hole).map(tile).join("");
   renderBeginnerShapes();
   $("skSnap").value = String(sketch.opts.snap);
@@ -747,6 +750,12 @@ function renderShapeForm() {
 
 
 let libCat = "all";
+let makeTools = null;
+function openMakeTool(which) {
+  if (!makeTools || (S.job && S.job.running)) return;
+  if (S.src !== "shape") showSource("shape");
+  if (which === "text") makeTools.openText(); else makeTools.openTrace();
+}
 function openLibrary() {
   $("shapeLib").classList.remove("hidden");
   $("libSearch").value = "";
@@ -2256,10 +2265,20 @@ function bind() {
   // step 1: Make a part
   if ($("bgShapes")) $("bgShapes").onclick = (e) => { const b = e.target.closest("[data-bshape]"); if (b) beginnerPick(b.dataset.bshape); };
   if ($("bgMore")) $("bgMore").onclick = () => openLibrary();
+  makeTools = initMakeTools({
+    sketch, isPro: isProMode, toast,
+    blocked: () => !!(S.job && S.job.running),
+    afterAdd: () => { S.bgChoosing = false; if (S.src !== "shape") showSource("shape"); sketch.fitView(); useShape(); },
+  });
+  const bgm = document.querySelector("#bgPick .bgmore");
+  if (bgm) bgm.insertAdjacentHTML("beforeend", `<button type="button" id="bgText" class="xl">Aa Add text</button><button type="button" id="bgTrace" class="xl">▧ Trace a picture</button>`);
+  if ($("bgText")) $("bgText").onclick = () => openMakeTool("text");
+  if ($("bgTrace")) $("bgTrace").onclick = () => openMakeTool("trace");
   if ($("bgChange")) $("bgChange").onclick = () => { S.bgChoosing = true; paintGuide(); };
   const addTile = (e) => {
     if (Date.now() < (S.uiBlockUntil || 0)) return;      // a second tap just after a sheet closed would hit whatever is under it
     if (e.target.closest("[data-lib]")) { openLibrary(); return; }
+    const tl = e.target.closest("[data-tool]"); if (tl) { openMakeTool(tl.dataset.tool); return; }
     const b = e.target.closest("[data-shape]"); if (b) addShapeId(b.dataset.shape);
   };
   $("shapeTiles").onclick = addTile; $("holeTiles").onclick = addTile;
@@ -2635,7 +2654,7 @@ async function init() {
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, openMakeTool, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
   inspectorApi = makeInspector({
     sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),
     setLead: (v) => { $("ovLead").value = String(v); },

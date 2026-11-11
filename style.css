@@ -1994,3 +1994,26 @@ body.short-land .dimedit { padding: 6px 10px; }
 body.short-land .dimedit > p.small { display: none; }
 body.short-land .dimedit label { margin-bottom: 2px; }
 body.short-land .dimedit .dimops { margin-top: 4px; }
+
+/* ---- Round 5: Add text and Trace a picture (js/maketools.js) ---- */
+.mtdlg { z-index: 140; }
+.mtdlg .shapelib-card { max-height: calc(100dvh - 24px); overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.mtdlg textarea { width: 100%; min-height: 64px; resize: vertical; }
+.mtdlg canvas { width: 100%; height: auto; max-height: 34dvh; border: 1px solid var(--line, #cbd5df); border-radius: 10px; background: #fff; }
+.mtdlg .mt-pro { display: none; }
+.mtdlg.is-pro .mt-pro { display: block; }
+.mtdlg.is-pro .mt-guide, .mtdlg.is-pro .mt-step { display: none; }
+.mtdlg.kind-letters .mt-plate { display: none; }
+.mt-lab { display: flex; align-items: center; }
+.mt-cols { display: flex; flex-direction: column; gap: 8px; }
+.mt-ctl, .mt-view { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+@media (min-width: 820px) {
+  .mtdlg .shapelib-card { width: min(960px, 100%); }
+  .mt-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .mt-view { position: sticky; top: 0; }
+}
+.mt-step { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 6px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; flex: none; }
+.mtdlg .row.wrap { align-items: center; gap: 8px; }
+.tiles button.mktool i { font-style: normal; font-weight: 700; }
+@media (max-height: 560px) { .mtdlg canvas { max-height: 24dvh; } .mtdlg .mt-guide { display: none; } }

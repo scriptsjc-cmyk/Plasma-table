@@ -9,7 +9,7 @@
 //    you always get the deployed file. The cache is used only when the network fails or is too slow, and only the cache of THIS release
 //    is read, never an older one. Precached files are written once at install, never from later fetches, so the offline copy is always
 //    one consistent release. version.json is always asked of the network (offline it falls back to the installed release's copy).
-const CACHE = "plasma-cad-2026.11.11-9e0235b";
+const CACHE = "plasma-cad-2026.11.11-107e36a";
 const PRECACHE = [
   /* precache:start */
   "./",
@@ -41,6 +41,7 @@ const PRECACHE = [
   "js/expr.js",
   "js/flow.js",
   "js/fluidnc.js",
+  "js/fontdata.js",
   "js/geom.js",
   "js/grbl.js",
   "js/howto.js",
@@ -48,6 +49,7 @@ const PRECACHE = [
   "js/inspector-ui.js",
   "js/job.js",
   "js/machine.js",
+  "js/maketools.js",
   "js/partsfolders.js",
   "js/r2ui.js",
   "js/safety.js",
@@ -60,7 +62,9 @@ const PRECACHE = [
   "js/sketch.js",
   "js/svg.js",
   "js/sw-register.js",
+  "js/textshape.js",
   "js/timeline.js",
+  "js/trace.js",
   "js/variants.js",
   "js/version.js",
   "js/whyoff.js",
