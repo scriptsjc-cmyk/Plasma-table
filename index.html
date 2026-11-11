@@ -124,7 +124,7 @@
       <circle cx="60" cy="60" r="57" fill="url(#esPlate)" stroke="#7a5f00" stroke-width="2.5"/>
       <circle cx="60" cy="60" r="46" fill="url(#esWell)" stroke="#000" stroke-width="2"/>
       <ellipse class="es-shadow" cx="60" cy="70" rx="35" ry="10" fill="#000" opacity=".5"/>
-      <circle class="es-side" cx="60" cy="63" r="34" fill="#7a0b08"/>
+      <circle cx="60" cy="63" r="34" fill="#7a0b08"/>
       <g class="es-top">
         <circle cx="60" cy="56" r="34" fill="url(#esCap)" stroke="#650807" stroke-width="2"/>
         <circle class="es-on" cx="60" cy="56" r="34" fill="url(#esCapOn)" opacity="0"/>
@@ -322,10 +322,10 @@
                 <button id="spUp" class="xl" aria-label="Faster">+</button>
               </div>
               <input type="range" id="spSlider" aria-label="Cut speed">
-              <div class="speedscale"><span>slower</span><span id="spRange"></span><span>faster</span></div>
+              <div><span>slower</span><span id="spRange"></span><span>faster</span></div>
               <p id="spNote" class="spnote"></p>
             </div>
-            <p class="muted small autohint">Leave a box empty to use the recommended value shown in it as “Auto”.</p>
+            <p class="muted small">Leave a box empty to use the recommended value shown in it as “Auto”.</p>
             <div class="grid2">
               <label>Cut width / kerf (mm)<input id="ovKerf" type="number" step="0.1" inputmode="decimal"></label>
               <label>Lead-in (mm)<input id="ovLead" type="number" step="0.5" inputmode="decimal"></label>
@@ -490,7 +490,7 @@
               <button type="button" id="remDel" class="small danger" title="Delete the picked saved remnant">Delete</button>
             </div>
           </details>
-          <p class="muted small layhelp beginner-help">Drag a part to move it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet.</p>
+          <p class="muted small beginner-help">Drag a part to move it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet.</p>
           <div id="layoutSel" class="layoutsel hidden">
             <div class="selhead"><b id="laySelName">Part</b></div>
             <div class="skbtns laytools">
@@ -543,7 +543,7 @@
             <button class="do-raise">⤒ Raise torch</button>
             <button id="btnGoStart">Go to start point</button>
           </div>
-          <p class="muted small zerohelp">Put the sheet on the table. Move the torch over the sheet's <b>bottom-left corner</b> and press <b>Start here</b>. That corner is where the sheet picture's 0, 0 is.</p>
+          <p class="muted small">Put the sheet on the table. Move the torch over the sheet's <b>bottom-left corner</b> and press <b>Start here</b>. That corner is where the sheet picture's 0, 0 is.</p>
           <div class="jogmount"></div>
           <p class="muted small keyhint">Keyboard: arrows move, Page Up / Page Down raise and lower. Tap for one step, hold to glide. Two arrows go diagonal, add Shift to go slow.</p>
           <details id="originCard" class="originbox">
@@ -739,7 +739,7 @@
       <span></span><button class="j" data-axis="Y" data-dir="1">▲<small>Y+</small></button><span></span>
       <button class="j z" data-axis="Z" data-dir="1">⤒<small>Up</small></button>
       <button class="j" data-axis="X" data-dir="-1">◀<small>X−</small></button>
-      <span class="jcenter"></span>
+      <span></span>
       <button class="j" data-axis="X" data-dir="1">▶<small>X+</small></button>
       <span></span>
       <span></span><button class="j" data-axis="Y" data-dir="-1">▼<small>Y−</small></button><span></span>
@@ -1374,7 +1374,7 @@
 
 <!-- how-to guide -->
 <div id="howtoDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
-  <div class="shapelib-card acctcard wide howto-card">
+  <div class="shapelib-card acctcard wide">
     <div class="shapelib-head">
       <h2 id="howtoTitle">How to use</h2>
       <button type="button" class="acct-close" id="howtoClose">Close</button>
