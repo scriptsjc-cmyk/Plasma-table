@@ -5,6 +5,7 @@
 //  7  Beginner always shows the size boxes: with nothing picked the only part is picked
 //  W  Put the table on your Wi-Fi: FluidNC value encoding, the scan list, the $ lines sent, the password never logged / kept / shown
 //  10 a different account signing in gets "Keep this drawing?" once; Start fresh clears drawing, undo, recent files and material; the mode follows the account
+//  8  Pro on a phone: the inspector is a bottom sheet, the tool list one row, the status under the picture
 //  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Zoom to fit, Expand picture, scroll zoom
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
@@ -128,6 +129,24 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   await ctx.close();
 }
 
+// ================================================================== 8: Pro on a phone
+{
+  const page = await phone(390, 664);
+  await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("pro", { persist: false, autoFs: false }); T.showScreen("make", { force: true }); T.setShapeFs(false); T.sketch.clear(); T.sketch.add("plate", true); T.sketch.fitView(); })()`); await sleep(600);
+  const g = await T(page, `(() => { const r = (q) => { const b = document.querySelector(q).getBoundingClientRect(); return { t: Math.round(b.top), b: Math.round(b.bottom), w: Math.round(b.width), h: Math.round(b.height) }; };
+    const tops = [...document.querySelectorAll("#quickBar button")].filter((b) => b.offsetParent).map((b) => Math.round(b.getBoundingClientRect().top));
+    return { insp: r("#ptInspector"), cv: r("#preview"), dock: r(".previewDock"), qbRows: new Set(tops).size, qbButtons: tops.length, vh: innerHeight, vw: innerWidth, expanded: document.getElementById("ptInspToggle").getAttribute("aria-expanded") }; })()`);
+  ck("8 phone Pro: the inspector is a bar along the bottom (collapsed), not a column beside the picture", g.insp.b >= g.vh - 1 && g.insp.h <= 56 && g.insp.w >= g.vw - 1 && g.expanded === "false", g.insp);
+  ck("8 phone Pro: the picture uses the full width", g.cv.w >= 0.9 * g.vw, g.cv);
+  ck("8 phone Pro: the tools are one sideways-scrolling row", g.qbRows === 1 && g.qbButtons >= 4, { rows: g.qbRows, n: g.qbButtons });
+  ck("8 phone Pro: the status / Save row sits under the picture, not on it", g.dock.t >= g.cv.b - 1, { cv: g.cv, dock: g.dock });
+  await snap(page, "pro-phone");
+  await page.click("#ptInspToggle"); await sleep(300);
+  const o = await T(page, `(() => { const b = document.getElementById("ptInspector").getBoundingClientRect(); return { h: Math.round(b.height), b: Math.round(b.bottom), vh: innerHeight, expanded: document.getElementById("ptInspToggle").getAttribute("aria-expanded"), arrow: [...document.querySelectorAll("#ptInspToggle use")].pop().getAttribute("href") }; })()`);
+  ck("8 phone Pro: tapping the bar opens the sheet (at most 55% of the screen, arrow down to close)", o.expanded === "true" && o.h > 56 && o.h <= 0.56 * o.vh && o.b >= o.vh - 1 && o.arrow === "#i-arrow-down", o);
+  await snap(page, "pro-phone-sheet");
+  await page.context().close();
+}
 // ================================================================== 6: Add a hole lands inside the part
 {
   const page = await phone(390, 664); await makeBeginner(page, false);

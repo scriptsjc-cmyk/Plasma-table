@@ -63,6 +63,7 @@ const OPS = [
 ];
 
 const NARROW = "(max-width: 1100px), (max-height: 560px)";
+const SHEET = "(max-width: 599px) and (orientation: portrait)";       // round 5 item 8 (css/screen-make.css)
 
 function icon(name) {
   return `<svg class="ico" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
@@ -375,7 +376,8 @@ function bindFields(aside) {
       toggle.setAttribute("aria-label", collapsed ? "Expand inspector" : "Collapse inspector");
       const uses = toggle.querySelectorAll("use");
       const chev = uses[uses.length - 1];
-      if (chev) chev.setAttribute("href", collapsed ? "#i-arrow-left" : "#i-arrow-right");
+      const sheet = window.matchMedia(SHEET).matches;               // a phone: the inspector is a bottom sheet, so its arrow points up / down
+      if (chev) chev.setAttribute("href", sheet ? (collapsed ? "#i-arrow-up" : "#i-arrow-down") : (collapsed ? "#i-arrow-left" : "#i-arrow-right"));
     }
     if (body) {
       body.hidden = collapsed;
