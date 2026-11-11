@@ -67,6 +67,7 @@ function bindLive() {
   $("btnLostResume").onclick = () => {
     const M = H.M(); if (M.jobRunning()) { H.toast("Stop the job first (STOP or the space bar).", true); return; }
     const n = (watch.lost && watch.lost.cut) || 1;
+    if (!H.confirm(`The arc was lost during cut ${n}.\n\nGo on from cut ${n}? You will check the sheet, set the start point again and tick the checklist first. The torch only fires when you press Start. Nothing starts now.`)) return;
     // the same road as "Continue from cut N" after any stop: work zero is NOT kept unless the machine still knows where it is,
     // Start asks its confirm box, the checklist and every start check apply, and nothing fires until Start is pressed
     H.continueFromCut(n);
