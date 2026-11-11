@@ -256,6 +256,7 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   // offline
   state.down = true; await T(page, "navigator.serviceWorker.ready.then(() => 1)");
   await page.reload({ waitUntil: "load" }).catch(() => {});
+  await page.waitForFunction(() => window.plasmaTest, null, { timeout: 15000 }).catch(() => {});   // the module graph is still starting when "load" fires
   const off = await T(page, "({ ok: !!window.plasmaTest, title: document.title, scr: document.body.dataset.screen })").catch((e) => ({ err: String(e) }));
   ck("30 offline: the page reloads from the cache and the app starts", off.ok === true, off);
   const offVer = await T(page, "fetch('version.json?x=1').then((r) => r.json())").catch((e) => ({ err: String(e) }));
