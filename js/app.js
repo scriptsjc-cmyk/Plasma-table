@@ -262,6 +262,19 @@ function paintMenu() {
   $("menuHello").textContent = nm ? `Hi ${nm}. What do you want to do?` : "What do you want to do?";
   $("menuMachine").textContent = Acc.hasLinkedMachine() ? "Your machine is linked." : (Acc.isSignedIn() ? "No machine linked yet. You can make parts now; linking a machine is needed to cut." : "");
 }
+// B5 21: a signed-in user's very first job is a Practice run by default (move only, torch off). Once any job has been started,
+// Practice goes back to being their own choice. Tracked per account on this device.
+const firstJobKey = () => { const u = Acc.currentUser(); return u ? "plasma.firstJobDone." + (u.id || u.email || "user") : null; };
+function firstJobDone() { const k = firstJobKey(); if (!k) return true; try { return localStorage.getItem(k) === "1"; } catch (e) { return false; } }
+function markFirstJobDone() { const note = $("dryFirstNote"); if (note) note.classList.add("hidden"); const k = firstJobKey(); if (!k) return; try { localStorage.setItem(k, "1"); } catch (e) { /* private mode */ } }
+function applyFirstJobDefault() {
+  const k = firstJobKey(), cb = $("dryRun");
+  if (!k || !cb || firstJobDone() || S._firstJobFor === k) return;
+  S._firstJobFor = k;
+  if (!cb.checked) { cb.checked = true; if (S.prepared) loadJob(); renderMaterials(); }
+  const note = $("dryFirstNote"); if (note) note.classList.remove("hidden");
+  toast("Your first job is a Practice run: the table moves but the torch stays off. Untick “Practice run” on the Bed & start step when you want to cut for real.");
+}
 function onScreen(name, prev) {
   if (prev === "cut") S.cutStep = S.cur;
   $("menuView").classList.toggle("hidden", name !== "menu");
@@ -272,6 +285,7 @@ function onScreen(name, prev) {
   if (name === "login") openAccount("in");
   else if (prev === "login") closeAccountUi();
   if (name === "menu") paintMenu();
+  if (name === "cut") applyFirstJobDefault();
   if (name === "make") {
     S.tab = "cut"; showTab("cut");
     S.src = "shape";
@@ -574,6 +588,8 @@ function renderBeginnerShapes() {
     ? `<button type="button" data-bshape="${esc(id)}" class="${cur === id ? "sel" : ""}"><i>${shapeThumb(SHAPES.find((s) => s.id === id), 72, 48)}</i><span>${esc(label)}</span></button>` : "").join("");
 }
 // add a shape by id; a library preset like "flange6" adds its base shape with its sizes already set
+// a circle looks the same turned any way, so "Turn it" is hidden for it
+const isRoundType = (type) => type === "disc" || type === "hole" || type === "ring";
 function addShapeId(id) {
   const pr = SHAPE_PRESETS[id];
   if (pr) sketch.add(pr.base, false, pr.p); else sketch.add(id);
@@ -670,7 +686,7 @@ function renderShapeForm() {
       <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
         `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}</div>${customSizeHtml(it, b)}
       <div class="skbtns bigbtns">
-        <button data-sk="rotateBy" data-arg="90">⟳ Turn it</button>
+        ${isRoundType(it.type) ? "" : `<button data-sk="rotateBy" data-arg="90">⟳ Turn it</button>`}
         ${!sh.hole && !sh.sheet && shapeDef("hole") ? `<button data-sk="add" data-arg="hole">◦ Add a hole</button>` : ""}
         ${sh.hole && sketch.hostPart(it) ? `<button data-sk="pickHost">↩ Back to the part</button><button data-sk="centreInHost">◎ Centre it</button>` : ""}
         ${sh.sheet ? `<button data-sk="explode" title="Make each piece its own part, so you can place them on the bed one by one">✂ Split into parts</button>` : ""}
@@ -707,7 +723,7 @@ function renderShapeForm() {
       ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
     </div>
     <div class="skbtns">
-      <button data-sk="rotateBy" data-arg="90" title="R">⟳ Turn 90°</button>
+      ${isRoundType(it.type) ? "" : `<button data-sk="rotateBy" data-arg="90" title="R">⟳ Turn 90°</button>`}
       <button data-sk="mirror" title="M">⇋ Mirror</button>
       <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
       ${moved ? `<button data-sk="resetHoles">↺ Holes back</button>` : ""}
@@ -934,7 +950,7 @@ function positionDimEdit(dim) {
     const cv = $("preview");
     if (cv) { const r = cv.getBoundingClientRect(); x = r.left + 16; y = r.top + 16; }
   }
-  const w = Math.min(280, innerWidth - 24), h = 120;
+  const w = Math.min(280, innerWidth - 24), h = 170;
   x = Math.max(8, Math.min(x, innerWidth - w - 8));
   y = Math.max(8, Math.min(y, innerHeight - h - 8));
   box.style.left = x + "px"; box.style.top = y + "px";
@@ -953,6 +969,20 @@ function openDimEdit(dim) {
   box.classList.remove("hidden"); box.hidden = false;
   positionDimEdit(dim);
   requestAnimationFrame(() => { try { inp.focus(); inp.select(); } catch (e) { /* ignore */ } });
+}
+// the operator row under the size box (shown on touch screens): inserts at the cursor without taking focus off the box
+function bindDimOps() {
+  const row = $("dimOps"), inp = $("dimEditInput"); if (!row || !inp) return;
+  row.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) e.preventDefault(); });   // keep the keypad up and the caret where it is
+  row.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.id === "dimOk") { applyDimEdit(); return; }
+    const op = b.dataset.op; if (!op) return;
+    const a = inp.selectionStart ?? inp.value.length, z = inp.selectionEnd ?? a;
+    inp.setRangeText(op, a, z, "end");
+    inp.focus({ preventScroll: true });
+    inp.dispatchEvent(new Event("input", { bubbles: true }));
+  });
 }
 function closeDimEdit() {
   const box = $("dimEdit"); if (!box) return;
@@ -2119,6 +2149,7 @@ function addTestPattern(kind) {
 }
 
 function bind() {
+  bindDimOps();
   $$(".tab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
   $$("#stepper li").forEach((li) => (li.onclick = () => goStep(Number(li.dataset.step))));
   $$("[data-go]").forEach((b) => (b.onclick = () => goStep(Number(b.dataset.go))));
@@ -2366,6 +2397,7 @@ function bind() {
   };
   $("thicknesses").onclick = (e) => { const b = e.target.closest("[data-th]"); if (b) { S.thickness = Number(b.dataset.th); defaultSpeed(); applyMatchingPreset(); renderMaterials(); loadJob(); } };
   ["ovDelay", "ovPierce", "ovCut", "ovKerf", "ovLead", "dryRun"].forEach((id) => $(id).addEventListener("change", () => { renderMaterials(); loadJob(); }));
+  $("dryRun").addEventListener("change", () => { if (!$("dryRun").checked && $("dryFirstNote")) $("dryFirstNote").classList.add("hidden"); });
   $("spDown").onclick = () => setSpeed(S.speed - speedStep(row().feed_mm_min));
   $("spUp").onclick = () => setSpeed(S.speed + speedStep(row().feed_mm_min));
   $("spSlider").addEventListener("input", () => { S.speed = Number($("spSlider").value); $("spVal").textContent = S.speed; });
@@ -2395,7 +2427,7 @@ function bind() {
       const fromCut = R2.startCut();
       if (fromCut > 1 && !confirm(`Continue from cut ${fromCut}?\n\nCuts 1 to ${fromCut - 1} are NOT cut again. The torch lifts, moves to the start of cut ${fromCut} with the arc off, then pierces there. Work zero is kept as it is now. Is the sheet still exactly where it was?`)) return;
       S.jobSeq++; S.run = null;
-      S.jobLogId = null; S.jobLoggedEnd = false; M.startJob({ fromCut }); R2.afterStart(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(4); maybeLogJob(S.job);
+      S.jobLogId = null; S.jobLoggedEnd = false; M.startJob({ fromCut }); markFirstJobDone(); R2.afterStart(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(4); maybeLogJob(S.job);
       $("btnSaveSpeed").classList.add("hidden");
     }
     catch (e) { toast(e.message, true); }
@@ -2583,6 +2615,7 @@ async function init() {
       setTimeout(() => openNumPad(dim), 280);
     },
   });
+  sketch.partCounter = (sk) => Setup.partCount(sk);       // one part count for the preview caption, the layout name and every status line
   // keep STOP (in the top bar) above every dialog and keep dialogs from covering the bar
   const fitBar = () => { const b = document.querySelector(".topbar"); if (b) document.documentElement.style.setProperty("--topbar-h", Math.ceil(b.getBoundingClientRect().height) + "px"); };
   fitBar(); window.addEventListener("resize", fitBar); window.addEventListener("orientationchange", () => setTimeout(fitBar, 200));
@@ -2593,8 +2626,6 @@ async function init() {
   if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { R2, Setup, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
   window.ptInspector = makeInspector({
     sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),
-    ampsNow: () => { try { return S.cutAmps != null ? S.cutAmps : (row().amps ?? null); } catch (e) { return null; } },
-    setAmps: (v) => { S.cutAmps = v; },          // planning note only: the machine's amps are set on the power supply
     setLead: (v) => { $("ovLead").value = String(v); },
     setSpeed: (v) => setSpeed(v),
     loadJob,

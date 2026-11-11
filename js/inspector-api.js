@@ -7,7 +7,7 @@ export const OPS = ["cut", "score", "mark"];
 const LAYERS = { cut: { name: "Cut", color: "#1f8a4c" }, score: { name: "Score", color: "#c27c0e" }, mark: { name: "Mark", color: "#6a4fc9" } };
 
 export function makeInspector(h) {
-  // h: { sketch(), S, leadNow(), ampsNow(), setSpeed(v), setLead(v), loadJob(), jobRunning() }
+  // h: { sketch(), S, leadNow(), setSpeed(v), setLead(v), loadJob(), jobRunning() }
   const subs = new Set();
   const emit = (what = "change") => { for (const fn of [...subs]) { try { fn({ type: what }); } catch (e) { /* a bad listener must not break the page */ } } };
   const sk = () => h.sketch();
@@ -46,7 +46,6 @@ export function makeInspector(h) {
       return {
         operation: OPS.includes(it.op) ? it.op : "cut",
         speed: Number(S.speed) || 0,
-        amps: h.ampsNow(),
         leadIn: Number(h.leadNow()) || 0,
         leadOut: Number(S.cam.leadOut) || 0,
         tabs: { count: Number(S.cam.tabs) || 0, width: Number(S.cam.tabW) || 0 },
@@ -57,7 +56,7 @@ export function makeInspector(h) {
       const S = h.S, tb = p.tabs && typeof p.tabs === "object" ? p.tabs : null;
       if ("operation" in p && !OPS.includes(p.operation)) return false;
       if ("speed" in p && !(num(p.speed) && p.speed >= 50 && p.speed <= 20000)) return false;
-      if ("amps" in p && !(num(p.amps) && p.amps >= 0 && p.amps <= 400)) return false;
+      if ("amps" in p) return false;                 // amps are set at the plasma unit: not a per-shape (or any) app setting
       if ("leadIn" in p && !(num(p.leadIn) && p.leadIn >= 0 && p.leadIn <= 50)) return false;
       if ("leadOut" in p && !(num(p.leadOut) && p.leadOut >= 0 && p.leadOut <= 50)) return false;
       if (tb) {
@@ -68,7 +67,6 @@ export function makeInspector(h) {
         if (p.operation === "cut") delete it.op; else it.op = p.operation; sk().commit();
         if (p.operation !== "cut" && h.note) h.note(`${p.operation === "mark" ? "Mark" : "Score"} can't be cut lighter on this table (the torch only switches on and off), so Start stays blocked while any shape is set to it. Change it back to Cut, or hide the layer.`);
       }
-      if ("amps" in p) h.setAmps(p.amps);
       if ("leadOut" in p) S.cam.leadOut = p.leadOut;
       if (tb && "count" in tb) S.cam.tabs = Math.round(tb.count);
       if (tb && "width" in tb) S.cam.tabW = tb.width;

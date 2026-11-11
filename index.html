@@ -292,6 +292,7 @@
               <p id="matTip" class="mattip"></p>
               <div id="ampsCard" class="amps"></div>
               <label class="check prominent"><input type="checkbox" id="dryRun"> Practice run – move only, torch stays off</label>
+              <p id="dryFirstNote" class="muted small hidden">Ticked for you because this is your first job: the table moves but the torch stays off. Untick it when you want to cut for real.</p>
             </div>
             <div class="s2b">
               <div id="cutCheck2" class="cutcheck"></div>
@@ -841,7 +842,7 @@
           <button type="button" id="btnSavePart" class="accent">Save current drawing</button>
         </div>
         <div class="row partstools">
-          <button type="button" id="btnImportDxfs" class="accent" title="Pick up to 20 DXF files. Each one is saved as a part in a new folder.">⇪ Import DXFs</button>
+          <button type="button" id="btnImportDxfs" class="accent" title="Pick up to 20 DXF or SVG files. Each one is saved as a part in a new folder.">⇪ Import DXF / SVG</button>
           <button type="button" id="btnNewFolder">📁 New folder</button>
         </div>
         <div id="partsCard">
@@ -1046,6 +1047,10 @@
 <div id="dimEdit" class="dimedit hidden" hidden>
   <label id="dimEditLabel" for="dimEditInput">Size (mm)</label>
   <input id="dimEditInput" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done">
+  <!-- the phone's decimal keypad has no + - x / ( ) and no Return key, so these sit under the box on touch screens -->
+  <div id="dimOps" class="dimops" role="group" aria-label="Maths keys">
+    <button type="button" data-op="+" aria-label="plus">+</button><button type="button" data-op="-" aria-label="minus">−</button><button type="button" data-op="*" aria-label="times">×</button><button type="button" data-op="/" aria-label="divide">÷</button><button type="button" data-op="(" aria-label="open bracket">(</button><button type="button" data-op=")" aria-label="close bracket">)</button><button type="button" id="dimOk" class="go" aria-label="Apply">OK</button>
+  </div>
   <p class="muted small">Enter applies · Esc cancels · Tab next · arrows nudge · maths like 100/2</p>
 </div>
 
@@ -1072,12 +1077,12 @@
 
 <div id="importDlg" class="shapelib acctdlg impdlg hidden" role="dialog" aria-modal="true" aria-labelledby="impTitle">
   <div class="shapelib-card">
-    <div class="shapelib-head"><h2 id="impTitle">Import DXFs</h2><button type="button" id="impCancel">Cancel</button></div>
-    <p class="muted small impintro">Pick up to 20 DXF files. Each one is saved as a part (named after the file) in the folder below. A file that can't be read is skipped and the rest still import.</p>
+    <div class="shapelib-head"><h2 id="impTitle">Import DXF / SVG</h2><button type="button" id="impCancel">Cancel</button></div>
+    <p class="muted small impintro">Pick up to 20 DXF or SVG drawings. Each one is saved as a part (named after the file) in the folder below. A file that can't be read is skipped and the rest still import. Only closed outlines can be cut: loose lines that don't join up into a shape are reported next to the file.</p>
     <div class="impmeta">
       <label>Folder <input id="impFolder" list="impFolderList" maxlength="60" autocomplete="off"></label>
       <datalist id="impFolderList"></datalist>
-      <label id="impDrop" class="drop impdrop"><input id="impFiles" type="file" accept=".dxf,.svg" multiple><b>Choose DXF files</b><span class="muted">or drop them here (up to 20)</span></label>
+      <label id="impDrop" class="drop impdrop"><input id="impFiles" type="file" accept=".dxf,.svg" multiple><b>Choose DXF or SVG files</b><span class="muted">or drop them here (up to 20)</span></label>
     </div>
     <p id="impNote" class="muted small"></p>
     <div id="impAll" class="row hidden unitall"><span class="small">Size check for all files:</span>

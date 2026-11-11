@@ -523,6 +523,7 @@ export class Sketch {
     }
     const nb = this.boxOf(it);
     it.x = r1(it.x + b[0] - nb[0]); it.y = r1(it.y + b[1] - nb[1]);
+    if (d.uniform && Math.abs(W - H) > 0.5) this.onMessage(`${d.name || "That shape"} is the same size both ways, so it took the larger size (${r1(Math.max(W, H))} mm).`);
     this.commit(); this.onSelect();
   }
   variants() { const it = this.selected(); return it && it.type !== "custom" ? variantsFor(it.type) : []; }
@@ -836,9 +837,12 @@ export class Sketch {
   contours() { return this.items.filter((i) => !this.layerHidden(i)).flatMap((i) => this.contoursOf(i)); }
   // layers = the operation label of a shape (cut / score / mark). A hidden layer is neither drawn nor cut.
   layerHidden(it) { return !!(this.hiddenLayers && this.hiddenLayers.has(it.op || "cut")); }
+  // how many separate parts are on the bed (holes don't count): the app sets partCounter so every screen uses the one count
+  partTotal() { try { const n = this.partCounter ? this.partCounter(this) : NaN; return Number.isFinite(n) ? n : this.items.length; } catch (e) { return this.items.length; } }
   name() {
     if (this.items.length === 1) return def(this.items[0].type).name;
-    return `Layout (${this.items.length} shapes)`;
+    const n = this.partTotal();
+    return `Layout (${n} part${n === 1 ? "" : "s"})`;
   }
   // where the problems the cut check found are (drawn as numbered markers)
   setMarks(marks) { this.marks = marks || []; this.draw(); }
@@ -1060,7 +1064,8 @@ export class Sketch {
       const b = this.allBox();
       ctx.fillStyle = C.label; ctx.font = "12px Barlow, system-ui";
       const tool = this.tool === "draw" ? " · DRAW: tap points, then Close" : this.tool === "measure" ? " · MEASURE: tap two points" : "";
-      ctx.fillText(`${this.items.length} shape${this.items.length > 1 ? "s" : ""} · overall ${r1(b[2] - b[0])} × ${r1(b[3] - b[1])} mm${tool}`, 8, h - 8);
+      const np = this.partTotal();
+      ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${r1(b[2] - b[0])} × ${r1(b[3] - b[1])} mm${tool}`, 8, h - 8);
     } else {
       ctx.fillStyle = C.label; ctx.font = "15px Barlow, system-ui"; ctx.textAlign = "center";
       ctx.fillText(this.tool === "draw" ? "Tap to place the first point of the outline" : "Tap a shape below to add it", w / 2, h / 2); ctx.textAlign = "start";

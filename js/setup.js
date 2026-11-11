@@ -44,6 +44,7 @@ function unitsOf(sk) {
   for (const it of sk.items) {
     if (shapeDef(it.type) && shapeDef(it.type).multi) continue;
     if (sk.isHole(it) && sk._holes && sk._holes.has(it.id)) continue;      // a hole drawn inside a part (a shape dropped onto another part later is NOT one: that's an overlap)
+    if (sk.isHole(it) && !(sk._seen && sk._seen.has(it.id)) && sk.hostOf(it)) continue;           // before the bed layout opens: a hole sitting in a part is that part's hole, so Make and the bed count the same parts
     const cs = sk.contoursOf(it); if (!cs.length) continue;
     const rings = cs.map((c) => c.pts);
     out.push({ it, id: it.id, rings, box: bbox([{ pts: rings.flat() }]), key: it._key });
@@ -194,7 +195,7 @@ export function enter() {
   $("layGrid").value = String(sk.opts.snap || 0);
   // shapes that sit inside another part's outline when the layout opens are holes of that part; anything new is a part
   sk._holes = sk._holes || new Set(); sk._seen = sk._seen || new Set();
-  for (const it of sk.items) { if (!sk._seen.has(it.id) && sk.isHole(it)) sk._holes.add(it.id); }
+  for (const it of sk.items) { if (!sk._seen.has(it.id) && sk.isHole(it) && sk.hostOf(it)) sk._holes.add(it.id); }
   if (!sk._layoutPlaced) { sk._layoutPlaced = true; bringOnSheet(sk); }
   sk.pick([]);
   zoomParts = true; paintZoomBtns();

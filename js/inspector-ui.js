@@ -135,13 +135,18 @@ function shellHtml() {
           <label class="pt-span" for="ptInspOp">Operation
             <select id="ptInspOp"></select>
           </label>
-          <label for="ptInspSpeed">Speed (mm/min)<input id="ptInspSpeed" type="number" inputmode="decimal" step="10" min="0" autocomplete="off"></label>
-          <label for="ptInspAmps">Amps<input id="ptInspAmps" type="number" inputmode="decimal" step="1" min="0" autocomplete="off"></label>
-          <label for="ptInspLeadIn">Lead-in (mm)<input id="ptInspLeadIn" type="number" inputmode="decimal" step="0.5" min="0" autocomplete="off"></label>
-          <label for="ptInspLeadOut">Lead-out (mm)<input id="ptInspLeadOut" type="number" inputmode="decimal" step="0.5" min="0" autocomplete="off"></label>
-          <label for="ptInspTabs">Tabs<input id="ptInspTabs" type="number" inputmode="numeric" step="1" min="0" autocomplete="off"></label>
-          <label for="ptInspTabW">Tab width (mm)<input id="ptInspTabW" type="number" inputmode="decimal" step="0.5" min="0" autocomplete="off"></label>
         </div>
+        <fieldset id="ptInspJob" class="pt-jobset">
+          <legend>Whole job (not just this shape)</legend>
+          <p class="pt-note muted">The torch uses one speed, lead-in, lead-out and tab setting for every cut in the job, so changing them here changes them for all shapes. The plasma amps are set on the power supply, not here.</p>
+          <div class="pt-grid">
+            <label for="ptInspSpeed">Speed (mm/min)<input id="ptInspSpeed" type="number" inputmode="decimal" step="10" min="0" autocomplete="off"></label>
+            <label for="ptInspLeadIn">Lead-in (mm)<input id="ptInspLeadIn" type="number" inputmode="decimal" step="0.5" min="0" autocomplete="off"></label>
+            <label for="ptInspLeadOut">Lead-out (mm)<input id="ptInspLeadOut" type="number" inputmode="decimal" step="0.5" min="0" autocomplete="off"></label>
+            <label for="ptInspTabs">Tabs<input id="ptInspTabs" type="number" inputmode="numeric" step="1" min="0" autocomplete="off"></label>
+            <label for="ptInspTabW">Tab width (mm)<input id="ptInspTabW" type="number" inputmode="decimal" step="0.5" min="0" autocomplete="off"></label>
+          </div>
+        </fieldset>
       </section>
       <section id="ptInspLayersSec" aria-labelledby="ptInspLayersH">
         <h3 id="ptInspLayersH">${icon("grid")} Cut layers</h3>
@@ -266,7 +271,6 @@ function paint() {
       const op = cut.operation != null ? String(cut.operation) : "cut";
       fillOperations(op);
       setControl("ptInspSpeed", fmt(cut.speed));
-      setControl("ptInspAmps", fmt(cut.amps));
       setControl("ptInspLeadIn", fmt(cut.leadIn));
       setControl("ptInspLeadOut", fmt(cut.leadOut));
       const tabs = cut.tabs;
@@ -296,7 +300,6 @@ function commitCut() {
   const op = document.getElementById("ptInspOp");
   if (op && op.value) patch.operation = op.value;
   const speed = readNum("ptInspSpeed"); if (speed !== undefined) patch.speed = speed;
-  const amps = readNum("ptInspAmps"); if (amps !== undefined) patch.amps = amps;
   const leadIn = readNum("ptInspLeadIn"); if (leadIn !== undefined) patch.leadIn = leadIn;
   const leadOut = readNum("ptInspLeadOut"); if (leadOut !== undefined) patch.leadOut = leadOut;
   const count = readNum("ptInspTabs");
@@ -318,7 +321,7 @@ function bindFields(aside) {
       el.addEventListener("blur", paint);
     }
   }
-  const cutIds = ["ptInspSpeed", "ptInspAmps", "ptInspLeadIn", "ptInspLeadOut", "ptInspTabs", "ptInspTabW"];
+  const cutIds = ["ptInspSpeed", "ptInspLeadIn", "ptInspLeadOut", "ptInspTabs", "ptInspTabW"];
   for (const id of cutIds) {
     const el = document.getElementById(id);
     if (el) {

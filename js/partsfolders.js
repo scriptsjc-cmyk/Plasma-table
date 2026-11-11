@@ -1,4 +1,4 @@
-// Round 3: folders for the parts list + batch "Import DXFs" (up to 20 files, each saved as a part).
+// Round 3: folders for the parts list + batch "Import DXF / SVG" (up to 20 files, each saved as a part).
 // Storage is the normal saved-parts storage (account.js): a part's folder name and its preview/size live INSIDE its `data`
 // (data.folder, data.meta), so no new SQL is needed and old parts without a folder simply belong to "My parts".
 import * as A from "./account.js";
@@ -38,24 +38,38 @@ export function thumbSvg(meta, cls = "pthumb") {
   if (!meta || !meta.t) return `<span class="${cls} none" aria-hidden="true">▢</span>`;
   return `<svg class="${cls}" viewBox="-2 -2 ${meta.tw + 4} ${meta.th + 4}" aria-hidden="true"><path d="${meta.t}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
+// a parser's own message, kept short and free of jargon
+export function plainParseError(e, ext) {
+  const m = String((e && e.message) || "");
+  if (/binary/i.test(m)) return m;
+  if (ext === "svg") return /look like an SVG/i.test(m) ? "This doesn't look like a valid SVG file." : (/No shapes found/i.test(m) ? "No shapes were found in this SVG. In Inkscape use Path > Object to Path, and turn text into paths." : m || "Can't read this SVG.");
+  return m || "Can't read this DXF.";
+}
 export const sizeText = (meta) => meta ? `${meta.w} × ${meta.h} mm` : "";
 
 // ---------------------------------------------------------------- reading one drawing file
 export async function readDrawing(file) {
   const ext = String(file.name || "").toLowerCase().split(".").pop();
-  if (ext !== "dxf" && ext !== "svg") throw new Error("Not a DXF file.");
+  if (ext !== "dxf" && ext !== "svg") throw new Error("Only DXF or SVG drawings can be imported here. This file is ." + (ext || "unknown") + ".");
   if (file.size > MAX_BYTES) throw new Error("File is bigger than 8 MB.");
   const text = await file.text();
   if (text.indexOf("\u0000") >= 0) throw new Error("This looks like a binary file, not a text DXF. Save it from your CAD as ASCII DXF.");
-  const r = ext === "dxf" ? parseDXF(text) : parseSVG(text);
-  if (!r || !r.contours || !r.contours.length) throw new Error("No closed shapes to cut were found. The file may be damaged or only hold open lines.");
+  let r;
+  try { r = ext === "dxf" ? parseDXF(text) : parseSVG(text); }
+  catch (e) { throw new Error(plainParseError(e, ext)); }
+  if (!r || !r.contours || !r.contours.length) throw new Error("Nothing to cut was found in this drawing. It may be empty, or damaged.");
+  // open lines: a cutter needs closed outlines, so say so in plain words rather than "no closed shapes"
+  const nOpen = r.contours.filter((c) => c.closed === false && !c.circle).length, nClosed = r.contours.length - nOpen;
+  if (!nClosed) throw new Error(`This drawing is only ${nOpen} loose line${nOpen === 1 ? "" : "s"} that don't join up into a closed shape, so there is nothing to cut round. In your CAD, join the lines into closed outlines (Close, Join or Pedit > Join) and save it again.`);
   const e = contoursToEditable(r.contours);
   if (!e || !e.parts.length) throw new Error("Nothing editable was found in this file.");
   const meta = metaFromContours(r.contours);
   if (!meta || !(meta.w > 0) || !(meta.h > 0)) throw new Error("The drawing has no size.");
   const items = e.parts.map(({ cs, x, y }) => ({ type: "custom", p: { scale: 100 }, x, y, rot: 0, holes: {}, shape: { cs } }));
   const curves = r.curves && (r.curves.splines || r.curves.ellipses) ? r.curves.splines + r.curves.ellipses : 0;
-  return { name: String(file.name).replace(/\.[^.]+$/, "").trim() || "Imported part", items, meta, units: r.units || "", curves, warnings: r.warnings || [] };
+  const notes = [...(r.warnings || [])];
+  if (nOpen) notes.push(`${nOpen} loose line${nOpen === 1 ? "" : "s"} in this drawing ${nOpen === 1 ? "doesn't" : "don't"} join up into a closed shape. ${nOpen === 1 ? "It" : "They"} would be cut exactly on the line, not as a part. Join ${nOpen === 1 ? "it" : "them"} in your CAD if ${nOpen === 1 ? "it is" : "they are"} part of an outline.`);
+  return { name: String(file.name).replace(/\.[^.]+$/, "").trim() || "Imported part", items, meta, units: r.units || "", curves, warnings: notes, open: nOpen };
 }
 // factor 25.4 (it was inches) or 1/25.4 (it was mm shown as inches)
 export function scaled(d, k) {
@@ -115,13 +129,14 @@ function render() {
       ${f.d ? thumbSvg(sz) : `<span class="pthumb none">⚠</span>`}
       <div class="grow"><b>${H.esc(f.name)}</b>
         <div class="muted small">${sz ? sizeText(sz) : ""}${f.d && f.d.units ? " · " + H.esc(f.d.units) : ""}${f.d && f.d.curves ? ` · ${f.d.curves} curve(s) made into short lines` : ""} ${hint}</div>
+        ${f.d && f.d.open ? `<div class="small warnline">⚠ ${H.esc(f.d.warnings[f.d.warnings.length - 1])}</div>` : ""}
         <div class="small">${st}</div></div>
       ${f.d && !busy && f.status !== "ok" ? `<div class="unitbtns" role="group" aria-label="Size check for ${H.esc(f.name)}">
         <button type="button" class="small ${kk === "1" ? "sel" : ""}" data-k="1" title="Size is right (mm)">mm</button>
         <button type="button" class="small ${kk === "25.4" ? "sel" : ""}" data-k="25.4" title="It was inches: multiply by 25.4">× 25.4</button>
         <button type="button" class="small ${kk === "0.03937" ? "sel" : ""}" data-k="0.03937" title="It was mm shown as inches: divide by 25.4">÷ 25.4</button></div>` : ""}
     </div>`;
-  }).join("") : `<p class="muted">No files yet. Drop DXF files here, or tap “Choose DXF files”.</p>`;
+  }).join("") : `<p class="muted">No files yet. Drop DXF or SVG files here, or tap “Choose DXF or SVG files”.</p>`;
   $("impAll").classList.toggle("hidden", ok.length < 2 || busy);
   const todo = files.filter((f) => f.d && f.status !== "ok").length;
   $("impGo").disabled = busy || !todo;

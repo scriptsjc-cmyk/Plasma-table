@@ -89,7 +89,7 @@ async function refreshPartsList() {
   try {
     partsRows = await A.listParts();
     const groups = groupParts(partsRows), names = groups.map((g) => g.name), closed = closedFolders();
-    if (!partsRows.length && groups.length === 1) { box.innerHTML = "<p class='muted'>No parts saved yet. Save a drawing, or use “Import DXFs”.</p>"; return; }
+    if (!partsRows.length && groups.length === 1) { box.innerHTML = "<p class='muted'>No parts saved yet. Save a drawing, or use “Import DXF / SVG”.</p>"; return; }
     box.innerHTML = groups.map((g) => {
       const isClosed = closed.has(g.name);
       return `<section class="pfolder ${isClosed ? "closed" : ""}" data-folder="${esc(g.name)}">
@@ -97,7 +97,7 @@ async function refreshPartsList() {
           <button type="button" class="pftoggle" data-fact="toggle" aria-expanded="${!isClosed}" title="${isClosed ? "Show" : "Hide"} this folder"><span class="caret">${isClosed ? "▸" : "▾"}</span> <b>📁 ${esc(g.name)}</b> <span class="muted small">${g.rows.length} part${g.rows.length === 1 ? "" : "s"}</span></button>
           ${g.name === MY ? "" : `<button type="button" class="small" data-fact="frename">Rename</button><button type="button" class="small warn" data-fact="fdelete">Delete</button>`}
         </div>
-        <div class="pfbody">${g.rows.length ? g.rows.map((p) => partRowHtml(p, names)).join("") : "<p class='muted small pfempty'>Empty. Use “Move to…” on a part, or import DXFs into this folder.</p>"}</div>
+        <div class="pfbody">${g.rows.length ? g.rows.map((p) => partRowHtml(p, names)).join("") : "<p class='muted small pfempty'>Empty. Use “Move to…” on a part, or import DXF / SVG files into this folder.</p>"}</div>
       </section>`;
     }).join("");
     fillMissingMeta();

@@ -1975,3 +1975,16 @@ body.short-land[data-screen="cut"] #torchPill.on:not([hidden]) { display: inline
 #btnStop.holding { filter: brightness(1.25); }
 /* ...and with it showing, the long "Practice, nothing moves" pill gives way (ellipsis) instead of running under it */
 body.short-land[data-screen="cut"] #topMenu #connPill { flex: 0 1 auto; min-width: 0; }
+
+/* Round 5 (bugs 20): the inspector's job-wide cut settings sit in their own labelled box */
+#ptInspector .pt-jobset { margin: 8px 0 0; padding: 6px 8px 8px; border: 1px dashed var(--line); border-radius: 8px; min-width: 0; }
+#ptInspector .pt-jobset legend { padding: 0 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
+
+/* Round 5 (bugs 23): maths keys under the size box on touch screens (the iOS decimal keypad has no operators or Return) */
+.dimops { display: none; gap: 6px; margin-top: 6px; }
+@media (pointer: coarse), (hover: none) {
+  .dimops { display: flex; }
+}
+.dimops button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; font-size: 20px; font-weight: 700; }
+.dimops button.go { flex: 1.6 1 0; font-size: 16px; }
+.warnline { color: #8a5a00; margin-top: 2px; }
