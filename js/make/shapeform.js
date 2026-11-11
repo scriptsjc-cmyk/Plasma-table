@@ -92,9 +92,10 @@ function holeHostHtml(it, sh) {
 }
 export function renderShapeForm() {
   // round 5 item 7: Beginner always sees the size boxes: with nothing picked, the only part is picked for you
-  if (!sketch.opts.pro && !sketch.layout && !sketch.picked().length) {
+  // (not in the full-screen editor, where Esc first drops the pick and then leaves)
+  if (!sketch.opts.pro && !sketch.layout && !S.shapeFs && !sketch.picked().length) {
     const parts = sketch.items.filter((o) => !sketch.isHole(o));
-    if (parts.length === 1) { sketch.pick([parts[0].id]); sketch.draw(); }
+    if (parts.length === 1) { sketch.pick([parts[0].id]); sketch.autoPick = parts[0].id; sketch.draw(); }
   }
   const list = sketch.picked(), it = sketch.selected();
   $("skUndo").disabled = !sketch.past.length; $("skRedo").disabled = !sketch.future.length;

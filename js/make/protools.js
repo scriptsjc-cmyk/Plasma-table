@@ -14,6 +14,8 @@ export function setShapeFs(on) {
     return;
   }
   S.shapeFs = on;
+  // the full-screen editor starts with nothing picked when the pick was only made to show the Beginner size boxes (so one Esc leaves it)
+  if (on && sketch.autoPick != null && sketch.sel.ids.length === 1 && sketch.sel.ids[0] === sketch.autoPick) { sketch.pick([]); sketch.autoPick = null; }
   if (on && S.src !== "shape") { showSource("shape"); }
   if (on && S.cur !== 1) goStep(1);
   document.body.classList.toggle("shape-fs", on);
