@@ -15,7 +15,7 @@ export class SimTransport {
     this.homing = false; this.relative = false; this.feed = 1000; this.motion = 0;
     this.sheetZ = sheetZ; this.switchOffset = switchOffset; this.speedup = speedup;
     this.busyUntil = 0; this.queue = []; this.feedOv = 100; this.estop = false; this.inbuf = ""; this.log = [];
-    this.torchOnCount = 0; this.moving = false; this.jogging = false; this.jogGen = 0; this.probeCount = 0; this.closed = false; this.resetGen = 0;
+    this.torchOnCount = 0; this.thcReport = true; this.arcLost = false; this.moving = false; this.jogging = false; this.jogGen = 0; this.probeCount = 0; this.closed = false; this.resetGen = 0;
   }
   async open() {
     this._send("GrblHAL 1.1f ['$' or '$' for help] (demo)");
@@ -63,7 +63,21 @@ export class SimTransport {
     if (this.estop) pn += "E";
     if (pn) pn = "|Pn:" + pn;
     const f = (a) => a.map((v) => v.toFixed(3)).join(",");
-    return `<${st}|MPos:${f(this.mpos)}|FS:${Math.round(this.feed * this.feedOv / 100)},0|WCO:${f(this.wco)}|Ov:${this.feedOv},100,100${pn}${acc}>`;
+    return `<${st}|MPos:${f(this.mpos)}|FS:${Math.round(this.feed * this.feedOv / 100)},0|WCO:${f(this.wco)}|Ov:${this.feedOv},100,100${pn}${acc}${this._thc()}>`;
+  }
+  // demo only: pretends to be a grblHAL with the plasma plugin, which adds "|THC:<arc volts>,<flags>" (A = arc OK, T = torch on).
+  // The voltage is a fixed made-up 118.0 V while the pretend arc is up. Real controllers report their own numbers; set thcReport = false to act like one that has no THC.
+  _thc() {
+    if (!this.thcReport) return "";
+    const on = this.torch && !this.spindleStopped, arc = on && !this.arcLost;
+    return `|THC:${arc ? "118.0" : "0.0"}${on ? "," + (arc ? "A" : "") + "T" : ""}`;
+  }
+  // demo only: the pretend arc goes out while the torch is still switched on (what a lost arc looks like), and the controller pauses like grblHAL's plugin does
+  demoLoseArc(msg = false) {
+    if (!this.torch) return false;
+    this.arcLost = true; this.hold = true;
+    if (msg) this._send("[MSG:Warning: arc failed]");
+    return true;
   }
   // demo only: put the pretend torch somewhere instantly (used by "set up the edges for me"). Only when nothing is moving.
   demoTeleport(p) {
@@ -78,7 +92,7 @@ export class SimTransport {
   }
   _reset() {
     const moving = this.moving;
-    this.queue = []; this.torch = false; this.hold = false; this.resetGen++;
+    this.queue = []; this.torch = false; this.hold = false; this.arcLost = false; this.resetGen++;
     if (moving) { this.alarm = true; this._send("ALARM:3"); }
     this._send("GrblHAL 1.1f ['$' or '$' for help] (demo)");
   }
@@ -165,8 +179,8 @@ export class SimTransport {
       return this._send("ok");
     }
     for (const gg of g) if ([0, 1, 2, 3].includes(gg)) this.motion = gg;
-    if (m.includes(3) || m.includes(4)) { this.torch = true; this.torchOnCount++; }
-    if (m.includes(5)) this.torch = false;
+    if (m.includes(3) || m.includes(4)) { this.torch = true; this.arcLost = false; this.torchOnCount++; }
+    if (m.includes(5)) { this.torch = false; this.arcLost = false; }
     if (["X", "Y", "Z"].some((a) => a in ax)) {
       const t = [...this.mpos];
       "XYZ".split("").forEach((a, i) => { if (a in ax) t[i] = this.relative ? this.mpos[i] + ax[a] : ax[a] + this.wco[i]; });

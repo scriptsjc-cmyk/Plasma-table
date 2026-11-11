@@ -88,6 +88,17 @@ export class WebSerialTransport {
 }
 
 // ------------------------------------------------------------------ status parsing
+// grblHAL's plasma plugin appends "|THC:<arc voltage>,<flag letters>" to the real-time report (Plugin_plasma thc.c onRealtimeReport).
+// Flag letters: A arc OK, E THC enabled, R THC active, T torch on, O ohmic probe, V velocity lock, H void lock, D down, U up.
+// Nothing else reports arc OK or arc voltage: plain grblHAL and FluidNC send no THC field, so those values stay "not connected".
+export function parseThc(v) {
+  const i = String(v).indexOf(",");
+  const volts = Number(i < 0 ? v : String(v).slice(0, i));
+  if (!Number.isFinite(volts)) return null;
+  const flags = (i < 0 ? "" : String(v).slice(i + 1)).toUpperCase().replace(/[^A-Z]/g, "");
+  const has = (c) => flags.includes(c);
+  return { volts, flags, arcOk: has("A"), enabled: has("E"), active: has("R"), torchOn: has("T"), ohmic: has("O"), velLock: has("V"), voidLock: has("H"), down: has("D"), up: has("U") };
+}
 export function parseStatus(text) {
   const parts = text.split("|");
   const st = { state: parts[0].split(":")[0], substate: parts[0] };
@@ -102,6 +113,7 @@ export function parseStatus(text) {
     else if (k === "Bf") st.buffer = v;
     else if (k === "Ov") st.overrides = v;
     else if (k === "A") st.accessories = v;
+    else if (k === "THC") st.thc = parseThc(v);   // grblHAL Plugin_plasma only: "|THC:<arc volts>,<flags>"
   }
   return st;
 }
