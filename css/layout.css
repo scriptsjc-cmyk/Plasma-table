@@ -1,5 +1,9 @@
 /* Layout: the app shell (top bar, tabs, banners, status pills), the preview / step-pane grid, the stepper and the nav bar,
-   plus the short-landscape / portrait phone rules that resize them. */
+   plus the short-landscape / portrait phone rules that resize them.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
 
 html, body { margin: 0; background: var(--bg); color: var(--text);
   font: var(--fs-md)/1.45 var(--font); }

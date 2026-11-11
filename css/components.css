@@ -1,4 +1,8 @@
-/* Components shared by more than one screen: dialogs and sheets, keypad, jog pad, lamps, chips, choice tiles, lists. */
+/* Components shared by more than one screen: dialogs and sheets, keypad, jog pad, lamps, chips, choice tiles, lists.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
 
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 /* step 2 */

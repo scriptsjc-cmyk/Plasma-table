@@ -1,4 +1,8 @@
-/* Make a part: bar + Beginner / Pro switch, shape picker, size boxes, sketch toolbar and palette, Pro inspector, make tools. */
+/* Make a part: bar + Beginner / Pro switch, shape picker, size boxes, sketch toolbar and palette, Pro inspector, make tools.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
 
 .log .tx { color: var(--accent); }
 .shapeform { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--well); }

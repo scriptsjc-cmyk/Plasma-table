@@ -1,4 +1,8 @@
-/* Base: resets, element defaults, the small utility classes (.hidden .muted .row ...) and the shared button / form look. */
+/* Base: resets, element defaults, the small utility classes (.hidden .muted .row ...) and the shared button / form look.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
 
 * { box-sizing: border-box; }
 button, select, input, textarea { font: inherit; color: inherit; }

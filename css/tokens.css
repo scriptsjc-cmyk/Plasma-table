@@ -1,5 +1,9 @@
 /* Design tokens: the colour, type, spacing and CAD-canvas variables everything else reads. One light theme; the dark block is
-   kept for a future theme switch (nothing sets data-theme today). */
+   kept for a future theme switch (nothing sets data-theme today).
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
 
 /* Plasma Table — light CAD theme (Fusion / Onshape / SolidWorks inspired). Colours live in this one theme block so a dark theme can return later. */
 :root, [data-theme="light"] {

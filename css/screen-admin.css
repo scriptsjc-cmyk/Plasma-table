@@ -1,4 +1,8 @@
-/* Machine setup tab, settings, help and the admin dialog. */
+/* Machine setup tab, settings, help and the admin dialog.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
 
 #setupView .card + .card { border-radius: var(--r); margin-top: 12px; }
 .limits { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: var(--fs-sm); }

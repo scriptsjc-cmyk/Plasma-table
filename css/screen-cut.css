@@ -1,4 +1,8 @@
-/* Cutting screen: Part / Bed & start / Cut steps, set-up cards, run screen, STOP + E-stop, live torch panel, start points, coupon. */
+/* Cutting screen: Part / Bed & start / Cut steps, set-up cards, run screen, STOP + E-stop, live torch panel, start points, coupon.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
+   in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
+   re-checking the cascade. */
 
 .arcmark.brand-mark { width: 56px; height: 56px; }
 canvas#preview.placing { touch-action: none; }
