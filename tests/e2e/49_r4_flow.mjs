@@ -90,14 +90,14 @@ for (const prof of ["desktop", "iphone14", "iphone14land"]) {
   const p = await newPage(K.browser, prof, { base: srv.base }); const P = (s) => `MENU [${prof}]: ${s}`;
   const b = await p.evaluate(() => ["menuMake", "menuCut"].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return { id, w: r.width, h: r.height, text: document.getElementById(id).textContent.replace(/\s+/g, " ").trim() }; }));
   t.check(P("two big buttons: Make a part and Go to cutting"), b.length === 2 && /Make a part/.test(b[0].text) && /Go to cutting/.test(b[1].text) && b.every((x) => x.w >= 150 && x.h >= 80), JSON.stringify(b));
-  t.check(P("nothing else to press: no E-stop, no tabs, no Beginner/Pro switch, no stepper"), !(await vis(p, "#btnStop")) && !(await vis(p, ".tabs")) && !(await vis(p, "#modeSwitch")) && !(await vis(p, "#stepper")) && !(await vis(p, "#btnHome")));
+  t.check(P("nothing else to press: no E-stop, no tabs, no Simple/Advanced buttons, no stepper"), !(await vis(p, "#btnStop")) && !(await vis(p, ".tabs")) && !(await vis(p, "#modeSwitch")) && !(await vis(p, "#editorSwitch")) && !(await vis(p, "#stepper")) && !(await vis(p, "#btnHome")));
   if (prof === "desktop") await shot(p, "r4-menu-desktop");
   await p.evaluate(() => document.getElementById("menuMake").click()); await sleep(250);
-  t.check(P("Make a part opens the design screen with the Beginner/Pro switch and a Menu button"), (await scr(p)) === "make" && await vis(p, "#modeSwitch") && await vis(p, "#btnHome") && !(await vis(p, "#btnStop")) && !(await vis(p, ".tabs")));
+  t.check(P("Make a part opens the design screen with Advanced tools and a Menu button"), (await scr(p)) === "make" && await vis(p, "#btnAdvancedTools") && await vis(p, "#btnHome") && !(await vis(p, "#btnStop")) && !(await vis(p, ".tabs")));
   await p.evaluate(() => document.getElementById("btnHome").click()); await sleep(250);
   t.check(P("Menu button goes back to the menu"), (await scr(p)) === "menu");
   await p.evaluate(() => document.getElementById("menuCut").click()); await sleep(250);
-  t.check(P("Go to cutting opens the cutting screen: E-stop shown, no Beginner/Pro switch"), (await scr(p)) === "cut" && await vis(p, "#btnStop") && !(await vis(p, "#modeSwitch")) && (prof === "iphone14land" ? !(await vis(p, "#stepper")) : await vis(p, "#stepper")));   // css/layout.css: body.short-land[data-screen="cut"] #stepper {display:none} — phone on its side gives all the height to the bed (commit ba9ac6d), so the stepper is hidden there by design
+  t.check(P("Go to cutting opens the cutting screen: E-stop shown, no Simple/Advanced buttons"), (await scr(p)) === "cut" && await vis(p, "#btnStop") && !(await vis(p, "#modeSwitch")) && !(await vis(p, "#editorSwitch")) && (prof === "iphone14land" ? !(await vis(p, "#stepper")) : await vis(p, "#stepper")));   // css/layout.css: body.short-land[data-screen="cut"] #stepper {display:none} — phone on its side gives all the height to the bed (commit ba9ac6d), so the stepper is hidden there by design
   t.check(P("the cutting screen starts with upload / saved parts, and no Move step or tab anywhere"), await vis(p, "#drop") && await vis(p, "#btnPickSaved") && (await p.locator("#moveView, .tab[data-tab='move'], .step[data-step='2']").count()) === 0);
   if (prof === "desktop") await shot(p, "r4-cut-empty-desktop");
   await p.close(); await p.ctx.close();

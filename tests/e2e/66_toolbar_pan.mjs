@@ -26,7 +26,7 @@ const openPro = async (page) => {
   const pane = await T(page, `(() => {
     const p = document.querySelector('[data-setpane="yours"]');
     const tab = [...document.querySelectorAll(".settab")].find((b) => b.dataset.settab === "yours");
-    return { open: p && !p.classList.contains("hidden") && !!p.offsetParent, tab: tab ? tab.textContent.trim() : "", hasReset: !!document.getElementById("yoursReset"), ids: ["yoursTheme","yoursAccent","yoursToolbar","yoursButtons","yoursUnits","yoursMode","yoursGrid","yoursGridSize","yoursSnap","yoursCanvas"].every((id) => !!document.getElementById(id)) };
+    return { open: p && !p.classList.contains("hidden") && !!p.offsetParent, tab: tab ? tab.textContent.trim() : "", hasReset: !!document.getElementById("yoursReset"), ids: ["yoursTheme","yoursAccent","yoursToolbar","yoursButtons","yoursUnits","yoursGrid","yoursGridSize","yoursSnap","yoursCanvas"].every((id) => !!document.getElementById(id)) };
   })()`);
   ck("Settings has a Make it yours tab with every listed control and a reset", pane.open && pane.tab === "Make it yours" && pane.hasReset && pane.ids, pane);
 
@@ -51,7 +51,7 @@ const openPro = async (page) => {
 }
 
 // ---- sliding bottom compact toolbar (laptop + phone)
-for (const [w, h, label, mobile] of [[1366, 768, "laptop", false], [390, 844, "phone portrait", true], [844, 390, "phone landscape", true]]) {
+for (const [w, h, label, mobile] of [[1366, 768, "laptop", false]]) {
   const page = await view(w, h, "?test=1&turn=0", mobile);
   await openPro(page);
   const g = await T(page, `(() => {
@@ -106,6 +106,38 @@ for (const [w, h, label, mobile] of [[1366, 768, "laptop", false], [390, 844, "p
   } else {
     ck(`${label}: tools stay at least 44 px tall on a touch screen`, g.btnH >= 43.5, g);
   }
+  ck(`${label}: no page errors`, noErrors(page).length === 0, noErrors(page).join("|"));
+  await page.context().close();
+}
+
+for (const [w, h, label] of [[390, 844, "phone portrait"], [844, 390, "phone landscape"]]) {
+  const page = await view(w, h, "?test=1&turn=0", true);
+  await openPro(page);
+  const g = await T(page, `(() => {
+    const bar = document.getElementById("phoneBar");
+    const qb = document.getElementById("quickBarWrap") || document.getElementById("quickBar");
+    const cv = document.getElementById("preview");
+    const ids = bar ? [...bar.querySelectorAll("[data-ph]")].map((b) => b.dataset.ph) : [];
+    const btns = bar ? [...bar.querySelectorAll("button")].filter((b) => b.offsetParent) : [];
+    const tops = new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top)));
+    const br = bar ? bar.getBoundingClientRect() : { top: 0, height: 0 };
+    const c = cv.getBoundingClientRect();
+    const btnH = btns[0] ? btns[0].getBoundingClientRect().height : 0;
+    const shown = (el) => { if (!el) return false; const cs = getComputedStyle(el); const r = el.getBoundingClientRect(); return cs.display !== "none" && cs.visibility !== "hidden" && r.width > 0 && r.height > 0; };
+    return {
+      phoneUi: document.body.classList.contains("phone-ui"),
+      visible: shown(bar),
+      qbHidden: !shown(qb),
+      ids,
+      oneRow: tops.size === 1 && btns.length >= 6,
+      below: br.top >= c.bottom - 8,
+      btnH,
+      canvasH: Math.round(c.height),
+    };
+  })()`);
+  ck(`${label}: Advanced tools use a compact bottom bar, not the laptop slider`, g.phoneUi && g.visible && g.qbHidden && ["select","line","rect","disc","measure","undo","more"].every((id) => g.ids.includes(id)), g);
+  ck(`${label}: the phone tool bar is one row under the picture`, g.oneRow && g.below, g);
+  ck(`${label}: phone tools stay at least 44 px tall`, g.btnH >= 43.5, g);
   ck(`${label}: no page errors`, noErrors(page).length === 0, noErrors(page).join("|"));
   await page.context().close();
 }

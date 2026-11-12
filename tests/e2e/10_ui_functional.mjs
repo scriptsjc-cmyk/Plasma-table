@@ -122,15 +122,17 @@ for (const prof of ["desktop", "iphone14"]) {
   const lab = await page.evaluate(() => { const s = window.plasmaTest.sketch; s.draw(); return s.dimHits.map((h) => [h.w, h.h]); });
   if (prof !== "desktop") t.check(P("dimension label tap target >= 44x44 (HIG, hit-pad 14px each side included)"), lab.every(([w, h]) => w + 28 >= 44 && h + 28 >= 44), JSON.stringify(lab), "A11Y-TOUCH");
 
-  // ---------- Versions row via the real buttons (Round 2: Beginner hides it, Pro shows it)
+  // ---------- Versions row via the real buttons (Round 2: Simple hides it, Advanced shows it)
   await page.evaluate(() => window.plasmaTest.setAppMode("pro", { persist: false, autoFs: false }));
+  await sleep(300);
+  const varBtns = () => page.locator("#phoneSheet [data-var], #shapeForm [data-var]").filter({ visible: true });
   const bases = [["rect", { w: 100, h: 50 }, [10, 20]], ["disc", { d: 100 }, [15, 15]], ["triangle", { w: 100, h: 80 }, [5, 5]], ["plate", { w: 120, h: 80 }, [50, 50]], ["bracket", { w: 50, h: 120 }, [70, 3]], ["slot", { len: 120, wid: 40 }, [9, 9]]];
   for (const [type, p0, xy] of bases) {
-    await fresh(page, type, p0, xy); const b0 = (await state(page))[0].box; const n = await page.locator("#shapeForm [data-var]").count();
+    await fresh(page, type, p0, xy); const b0 = (await state(page))[0].box; const n = await varBtns().count();
     t.check(P(`${type}: Versions row rendered`), n >= 2, `${n} buttons`, "VAR-UI");
     for (let i = 0; i < n; i++) {
       await fresh(page, type, p0, xy);
-      const btn = page.locator("#shapeForm [data-var]").nth(i); const label = (await btn.innerText()).trim();
+      const btn = varBtns().nth(i); const label = (await btn.innerText()).trim();
       if (prof === "iphone14") await btn.tap(); else await btn.click(); await sleep(80);
       const st = (await state(page))[0], b1 = st.box;
       const keep = Math.abs(b1[0] - b0[0]) < 0.3 && Math.abs(b1[1] - b0[1]) < 0.3 && Math.abs((b1[2] - b1[0]) - (b0[2] - b0[0])) < 0.3 && Math.abs((b1[3] - b1[1]) - (b0[3] - b0[1])) < 0.3;
@@ -140,31 +142,44 @@ for (const prof of ["desktop", "iphone14"]) {
     }
   }
   // tap target size of version buttons
-  if (prof !== "desktop") { await fresh(page, "rect", { w: 100, h: 50 }); const sizes = await page.locator("#shapeForm [data-var]").evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })); t.check(P("version buttons >= 44px tall"), sizes.every(([, h]) => h >= 44), JSON.stringify(sizes), "A11Y-TOUCH"); }
+  if (prof !== "desktop") { await fresh(page, "rect", { w: 100, h: 50 }); const sizes = await varBtns().evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })); t.check(P("version buttons >= 44px tall"), sizes.every(([, h]) => h >= 44), JSON.stringify(sizes), "A11Y-TOUCH"); }
   // rapid tapping
   await fresh(page, "triangle", { w: 100, h: 80 }, [5, 5]);
-  for (let i = 0; i < 12; i++) { const idx = i % 4; const bs = page.locator("#shapeForm [data-var]"); if (await bs.count() > idx) await bs.nth(idx).click({ noWaitAfter: true, timeout: 1500 }).catch(() => {}); }
+  for (let i = 0; i < 12; i++) { const idx = i % 4; const bs = varBtns(); if (await bs.count() > idx) await bs.nth(idx).click({ noWaitAfter: true, timeout: 1500 }).catch(() => {}); }
   const rb = (await state(page))[0]; t.check(P("12 rapid version taps: still one part, finite, responsive"), (await state(page)).length === 1 && rb.box.every(Number.isFinite) && await responsive(page), JSON.stringify(rb.box), "RAPID");
   const rw = rb.box[2] - rb.box[0]; t.check(P("12 rapid taps (triangle/radiused/gusset) don't shrink the part below 90 mm of its 100 mm"), rw >= 90, `width now ${rw.toFixed(1)}`, "VAR-DRIFT");
-  // ---------- Pro / Beginner mode switch
-  await page.evaluate(() => localStorage.removeItem("plasma.sketch.opts")); await page.reload(); await page.waitForFunction(() => window.plasmaTest); await demoToShape(page);
+  // ---------- Simple view / Advanced tools
+  await page.evaluate(() => { localStorage.removeItem("plasma.sketch.opts"); localStorage.removeItem("plasma.yours.v1"); }); await page.reload(); await page.waitForFunction(() => window.plasmaTest); await demoToShape(page);
   t.check(P("Pro checkbox is gone"), await page.locator("#skPro").count() === 0);
-  t.check(P("Beginner by default, no Pro tools shown"), !(await page.evaluate(() => document.body.classList.contains("pro-mode"))) && await page.locator("#proTools.hidden").count() === 1 && await page.locator('#modeSwitch [data-mode="beginner"].sel').count() === 1);
-  await page.locator('#modeSwitch [data-mode="pro"]').click(); await sleep(150);
-  t.check(P("Pro switch on → tools visible"), await page.evaluate(() => document.body.classList.contains("pro-mode")) && await page.locator("#proTools:not(.hidden) button").count() >= 4, `${await page.locator("#proTools button").count()} buttons`);
-  t.check(P("Pro saved in localStorage"), await page.evaluate(() => JSON.parse(localStorage.getItem("plasma.sketch.opts") || "{}").pro === true));
+  t.check(P("Simple view by default, no Advanced tools shown"), !(await page.evaluate(() => document.body.classList.contains("pro-mode"))) && await page.locator("#proTools.hidden").count() === 1 && await page.locator("#btnAdvancedTools").count() === 1);
+  await page.locator("#btnAdvancedTools").click(); await sleep(150);
+  t.check(P("Advanced tools on → tools visible"), await page.evaluate(() => document.body.classList.contains("pro-mode") && window.plasmaTest.isProMode()) && (await page.locator("#proTools:not(.hidden) button").count() >= 4 || await page.locator("#phoneBar [data-ph]").count() >= 6), `${await page.locator("#proTools button").count()} desk / ${await page.locator("#phoneBar [data-ph]").count()} phone`);
+  t.check(P("Advanced saved in localStorage"), await page.evaluate(() => JSON.parse(localStorage.getItem("plasma.sketch.opts") || "{}").pro === true || (JSON.parse(localStorage.getItem("plasma.yours.v1") || "{}").mode === "advanced")));
   await page.reload(); await page.waitForFunction(() => window.plasmaTest); await demoToShape(page);
-  t.check(P("Pro persists across reload"), await page.evaluate(() => document.body.classList.contains("pro-mode") && window.plasmaTest.isProMode()) && await page.locator('#modeSwitch [data-mode="pro"].sel').count() === 1 && await page.locator("#proTools:not(.hidden)").count() === 1, "", "PRO-PERSIST");
+  t.check(P("Advanced persists across reload"), await page.evaluate(() => document.body.classList.contains("pro-mode") && window.plasmaTest.isProMode()) && await page.locator("#btnSimpleView").count() === 1, "", "PRO-PERSIST");
   await shot(page, `${prof}-pro-mode`);
+  const openLinarray = async () => {
+    const desk = page.locator('#shapeForm [data-pro="linarray"]').filter({ visible: true });
+    if (await desk.count()) { await desk.first().click(); return; }
+    const more = page.locator('#phoneBar [data-ph="more"]');
+    const lin = page.locator('#phoneSheet [data-more="linarray"]');
+    if (!(await lin.isVisible()) && await more.isVisible()) {
+      if (prof === "iphone14") await more.tap(); else await more.click();
+      await lin.waitFor({ state: "visible", timeout: 5000 });
+    }
+    if (prof === "iphone14") await lin.tap(); else await lin.click();
+  };
   // Pro buttons produce a result via the UI
   await page.evaluate(() => { window.plasmaTest.setShapeFs(false); const s = window.plasmaTest.sketch; s.clear(); s.add("plate", true); s.pick([s.items[0].id]); s.fitView(); s.commit(); s.onSelect(); });
-  await page.locator('#shapeForm [data-pro="linarray"]').click(); await page.waitForSelector("#cadDialog:not(.hidden)");
+  await sleep(400);
+  await openLinarray(); await page.waitForSelector("#cadDialog:not(.hidden)");
   t.check(P("linear array dialog opens with 3 fields"), await page.locator("#cadFields input").count() === 3);
   await shot(page, `${prof}-cad-dialog`);
   await page.locator("#cadOk").click({ force: true }); await sleep(150); t.check(P("linear array default → 3 copies"), (await state(page)).filter((i) => i.type === "plate").length === 3, JSON.stringify((await state(page)).map((i) => i.type)));
   // dialog validation
   await page.evaluate(() => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect", true); s.pick([s.items[0].id]); s.onSelect(); });
-  await page.locator('#shapeForm [data-pro="linarray"]').click(); await page.waitForSelector("#cadDialog:not(.hidden)");
+  await sleep(400);
+  await openLinarray(); await page.waitForSelector("#cadDialog:not(.hidden)");
   await page.fill("#cad_n", "abc").catch(() => {}); await page.locator("#cadOk").click({ force: true }); t.check(P("array dialog: letters rejected with message"), await toastText(page) !== "" || await page.locator("#cadDialog:not(.hidden)").count() === 1, await toastText(page));
   await page.close().catch(() => {}); await page.ctx.close().catch(() => {});
 }

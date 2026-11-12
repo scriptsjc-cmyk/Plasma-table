@@ -90,10 +90,10 @@ try {
     await snap(p, "account-menu");
     t.check("the account menu has no Beginner/Pro radios any more", await p.locator('input[name="acctMode"], input[name="suMode"]').count() === 0);
     await p.click("#accountDlg .acct-close"); await dismissMigrate(p);
-    // r4: Beginner/Pro is switched on Make a part only
-    await p.evaluate(() => document.querySelector('#modeSwitch [data-mode="pro"]').click());
+    // Advanced tools on Make a part
+    await p.evaluate(() => document.getElementById("btnAdvancedTools").click());
     await sleep(400);
-    t.check("switching to Pro on Make a part turns Pro mode on", await p.evaluate(() => window.plasmaTest.sketch.opts.pro === true && document.body.classList.contains("pro-mode")));
+    t.check("Advanced tools on Make a part turns the full editor on", await p.evaluate(() => window.plasmaTest.sketch.opts.pro === true && document.body.classList.contains("pro-mode")));
     // close and save / load a part
     await dismissMigrate(p);
     await p.evaluate(() => { if (window.plasmaTest.setShapeFs) window.plasmaTest.setShapeFs(false); });

@@ -66,7 +66,7 @@ const makeBeginner = async (page, pick = true) => {
   await sleep(500);
 };
 const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.querySelector(q); if (!e) return null; const b = e.getBoundingClientRect(); return { l: Math.round(b.left), t: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height), b: Math.round(b.bottom), r: Math.round(b.right) }; };
-  return { grid: r(".cutgrid"), pane: r(".previewPane"), cv: r("#preview"), dock: r(".previewDock"), step: r(".stepPane"), split: r("#makeSplit"), tools: r("#picTools"), modesw: r("#modeSwitch"), title: r("#ghTitle") }; })()`);
+  return { grid: r(".cutgrid"), pane: r(".previewPane"), cv: r("#preview"), dock: r(".previewDock"), step: r(".stepPane"), split: r("#makeSplit"), tools: r("#picTools"), modesw: r("#editorSwitch"), title: r("#ghTitle") }; })()`);
 { // phone portrait
   const page = await phone(390, 664); await makeBeginner(page);
   const g = await geom(page);
@@ -80,8 +80,8 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
 { // phone on its side
   const page = await phone(750, 340); await makeBeginner(page);
   const g = await geom(page);
-  ck("5 750x340: the picture is the wider column and at least 140 px tall", g.cv.w > g.step.w && g.cv.h >= 140, g);
-  ck("5 750x340: the Beginner / Pro switch is on screen, beside the step title, not over it", g.modesw.r <= 751 && g.modesw.t >= 0 && (g.modesw.l >= g.title.r || g.modesw.t >= g.title.b), g);
+  ck("5 750x340: the picture is at least 140 px tall on a short landscape phone", g.cv.h >= 140, g);
+  ck("5 750x340: Advanced tools sits on screen, not over the step title", g.modesw && g.modesw.r <= 751 && g.modesw.t >= 0 && (g.modesw.l >= (g.title ? g.title.r : 0) || g.modesw.t >= (g.title ? g.title.b : 0)), g);
   await snap(page, "make-750x340");
   await page.context().close();
 }
@@ -138,17 +138,27 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
 {
   const page = await phone(390, 664);
   await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("pro", { persist: false, autoFs: false }); T.showScreen("make", { force: true }); T.setShapeFs(false); T.sketch.clear(); T.sketch.add("plate", true); T.sketch.fitView(); })()`); await sleep(600);
-  const g = await T(page, `(() => { const r = (q) => { const b = document.querySelector(q).getBoundingClientRect(); return { t: Math.round(b.top), b: Math.round(b.bottom), w: Math.round(b.width), h: Math.round(b.height) }; };
-    const tops = [...document.querySelectorAll("#quickBar button")].filter((b) => b.offsetParent).map((b) => Math.round(b.getBoundingClientRect().top));
-    return { insp: r("#ptInspector"), cv: r("#preview"), dock: r(".previewDock"), qbRows: new Set(tops).size, qbButtons: tops.length, vh: innerHeight, vw: innerWidth, expanded: document.getElementById("ptInspToggle").getAttribute("aria-expanded") }; })()`);
-  ck("8 phone Pro: the inspector is a bar along the bottom (collapsed), not a column beside the picture", g.insp.b >= g.vh - 1 && g.insp.h <= 56 && g.insp.w >= g.vw - 1 && g.expanded === "false", g.insp);
-  ck("8 phone Pro: the picture uses the full width", g.cv.w >= 0.9 * g.vw, g.cv);
-  ck("8 phone Pro: the tools are one sideways-scrolling row", g.qbRows === 1 && g.qbButtons >= 4, { rows: g.qbRows, n: g.qbButtons });
-  ck("8 phone Pro: the status / Save row sits under the picture, not on it", g.dock.t >= g.cv.b - 1, { cv: g.cv, dock: g.dock });
+  const g = await T(page, `(() => {
+    const shown = (el) => { if (!el) return false; const cs = getComputedStyle(el); const r = el.getBoundingClientRect(); return cs.display !== "none" && cs.visibility !== "hidden" && r.width > 0 && r.height > 0; };
+    const r = (q) => { const e = document.querySelector(q); if (!e || !shown(e)) return null; const b = e.getBoundingClientRect(); return { t: Math.round(b.top), b: Math.round(b.bottom), w: Math.round(b.width), h: Math.round(b.height) }; };
+    const bar = document.getElementById("phoneBar");
+    const btns = bar ? [...bar.querySelectorAll("button")].filter(shown) : [];
+    const tops = new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top)));
+    return { cv: r("#preview"), dock: r(".previewDock"), bar: r("#phoneBar"), qb: shown(document.getElementById("quickBar")), insp: shown(document.getElementById("ptInspector")), rows: tops.size, n: btns.length, vh: innerHeight, vw: innerWidth };
+  })()`);
+  ck("8 phone Advanced: the laptop inspector and slider are hidden", !g.qb && !g.insp, g);
+  ck("8 phone Advanced: the picture uses the full width", g.cv && g.cv.w >= 0.9 * g.vw, g.cv);
+  ck("8 phone Advanced: a compact tool bar sits in one row under the picture", g.bar && g.rows === 1 && g.n >= 6 && g.bar.t >= g.cv.b - 2, g);
+  ck("8 phone Advanced: the status / Save row sits under the picture, not on it", g.dock && g.dock.t >= g.cv.b - 1, { cv: g.cv, dock: g.dock });
   await snap(page, "pro-phone");
-  await page.click("#ptInspToggle"); await sleep(300);
-  const o = await T(page, `(() => { const b = document.getElementById("ptInspector").getBoundingClientRect(); return { h: Math.round(b.height), b: Math.round(b.bottom), vh: innerHeight, expanded: document.getElementById("ptInspToggle").getAttribute("aria-expanded"), arrow: [...document.querySelectorAll("#ptInspToggle use")].pop().getAttribute("href") }; })()`);
-  ck("8 phone Pro: tapping the bar opens the sheet (at most 55% of the screen, arrow down to close)", o.expanded === "true" && o.h > 56 && o.h <= 0.56 * o.vh && o.b >= o.vh - 1 && o.arrow === "#i-arrow-down", o);
+  await page.click('#phoneBar [data-ph="more"]'); await sleep(300);
+  const o = await T(page, `(() => {
+    const shown = (el) => { if (!el) return false; const cs = getComputedStyle(el); const r = el.getBoundingClientRect(); return cs.display !== "none" && cs.visibility !== "hidden" && r.width > 0 && r.height > 0; };
+    const sh = document.getElementById("phoneSheet");
+    const b = sh ? sh.getBoundingClientRect() : { height: 0, bottom: 0 };
+    return { open: shown(sh), h: Math.round(b.height), b: Math.round(b.bottom), vh: innerHeight, hasLinarray: !!(sh && sh.querySelector('[data-more="linarray"]')) };
+  })()`);
+  ck("8 phone Advanced: More opens a sheet of the less-used tools (at most half the screen)", o.open && o.hasLinarray && o.h > 40 && o.h <= 0.56 * o.vh, o);
   await snap(page, "pro-phone-sheet");
   await page.context().close();
 }
@@ -167,11 +177,11 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   const page = await phone(1366, 768);
   const vis = (q) => T(page, `(() => { const e = document.querySelector(${JSON.stringify(q)}); if (!e) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden"; })()`);
   await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("beginner", { persist: false, autoFs: false }); T.showScreen("menu", { force: true }); })()`); await sleep(300);
-  ck("9 the main menu has the Beginner / Pro switch in the header", await vis("#topModeSwitch"));
-  await page.click('#topModeSwitch [data-mode="pro"]'); await sleep(300);
-  ck("9 the header switch sets the mode", await T(page, `window.plasmaTest.isProMode() && document.querySelector('#topModeSwitch [data-mode="pro"]').classList.contains("sel")`));
-  await T(page, `window.plasmaTest.showScreen("make", { force: true }); window.plasmaTest.setShapeFs(false)`); await sleep(400);
-  ck("9 Make a part: only its own switch shows (the header one is hidden) and it agrees", !(await vis("#topModeSwitch")) && await vis("#makeBar #modeSwitch") && await T(page, `document.querySelector('#modeSwitch [data-mode="pro"]').classList.contains("sel")`));
+  ck("9 the main menu has no Beginner / Pro switch and no header mode control", !(await vis("#topModeSwitch")) && !(await vis("#modeSwitch")) && !(await vis("#editorSwitch")));
+  await T(page, `window.plasmaTest.showScreen("make", { force: true }); window.plasmaTest.setAppMode("simple", { persist: false, autoFs: false }); window.plasmaTest.setShapeFs(false)`); await sleep(400);
+  ck("9 Make a part starts in Simple view with an Advanced tools button", await vis("#btnAdvancedTools") && !(await vis("#btnSimpleView")) && await T(page, `!window.plasmaTest.isProMode() && document.body.classList.contains("beginner")`));
+  await page.click("#btnAdvancedTools"); await sleep(400);
+  ck("9 Advanced tools opens the full editor", await T(page, `window.plasmaTest.isProMode() && document.body.classList.contains("pro-mode")`) && await vis("#btnSimpleView"));
   // Pro: the cut settings at the foot of the inspector
   await T(page, `(() => { const T = window.plasmaTest; T.sketch.clear(); T.sketch.add("plate", true); T.sketch.fitView(); T.renderShapeForm ? T.renderShapeForm() : 0; })()`); await sleep(400);
   const rowsOf = (q) => T(page, `[...document.querySelectorAll(${JSON.stringify(q + " dt")})].map((d) => d.textContent)`);
@@ -179,8 +189,8 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   ck("9 Pro: the inspector shows Cut settings (material, thickness, kerf, pierce delay, speed, lead-in, practice)", JSON.stringify(await rowsOf("#ptInspCutSum")) === JSON.stringify(want) && await vis("#ptInspCutSum [data-cutsum=change]"), await rowsOf("#ptInspCutSum"));
   // lock it in Pro, then switch to Beginner: the lock is visible with an Unlock button
   await T(page, `(() => { const k = window.plasmaTest.sketch; k.pick([k.items[0].id]); k.toggleLock(); })()`); await sleep(200);
-  await page.click('#modeSwitch [data-mode="beginner"]'); await sleep(500);
-  ck("9 Beginner: the header switch stays hidden on Make; no body pro-mode", !(await vis("#topModeSwitch")) && await T(page, `document.body.classList.contains("beginner")`));
+  await page.click("#btnSimpleView"); await sleep(500);
+  ck("9 Simple view: no Beginner / Pro switch, and the body is not in the advanced editor", !(await vis("#topModeSwitch")) && !(await vis("#modeSwitch")) && await T(page, `document.body.classList.contains("beginner") && !window.plasmaTest.isProMode()`));
   ck("9 a part locked in Pro shows as locked in Beginner, with Unlock", await vis('#shapeForm .lockline [data-sk="toggleLock"]') || await vis('#shapeForm [data-sk="unlockAll"]'));
   await page.click('#shapeForm .lockline button'); await sleep(300);
   ck("9 Unlock in Beginner frees it", await T(page, `!window.plasmaTest.sketch.items.some((i) => i.lock)`));
@@ -200,7 +210,7 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   await page.click("#cutSummary .cutsum-adv > summary"); await sleep(200);
   await page.click("#cutSummary [data-cutsum=change]"); await sleep(600);
   ck("9 Change opens the cutting screen's material step with More cut options open", await T(page, `window.plasmaTest.screen() === "cut" && document.getElementById("advCut").open && document.body.dataset.step === "1"`), await T(page, `[window.plasmaTest.screen(), document.body.dataset.step]`));
-  ck("9 the cutting screen hides the header switch and has no Beginner / Pro styling", !(await vis("#topModeSwitch")) && await T(page, `!document.body.classList.contains("beginner") && !document.body.classList.contains("pro-mode")`));
+  ck("9 the cutting screen hides Simple / Advanced and has no Beginner / Pro styling", !(await vis("#editorSwitch")) && !(await vis("#topModeSwitch")) && await T(page, `!document.body.classList.contains("beginner") && !document.body.classList.contains("pro-mode")`));
   ck("9 no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await page.context().close();
 }

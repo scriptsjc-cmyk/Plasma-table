@@ -36,8 +36,8 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   await sign.context().close();
   const page = await view(w, h);
   await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("beginner", { persist: false, autoFs: false }); T.showScreen("make", { force: true }); T.setShapeFs(false); })()`); await sleep(300);
-  const b = await T(page, `(() => { const e = document.querySelector('#modeSwitch [data-mode="beginner"]'); return { text: e.innerText.trim(), fits: e.scrollWidth <= e.clientWidth + 1, fs: parseFloat(getComputedStyle(e).fontSize) }; })()`);
-  ck(`A ${w}x${h}: the mode switch says "Beginner" in full, at least 14 px, and it fits`, b.text === "Beginner" && b.fits && b.fs >= 14, b);
+  const b = await T(page, `(() => { const e = document.getElementById("btnAdvancedTools"); return { text: e ? e.innerText.trim() : "", fits: !!(e && e.scrollWidth <= e.clientWidth + 1), fs: e ? parseFloat(getComputedStyle(e).fontSize) : 0 }; })()`);
+  ck(`A ${w}x${h}: Advanced tools is labelled in full, at least 14 px, and it fits`, b.text === "Advanced tools" && b.fits && b.fs >= 14, b);
   ck(`A ${w}x${h}: no demo note over Make a part`, !(await T(page, `!!document.getElementById("demoAcctBar").offsetParent`)));
   await T(page, `window.plasmaTest.setShapeFs(true)`); await sleep(300);
   ck(`A ${w}x${h}: the editor bar says "Save" (not "Save…")`, (await T(page, `document.getElementById("fsSave").innerText.trim()`)) === "Save");

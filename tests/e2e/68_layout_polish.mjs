@@ -60,7 +60,7 @@ const T = (page, js) => page.evaluate(js);
   await sleep(200);
   const inch = await T(page, `document.body.innerText`);
   ck("Inches display unit shows in on the Make screen", /\d+(\.\d+)?\s*in\b/.test(inch) || / in /.test(inch), inch.slice(0, 200));
-  ck("the Beginner/Pro switch is hidden on the cutting screen", await T(page, `(() => { window.plasmaTest.showScreen("cut"); const el = document.getElementById("modeSwitch") || document.getElementById("topModeSwitch"); if (!el) return true; const cs = getComputedStyle(el); return cs.display === "none" || !el.offsetParent; })()`));
+  ck("Advanced tools / Simple view are hidden on the cutting screen", await T(page, `(() => { window.plasmaTest.showScreen("cut"); const el = document.getElementById("editorSwitch"); if (!el) return true; const cs = getComputedStyle(el); return cs.display === "none" || !el.offsetParent; })()`));
   await page.context().close();
 }
 

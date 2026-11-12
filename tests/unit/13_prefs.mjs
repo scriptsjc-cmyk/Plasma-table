@@ -8,12 +8,12 @@ const t = new T("13_prefs");
 const ck = (n, ok, i) => t.check(n, ok, typeof i === "string" ? i : (i != null ? JSON.stringify(i) : ""));
 
 const d = P.defaultPrefs();
-ck("defaults are a complete, safe set", d.theme === "auto" && d.accent === "blue" && d.toolbar === "bottom" && d.buttons === "compact" && d.units === "mm" && d.mode === "beginner" && d.grid === true && d.gridSize === 0 && d.snap === true && d.canvas === "default");
+ck("defaults are a complete, safe set", d.theme === "auto" && d.accent === "blue" && d.toolbar === "bottom" && d.buttons === "compact" && d.units === "mm" && d.mode === "simple" && d.grid === true && d.gridSize === 0 && d.snap === true && d.canvas === "default");
 ck("every accent has light and dark palettes", Object.values(P.ACCENTS).every((a) => a.light && a.dark && a.light.accent && a.dark.accent));
 
 ck("junk input falls back to defaults", P.sanitizePrefs(null).theme === "auto" && P.sanitizePrefs("x").accent === "blue" && P.sanitizePrefs({ theme: "neon", accent: "pink", toolbar: "left", buttons: "tiny", units: "cm", mode: "admin", gridSize: 7, canvas: "neon" }).toolbar === "bottom");
 const ok = P.sanitizePrefs({ theme: "dark", accent: "teal", toolbar: "top", buttons: "large", units: "inch", mode: "pro", grid: false, gridSize: 10, snap: false, canvas: "paper", extra: "nope" });
-ck("accepted values are kept and extras are dropped", ok.theme === "dark" && ok.accent === "teal" && ok.toolbar === "top" && ok.buttons === "large" && ok.units === "inch" && ok.mode === "pro" && ok.grid === false && ok.gridSize === 10 && ok.snap === false && ok.canvas === "paper" && !("extra" in ok));
+ck("accepted values are kept and extras are dropped", ok.theme === "dark" && ok.accent === "teal" && ok.toolbar === "top" && ok.buttons === "large" && ok.units === "inch" && ok.mode === "advanced" && ok.grid === false && ok.gridSize === 10 && ok.snap === false && ok.canvas === "paper" && !("extra" in ok));
 
 ck("prefsKey is the device key when no user is signed in", P.prefsKey("") === P.PREFS_KEY && P.prefsKey(null) === P.PREFS_KEY);
 ck("prefsKey is per-user when an id is given", P.prefsKey("abc") === P.PREFS_KEY + ".abc" && P.prefsKey("abc") !== P.prefsKey("def"));
@@ -56,11 +56,16 @@ ck("wheelZoom defaults to off and is kept when set", P.defaultPrefs().wheelZoom 
 localStorage.clear();
 P.savePrefs({ theme: "dark", mode: "pro" }, "");
 const fresh = P.loadPrefs("new-user");
-ck("a new signed-in account does not inherit the signed-out Make it yours choices", fresh.theme === "auto" && fresh.mode === "beginner");
+ck("a new signed-in account does not inherit the signed-out Make it yours choices", fresh.theme === "auto" && fresh.mode === "simple");
 
 ck("formatLen uses millimetres by default", /mm$/.test(P.formatLen(100, 0)) && P.formatLen(100, 0).startsWith("100"));
 P.savePrefs({ units: "inch" }, "u-inch");
 ck("formatLen converts to inches when that display unit is chosen", P.formatLen(25.4, 0) === "1 in" || P.formatLen(25.4, 2).startsWith("1"), P.formatLen(25.4, 2));
 
+ck("a saved Beginner mode becomes Simple", P.sanitizePrefs({ mode: "beginner" }).mode === "simple");
+ck("a saved Pro mode becomes Advanced", P.sanitizePrefs({ mode: "pro" }).mode === "advanced");
+ck("an unknown mode falls back to Simple", P.sanitizePrefs({ mode: "nope" }).mode === "simple");
+
 process.exit(t.done() ? 1 : 0);
+
 
