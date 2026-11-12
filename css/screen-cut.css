@@ -667,3 +667,31 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 }
 /* Make it yours: choices apply live, so the sticky Save row is hidden by JS; keep the pane reachable on short screens */
 [data-setpane="yours"] { padding-bottom: 12px; }
+
+/* ===================== Phone cutting screen: a narrow screen, or a phone on its side (same test as PHONE_MQ in js/ui/menu.js).
+   STOP stays in the header and is the biggest control; the step's main buttons (Back / Start, or Pause) sit in the sticky bar with a
+   More button; secondary controls move into the More sheet (#cutSheet) over the bed picture. The laptop layout never sees any of this. */
+.cutmore-btn, .runpos, .cutsheet { display: none; }
+@media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
+  body[data-screen="cut"] .cutmore-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: none;
+    min-width: 64px; min-height: 52px; padding: 4px 10px; font-size: 15px; font-weight: 700; }
+  .cutmore-btn .ico { width: 22px; height: 22px; }
+  .cutmore-btn[aria-expanded="true"] { background: var(--accent-weak); border-color: var(--accent); }
+  body[data-screen="cut"] .previewPane { position: relative; }
+  body[data-screen="cut"] .cutsheet:not(.hidden) { display: flex; flex-direction: column; position: absolute; inset: 0; z-index: 9;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+  .cutsheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 2px 2px 2px 12px; border-bottom: 1px solid var(--line); }
+  .cutsheet-head h2 { margin: 0; font-size: 16px; }
+  #cutSheetClose { min-width: 44px; min-height: 44px; font-size: 18px; }
+  .cutsheet-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 8px 10px 10px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+  .cutsheet-body > * { margin: 0; }
+  .cutsheet-body > button { align-self: flex-start; min-height: 48px; }
+  .cutsheet-body #showMachWrap { position: static; display: flex; align-self: flex-start; }
+  .cutsheet-body .livespeed .row { gap: 6px; }
+  /* Bed & start: Back / Start / More in the sticky bar; Download G-code is in More */
+  body[data-screen="cut"] .step[data-step="3"] > .nav #btnExport3 { display: none; }
+  body[data-screen="cut"] .step[data-step="3"] > .nav { flex-wrap: wrap; align-items: stretch; }
+  body[data-screen="cut"] .step[data-step="3"] > .nav .cutmore-btn { order: 2; }
+}
