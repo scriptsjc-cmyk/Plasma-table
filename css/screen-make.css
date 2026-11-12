@@ -507,3 +507,176 @@ body.pro-mode #srcShape > .addtiles { display: none; }
   .shapetiles, #shapeTiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .shapetiles button, #shapeTiles button { font-size: 11px; white-space: normal; line-height: 1.15; }
 }
+
+
+/* ---- Simple / Advanced (replaces the Beginner / Pro switch) ---- */
+#editorSwitch { display: flex; gap: 6px; align-items: center; }
+body[data-screen="cut"] #editorSwitch,
+body[data-screen="cut"] #phoneBar,
+body[data-screen="cut"] #phoneSheet,
+body[data-screen="cut"] #drawSizeDlg { display: none !important; }
+body:not(.phone-ui) #phoneBar,
+body:not(.phone-ui) #phoneSheet { display: none !important; }
+.editorsw .modesw-btn.hidden { display: none !important; }
+
+/* ---- Phone Make-a-part: canvas first, sheets on demand, compact tool bar ---- */
+body.phone-ui[data-screen="make"] {
+  --phonebar-h: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+/* Selectors are at least as specific as the earlier Beginner/Pro phone grids they replace. */
+body.app-shell.phone-ui[data-screen="make"] .cutgrid,
+body.app-shell.phone-ui[data-screen="make"] .cutgrid.with-qb,
+body.app-shell.phone-ui[data-screen="make"] .cutgrid.editing,
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid,
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.with-qb,
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.editing,
+body.app-shell.phone-ui.pro-mode[data-screen="make"]:not(.short-land) .cutgrid.with-qb,
+body.app-shell.phone-ui.pro-mode[data-screen="make"]:not(.short-land) .cutgrid.editing {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  grid-template-areas: "preview" !important;
+  min-height: 0; height: 100%;
+  padding-bottom: var(--phonebar-h);
+}
+/* Simple view: give the template / size form its own row (or column on a short landscape phone)
+   so the picture stays in the free space and size labels stay tappable. */
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid,
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.with-qb,
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.editing,
+body.app-shell.phone-ui[data-screen="make"].simple-mode:not(.short-land):not(.shape-fs) .cutgrid {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1.4fr) minmax(160px, 0.9fr) !important;
+  grid-template-areas: "preview" "step" !important;
+  padding-bottom: 0 !important;
+}
+body.app-shell.phone-ui.short-land.beginner[data-screen="make"]:not(.shape-fs) .cutgrid,
+body.app-shell.phone-ui.short-land[data-screen="make"].simple-mode:not(.shape-fs) .cutgrid {
+  grid-template-columns: minmax(0, 1.25fr) minmax(220px, 40vw) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  grid-template-areas: "preview step" !important;
+  padding-bottom: 0 !important;
+}
+body.phone-ui[data-screen="make"] .previewPane { grid-area: preview !important; min-height: 0; overflow: hidden; }
+body.phone-ui[data-screen="make"] #makeSplit,
+body.phone-ui[data-screen="make"] #quickBarWrap,
+body.phone-ui[data-screen="make"] #ptInspector { display: none !important; }
+/* Advanced phone: keep the step pane out of the grid, but leave #edgePanel
+   available as a sheet so edge edit still works. */
+body.phone-ui[data-screen="make"].advanced-mode .stepPane,
+body.phone-ui[data-screen="make"].pro-mode .stepPane {
+  display: block !important;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  width: auto; height: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  border: 0;
+  z-index: 21;
+  grid-area: preview;
+  pointer-events: none;
+}
+body.phone-ui[data-screen="make"].advanced-mode .stepPane > :not(.step):not(#edgePanel),
+body.phone-ui[data-screen="make"].pro-mode .stepPane > :not(.step):not(#edgePanel) { display: none !important; }
+body.phone-ui[data-screen="make"].advanced-mode .stepPane > .step,
+body.phone-ui[data-screen="make"].pro-mode .stepPane > .step,
+body.phone-ui[data-screen="make"].advanced-mode #srcShape,
+body.phone-ui[data-screen="make"].pro-mode #srcShape {
+  display: block !important;
+  height: 0; overflow: visible;
+  pointer-events: none;
+  background: none; border: 0; padding: 0; margin: 0;
+  box-shadow: none;
+}
+body.phone-ui[data-screen="make"].advanced-mode .stepPane > .step > :not(#srcShape):not(#edgePanel),
+body.phone-ui[data-screen="make"].pro-mode .stepPane > .step > :not(#srcShape):not(#edgePanel),
+body.phone-ui[data-screen="make"].advanced-mode #srcShape > :not(#edgePanel),
+body.phone-ui[data-screen="make"].pro-mode #srcShape > :not(#edgePanel) { display: none !important; }
+body.phone-ui[data-screen="make"]:has(#edgePanel:not(.hidden)) #phoneSheet { display: none !important; }
+body.phone-ui[data-screen="make"].advanced-mode #edgePanel:not(.hidden),
+body.phone-ui[data-screen="make"].pro-mode #edgePanel:not(.hidden) {
+  display: block !important;
+  pointer-events: auto;
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(var(--phonebar-h, 56px) + 120px);
+  max-height: 48%;
+  overflow: auto;
+  z-index: 21;
+  margin: 0;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 24px rgba(16, 24, 40, .18);
+  background: var(--card);
+  padding: 12px 12px max(12px, env(safe-area-inset-bottom));
+}
+
+/* Simple view on phone: templates and size boxes sit in a rounded bottom (or side) panel */
+body.phone-ui[data-screen="make"].simple-mode .stepPane,
+body.phone-ui[data-screen="make"].beginner .stepPane {
+  position: relative; left: auto; right: auto; bottom: auto;
+  grid-area: step !important;
+  z-index: 5;
+  max-height: none;
+  overflow: auto;
+  background: var(--card);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 24px rgba(16, 24, 40, .18);
+  padding: 12px 12px max(12px, env(safe-area-inset-bottom));
+  min-height: 0;
+}
+body.phone-ui.short-land[data-screen="make"].simple-mode .stepPane,
+body.phone-ui.short-land[data-screen="make"].beginner .stepPane {
+  border-radius: 16px 0 0 16px;
+  box-shadow: -8px 0 24px rgba(16, 24, 40, .12);
+}
+body.phone-ui[data-screen="make"].simple-mode #phoneBar,
+body.phone-ui[data-screen="make"].simple-mode #phoneSheet,
+body.phone-ui[data-screen="make"].beginner #phoneBar,
+body.phone-ui[data-screen="make"].beginner #phoneSheet { display: none !important; }
+
+.phonebar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 22;
+  display: flex; align-items: stretch; gap: 2px;
+  min-height: var(--phonebar-h);
+  padding: 4px 4px max(4px, env(safe-area-inset-bottom));
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+.phonebar button {
+  flex: 1 1 0; min-width: 0; min-height: 44px;
+  font-size: 11px; font-weight: 650; padding: 4px 2px;
+  background: transparent; border: 0; color: var(--text);
+  display: flex; align-items: center; justify-content: center;
+}
+.phonebar button.on { background: var(--accent-weak); color: var(--accent-text); border-radius: 8px; }
+.phonebar button[disabled] { opacity: .4; }
+
+body.app-shell.phone-ui[data-screen="make"]:not(.short-land) .previewDock,
+body.app-shell.phone-ui.short-land[data-screen="make"] .previewDock {
+  position: relative !important;
+  z-index: 23 !important;
+  left: auto; right: auto; bottom: auto;
+  max-height: none;
+  overflow: visible;
+  background: var(--card);
+}
+.phonesheet {
+  position: fixed; left: 0; right: 0; bottom: calc(var(--phonebar-h, 56px) + 120px); z-index: 21;
+  max-height: 48%; overflow: auto;
+  background: var(--card);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 24px rgba(16, 24, 40, .18);
+  padding: 4px 12px 12px;
+}
+.phonesheet-handle {
+  display: block; width: 40px; height: 20px; margin: 0 auto 8px;
+  border: 0; background: transparent; position: relative;
+}
+.phonesheet-handle::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 8px; height: 4px;
+  border-radius: 2px; background: var(--line-strong);
+}
+#drawSizeDlg .grid2 { margin: 8px 0 12px; }
+#drawSizeDlg input { min-height: 44px; }

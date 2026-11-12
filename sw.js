@@ -114,6 +114,7 @@ const PRECACHE = [
   "js/make/fontdata.js",
   "js/make/library.js",
   "js/make/maketools.js",
+  "js/make/phonesheet.js",
   "js/make/picture.js",
   "js/make/protools.js",
   "js/make/quickbar.js",

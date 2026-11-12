@@ -1,4 +1,4 @@
-// Make a part: beginner shape tiles, the guide, and the size/position form for the selected shape.
+// Make a part: Simple view templates, the guide, and the size/position form for the selected shape.
 import { SHAPES, SHAPE_PRESETS, shapeThumb } from "./shapes.js";
 import { screen } from "../ui/flow.js";
 import { shapeDef } from "./sketch.js";
@@ -12,6 +12,7 @@ import { renderProTools, setShapeFs } from "./protools.js";
 import { runPro } from "./cad.js";
 import { showSource, useShape, useShapeSoon } from "../core/hooks.js";
 import { paintCutSummary } from "./cutsummary.js";
+import { onShapeFormPainted } from "./phonesheet.js";
 
 let editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
@@ -29,7 +30,7 @@ export function renderShapeTiles() {
   renderProTools();
 }
 // ---- Beginner: big plain shape buttons first, and a one-step-at-a-time guide
-const BEGIN_SHAPES = [["rect", "Rectangle"], ["disc", "Circle"], ["plate", "Plate with holes"], ["ring", "Ring"], ["triangle", "Triangle"], ["slot", "Slot"]];
+const BEGIN_SHAPES = [["bracket", "Bracket"], ["plate", "Plate with holes"], ["flange", "Flange"], ["gusset", "Gusset"], ["rect", "Rectangle"], ["disc", "Circle"], ["ring", "Ring"], ["triangle", "Triangle"], ["slot", "Slot"]];
 function renderBeginnerShapes() {
   const box = $("bgShapes"); if (!box) return;
   const cur = sketch && sketch.items.length === 1 ? sketch.items[0].type : null;
@@ -58,13 +59,13 @@ export function paintGuide() {
   const has = !!(sketch && sketch.items.length);
   document.body.classList.toggle("bg-picked", !!(mk && beg && S.src === "shape" && has && !S.bgChoosing && S.cur === 1));
   const nx = $("next1");
-  if (nx) nx.textContent = mk ? (S.prepared ? "✂ Cut this part →" : (has ? "Getting it ready…" : "Pick a shape to continue")) : "Next: bed and start →";
+  if (nx) nx.textContent = mk ? (S.prepared ? "✂ Cut this part →" : (has ? "Getting it ready…" : "Pick a template to continue")) : "Next: bed and start →";
   const mt = $("matLine"); if (mt) mt.textContent = S.material ? `Cutting ${S.material.toLowerCase()}, ${S.thickness} mm thick. Not right? Tap a different one.` : "";
   const t = $("step1Title"); if (t) t.textContent = mk ? "Make a part" : "What do you want to cut?";
   const gh = $("guideHead"); if (!gh || !mk || !beg) return;
   $("ghStep").textContent = "Make a part";
-  $("ghTitle").textContent = has ? "Set the size" : "Pick a shape";
-  $("ghHelp").textContent = has ? "Type how big it should be, turn it, add holes. When it looks right, press Cut this part." : "Tap a shape, or draw your own.";
+  $("ghTitle").textContent = has ? "Set the size" : "Pick a template";
+  $("ghHelp").textContent = has ? "Type how big it should be, turn it, add holes. When it looks right, press Cut this part." : "Tap a template and fill in the numbers, or open Advanced tools to draw freely.";
   gh.style.setProperty("--prog", has ? "100%" : "0%");
 }
 const HOLE_ADDERS = [["slothole", "Slot hole"], ["cornerholes", "Corner holes (4)"], ["holerow", "Row of holes"], ["boltcircle", "Ring of holes"], ["holegrid", "Grid of holes"]];
@@ -105,6 +106,9 @@ function beginnerPartsHtml() {
   return `<div class="bgparts"><h4>Parts in this drawing</h4><ul>${li}</ul>${unlock}</div>`;
 }
 export function renderShapeForm() {
+  try { renderShapeFormCore(); } finally { try { onShapeFormPainted(); } catch (e) { /* phone sheet optional */ } }
+}
+function renderShapeFormCore() {
   try { paintCutSummary(); } catch (e) { /* the cut chart is not loaded yet */ }
   // round 5 item 7: Beginner always sees the size boxes: with nothing picked, the only part is picked for you
   // (not in the full-screen editor, where Esc first drops the pick and then leaves)
@@ -202,7 +206,7 @@ export function renderShapeForm() {
     </div>${proOne}${holeHostHtml(it, sh)}`;
 }
 export function bindShapeForm() {
-  if ($("bgDraw")) $("bgDraw").onclick = () => { if (S.src !== "shape") showSource("shape"); setShapeFs(true); };
+  if ($("bgDraw")) $("bgDraw").onclick = () => setAppMode("advanced");
   if ($("fsDone")) $("fsDone").onclick = () => setShapeFs(false);
   if ($("fsSave")) $("fsSave").onclick = () => saveCurrent().catch((e) => toast(e.message, true));
   if ($("btnShapeFs")) $("btnShapeFs").onclick = () => setShapeFs(true);

@@ -21,8 +21,8 @@ function snapOn(on) {
 function applyAll(p, { mode = true } = {}) {
   applyChrome(p);
   snapOn(p.snap);
-  if (mode && (p.mode === "pro" || p.mode === "beginner")) {
-    try { setAppMode(p.mode, { persist: !!(Acc.isSignedIn && Acc.isSignedIn()), autoFs: false }); } catch (e) { /* not ready */ }
+  if (mode && (p.mode === "simple" || p.mode === "advanced" || p.mode === "pro" || p.mode === "beginner")) {
+    try { setAppMode(p.mode, { persist: false, autoFs: false }); } catch (e) { /* not ready */ }
   }
   try { if (sketch && sketch.draw) sketch.draw(); } catch (e) { /* ignore */ }
   refreshScrollRows();
@@ -35,7 +35,6 @@ function fillForm(p) {
   set("yoursToolbar", p.toolbar);
   set("yoursButtons", p.buttons);
   set("yoursUnits", p.units);
-  set("yoursMode", p.mode);
   set("yoursGrid", p.grid);
   set("yoursGridSize", p.gridSize);
   set("yoursSnap", p.snap);
@@ -52,7 +51,7 @@ function readForm() {
     toolbar: val("yoursToolbar"),
     buttons: val("yoursButtons"),
     units: val("yoursUnits"),
-    mode: val("yoursMode"),
+    mode: getPrefs().mode,
     grid: chk("yoursGrid"),
     gridSize: Number(val("yoursGridSize")),
     snap: chk("yoursSnap"),
@@ -64,18 +63,10 @@ function readForm() {
 function onChange(e) {
   const field = e && e.target && e.target.id;
   const draft = readForm();
-  if (field === "yoursMode" && draft.mode === "pro") {
-    try {
-      if (Acc.isSignedIn && Acc.isSignedIn() && typeof Acc.canPro === "function" && !Acc.canPro()) {
-        draft.mode = "beginner";
-        const el = $("yoursMode"); if (el) el.value = "beginner";
-        toast("Pro isn't available on this account, so Default mode stays Beginner.", true);
-      }
-    } catch (err) { /* ignore */ }
-  }
   const next = savePrefs(draft, userId());
   // Display units only — do not rewrite machine Settings units.
-  applyAll(next, { mode: field === "yoursMode" });
+  // Simple / Advanced is remembered from the Make a part buttons, not from this pane.
+  applyAll(next, { mode: false });
 }
 
 export function paintYours() { fillForm(getPrefs()); }
@@ -87,7 +78,7 @@ export function initYours() {
   loadPrefs(uid);
   if (!stored) {
     const patch = {};
-    if (sketch && sketch.opts && sketch.opts.pro) patch.mode = "pro";
+    if (sketch && sketch.opts && sketch.opts.pro) patch.mode = "advanced";
     // pick up display units already chosen in Settings, and a saved Pro sketch mode
     try {
       const raw = JSON.parse(localStorage.getItem("plasma.settings.v1") || "null");

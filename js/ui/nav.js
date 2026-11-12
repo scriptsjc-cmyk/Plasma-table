@@ -10,6 +10,7 @@ import { S, sketch } from "../core/state.js";
 import { loadJob, renderCutCheck } from "../cut/prepare.js";
 import { renderMaterials } from "../cut/material.js";
 import { applyBodyMode, syncModeSwitch } from "./mode.js";
+import { syncPhoneUi } from "../make/phonesheet.js";
 import { renderProTools, setShapeFs } from "../make/protools.js";
 import { renderShapeForm } from "../make/shapeform.js";
 import { drawPreview } from "../cut/preview.js";
@@ -64,6 +65,7 @@ export function onScreen(name, prev) {
   $("menuView").classList.toggle("hidden", name !== "menu");
   if (name !== "cut" && name !== "make") { $("cutView").classList.add("hidden"); $("setupView").classList.add("hidden"); }
   applyBodyMode();
+  try { syncPhoneUi(); } catch (e) { /* ignore */ }
   const gate = $("accountDlg");
   gate.classList.toggle("loginpage", name === "login");
   if (name === "login") openAccount("in");

@@ -30,7 +30,9 @@ export const CANVAS_BG = {
 const THEMES = ["auto", "light", "dark"];
 const TOOLBARS = ["bottom", "top"];
 const BUTTONS = ["compact", "normal", "large"];
-const MODES = ["beginner", "pro"];
+const MODES = ["simple", "advanced"];
+const MODE_ALIASES = { beginner: "simple", pro: "advanced", simple: "simple", advanced: "advanced" };
+export function migrateMode(mode) { return MODE_ALIASES[mode] || null; }
 const GRID_SIZES = [0, 1, 2, 5, 10, 20, 50];
 
 export function defaultPrefs() {
@@ -40,7 +42,7 @@ export function defaultPrefs() {
     toolbar: "bottom",
     buttons: "compact",
     units: "mm",
-    mode: "beginner",
+    mode: "simple",
     grid: true,
     gridSize: 0,
     snap: true,
@@ -58,7 +60,7 @@ export function sanitizePrefs(raw) {
   if (TOOLBARS.includes(src.toolbar)) out.toolbar = src.toolbar;
   if (BUTTONS.includes(src.buttons)) out.buttons = src.buttons;
   if (src.units === "mm" || src.units === "inch") out.units = src.units;
-  if (MODES.includes(src.mode)) out.mode = src.mode;
+  const mode = migrateMode(src.mode); if (mode) out.mode = mode;
   if (typeof src.grid === "boolean") out.grid = src.grid;
   if (GRID_SIZES.includes(Number(src.gridSize))) out.gridSize = Number(src.gridSize);
   if (typeof src.snap === "boolean") out.snap = src.snap;

@@ -57,6 +57,7 @@ import { addTestPattern, adminMayTalk, bindMachineControls, fillEdgePanel, readC
 import { bindShapeForm, paintGuide, renderShapeForm, renderShapeTiles } from "./make/shapeform.js";
 import { bindConnection, connectWiFi, setConnected, wifiWatch } from "./machine/connection.js";
 import { bindQuickBar, renderQuickBar } from "./make/quickbar.js";
+import { bindPhoneSheet } from "./make/phonesheet.js";
 import { bindDialogKeys } from "./ui/dialogs.js";
 import { bindRun } from "./cut/run.js";
 import { bindViewport } from "./ui/viewport.js";
@@ -75,6 +76,7 @@ function bind() {
   bindShapeForm();
   bindExport();
   bindQuickBar();
+  bindPhoneSheet();
   bindGate();
   bindMachineControls();
   bindLibrary();
@@ -232,10 +234,11 @@ if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } }
   Acc.onAccountChange(publishInspector);
   renderShapeTiles();
   initYours();
-  let startMode = getPrefs().mode;
+  let startMode = getPrefs().mode || "simple";
   try {
-    // a saved editor mode (plasma.sketch.opts) wins over the Make it yours default; if that key was cleared, start in Beginner
-    if (localStorage.getItem("plasma.sketch.opts")) startMode = sketch.opts.pro ? "pro" : "beginner";
+    const raw = JSON.parse(localStorage.getItem("plasma.yours.v1") || "null");
+    const hadMode = raw && (raw.mode === "beginner" || raw.mode === "pro" || raw.mode === "simple" || raw.mode === "advanced");
+    if (!hadMode && localStorage.getItem("plasma.sketch.opts")) startMode = sketch.opts.pro ? "advanced" : "simple";
   } catch (e) { /* ignore */ }
   setAppMode(startMode, { persist: false, autoFs: false });
   bind();

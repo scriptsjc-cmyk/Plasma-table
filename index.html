@@ -113,10 +113,6 @@
   <button type="button" id="btnHowto" class="pill iconbtn" title="How to use" aria-label="How to use"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-help"></use></svg></button>
   <button type="button" id="btnSettings" class="pill iconbtn" title="Settings" aria-label="Settings"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-gear"></use></svg></button>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
-  <div id="topModeSwitch" class="modesw topmodesw" role="group" aria-label="Design mode for Make a part">
-    <button type="button" class="modesw-btn" data-mode="beginner" title="Make a part: guided, step by step">Beginner</button>
-    <button type="button" class="modesw-btn" data-mode="pro" title="Make a part: dense workspace with every tool">Pro</button>
-  </div>
   <span id="modeChip" class="pill chip hidden" title="App mode"></span>
   <span id="practiceChip" class="pill chip practice hidden">PRACTICE RUN</span>
   </div>
@@ -215,9 +211,9 @@
 <section id="cutView" class="view hidden">
   <div id="makeBar" class="makebar">
     <h1>Make a part</h1>
-    <div id="modeSwitch" class="modesw" role="group" aria-label="Design mode">
-      <button type="button" class="modesw-btn sel" data-mode="beginner" title="Guided, step by step">Beginner</button>
-      <button type="button" class="modesw-btn" data-mode="pro" title="Dense workspace with every tool">Pro</button>
+    <div id="editorSwitch" class="editorsw" role="group" aria-label="Drawing tools">
+      <button type="button" id="btnAdvancedTools" class="modesw-btn">Advanced tools</button>
+      <button type="button" id="btnSimpleView" class="modesw-btn hidden">Simple view</button>
     </div>
   </div>
   <ol class="stepper" id="stepper">
@@ -285,7 +281,7 @@
           <div id="bgShapes" class="bgshapes"></div>
           <div class="bgmore">
             <button type="button" id="bgMore" class="xl">More shapes…</button>
-            <button type="button" id="bgDraw" class="xl">✏ Draw your own</button>
+            <button type="button" id="bgDraw" class="xl">✏ Advanced tools</button>
           </div>
         </div>
 
@@ -447,7 +443,7 @@
               <li><b>Move</b> – drag it. Guide lines appear when it lines up with another shape. Hold <b>Alt</b> to move freely.</li>
               <li><b>Size</b> – tap the millimetre label above or beside the shape and type the exact size (you can use 100/2 or 50+12.5). Or drag a corner, or use the boxes below.</li>
               <li><b>Versions</b> – tap a shape, then pick a version (rounded, chamfered, corner holes, flange, gusset…). It keeps the size and place.</li>
-              <li><b>Pro mode</b> – switch to Pro with the Beginner / Pro switch at the top of this screen for a dense layout, the full-screen editor, arrays, subtract, offset and every tool in one place.</li>
+              <li><b>Advanced tools</b> – opens the full drawing editor: a dense layout, arrays, subtract, offset and every tool in one place. Simple view takes you back to the templates.</li>
               <li><b>Edit a drawn outline</b> – after <b>Draw outline</b>, click an edge to type an exact length, square it up, set an angle, or turn it into a curve (drag the midpoint handle). Drag corners, double-click an edge to add a corner, Delete removes one. Undo still works.</li>
               <li><b>Holes</b> – drag a hole to move it. The numbers show how far its middle is from the part's left and bottom edges.</li>
               <li><b>Several at once</b> – Shift-click them, or drag a box round them on empty space. Then move, copy, turn, mirror or delete them together.</li>
@@ -1206,6 +1202,33 @@
   </div>
 </div>
 
+
+<!-- phone Make-a-part: a compact tool bar and on-demand bottom sheets -->
+<nav id="phoneBar" class="phonebar hidden" hidden aria-label="Drawing tools">
+  <button type="button" data-ph="select" title="Select">Pointer</button>
+  <button type="button" data-ph="line" title="Draw a line or outline">Line</button>
+  <button type="button" data-ph="rect" title="Rectangle">Rectangle</button>
+  <button type="button" data-ph="disc" title="Circle">Circle</button>
+  <button type="button" data-ph="measure" title="Measure">Measure</button>
+  <button type="button" data-ph="undo" title="Undo">Undo</button>
+  <button type="button" data-ph="more" title="More tools" aria-expanded="false">More</button>
+</nav>
+<div id="phoneSheet" class="phonesheet hidden" hidden role="dialog" aria-label="Shape options">
+  <button type="button" class="phonesheet-handle" id="phoneSheetClose" aria-label="Close"></button>
+  <div id="phoneSheetBody"></div>
+</div>
+<div id="drawSizeDlg" class="safedlg hidden" hidden role="dialog" aria-modal="true" aria-labelledby="drawSizeTitle">
+  <div class="safedlg-card">
+    <h2 id="drawSizeTitle">Size</h2>
+    <p id="drawSizeBody" class="muted"></p>
+    <div class="grid2" id="drawSizeFields"></div>
+    <div class="row safedlg-actions">
+      <button type="button" id="drawSizeCancel">Cancel</button>
+      <button type="button" id="drawSizeOk" class="go">Add</button>
+    </div>
+  </div>
+</div>
+
 <!-- dimension typing (replaces the on-screen calculator pad) -->
 <div id="dimEdit" class="dimedit hidden" hidden>
   <label id="dimEditLabel" for="dimEditInput">Size (mm)</label>
@@ -1372,12 +1395,6 @@
           <select id="yoursUnits">
             <option value="mm">Millimetres</option>
             <option value="inch">Inches (display only)</option>
-          </select>
-        </label>
-        <label>Default mode
-          <select id="yoursMode">
-            <option value="beginner">Beginner</option>
-            <option value="pro">Pro</option>
           </select>
         </label>
         <label class="check"><input id="yoursGrid" type="checkbox"> Show the grid</label>
