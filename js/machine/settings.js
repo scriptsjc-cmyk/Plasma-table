@@ -1,8 +1,9 @@
-// Settings menu: machine, speeds, torch, pierce/cut, materials, homing, I/O,
-// units, backup/restore. Beginner sees the basics; Pro sees firmware tools
-// (steps/mm, $ editor) behind a warning and an automatic $$ backup.
+// Settings menu: Make it yours, machine, speeds, torch, pierce/cut, materials,
+// homing, I/O, units, backup/restore. Beginner sees the basics; Pro sees firmware
+// tools (steps/mm, $ editor) behind a warning and an automatic $$ backup.
 
 import * as Acc from "../account/account.js";
+import { savePrefs } from "../core/prefs.js";
 import { filterConsoleCommand, renderAdvancedMachine } from "./admin-machine.js";
 import { fluidncMixedContentMessage } from "./fluidnc.js";
 import { DIALECTS } from "./dialect.js";
@@ -109,6 +110,14 @@ let presets = []; // admin published + local overrides
 const LOCAL_PRESETS = "plasma.cutPresets.local";
 
 export function currentSettings() { return state; }
+export function applyUnits(units) {
+  if (units !== "mm" && units !== "inch") return;
+  if (!state) return;
+  state.units = units;
+  if ($("setUnits")) $("setUnits").value = units;
+  saveSettings(state);
+  if (host && host.onChange) host.onChange(state);
+}
 export function initSettings(opts) { host = opts || {}; state = loadSettings(); loadLocalPresets(); }
 
 function loadLocalPresets() {
@@ -162,6 +171,7 @@ function toast(m, e) { if (host && host.toast) host.toast(m, e); }
 
 
 const TABS = [
+  { id: "yours", name: "Make it yours", beginner: true },
   { id: "machine", name: "Machine & axes", beginner: true },
   { id: "speeds", name: "Speeds", beginner: true },
   { id: "torch", name: "Torch & THC", beginner: true },
@@ -193,6 +203,7 @@ function showTab(id) {
   if (id === "materials") paintMaterials();
   if (id === "io") paintIo();
   if (id === "about" && host && host.paintAbout) host.paintAbout();
+  if (id === "yours" && host && host.paintYours) host.paintYours();
 }
 
 function $$(sel, root) { return [...(root || document).querySelectorAll(sel)]; }
@@ -210,6 +221,12 @@ export function paintSettings() {
     b.type = "button"; b.className = "settab"; b.dataset.settab = t.id; b.textContent = t.name;
     b.onclick = () => showTab(t.id);
     box.appendChild(b);
+  }
+  const current = document.querySelector(".setpane:not(.hidden)");
+  const curId = current && current.dataset.setpane;
+  if (curId) {
+    const curBtn = box.querySelector(`.settab[data-settab="${curId}"]`);
+    if (curBtn) curBtn.classList.add("sel");
   }
   const first = box.querySelector(".settab");
   if (first && !box.querySelector(".settab.sel")) first.classList.add("sel");
@@ -229,6 +246,7 @@ function fillBasics() {
   set("setThcV", s.torch.thcVoltage);
   if ($("setThcOn")) $("setThcOn").checked = !!s.torch.thcOn;
   if ($("setUnits")) $("setUnits").value = s.units || "mm";
+  if ($("yoursUnits")) $("yoursUnits").value = s.units || "mm";
   if ($("setDialect")) $("setDialect").value = s.dialect || "grbl";
   if ($("setLineNo")) $("setLineNo").checked = !!s.lineNumbers;
   if ($("setSizeCheck")) $("setSizeCheck").checked = s.sizeCheck !== false;
@@ -269,6 +287,10 @@ function readFormIntoState() {
   r.settings.fluidnc = { ...state.fluidnc };
   state = r.settings;
   saveSettings(state);
+  if (state.units === "mm" || state.units === "inch") {
+    try { savePrefs({ units: state.units }); } catch (e) { /* ignore */ }
+    if ($("yoursUnits")) $("yoursUnits").value = state.units;
+  }
   if (host && host.onChange) host.onChange(state);
   return state;
 }

@@ -10,6 +10,8 @@ import { openResize } from "./files.js";
 import { openCad, runPro } from "./cad.js";
 import { setShapeFs } from "./protools.js";
 import { openDimEdit } from "./dimedit.js";
+import { savePrefs } from "../core/prefs.js";
+import { mountScrollRow, refreshScrollRows } from "../ui/scrollrow.js";
 
 function sizeDimForSelection() {
   const it = sketch.selected(); if (!it) return null;
@@ -31,8 +33,10 @@ export function renderQuickBar() {
   const qb = $("quickBar"); if (!qb || !sketch) return;
   const on = screen() === "make" && S.src === "shape" && ((S.cur === 1 && isProMode()) || S.shapeFs);
   qb.classList.toggle("hidden", !on);
+  const wrap = document.getElementById("quickBarWrap") || qb.closest(".scrollrow-wrap");
+  if (wrap) wrap.classList.toggle("hidden", !on);
   const grid = qb.closest(".cutgrid"); if (grid) grid.classList.toggle("with-qb", on);
-  if (!on) { qb.innerHTML = ""; return; }
+  if (!on) { qb.innerHTML = ""; refreshScrollRows(); return; }
   const one = sketch.selected(), any = sketch.picked().length > 0, many = sketch.picked().length > 1;
   const locked = sketch.picked().some((i) => i.lock);
   const hasVer = !!(one && variantsFor(one.type).length);
@@ -74,6 +78,8 @@ export function renderQuickBar() {
   const hadFocus = document.activeElement && document.activeElement.id === "qbSearch";
   qb.innerHTML = parts.join("");
   if (hadFocus) { const s = $("qbSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  mountScrollRow(qb);
+  refreshScrollRows();
 }
 function quickAction(a) {
   switch (a) {
@@ -91,7 +97,7 @@ function quickAction(a) {
     case "resize": openResize(); break;
     case "ver": openVersions(); break;
     case "fit": sketch.fitView(); break;
-    case "snap": sketch.opts.snap = sketch.opts.snap ? 0 : 1; try { sketch.saveOpts && sketch.saveOpts(); } catch (e) { /* ignore */ } sketch.draw(); toast(sketch.opts.snap ? "Snap on (1 mm)" : "Snap off"); break;
+    case "snap": sketch.opts.snap = sketch.opts.snap ? 0 : 1; try { sketch.saveOpts && sketch.saveOpts(); } catch (e) { /* ignore */ } try { savePrefs({ snap: !!sketch.opts.snap }); const ys = document.getElementById("yoursSnap"); if (ys) ys.checked = !!sketch.opts.snap; } catch (e) { /* ignore */ } sketch.draw(); toast(sketch.opts.snap ? "Snap on (1 mm)" : "Snap off"); break;
     case "draw": case "measure": case "nest": case "offset": case "linarray": case "polar": case "subtract":
       runPro(a); break;
     case "join": sketch.join(); break;

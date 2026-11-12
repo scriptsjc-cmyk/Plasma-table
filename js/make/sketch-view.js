@@ -1,6 +1,7 @@
 // Sketch: the view (fit, zoom, pan) and drawing the canvas.
 import { bbox } from "../core/geom.js";
 import { def, r1, themeColor } from "./sketch-util.js";
+import { getPrefs } from "../core/prefs.js";
 
 export class ViewMethods {
   fitView() {
@@ -58,18 +59,22 @@ export class ViewMethods {
     };
     ctx.fillStyle = C.canvas; ctx.fillRect(0, 0, w, h);
 
-    // grid
+    // grid (Make it yours can hide it or lock the step; 0 means auto-size)
+    const prefs = getPrefs();
     const steps = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
-    const g = steps.find((v) => v * s >= 12) || 1000, G = steps.find((v) => v >= g * 5) || g * 5;
-    const [wx0, wy0] = this.toWorld(0, h), [wx1, wy1] = this.toWorld(w, 0);
-    for (const [step, col] of [[g, C.grid], [G, C.gridMajor]]) {
-      ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath();
-      for (let x = Math.floor(wx0 / step) * step; x <= wx1; x += step) { const X = Math.round(S(x, 0)[0]) + 0.5; ctx.moveTo(X, 0); ctx.lineTo(X, h); }
-      for (let y = Math.floor(wy0 / step) * step; y <= wy1; y += step) { const Y = Math.round(S(0, y)[1]) + 0.5; ctx.moveTo(0, Y); ctx.lineTo(w, Y); }
-      ctx.stroke();
+    const auto = steps.find((v) => v * s >= 12) || 1000;
+    const g = prefs.gridSize > 0 ? prefs.gridSize : auto, G = steps.find((v) => v >= g * 5) || g * 5;
+    if (prefs.grid) {
+      const [wx0, wy0] = this.toWorld(0, h), [wx1, wy1] = this.toWorld(w, 0);
+      for (const [step, col] of [[g, C.grid], [G, C.gridMajor]]) {
+        ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath();
+        for (let x = Math.floor(wx0 / step) * step; x <= wx1; x += step) { const X = Math.round(S(x, 0)[0]) + 0.5; ctx.moveTo(X, 0); ctx.lineTo(X, h); }
+        for (let y = Math.floor(wy0 / step) * step; y <= wy1; y += step) { const Y = Math.round(S(0, y)[1]) + 0.5; ctx.moveTo(0, Y); ctx.lineTo(w, Y); }
+        ctx.stroke();
+      }
     }
     ctx.fillStyle = C.label; ctx.font = "11px Barlow, system-ui";
-    ctx.textAlign = "right"; ctx.fillText(`grid ${G} mm · snap ${this.opts.snap ? this.opts.snap + " mm" : "off"}`, w - 8, h - 8); ctx.textAlign = "start";
+    ctx.textAlign = "right"; ctx.fillText(`${prefs.grid ? "grid " + G + " mm" : "grid off"} · snap ${this.opts.snap ? this.opts.snap + " mm" : "off"}`, w - 8, h - 8); ctx.textAlign = "start";
 
     // sheet layout (step 3): the sheet, the machine's work area, and which parts are too close / overlapping / off the sheet
     const LY = this.layout || null, LI = LY ? (this.layoutInfo = LY.analyze(this)) : null;

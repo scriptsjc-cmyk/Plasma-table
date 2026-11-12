@@ -16,6 +16,10 @@ import { fillSettingsFromText, setFirmwareText, filterConsoleCommand } from "./m
 import { FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps } from "./machine/fluidnc.js";
 import { convertGcode } from "./machine/dialect.js";
 import { initSettings, bindSettings, openSettings, closeSettings, currentSettings, matchPreset, refreshPublishedPresets } from "./machine/settings.js";
+import { getPrefs } from "./core/prefs.js";
+import { initYours, bindYours, paintYours } from "./ui/yours.js";
+import { bindScrollRows, refreshScrollRows } from "./ui/scrollrow.js";
+import { bindPreviewNav } from "./cut/previewnav.js";
 import { bindHowto, openHowto, closeHowto } from "./ui/howto.js";
 import { askSize, scaleContours, sizeCheckWanted } from "./make/sizecheck.js";
 import { continueFromCut } from "./cut/restart.js";
@@ -85,6 +89,9 @@ function bind() {
   bindPicture();
   bindWifiSetup();
   bindCutSummary();
+  bindYours();
+  bindScrollRows();
+  bindPreviewNav(drawPreview);
 }
 
 async function init() {
@@ -142,6 +149,7 @@ async function init() {
   });
   initSettings({
     toast,
+    paintYours,
     isPro: () => !!(Acc.isPro() || Acc.isAdmin() || (sketch && sketch.opts.pro)),
     isFluidNC: () => !!S.fluidnc,
     hasThc: () => !!(S.cfg && S.cfg.thc),
@@ -201,7 +209,7 @@ async function init() {
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
 if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   setInspectorApi(makeInspector({
     sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),
@@ -222,8 +230,15 @@ if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } }
   publishInspector();
   Acc.onAccountChange(publishInspector);
   renderShapeTiles();
-  setAppMode(sketch.opts.pro ? "pro" : "beginner", { persist: false, autoFs: false });
+  initYours();
+  let startMode = getPrefs().mode;
+  try {
+    // a saved editor mode (plasma.sketch.opts) wins over the Make it yours default; if that key was cleared, start in Beginner
+    if (localStorage.getItem("plasma.sketch.opts")) startMode = sketch.opts.pro ? "pro" : "beginner";
+  } catch (e) { /* ignore */ }
+  setAppMode(startMode, { persist: false, autoFs: false });
   bind();
+  refreshScrollRows();
   await initAccountUi({
     toast, esc,
     applyMode: applyAccountMode,
