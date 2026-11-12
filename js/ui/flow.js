@@ -12,14 +12,15 @@ export const screen = () => document.body.dataset.screen || "boot";
 
 // ---------------------------------------------------------------- keyboard E-stop
 // Registered when this module loads (before the sketch editor adds its own window listener), so Esc and the space bar
-// reach the E-stop first. The space bar stops on the cutting screen, except while typing into a box (but while a job is live it
-// stops even then). Esc is NOT a stop key: it belongs to dialogs and the editor.
-const TEXT_INPUTS = new Set(["text", "number", "email", "password", "search", "tel", "url", "date", "time", "datetime-local", "month", "week", "color", ""]);
+// reach the E-stop first. The space bar stops on the cutting screen, except while typing text into a box (but while a job is live
+// it stops even then). A number box, a list or a slider can't take a typed space, so Space stops there too (r7 U27).
+// Esc is NOT a stop key: it belongs to dialogs and the editor.
+const TEXT_INPUTS = new Set(["text", "email", "password", "search", "tel", "url", ""]);
 function typingTarget(el) {
   if (!el || el === document.body) return false;
   if (el.isContentEditable) return true;
   const tag = el.tagName;
-  if (tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (tag === "TEXTAREA") return true;
   if (tag === "INPUT") return TEXT_INPUTS.has((el.getAttribute("type") || "text").toLowerCase());   // a tick-box or slider can't take a typed space
   return false;
 }
