@@ -142,3 +142,9 @@ body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-wi
 .pwfield { display: flex; align-items: stretch; gap: 6px; }
 .pwfield input { flex: 1 1 auto; min-width: 0; }
 .pwshow { flex: none; min-width: 64px; min-height: 44px; padding: 0 10px; font-weight: 700; }
+
+/* Create account is full width, with a gap above the next control */
+#formSignUp .signup-submit, #formSignUp button.xl.go { width: 100%; }
+#formSignUp { gap: 10px; }
+#goSignIn { margin-top: 8px; display: inline-flex; }
+.loginbrand .loginmark { max-width: 280px; height: auto; }

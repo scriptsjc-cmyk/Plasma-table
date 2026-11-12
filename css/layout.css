@@ -365,6 +365,10 @@ html, body.app-shell { height: 100%; height: 100dvh; }
 body.app-shell .tabs { max-width: none; width: 100%; margin: 0; padding: 0 8px; flex: none; }
 body.app-shell .tab { min-height: 40px; }
 body.app-shell .banner.big { font-size: var(--fs-md); border-width: 2px; }
+body.app-shell #appMain {
+  flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
+  display: flex; flex-direction: column; overflow: hidden;
+}
 body.app-shell #cutView,
 body.app-shell #setupView {
   flex: 1 1 auto; min-height: 0; max-width: none; width: 100%; margin: 0;
@@ -658,3 +662,34 @@ body[data-screen="cut"] .stepPane > .step .nav { position: sticky; bottom: 0; ba
 /* phone on its side: every pixel of height goes to the bed and the buttons */
 body.short-land[data-screen="cut"] #stepper { display: none; }
 .lamps.mini .lamp.on[data-in="estop"], .lamps.mini .lamp.on[data-in="torch"] { padding: 4px 10px; border-radius: 999px; }
+
+
+/* Hide the Beginner/Pro switch on the cutting screen (both modes share one cut layout). */
+body[data-screen="cut"] #modeSwitch,
+body[data-screen="cut"] #topModeSwitch { display: none !important; }
+
+/* 44px touch targets on header chips, tabs, mode switch and the demo-edges control */
+.modesw-btn, .tab, #acctPill, #connPill, #btnDemoEdges { min-height: 44px; }
+.topbar button, .topbar .pill { min-height: 44px; }
+
+/* Export / Save labels sit vertically centred in their 44px buttons */
+#exportRow button, .exportrow button, #btnSavePartQuick, #btnExport { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Portrait: don't let the header wrap TORCH OFF onto a second row */
+@media (max-width: 520px) and (orientation: portrait) {
+  .topbar { flex-wrap: nowrap; }
+  .topbar .logo { max-width: 28%; }
+  #torchPill, #practiceChip, #stateBadge, #connPill { font-size: 11px; padding: 0 6px; }
+  #torchPill { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* Portrait cutting step 1: choose the part first; collapse the empty bed until a part is loaded */
+@media (max-width: 699px) and (orientation: portrait) {
+  body[data-screen="cut"][data-step="1"] .previewPane { display: none; }
+  body[data-screen="cut"][data-step="1"] .cutgrid { grid-template-areas: "step" !important; grid-template-columns: 1fr !important; grid-template-rows: minmax(0, 1fr) !important; }
+  /* Make (Pro) Save / Download / Dialect stay on-screen */
+  body[data-screen="make"] #exportRow, body[data-screen="make"] .exportrow { flex-wrap: wrap; overflow: auto; max-width: 100%; }
+}
+
+/* Blocker jump buttons look like text links */
+.blocker-jump { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; min-height: 44px; }

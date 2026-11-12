@@ -22,7 +22,7 @@
 #announceBar #announceBody { display: block; margin-top: 2px; }
 .annrow, .userrow { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin: 0 0 8px; background: var(--well); }
 .edgepanel { border: 1px solid var(--line); background: var(--well); border-radius: 8px; padding: 10px 12px; margin: 8px 0 12px; }
-.adv-warn { background: var(--warn-bg); border: 1px solid var(--warn); color: #7A3B00; border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; font-weight: 650; }
+.adv-warn { background: var(--warn-bg); border: 1px solid var(--warn); color: var(--warn-text); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; font-weight: 650; }
 #advConsoleLog { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #1F2A37; color: #E8EAED; border-radius: 8px; padding: 8px; min-height: 80px; max-height: 180px; overflow: auto; white-space: pre-wrap; }
 #advSettings { max-height: 280px; overflow: auto; }
 .adv-set { display: grid; grid-template-columns: 64px 1fr 120px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
@@ -91,3 +91,11 @@ body:not([data-mode="pro"]) .pro-copy, body[data-mode="pro"] .beg-copy { display
 .adm-receipt p { margin: 0 0 8px; font-weight: 700; overflow-wrap: anywhere; }
 .adm-receipt .row { gap: 8px; }
 .claim-err { margin: 0; color: var(--alarm-text, var(--alarm)); font-weight: 650; }
+
+@media (max-height: 540px) {
+  #settingsTabs.settabs { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+  #settingsTabs .settab { flex: 1 0 7em; min-width: 7em; }
+}
+#gateDlg .acctcard, #gateDlg .shapelib-card { max-height: calc(100vh - 24px); overflow: auto; padding-bottom: 16px; }
+#gateDlg .row { position: sticky; bottom: 0; background: var(--well); padding-top: 8px; }
+.adv-warn { color: var(--warn-text); }

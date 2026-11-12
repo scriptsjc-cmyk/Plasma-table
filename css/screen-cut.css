@@ -244,7 +244,7 @@ body.pro-mode .speedrow { gap: 8px; }
 .setupcard > summary::before { content: "▾"; color: var(--muted, #667); }
 .setupcard:not([open]) > summary::before { content: "▸"; }
 .layoutstate { font-size: 13px; font-weight: 600; }
-.layoutstate.good { color: #1e7a46; }
+.layoutstate.good { color: var(--ok-text); }
 .layoutstate.bad { color: #c42b1c; }
 .sheetrow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 4px 0; }
 .sheetrow label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
@@ -660,3 +660,10 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 .wifisteps { padding-left: 22px; line-height: 1.45; }
 .wifisteps li { margin-bottom: 6px; }
 #wifiDlg .okline { color: var(--ok-text); font-size: 18px; }
+
+/* Hover styles only on hover-capable pointers, so a touch doesn't leave a tab looking selected */
+@media (hover: hover) {
+  .settab:hover, .admtab:hover { filter: brightness(1.04); }
+}
+/* Make it yours: choices apply live, so the sticky Save row is hidden by JS; keep the pane reachable on short screens */
+[data-setpane="yours"] { padding-bottom: 12px; }

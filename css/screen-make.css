@@ -62,7 +62,7 @@ body.beginner #proTools { display: none !important; }
 .statcard span { color: var(--muted); font-size: 12px; font-weight: 650; }
 #announceBar.sev-info { background: var(--accent-weak); border: 1px solid var(--accent); color: var(--text); }
 #announceBar.sev-update { background: var(--ok-bg); border: 1px solid var(--go); color: var(--ok-text); }
-#announceBar.sev-warning { background: var(--warn-bg); border: 1px solid var(--warn); color: #7A3B00; }
+#announceBar.sev-warning { background: var(--warn-bg); border: 1px solid var(--warn); color: var(--warn-text); }
 /* ---- UX2: contrast, sticky chrome, palette, editor, settings ---- */
 .warntext { color: var(--warn-text); font-weight: 650; margin: 8px 0; }
 .pill.torch.on { background: var(--alarm); border-color: var(--alarm); color: #fff; animation: torchpulse 1s ease-in-out infinite; }
@@ -345,7 +345,7 @@ body[data-screen="cut"] #srcShape, body[data-screen="cut"] #bgPick, body[data-sc
 body[data-screen="cut"] #fsBar, body[data-screen="cut"] #toolBar { display: none !important; }
 /* make bar: title + the Beginner / Pro switch (the only place it lives) */
 .makebar { align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; background: var(--card); border-bottom: 1px solid var(--line); flex: none; }
-.makebar h2 { margin: 0; font-size: var(--fs-lg); }
+.makebar h1, .makebar h2 { margin: 0; font-size: var(--fs-lg); font-weight: 700; }
 body.shape-fs .makebar { display: none; }
 body[data-screen="cut"] .step[data-step="4"] .nav { display: none; }
 /* Round 5 (CAD): the cut check and job warnings belong to cutting, not to designing */
@@ -502,3 +502,8 @@ body.short-land[data-screen="cut"] #topModeSwitch { display: none; }
 #topModeSwitch .modesw-btn { min-height: 44px; font-size: 14px; }
 /* round 5 look M13: Pro adds shapes from one place, the tool list on the left (with All shapes… for the rest); the second icon grid is gone */
 body.pro-mode #srcShape > .addtiles { display: none; }
+
+@media (orientation: landscape) and (max-height: 540px) {
+  .shapetiles, #shapeTiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .shapetiles button, #shapeTiles button { font-size: 11px; white-space: normal; line-height: 1.15; }
+}

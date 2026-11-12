@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#E8EAED">
+<meta name="description" content="Porta Plazma CNC — design parts and cut them on a plasma table from your browser.">
+  <meta name="theme-color" content="#E8EAED">
 <meta name="referrer" content="no-referrer">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: https://sjtjgumbsnakipkgskxt.supabase.co; script-src 'self'; object-src 'none'; worker-src 'self'; base-uri 'self'; form-action 'self'">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -184,6 +185,7 @@
 
 <div id="demoAcctBar" class="banner amber hidden" role="status">Demo: accounts stay in this browser. Claim code <b>DEMO-0000</b> links a practice machine.</div>
 <!-- ============================================================ MAIN MENU (after sign-in) -->
+<main id="appMain">
 
 <section id="menuView" class="view hidden" aria-label="Main menu">
   <div class="menuwrap">
@@ -212,7 +214,7 @@
 <!-- ============================================================ CUT -->
 <section id="cutView" class="view hidden">
   <div id="makeBar" class="makebar">
-    <h2>Make a part</h2>
+    <h1>Make a part</h1>
     <div id="modeSwitch" class="modesw" role="group" aria-label="Design mode">
       <button type="button" class="modesw-btn sel" data-mode="beginner" title="Guided, step by step">Beginner</button>
       <button type="button" class="modesw-btn" data-mode="pro" title="Dense workspace with every tool">Pro</button>
@@ -677,7 +679,7 @@
 <!-- ============================================================ SETUP -->
 <section id="setupView" class="view hidden">
   <div class="card">
-    <h2>Machine edges (crash protection)</h2>
+    <h1>Machine edges (crash protection)</h1>
     <div class="grid2 status2">
       <div><span>Position</span><b id="refState" class="todo">Unknown</b></div>
       <div><span>Edges</span><b id="limState" class="todo">Not set</b></div>
@@ -741,6 +743,7 @@
     </form>
   </div>
 </section>
+</main>
 
 <!-- jog pad, moved into whichever view is open -->
 <template id="jogTpl">
@@ -947,7 +950,7 @@
     </div>
     <p id="claimHint" class="muted">Enter the one-off claim code from the sticker on the table.</p>
     <form id="formClaim" class="col">
-      <label>Claim code<input id="claimCode" type="text" autocomplete="off" autocapitalize="characters" required placeholder="XXXX-XXXX"></label>
+      <label>Claim code<input id="claimCode" type="text" autocomplete="off" autocapitalize="characters" required placeholder="e.g. AB12-CD34"></label>
       <label>Serial (optional — leave blank if you are not sure)<input id="claimSerial" type="text" autocomplete="off" autocapitalize="characters" placeholder="Optional. Leave blank unless you are sure it matches."></label>
       <p id="claimError" class="claim-err hidden" role="alert"></p>
       <button type="submit" class="xl go">Link machine</button>
@@ -1030,7 +1033,7 @@
       <ul class="plain">
         <li><b>Design, save and download G-code</b> are free. You do not need a machine for those.</li>
         <li><b>Connect, jog, Send and Start cutting</b> stay locked until you sign in and link a purchased table with the claim code on its sticker.</li>
-        <li><b>Try the demo</b> lets you watch the motions with the torch off, without a real table.</li>
+        <li><b>Practice (no machine)</b> lets you watch the motions with the torch off, without a real table.</li>
         <li>A demo account never unlocks a real machine, even with a claim code.</li>
       </ul>
     </div>
@@ -1051,6 +1054,7 @@
     <div class="row">
       <button type="button" id="migrateYes" class="xl go">Keep it, save to my account</button>
       <button type="button" id="migrateNo" class="xl">Start fresh</button>
+      <button type="button" id="migrateLater" class="xl">Later</button>
     </div>
   </div>
 </div>
@@ -1357,7 +1361,7 @@
             <option value="top">Top of the picture</option>
           </select>
         </label>
-        <label>Button size
+        <label>Toolbar button size
           <select id="yoursButtons">
             <option value="compact">Compact</option>
             <option value="normal">Normal</option>
@@ -1389,6 +1393,7 @@
           </select>
         </label>
         <label class="check"><input id="yoursSnap" type="checkbox"> Snap to the grid</label>
+        <label class="check"><input id="yoursWheelZoom" type="checkbox"> Wheel zooms (instead of pan)</label>
         <label>Canvas background
           <select id="yoursCanvas">
             <option value="default">Default</option>
@@ -1549,6 +1554,7 @@
 
 <footer class="appfoot"><span id="footVer"></span></footer>
 
+<link rel="modulepreload" href="js/app.js">
 <script type="module" src="js/app.js"></script>
 <!-- Pro inspector. Reads window.ptInspector lazily; js/ui/inspector-api.js (via app.js) wins over the sample mock. -->
 <script type="module" src="js/ui/inspector-ui.js"></script>
