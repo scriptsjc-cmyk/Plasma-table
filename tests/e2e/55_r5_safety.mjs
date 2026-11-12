@@ -145,11 +145,25 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   await sleep(5500);
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "zero_xy" })); await sleep(200);
   ck("9 zero_xy sets it", await T(page, "window.plasmaTest.getM().zeroConfirmed === true"));
-  await T(page, "window.plasmaTest.getM().onGrbl('alarm', { code: 2, message: 'Bad G-code' })");
-  ck("9 any alarm clears it", await T(page, "window.plasmaTest.getM().zeroConfirmed === false"));
+  const alarmBlock = await T(page, `(() => {
+    const M = window.plasmaTest.getM();
+    M.grbl.status.state = "Alarm";
+    M.onGrbl("status", { ...M.grbl.status, state: "Alarm" });
+    M.onGrbl("alarm", { code: 2, message: "Bad G-code" });
+    const out = { zero: M.zeroConfirmed, state: M.state() };
+    try { M.command({ cmd: "zero_xy" }); out.zeroXy = null; } catch (e) { out.zeroXy = String(e.message || e); }
+    out.zeroAfterZero = M.zeroConfirmed;
+    try { M.command({ cmd: "set_origin", x: 10, y: 10 }); out.origin = null; } catch (e) { out.origin = String(e.message || e); }
+    out.zeroAfterOrigin = M.zeroConfirmed;
+    return out;
+  })()`);
+  ck("9 any alarm clears it", alarmBlock.zero === false, JSON.stringify(alarmBlock));
+  ck("9 zero_xy is refused in Alarm and work zero stays unconfirmed", /Alarm/.test(alarmBlock.zeroXy || "") && alarmBlock.zeroAfterZero === false, JSON.stringify(alarmBlock));
+  ck("9 set_origin is refused in Alarm and work zero stays unconfirmed", /Alarm/.test(alarmBlock.origin || "") && alarmBlock.zeroAfterOrigin === false, JSON.stringify(alarmBlock));
+  await page.evaluate(() => { try { window.plasmaTest.getM().command({ cmd: "unlock" }); } catch (e) { /* */ } }); await sleep(1500);
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "zero_xy" })); await sleep(100);
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "set_origin", x: 10, y: 10 })); await sleep(100);
-  ck("9 set_origin keeps it set", await T(page, "window.plasmaTest.getM().zeroConfirmed === true"));
+  ck("9 set_origin keeps it set after Unlock", await T(page, "window.plasmaTest.getM().zeroConfirmed === true"));
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "reset" })); await sleep(200);
   ck("9 soft reset clears it", await T(page, "window.plasmaTest.getM().zeroConfirmed === false"));
   await T(page, "window.plasmaTest.refresh()");
