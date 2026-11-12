@@ -72,7 +72,7 @@ file / shape form / text / trace ──► Sketch (items: shapes with params, ho
                                        ▼
                        machine/machine.js  Machine.startJob(): safety rules, zero rule, latch
                                        │
-                       machine/grbl.js (USB) | wifi / fluidnc.js (WebSocket) | sim.js (practice table)
+                       machine/grbl.js protocol over usbserial.js (USB) | wifi / fluidnc.js (WebSocket) | sim.js (practice table)
                                        │  status, events
                                        ▼
                     machine/events.js onStatus/onEvent ─► ui/refresh.js refresh() ─► DOM
@@ -170,13 +170,14 @@ Line counts are approximate. Regenerate the table's descriptions from each file'
 | `dialect.js` | 94 | Turn the app's prepared GRBL/grblHAL job into another controller dialect. |
 | `events.js` | 104 | Reacts to everything the machine reports: status, safety flags, events, job log entry. |
 | `fluidnc.js` | 142 | FluidNC over Wi-Fi: a raw GRBL-compatible WebSocket (default ws://host:81). |
-| `grbl.js` | 388 | Talking to grblHAL over USB from the browser (Web Serial API, Chrome/Edge desktop). |
+| `grbl.js` | 390 | The GRBL text protocol for every link (FluidNC / grblHAL): streaming, status poll + watchdog, connect handshake, the Pi Wi-Fi transport. |
 | `jog.js` | 107 | Jogging: on-screen pad, arrow keys, hold-to-glide; and the position read-out. |
 | `machine.js` | 338 | `Machine`: ties the controller link, job builder and safety checks together; E-stop latch, work-zero rule, start guard. |
 | `panels.js` | 143 | Machine panels on the Get set up screen: edge/limits panel, controller settings backup, test patterns, command buttons. |
 | `safety.js` | 118 | Keeping the torch inside the machine (same rules as plasma/safety.py). |
 | `settings.js` | 412 | Settings menu: machine, speeds, torch, pierce/cut, materials, homing, I/O, backup/restore. |
 | `sim.js` | 238 | Demo mode: a pretend grblHAL controller in the browser (same as plasma/sim.py). |
+| `usbserial.js` | 115 | USB to the controller (Web Serial, Chrome/Edge desktop): opens the port at 115200 8N1, reads lines, notices an unplug. |
 
 ### `js/make/`
 

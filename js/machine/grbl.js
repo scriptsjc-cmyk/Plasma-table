@@ -1,6 +1,6 @@
-// Talking to grblHAL over USB from the browser (Web Serial API, Chrome/Edge desktop).
-// Same protocol handling as plasma/grbl.py: character-counting streaming,
-// status polling, real-time commands.
+// The GRBL text protocol (FluidNC / grblHAL) for every link: character-counting streaming, status polling + watchdog,
+// the connect handshake, real-time commands, status parsing; and the Pi Wi-Fi bridge transport. USB itself is usbserial.js.
+// Same protocol handling as plasma/grbl.py.
 
 export const RT = {
   STATUS: "?", HOLD: "!", RESUME: "~", RESET: "\x18",
@@ -24,68 +24,6 @@ const ERRORS = {
   15: "Jog would go past travel limits.", 20: "Unsupported G-code.", 22: "Feed rate not set.",
   24: "Two G-codes from the same group on one line.", 33: "Invalid move target.", 79: "Command not allowed in this state.",
 };
-
-// ------------------------------------------------------------------ transport
-export class WebSerialTransport {
-  constructor() { this.onLine = null; this.onClose = null; this.port = null; this.buf = ""; this.label = "USB"; }
-  static supported() { return typeof navigator !== "undefined" && "serial" in navigator; }
-
-  async open(baud = 115200, reuse = true) {
-    let port = null;
-    if (reuse) {
-      const known = await navigator.serial.getPorts();
-      if (known.length === 1) port = known[0];
-    }
-    if (!port) port = await navigator.serial.requestPort();  // shows Chrome's port picker
-    await port.open({ baudRate: baud });
-    this.port = port;
-    const info = port.getInfo ? port.getInfo() : {};
-    this.label = info.usbVendorId ? `USB ${info.usbVendorId.toString(16)}:${(info.usbProductId || 0).toString(16)}` : "USB";
-    this.writer = port.writable.getWriter();
-    this.enc = new TextEncoder();
-    this.readLoop();
-  }
-
-  async readLoop() {
-    const dec = new TextDecoder();
-    while (this.port && this.port.readable) {
-      const reader = this.port.readable.getReader();
-      this.reader = reader;
-      try {
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          this.buf += dec.decode(value, { stream: true });
-          let i;
-          while ((i = this.buf.indexOf("\n")) >= 0) {
-            const line = this.buf.slice(0, i).replace(/\r$/, "").trim();
-            this.buf = this.buf.slice(i + 1);
-            if (line && this.onLine) this.onLine(line);
-          }
-        }
-      } catch (e) {
-        break; // unplugged or closed
-      } finally {
-        try { reader.releaseLock(); } catch (e) { /* ignore */ }
-      }
-      if (this.closing) break;
-    }
-    if (this.onClose) this.onClose();
-  }
-
-  write(data) {
-    const bytes = typeof data === "string" ? this.enc.encode(data) : data;
-    return this.writer.write(bytes).catch(() => {});
-  }
-
-  async close() {
-    this.closing = true;
-    try { await this.reader?.cancel(); } catch (e) { /* ignore */ }
-    try { this.writer?.releaseLock(); } catch (e) { /* ignore */ }
-    try { await this.port?.close(); } catch (e) { /* ignore */ }
-    this.port = null;
-  }
-}
 
 // ------------------------------------------------------------------ status parsing
 // grblHAL's plasma plugin appends "|THC:<arc voltage>,<flag letters>" to the real-time report (Plugin_plasma thc.c onRealtimeReport).
@@ -203,6 +141,10 @@ export class WiFiTransport {
 }
 
 // ------------------------------------------------------------------ controller link
+const POLL_MS = 100;
+const CONFIG_ERR = /Configuration is invalid|^\[MSG:ERR: (Ignored key|Configuration error|Pin .* cannot be used)/;
+export const NO_REPLY_MSG = "No reply from the controller. Check the baud rate (115200), that you picked the right COM port, that the board is running FluidNC/grblHAL, and that no other program (FluidNC web installer, a serial terminal) has the port open.";
+
 export class GrblLink {
   constructor(transport, rxSize = 127, onEvent = () => {}) {
     this.t = transport;
@@ -215,16 +157,12 @@ export class GrblLink {
     this.feedOv = 100;
     this.job = null;
     this.running = true;
+    this.ready = !transport.needsHandshake;   // USB: only after a banner or a <status> report (see handshake())
+    this.lastRx = Date.now();
+    this.pollsSinceRx = 0;
     this.t.onLine = (l) => this._line(l);
-    this.t.onClose = () => {
-      this.status = { ...this.status, state: "Disconnected" };
-      this._emit("status", this.status);
-      this._emit("log", { text: "Controller disconnected.", level: "error" });
-      if (this.job && this.job.running) this._finishJob("error", "Job stopped: controller disconnected.");
-      this.running = false;
-      clearInterval(this.poll);
-    };
-    this.poll = setInterval(() => { if (this.running) this.t.write(RT.STATUS); }, 100);
+    this.t.onClose = (reason) => this._closed(reason);
+    this.poll = setInterval(() => this._tick(), POLL_MS);
     if (transport.remoteJobs) {          // the Pi runs the job; we just show its progress
       transport.onJob = (p) => this._remoteJob(p);
       const j = transport.hello && transport.hello.job;
@@ -239,6 +177,48 @@ export class GrblLink {
       finished: p.running ? null : (was && was.finished) || Date.now() };
     if (was && was.running && !p.running && p.message) this._emit("log", { text: p.message, level: p.result === "done" ? "info" : "warn" });
     this._emit("job", this.jobProgress());
+  }
+
+  // status poll + watchdog. Polls are counted, not just timed: a hidden tab slows timers to one a minute, and that alone
+  // must not look like a dead link. Lost = several '?' in a row went unanswered AND the watchdog time has passed.
+  _tick() {
+    if (!this.running) return;
+    const wd = this.t.watchdogMs;
+    if (wd && this.ready && this.pollsSinceRx >= Math.ceil(wd / POLL_MS) && Date.now() - this.lastRx > wd) {
+      this._closed(`No reply from the controller for ${Math.round(wd / 1000)} s. Check the USB cable and the controller's power.`);
+      this.t.close().catch?.(() => {});
+      return;
+    }
+    this.pollsSinceRx++;
+    this.t.write(RT.STATUS);
+  }
+
+  // Resolves once the controller has really answered: its start-up banner ("Grbl 3.7 [FluidNC v4.1.1 ...]") or a <...> status
+  // report to '?'. An ESP32 that stays silent has its auto-reset lines released once (it may be held in reset), then we give up.
+  handshake(timeoutMs = 6000) {
+    if (this.ready) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const t0 = Date.now();
+      let nudged = false;
+      const check = setInterval(() => {
+        if (this.ready) { clearInterval(check); resolve(); return; }
+        if (!this.running) { clearInterval(check); reject(new Error(this.closeReason || "The controller disconnected.")); return; }
+        const dt = Date.now() - t0;
+        if (!nudged && dt > timeoutMs / 2 && this.t.releaseResetLines) { nudged = true; this.t.releaseResetLines(); }
+        if (dt > timeoutMs) { clearInterval(check); reject(new Error(NO_REPLY_MSG)); }
+      }, 50);
+    });
+  }
+
+  _closed(reason) {
+    if (!this.running) return;
+    this.running = false;
+    clearInterval(this.poll);
+    this.closeReason = reason || "";
+    this.status = { ...this.status, state: "Disconnected", reason: reason || "" };
+    this._emit("status", this.status);
+    this._emit("log", { text: reason ? `Controller disconnected: ${reason}` : "Controller disconnected.", level: "error" });
+    if (this.job && this.job.running) this._finishJob("error", "Job stopped: controller disconnected.");
   }
 
   _emit(kind, data) { try { this.onEvent(kind, data); } catch (e) { console.error(e); } }
@@ -313,9 +293,9 @@ export class GrblLink {
   }
 
   async close() {
-    this.running = false;
     clearInterval(this.poll);
-    try { await this.t.close(); } catch (e) { /* ignore */ }
+    try { await this.t.close(); } catch (e) { /* ignore */ }   // USB / Wi-Fi report the close through onClose -> _closed
+    this.running = false;
   }
 
   _finishJob(result, message) {
@@ -364,7 +344,10 @@ export class GrblLink {
   }
 
   _line(line) {
+    this.lastRx = Date.now();
+    this.pollsSinceRx = 0;
     if (line.startsWith("<") && line.endsWith(">")) {
+      this.ready = true;
       const st = parseStatus(line.slice(1, -1));
       if (st.WCO) this.wco = st.WCO;
       if (st.MPos) st.WPos = st.MPos.map((v, i) => v - this.wco[i]);
@@ -393,10 +376,13 @@ export class GrblLink {
       return;
     }
     if (line.toLowerCase().startsWith("grbl")) {
+      this.ready = true;
       this.inflight = [];
       this._emit("log", { text: line, level: "info" });
       return;
     }
+    // FluidNC ConfigAlarm: config.yaml has an error. The status says plain "Alarm", but $X can't clear it, so say what it really is
+    if (CONFIG_ERR.test(line)) this._emit("alarm", { code: "config", message: `FluidNC reports a problem in its config.yaml (${line.replace(/^\[MSG:(ERR: )?|\]$/g, "")}). Unlock won't clear this: fix config.yaml, then restart the board. Type $SS in the console to see its start-up messages.` });
     if (line.startsWith("[PRB:")) this._emit("probe", { text: line });
     if (this.inflight[0] && this.inflight[0].got) this.inflight[0].got.push(line);     // the answer to an ask() comes before its ok
     this._emit("log", { text: line, level: "rx" });

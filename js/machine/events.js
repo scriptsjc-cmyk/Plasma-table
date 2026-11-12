@@ -83,14 +83,24 @@ export async function maybeLogJob(j) {
     S.jobLogId = null; S.jobLogP = null;
   }
 }
+// the lost-link banner: the "while running" wording is the default in index.html and is never softened
+const LOST_HOT = { title: "Connection lost while the machine was running.", text: "The torch may still be ON and the table may still be moving. Use the machine's own E-stop or power switch now." };
+function showLost({ title, text }) {
+  if ($("lostTitle")) $("lostTitle").textContent = title;
+  if ($("lostText")) $("lostText").textContent = text;
+  $("lostBar").classList.remove("hidden");
+}
 export function onEvent(kind, d) {
   if (kind === "status") {
+    const wasLive = S.connected;
     const wasHot = d.state === "Disconnected" && S.connected && !S.userDisconnected && (M.jobRunning() || !!(S.status && S.status.torch) || ["Run", "Jog", "Hold", "Home"].includes(S.status && S.status.state));
     onStatus(d);
     if (d.state === "Disconnected") {
       setConnected(false);
       // a dropped link (Wi-Fi, USB pulled) cannot be told to switch the torch off: say so loudly
-      if (wasHot && $("lostBar")) { $("lostBar").classList.remove("hidden"); toast("Connection lost while running. The torch may still be ON.", true); }
+      if (wasHot && $("lostBar")) { showLost(LOST_HOT); toast("Connection lost while running. The torch may still be ON.", true); }
+      // USB link gone while idle (unplugged, power off, no answers): still say so loudly, with the reason
+      else if (d.reason && wasLive && !S.userDisconnected && $("lostBar")) { showLost({ title: "Connection to the controller lost.", text: `${d.reason} Nothing will move until you reconnect. Check the cable, then press Connect again.` }); toast("Connection lost: " + d.reason, true); }
     }
   } else if (kind === "log") {
     log(d.text, d.level);

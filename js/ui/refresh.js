@@ -1,6 +1,6 @@
 // The big repaint: refresh() brings every button, banner and lamp in line with the current state.
 import { estopPaint, paintLock, screen } from "./flow.js";
-import { POSITION_LOST_ALARMS } from "../machine/machine.js";
+import { ALARM_DEFAULT, POSITION_LOST_ALARMS } from "../machine/machine.js";
 import * as Acc from "../account/account.js";
 import { paintDelay } from "../cut/pierce.js";
 import { paintRestart } from "../cut/restart.js";
@@ -102,7 +102,10 @@ export function refresh() {
   $("homeBar").classList.toggle("hidden", !(S.connected && S.safety.limits && !S.safety.referenced && S.status.state !== "Home"));
   const estop = !!(S.status.inputs && S.status.inputs.estop);
   $("estopBar").classList.toggle("hidden", !(S.connected && estop));
-  $("alarmBar").classList.toggle("hidden", !(S.connected && S.status.state === "Alarm" && !estop));
+  const inAlarm = S.connected && S.status.state === "Alarm" && !estop;
+  $("alarmBar").classList.toggle("hidden", !inAlarm);
+  // FluidNC can start up in Alarm without an ALARM:n line, so the banner still has to say what to do
+  if (inAlarm && !S.lastAlarm) $("alarmText").textContent = ALARM_DEFAULT;
 
   // running / done panel
   if (S.job) {

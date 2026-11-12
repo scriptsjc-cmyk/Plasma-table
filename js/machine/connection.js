@@ -1,5 +1,6 @@
 // Connect / disconnect (USB, Wi-Fi, FluidNC, demo), keep-awake, and the unload safety stop.
-import { RT, WebSerialTransport, WiFiTransport } from "./grbl.js";
+import { RT, WiFiTransport } from "./grbl.js";
+import { WebSerialTransport } from "./usbserial.js";
 import { FluidNCTransport, fluidncBlockedByHttps, fluidncMixedContentMessage, fluidncUrlProblem, fluidncWsUrl } from "./fluidnc.js";
 import { SimTransport } from "./sim.js";
 import * as Acc from "../account/account.js";
@@ -31,16 +32,22 @@ export function setConnected(on, label = "") {
 async function connectUSB() {
   if (!requireMachine("Link your machine to run jobs")) return;
   if (!WebSerialTransport.supported()) { toast("This browser can't use USB. Use Chrome or Edge on a computer.", true); return; }
+  if (S.usbBusy) return;
+  S.usbBusy = true;
+  const t = new WebSerialTransport();
   try {
-    const t = new WebSerialTransport();
-    await t.open(S.cfg.serial.baud || 115200);
-    await M.connect(t);
-    S.demo = null;
+    try { await t.open(S.cfg.serial.baud || 115200); } catch (e) {
+      if (e && e.name === "NotFoundError") return; // picker closed
+      toast("Couldn't open the port: " + e.message + " – is another program (FluidNC web installer, a serial terminal, Mach3) using it?", true);
+      return;
+    }
+    toast("Port open – waiting for the controller to answer…");
+    await M.connect(t);          // resolves only once the controller has replied (banner or status report)
+    S.demo = null; S.userDisconnected = false;
     setConnected(true, "the table");
   } catch (e) {
-    if (e && e.name === "NotFoundError") return; // picker closed
-    toast("Couldn't open the port: " + e.message + " – is Mach3 or another program using it?", true);
-  }
+    toast(e.message + (t.portHint ? t.portHint() : ""), true);      // e.g. no reply: wrong port / baud / firmware
+  } finally { S.usbBusy = false; }
 }
 // ---- Wi-Fi (page served by the Pi at the table)
 export async function connectWiFi(quiet = false) {
@@ -88,7 +95,7 @@ async function connectFluidNC() {
     const t = new FluidNCTransport(host, port);
     await t.open();
     await M.connect(t);
-    S.demo = null; S.fluidnc = true;
+    S.demo = null; S.fluidnc = true; S.userDisconnected = false;
     try { localStorage.setItem("plasma.fluidnc.host", host); localStorage.setItem("plasma.fluidnc.port", String(port)); } catch (e) { /* ignore */ }
     setConnected(true, "FluidNC at " + host);
   } catch (e) {
@@ -100,7 +107,7 @@ async function connectDemo() {
   const t = new SimTransport({ switchOffset: S.cfg.probe.switch_offset_mm, sheetZ: -15, speedup: 1 });   // real speed
   await t.open();
   await M.connect(t);
-  S.demo = t;
+  S.demo = t; S.userDisconnected = false;
   setConnected(true, "the demo (nothing real moves)");
 }
 async function disconnect() {
