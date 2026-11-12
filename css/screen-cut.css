@@ -517,19 +517,6 @@ body[data-screen="cut"][data-step="1"] .previewDock .stats { display: none; }
 @media (max-height: 540px) {
   #accountDlg.loginpage .loginbrand .arcmark { width: 36px; height: 36px; }
 }
-.menuwrap .arcmark { display: block; margin: 0 auto 8px; }
-.menubig { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 190px; padding: 18px 14px;
-  border-radius: 16px; border: 2px solid var(--line-strong); background: var(--card); color: var(--text); text-align: center; }
-.menubig span { font-size: var(--fs-md); color: var(--muted); font-weight: 500; }
-.menubig.go { background: var(--go); border-color: var(--go); color: var(--on-go); }
-.menubig.go span { color: var(--on-go); opacity: .9; }
-@media (max-width: 640px) {
-  .menubig { min-height: 120px; flex-direction: row; text-align: left; justify-content: flex-start; gap: 14px; }
-}
-@media (max-height: 540px) {
-  .menuwrap .arcmark { width: 32px; height: 32px; margin-bottom: 2px; }
-  .menubig { min-height: 96px; padding: 8px; flex-direction: column; text-align: center; }
-}
 body[data-screen="cut"] .stepper li span { width: 30px; height: 30px; font-size: 15px; }
 body[data-screen="cut"] .drop { min-height: 0; padding: 18px 12px; }
 body[data-screen="cut"] .nav .next, body[data-screen="cut"] #btnStart { flex: 1 1 auto; max-width: none; min-height: 64px; font-size: 20px; font-weight: 800; background: var(--accent); border-color: var(--accent); color: var(--on-accent); border-radius: 12px; }

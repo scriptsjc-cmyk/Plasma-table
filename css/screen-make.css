@@ -84,6 +84,9 @@ body.beginner #proTools { display: none !important; }
   .cutgrid.with-qb #quickBar .qb-group { flex: 0 0 auto; }
 }
 body.shape-fs #quickBar { display: flex !important; grid-column: 1; grid-row: 1; flex-direction: column; overflow: auto; max-height: none; }
+/* round 5 look High 5: in a column the 100% basis turned each group heading into a full-height block, pushing every tool out of view */
+body.shape-fs #quickBar .qb-group, body.shape-fs #quickBar .qb-search,
+body.short-land #quickBar .qb-group, body.short-land #quickBar .qb-search { flex: 0 0 auto; }
 body.shape-fs #fsBar { display: flex !important; }
 .fsbar { position: fixed; top: calc(var(--topbar-h, 56px) + 8px); right: 12px; z-index: 40;
   display: flex; gap: 8px; align-items: center; background: var(--well); border: 1px solid var(--line);
@@ -344,11 +347,6 @@ body[data-screen="cut"] #fsBar, body[data-screen="cut"] #toolBar { display: none
 .makebar { align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; background: var(--card); border-bottom: 1px solid var(--line); flex: none; }
 .makebar h2 { margin: 0; font-size: var(--fs-lg); }
 body.shape-fs .makebar { display: none; }
-@media (max-height: 540px) {
-}
-@media (max-width: 640px) {
-  .menubig > span { display: none; }
-}
 body[data-screen="cut"] .step[data-step="4"] .nav { display: none; }
 /* Round 5 (CAD): the cut check and job warnings belong to cutting, not to designing */
 body[data-screen="make"] #warnings, body[data-screen="make"] #cutCheck { display: none !important; }

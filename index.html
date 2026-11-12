@@ -188,17 +188,6 @@
 
 <section id="menuView" class="view hidden" aria-label="Main menu">
   <div class="menuwrap">
-    <svg width="56" height="56" viewBox="0 0 32 32" fill="none" aria-hidden="true" class="arcmark brand-mark">
-      <path fill="currentColor" d="M2.8 3.6h3.5V14.6H2.8z"/>
-      <path fill="currentColor" d="M2.8 17.4h3.5v10.8H2.8z"/>
-      <path fill="currentColor" d="M2.8 3.6h12.2v3.5H2.8z"/>
-      <path fill="currentColor" d="M11.5 3.6h3.5v10.1h-3.5z"/>
-      <path fill="currentColor" d="M2.8 10.2h12.2v3.5H2.8z"/>
-      <path fill="currentColor" d="M17.4 3.6H29.2v3.5H17.4z"/>
-      <path fill="currentColor" d="M21.75 3.6h3.5V14.6h-3.5z"/>
-      <path fill="currentColor" d="M21.75 17.4h3.5v10.8h-3.5z"/>
-      <path d="M1.6 16h28.8" stroke="var(--accent)" stroke-width="2" stroke-linecap="square"/>
-    </svg>
     <h1 id="menuHello">What do you want to do?</h1>
     <div class="menubtns">
       <button type="button" id="menuMake" class="menubig">
@@ -214,7 +203,10 @@
         <b>Your parts</b><span>Open, change or cut a part you saved.</span>
       </button>
     </div>
-    <p id="menuMachine" class="muted small"></p>
+    <div class="menustatus">
+      <p id="menuMachine" class="muted small"></p>
+      <div id="menuRecentWrap" class="menurecent hidden"><span class="muted small">Recent parts:</span> <span id="menuRecent"></span></div>
+    </div>
   </div>
 </section>
 
@@ -910,12 +902,15 @@
       <div data-pane="home" class="hidden" id="acctSigned">
         <p id="acctDemoTag" class="muted small hidden">Local demo account — stored only in this browser.</p>
         <div class="row acctwhorow">
-          <p id="acctWho" class="grow"></p>
+          <div class="grow acctwho">
+            <p id="acctWho"></p>
+            <p class="muted small"><span id="acctEmail" class="hidden"></span> <button type="button" id="btnShowEmail" class="small quiet" aria-controls="acctEmail" aria-expanded="false">Show email</button></p>
+          </div>
           <button type="button" id="btnSignOut">Sign out</button>
         </div>
         <div class="col">
           <label>Display name<input id="acctName" type="text" maxlength="80"></label>
-          <button type="button" id="btnAcctSave" class="go">Save settings</button>
+          <button type="button" id="btnAcctSave">Save name</button>
         </div>
         <h3>Linked machines</h3>
         <div id="acctMachines"></div>
@@ -1323,7 +1318,7 @@
         <label>Bed Y (mm)<input id="setBedY" type="number" min="50" step="1" inputmode="decimal"></label>
         <label>Bed Z (mm)<input id="setBedZ" type="number" min="10" step="1" inputmode="decimal"></label>
       </div>
-      <div class="row wrap">
+      <div class="row wrap invrow">
         <label class="check"><input id="setInvX" type="checkbox"> Invert X</label>
         <label class="check"><input id="setInvY" type="checkbox"> Invert Y</label>
         <label class="check"><input id="setInvZ" type="checkbox"> Invert Z</label>

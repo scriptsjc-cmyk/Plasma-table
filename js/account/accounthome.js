@@ -16,7 +16,10 @@ function fillSignedIn() {
   const signed = $("acctSigned");
   if (!signed) return;
   if (!u) return;
-  $("acctWho").textContent = (u.display_name ? u.display_name + " · " : "") + (u.email || "");
+  // round 5 look Low 1: the name up front; the email only on request (screen sharing, someone looking over a shoulder)
+  $("acctWho").textContent = u.display_name || (u.email || "").split("@")[0] || "Signed in";
+  $("acctEmail").textContent = u.email || ""; $("acctEmail").classList.add("hidden");
+  $("btnShowEmail").classList.toggle("hidden", !u.email); $("btnShowEmail").textContent = "Show email"; $("btnShowEmail").setAttribute("aria-expanded", "false");
   $("acctName").value = u.display_name || "";
   const serials = A.linkedSerials();
   $("acctMachines").innerHTML = serials.length
@@ -121,6 +124,10 @@ export function bindDialogs() {
 export function bindHome() {
   $("btnAcctParts").onclick = openParts;
   $("menuParts").onclick = openParts;
+  $("btnShowEmail").onclick = () => {
+    const on = $("acctEmail").classList.toggle("hidden");
+    $("btnShowEmail").textContent = on ? "Show email" : "Hide email"; $("btnShowEmail").setAttribute("aria-expanded", String(!on));
+  };
   $("btnAcctSave").onclick = async () => {
     try {
       await A.setDisplayName($("acctName").value);
@@ -134,7 +141,7 @@ export function bindHome() {
     // nothing of the previous (local demo) account may stay on screen: lists, name boxes, sign-in fields, cached previews
     setPartsRows([]); metaCache.clear();
     for (const id of ["partsList", "acctMachines"]) if ($(id)) $(id).innerHTML = "";
-    for (const id of ["partName", "acctName", "acctWho"]) if ($(id)) { if ("value" in $(id)) $(id).value = ""; else $(id).textContent = ""; }
+    for (const id of ["partName", "acctName", "acctWho", "acctEmail"]) if ($(id)) { if ("value" in $(id)) $(id).value = ""; else $(id).textContent = ""; }
     document.querySelectorAll("#accountDlg form").forEach((f) => { try { f.reset(); } catch (e) { /* ignore */ } });
     toast("Signed out");
     fillSignedIn();

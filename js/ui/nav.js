@@ -4,7 +4,8 @@ import { navLocked, screen, showScreen } from "./flow.js";
 import * as Acc from "../account/account.js";
 import * as Setup from "../cut/setup.js";
 import { demoEdges } from "./demo.js";
-import { $, $$, toast } from "../core/dom.js";
+import { $, $$, esc, toast } from "../core/dom.js";
+import { host } from "../account/uibase.js";
 import { S, sketch } from "../core/state.js";
 import { loadJob, renderCutCheck } from "../cut/prepare.js";
 import { renderMaterials } from "../cut/material.js";
@@ -23,6 +24,26 @@ export function paintMenu() {
   const nm = u && (u.display_name || (u.email || "").split("@")[0]);
   $("menuHello").textContent = nm ? `Hi ${nm}. What do you want to do?` : "What do you want to do?";
   $("menuMachine").textContent = Acc.hasLinkedMachine() ? "Your machine is linked." : (Acc.isSignedIn() ? "No machine linked yet. You can make parts now; linking a machine is needed to cut." : "");
+  paintMenuRecent();
+}
+// round 5 item 27: the menu's status row also offers the last few saved parts, one tap from opening in Make a part
+let recentTurn = 0;
+async function paintMenuRecent() {
+  const wrap = $("menuRecentWrap"), box = $("menuRecent"), turn = ++recentTurn;
+  if (!wrap || !box) return;
+  let rows = [];
+  if (Acc.isSignedIn()) { try { rows = (await Acc.listParts()).slice(0, 3); } catch (e) { rows = []; } }
+  if (turn !== recentTurn) return;                       // a newer paint (sign out, another account) already ran
+  wrap.classList.toggle("hidden", !rows.length);
+  box.innerHTML = rows.map((p) => `<button type="button" class="small" data-part="${esc(p.id)}">${esc(p.name || "Untitled part")}</button>`).join("");
+}
+async function openRecentPart(id) {
+  try {
+    const p = await Acc.loadPart(id);
+    if (host && host.loadDesign) host.loadDesign(p);
+    showScreen("make");
+    toast("Opened “" + p.name + "”");
+  } catch (e) { toast(e.message, true); }
 }
 // B5 21: a signed-in user's very first job is a Practice run by default (move only, torch off). Once any job has been started,
 // Practice goes back to being their own choice. Tracked per account on this device.
@@ -35,7 +56,7 @@ function applyFirstJobDefault() {
   S._firstJobFor = k;
   if (!cb.checked) { cb.checked = true; if (S.prepared) loadJob(); renderMaterials(); }
   const note = $("dryFirstNote"); if (note) note.classList.remove("hidden");
-  toast("Your first job is a Practice run: the table moves but the torch stays off. Untick “Practice run” on the Bed & start step when you want to cut for real.");
+  // round 5 item 18: said once, in the step text beside the box (#dryFirstNote), not in a toast over the preview
 }
 export function onScreen(name, prev) {
   if (prev === "cut") S.cutStep = S.cur;
@@ -117,6 +138,7 @@ export function syncSteps() {
   $$(".steps button").forEach((b) => b.classList.toggle("sel", Number(b.dataset.step) === S.jogStep));
 }
 export function bindNav() {
+  $("menuRecent").addEventListener("click", (e) => { const b = e.target.closest("button[data-part]"); if (b) openRecentPart(b.dataset.part); });
   $$(".tab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
   $$("#stepper li").forEach((li) => (li.onclick = () => goStep(Number(li.dataset.step))));
   $$("[data-go]").forEach((b) => (b.onclick = () => goStep(Number(b.dataset.go))));

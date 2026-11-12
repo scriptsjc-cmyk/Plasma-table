@@ -182,13 +182,12 @@ h3 .muted.small { text-transform: none; font-weight: 400; }
 .toolbar button { flex: 1; min-height: var(--tap); font-weight: 700; }
 canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px solid var(--line); background: var(--cad-canvas); }
 /* toast */
-.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--text);
+.toast { position: fixed; left: 50%; top: calc(var(--topbar-h, 56px) + 10px); transform: translateX(-50%); background: var(--text);
   color: #fff; font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: 100;
   box-shadow: 0 8px 24px rgba(16, 24, 40, .2); max-width: min(92vw, 480px);
   pointer-events: none; /* a toast must never swallow a tap meant for STOP or the quick bar */ }
 .toast.err { background: var(--alarm); color: #fff; }
-/* UX2 fix: in the full-screen editor the bottom edge holds the status line, so the toast goes to the top instead */
-body.shape-fs .toast { bottom: auto; top: calc(var(--topbar-h, 56px) + 10px); }
+/* round 5 look M11: every toast sits just under the header (STOP stays clear above it), never over Start, Save or the readouts at the bottom */
 @media (max-width: 899px) {
   /* phones: choices first until a drawing exists */
   .cutgrid.nofile .previewPane { display: none; }
@@ -273,8 +272,6 @@ body.short-land #setupView {
     position: absolute; inset: 0; width: 100%; height: 100% !important; flex: none; min-height: 0;
   }
   body.short-land #exportRow button { min-height: 44px; padding: 4px 8px; font-size: 14px; }
-  /* round 5 (look H2): on a phone on its side a toast sits under the header, never over Start / the checklist */
-  body.short-land .toast { bottom: auto; top: calc(var(--topbar-h, 56px) + 6px); }
   body.short-land .pill.acct { min-height: 44px; }
 }
 .shapelib-head button { min-height: var(--tap); }
@@ -475,7 +472,7 @@ body.pro-mode kbd { font: 10px/1.2 ui-monospace, Menlo, Consolas, monospace; bor
   #connPill { max-width: 5.5em; }
 }
 #torchPill[hidden] { display: none !important; }
-.appfoot { text-align: center; color: var(--muted); padding: 2px 12px 4px; font-size: 11px; line-height: 1.2; flex: none; }
+.appfoot { text-align: center; color: var(--muted); padding: 2px 12px 4px; font-size: 12px; line-height: 1.3;     /* round 5 look Low 2: readable; when it is hidden (short screens) Settings → About still has the version */ flex: none; }
 body.shape-fs .appfoot { display: none; }
 body.short-land .topbar { padding-top: 2px; padding-bottom: 2px; }
 /* ---- the "Demo, nothing moves" pill ---- */
@@ -602,6 +599,11 @@ body.short-land .appfoot { display: none; }
 /* TORCH ON / TORCH OFF is never cut short */
 body.short-land[data-screen="cut"] #stateBadge:not(.hidden), body.short-land[data-screen="cut"] #torchPill:not([hidden]) { display: inline-block !important; }
 /* the Ready / Paused / Alarm word and TORCH ON / TORCH OFF always stay on a phone on its side (round 5 safety: other chips shrink first) */
+/* round 5 look M5 / item 19: on a phone on its side, once connected the connection pill is just its dot (Ready already says it is
+   connected, PRACTICE RUN says nothing will cut), so the name and STOP keep their full width */
+body.short-land[data-screen="cut"] #connPill.on { padding: 0; width: 44px; min-width: 44px; max-width: 44px; justify-content: center; }
+body.short-land[data-screen="cut"] #connPill.on .connword { display: none; }
+body.short-land[data-screen="cut"] #acctPill { max-width: 9em; }
 @media (max-width: 700px) {
   /* smaller phones on their side: the connection and account pills give way so TORCH stays on the one header row */
   body.short-land[data-screen="cut"] #topMenu #connPill { max-width: 5.5em; }

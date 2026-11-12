@@ -33,6 +33,9 @@
 }
 /* settings + howto */
 .settabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 12px; }
+/* round 5 look Low 3: Settings tabs are even chips in rows, not a ragged wrap of different widths */
+#settingsTabs.settabs { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+#settingsTabs .settab { width: 100%; min-height: 44px; padding: 4px 8px; line-height: 1.2; text-align: center; }
 .howto-grid { display: grid; grid-template-columns: minmax(160px, 220px) minmax(0, 1fr); gap: 16px; }
 .howto-nav { display: flex; flex-direction: column; gap: 4px; }
 .howto-pick { display: none; }
@@ -61,8 +64,13 @@ body.app-shell #setupView { overflow: auto; }
   overflow: auto;
 }
 #settingsDlg .settabs { flex: none; }
-@media (max-height: 540px) {
-  /* round 5 (look H3): phone on its side: the whole Settings card scrolls, with Close on top and Save at the bottom always in reach */
+/* round 5 look Low 6: the invert boxes are a tight row; the whole label (44 px tall) is the tap target, the box itself is normal-sized */
+.invrow { gap: 4px 24px; }
+.invrow .check { margin-top: 4px; min-height: 44px; gap: 8px; }
+.invrow input[type=checkbox] { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
+@media (max-height: 540px), (max-width: 640px) {
+  /* round 5 (look H3): phone on its side: the whole Settings card scrolls, with Close on top and Save at the bottom always in reach.
+     Look M14: the same on a portrait phone, so a long pane (the firmware warning) is read in full above the sticky Save, not clipped in a strip */
   #settingsDlg .shapelib-card { height: auto; overflow: auto; padding-top: 0; padding-bottom: 0; }
   #settingsDlg .setpane:not(.hidden) { flex: none; overflow: visible; }
   #settingsDlg .shapelib-head { position: sticky; top: 0; z-index: 2; background: var(--well); padding: 6px 0; margin: 0; }

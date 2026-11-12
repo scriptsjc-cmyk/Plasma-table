@@ -16,11 +16,11 @@ function partRowHtml(p, folders) {
     <div class="partinfo"><b>${esc(p.name)}</b><div class="muted small"><span class="psize">${esc(sizeText(meta))}</span>${meta ? " · " : ""}${esc(when)}</div></div>
     <div class="row">
       <button type="button" class="small" data-act="load">Open</button>
-      <button type="button" class="small go" data-act="edit" title="Open it in the full-screen shape editor">Edit</button>
+      <button type="button" class="small" data-act="edit" title="Open it in the full-screen shape editor">Edit</button>
       <button type="button" class="small" data-act="dup" title="Make a copy of this part in this folder">Duplicate</button>
       <button type="button" class="small" data-act="rename">Rename</button>
       <select class="small movesel" data-act="move" aria-label="Move ${esc(p.name)} to a folder"><option value="">Move to…</option>${folders.filter((f) => f !== cur).map((f) => `<option value="${esc(f)}">${esc(f)}</option>`).join("")}<option value="__new">＋ New folder…</option></select>
-      <button type="button" class="small warn" data-act="del">Delete</button>
+      <button type="button" class="small pdel" data-act="del">Delete</button>
     </div>
   </div>`;
 }
