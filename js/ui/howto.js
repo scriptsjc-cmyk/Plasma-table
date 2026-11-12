@@ -4,7 +4,7 @@ const STEPS = [
   { id: "practice", title: "Your first practice cut (5 steps)", body: [
     "1. On Make a part, pick a simple shape (a rectangle is fine) and type its size.",
     "2. Press Cut this part. That opens the cutting screen on the Part step, where you pick the material and thickness.",
-    "3. Tick Practice run – the torch stays off. You can try this without a linked machine.",
+    "3. Tick Practice run – the torch stays off. The header chip says “Practice run · torch off” on a real machine. You can try this without a linked machine.",
     "4. On Bed & start, press Start here at the sheet's bottom-left corner (skipped in Practice if the app already has a start point).",
     "5. Press Start cutting and watch the path. This is the safest first job. The red STOP button (or the space bar) cancels at once.",
   ]},
@@ -15,7 +15,7 @@ const STEPS = [
   ]},
   { id: "cut", title: "Cutting screen", body: [
     "The steps are: 1 Part (material and thickness), 2 Bed & start (place the sheet and set Start here), then cut.",
-    "Practice run keeps the torch off. Pause holds motion and the torch. STOP or the space bar cancels the job. The red STOP button stays visible even if you hide the header.",
+    "Practice run keeps the torch off (the header chip says “Practice run · torch off”). Pause holds motion and the torch. STOP or the space bar cancels the job. The red STOP button stays visible even if you hide the header.",
     "A red TORCH ON pill in the header lights whenever the controller says the torch is firing.",
   ]},
   { id: "zero", title: "Set the start point (Start here)", body: [
