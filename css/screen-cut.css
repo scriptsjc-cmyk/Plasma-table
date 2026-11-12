@@ -703,10 +703,11 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.short-land[data-screen="cut"] .cutgrid:not(.with-qb) .stepPane { grid-column: 2; }
   /* Cut (running): progress, the live X / Y / Z and TORCH stay in view; Pause and More in the sticky bar; speed, pierce delay and the
      arc readings are in More. The tabs and the picture's caption step aside (you can't leave this screen mid-cut anyway). */
-  body.running-job[data-screen="cut"] .tabs, body.running-job[data-screen="cut"] .previewDock { display: none; }
+  body.running-job[data-screen="cut"] .tabs, body.running-job[data-screen="cut"] #stepper,
+  body.running-job[data-screen="cut"] .previewDock { display: none; }
   #running > #livePanel, #running > #lpNote, #running > #liveSpeedBox, #running > #runHelp { display: none; }
   body[data-screen="cut"] #running .runpos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 6px 0; }
-  #running .runpos div { padding: 2px 8px; display: flex; align-items: baseline; gap: 6px; }
+  #running .runpos div { padding: 2px 8px; display: flex; align-items: center; gap: 6px; }
   #running .runpos span { display: inline; font-size: 13px; }
   #running .runpos b { font-size: 22px; }
   #running .torchbig { margin: 6px 0; padding: 6px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
@@ -714,6 +715,30 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.running-job .runctl { padding: 6px 0 2px; align-items: stretch; }
   .runctl #btnPause { flex: 1 1 auto; max-width: 160px; min-height: 56px; }
   .runctl .cutmore-btn { min-height: 56px; }
+  /* not on its side: the run pane takes the height it needs and the picture gets the rest, so nothing slides under the Pause bar */
+  body.app-shell.running-job:not(.short-land)[data-screen="cut"] .cutgrid {
+    grid-template-rows: minmax(72px, 1fr) minmax(0, max-content) !important; grid-template-areas: "preview" "step" !important; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  /* on its side the position and TORCH share a row, so the whole run pane fits a 340px-high phone */
+  body.short-land[data-screen="cut"] #running { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr); column-gap: 6px; }
+  body.short-land[data-screen="cut"] #running > * { grid-column: 1 / -1; }
+  body.short-land[data-screen="cut"] #running > .runpos { grid-column: 1; }
+  body.short-land[data-screen="cut"] #running > .torchbig { grid-column: 2; }
+  body.short-land[data-screen="cut"] #running > .runpos b { font-size: 18px; }
+}
+@media (orientation: landscape) and (max-height: 360px), (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  /* small phones: tighter numbers, every line still there */
+  body[data-screen="cut"] #running #runTitle { font-size: 15px; margin: 0; }
+  body[data-screen="cut"] #running .runnums { margin: 0 0 4px; }
+  body[data-screen="cut"] #running .runnums .bigpct, body[data-screen="cut"] #running .bigleft { font-size: 32px; }
+  body[data-screen="cut"] #running .progress { height: 10px; }
+  body[data-screen="cut"] #running #runInfo { font-size: 12px; margin: 2px 0 0; }
+  body[data-screen="cut"] #running .runpos { margin: 4px 0; }
+  body[data-screen="cut"] #running .runpos b { font-size: 18px; }
+  body[data-screen="cut"] #running .torchbig { margin: 4px 0; min-height: 40px; padding: 4px; font-size: 16px; }
+  body.running-job[data-screen="cut"] .runctl { padding-top: 4px; }
+  body[data-screen="cut"] .runctl #btnPause, body[data-screen="cut"] .runctl .cutmore-btn { min-height: 52px; }
 }
 @media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
   /* STOP is the biggest control by area, not just the tallest: a bigger E-stop on a phone (128x84 on its side, 112x104 upright), and
