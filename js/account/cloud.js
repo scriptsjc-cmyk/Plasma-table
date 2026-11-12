@@ -36,23 +36,43 @@ export async function authFetch(path, opts = {}) {
   }
   return body;
 }
+// Overlapping refreshIfNeeded calls must share one POST. Supabase refresh tokens
+// rotate; a second call with the old token gets HTTP 400 "Already Used" and used
+// to wipe a session the first call had just saved (header still showed the name).
+let inflightRefresh = null;
+let sessionListener = null;
+export function setSessionListener(fn) { sessionListener = typeof fn === "function" ? fn : null; }
+function tellSessionListeners() { if (sessionListener) try { sessionListener(); } catch (e) { /* ignore */ } }
 export async function refreshIfNeeded({ force = false } = {}) {
   const sess = cloudSess();
   if (!sess || !sess.refresh) return sess;
   const exp = sess.expires_at ? Date.parse(sess.expires_at) : 0;
   if (!force && exp && exp - Date.now() > 30_000) return sess;
-  const body = {};
-  body.refresh_token = sess.refresh;
+  if (inflightRefresh) return inflightRefresh;
+  inflightRefresh = doRefresh(sess).finally(() => { inflightRefresh = null; });
+  return inflightRefresh;
+}
+async function doRefresh(startedWith) {
   const r = await fetch(rootUrl() + "/auth/v1/token?grant_type=refresh_token", {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify(body),
+    body: JSON.stringify({ refresh_token: startedWith.refresh }),
   });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) { saveCloudSess(null); throw new Error(data.msg || data.error_description || "Session expired. Sign in again."); }
-  const next = fromAuthPayload(data, sess.profile);
-  next.ent = sess.ent || null;                       // a new token must not forget the server's entitlements
-  saveCloudSess(next);
+  if (!r.ok) {
+    // Only sign out if this is still the token we sent. A late 400 must not
+    // wipe a newer session, and a real wipe must update the header.
+    const now = cloudSess();
+    if (now && now.refresh === startedWith.refresh) {
+      saveCloudSess(null);
+      tellSessionListeners();
+    }
+    throw new Error(data.msg || data.error_description || "Session expired. Sign in again.");
+  }
+  const next = fromAuthPayload(data, startedWith.profile);
+  next.ent = startedWith.ent || null;                       // a new token must not forget the server's entitlements
+  const now = cloudSess();
+  if (!now || now.refresh === startedWith.refresh || now.refresh === next.refresh) saveCloudSess(next);
   return cloudSess();
 }
 export function fromAuthPayload(data, profile) {

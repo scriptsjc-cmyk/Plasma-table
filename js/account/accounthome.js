@@ -52,7 +52,7 @@ export function openClaim() {
   $("claimSerial").value = "";
   $("claimHint").textContent = A.isDemoMode()
     ? "Local demo: use the practice code " + CONFIG.DEMO_CLAIM_CODE + ". Each demo account gets its own practice table; it exists only in this browser."
-    : "The claim code is on the sticker that came with the table. It can only be used once.";
+    : "The claim code is on the sticker that came with the table. It can only be used once. The practice code DEMO-0000 only works in local demo mode.";
 }
 export function openGate(why) {
   const signed = A.isSignedIn();

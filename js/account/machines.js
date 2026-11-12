@@ -13,11 +13,20 @@ function logClaim(s, userId, ok, detail) {
   s.log.push({ id: uid(), user_id: userId, ok, detail, at: nowIso() });
   if (s.log.length > 400) s.log = s.log.slice(-400);
 }
+// DEMO-0000 is a local-demo practice code only. On the live site a signed-in
+// user who typed it used to hit claim_machine and get "not recognised" (or a
+// toast hidden under the dialog). Say so clearly, and never send it to the server.
+export function practiceCodeOnCloudMessage(code) {
+  if (normCode(code) !== normCode(CONFIG.DEMO_CLAIM_CODE)) return null;
+  return "The practice code DEMO-0000 only works in local demo mode. On this site, use the claim code from the table sticker, or one generated under Admin → Machines.";
+}
 export async function claimMachine(code, serial) {
   const u = requireUser();
   const c = normCode(code);
   if (!c) throw new Error("Enter the claim code from the sticker.");
   if (cloudOn()) {
+    const demoMsg = practiceCodeOnCloudMessage(c);
+    if (demoMsg) throw new Error(demoMsg);
     await refreshIfNeeded();
     const body = { p_code: c };
     if (serial) body.p_serial = serial;

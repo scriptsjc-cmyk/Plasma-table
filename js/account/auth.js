@@ -2,12 +2,13 @@
 import { CONFIG } from "./config.js";
 import { F_PASS, META_KEY, SESS_KEY, cloudOn, normEmail, nowIso, okEmail, uid } from "./acctbase.js";
 import { accountMode, canGrantDemoAdmin, currentUser, notify, snapshot } from "./acctstate.js";
-import { api, authFetch, cloudSess, fromAuthPayload, loadCloudProfile, parseHashSession, readySession, refreshIfNeeded, saveCloudSess } from "./cloud.js";
+import { api, authFetch, cloudSess, fromAuthPayload, loadCloudProfile, parseHashSession, readySession, refreshIfNeeded, saveCloudSess, setSessionListener } from "./cloud.js";
 import { demoSession, demoState, hashPin, readJson, saveDemo, seedDemo, writeJson } from "./demostore.js";
 
 export async function initAccount() {
   if (cloudOn()) {
     api.demo = false;
+    setSessionListener(() => notify());
     try { await parseHashSession(); } catch (e) { /* ignore bad hash */ }
     try { await refreshIfNeeded(); } catch (e) { saveCloudSess(null); }
     try { if (cloudSess()) await loadCloudProfile(); } catch (e) { /* offline */ }

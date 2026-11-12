@@ -183,11 +183,11 @@ h3 .muted.small { text-transform: none; font-weight: 400; }
 canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px solid var(--line); background: var(--cad-canvas); }
 /* toast */
 .toast { position: fixed; left: 50%; top: calc(var(--topbar-h, 56px) + 10px); transform: translateX(-50%); background: var(--text);
-  color: #fff; font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: 100;
+  color: #fff; font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: 145;
   box-shadow: 0 8px 24px rgba(16, 24, 40, .2); max-width: min(92vw, 480px);
   pointer-events: none; /* a toast must never swallow a tap meant for STOP or the quick bar */ }
 .toast.err { background: var(--alarm); color: #fff; }
-/* round 5 look M11: every toast sits just under the header (STOP stays clear above it), never over Start, Save or the readouts at the bottom */
+/* sits just under the header (STOP stays clear above it) and above claim/account dialogs (z-index 120) so an error is visible; never over Start, Save or the readouts at the bottom */
 @media (max-width: 899px) {
   /* phones: choices first until a drawing exists */
   .cutgrid.nofile .previewPane { display: none; }
