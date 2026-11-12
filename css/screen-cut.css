@@ -715,3 +715,21 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .runctl #btnPause { flex: 1 1 auto; max-width: 160px; min-height: 56px; }
   .runctl .cutmore-btn { min-height: 56px; }
 }
+@media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
+  /* STOP is the biggest control by area, not just the tallest: a bigger E-stop on a phone (128x84 on its side, 112x104 upright), and
+     no other button on the cutting screen wider than 176px or, for the big ones, taller than about 60px (long labels go to 14px so
+     they wrap to at most three short lines). Link-style sentences (.blocker-jump) and form fields are not buttons. */
+  body.short-land[data-screen="cut"] #btnStop.estop { min-width: 128px; min-height: 84px; }
+  body.short-land[data-screen="cut"] #btnStop.estop .estop-svg { width: 68px; height: 68px; }
+  body[data-screen="cut"]:not(.short-land) #btnStop.estop { width: 112px; min-width: 112px; min-height: 104px; }
+  body[data-screen="cut"]:not(.short-land) #btnStop.estop .estop-svg { width: 80px; height: 80px; }
+  body[data-screen="cut"] #cutView button:not(.blocker-jump) { max-width: 176px; line-height: 1.2; }
+  body[data-screen="cut"] #cutView .step[data-step="3"] > .nav #btnStart { max-width: 176px; }
+  body[data-screen="cut"] #cutView .stepPane button.xl, body[data-screen="cut"] #cutView .stepPane .nav button,
+  body[data-screen="cut"] #cutView #btnZero, body[data-screen="cut"] #cutView #materials button, body[data-screen="cut"] #cutView #thicknesses button,
+  body[data-screen="cut"] #cutView .laybtns button, body[data-screen="cut"] #cutView .pickrow button {
+    min-height: 52px; padding: 4px 10px; font-size: 16px; }
+  body[data-screen="cut"] #cutView #btnTrace, body[data-screen="cut"] #cutView .pickrow button, body[data-screen="cut"] #cutView #camReset,
+  body[data-screen="cut"] #cutView .nestbox button, body[data-screen="cut"] #cutView .woform button, body[data-screen="cut"] #cutView #btnChangeMat,
+  body[data-screen="cut"] #cutView #done button { font-size: 14px; padding: 4px 8px; }
+}
