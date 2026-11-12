@@ -5,7 +5,7 @@
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
 
-/* Plasma Table — light CAD theme (Fusion / Onshape / SolidWorks inspired). Colours live in this one theme block so a dark theme can return later. */
+/* Porta Plazma CNC light CAD theme (Fusion / Onshape / SolidWorks inspired). */
 :root, [data-theme="light"] {
   /* chrome */
   --bg: #E8EAED;

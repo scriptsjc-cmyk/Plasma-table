@@ -1,5 +1,5 @@
 #!/bin/bash
-# Plasma table Wi-Fi bridge: install as a service that starts on power-up.
+# Porta Plazma CNC Wi-Fi bridge: install as a service that starts on power-up.
 # Run once on the Pi:  sudo bash ~/plasma/pi/install.sh
 set -e
 if [ "$(id -u)" != "0" ]; then echo "Run with sudo:  sudo bash $0"; exit 1; fi
@@ -10,7 +10,7 @@ usermod -aG dialout "$WHO"            # allowed to use the controller's USB port
 
 cat > /etc/systemd/system/plasma.service <<UNIT
 [Unit]
-Description=Plasma table Wi-Fi bridge
+Description=Porta Plazma CNC Wi-Fi bridge
 After=network-online.target
 Wants=network-online.target
 

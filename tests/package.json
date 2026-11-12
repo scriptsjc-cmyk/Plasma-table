@@ -2,7 +2,7 @@
   "name": "plasma-table-tests",
   "private": true,
   "version": "1.0.0",
-  "description": "All tests for the Plasma table app: unit + end-to-end (Playwright + Chrome). See README.md",
+  "description": "All tests for the Porta Plazma CNC app: unit + end-to-end (Playwright + Chrome). See README.md",
   "type": "module",
   "scripts": {
     "test": "node run-all.mjs",

@@ -8,7 +8,7 @@
 # Machine when connected to FluidNC to download this template. The raw $
 # editor is hidden on FluidNC because those settings live here instead.
 
-name: Plasma Table
+name: Porta Plazma CNC
 board: ESP32 DevKitC V1
 
 stepping:

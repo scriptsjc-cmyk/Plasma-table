@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# Plasma table Wi-Fi bridge. Auth: a per-install pairing token (?token=) and an Origin check
+# Porta Plazma CNC Wi-Fi bridge. Auth: a per-install pairing token (?token=) and an Origin check
 # (Origin must match Host, or be on the allowlist). Optional --tls CERT KEY serves HTTPS/WSS.
-"""Plasma table Wi-Fi bridge for a Raspberry Pi (no extra packages needed).
+"""Porta Plazma CNC Wi-Fi bridge for a Raspberry Pi (no extra packages needed).
 
 * Serves the plasma website over Wi-Fi (http://plasma.local).
 * Passes commands between the website and the controller's USB port.
@@ -714,13 +714,13 @@ def make_handler(bridge: Bridge, site):
 
 
 async def main():
-    ap = argparse.ArgumentParser(description="Plasma table Wi-Fi bridge")
+    ap = argparse.ArgumentParser(description="Porta Plazma CNC Wi-Fi bridge")
     ap.add_argument("--site", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                     help="folder with index.html (default: the folder above this script)")
     ap.add_argument("--port", type=int, default=80)
     ap.add_argument("--serial", default="auto", help="controller port, e.g. /dev/ttyACM0 (default: find it)")
     ap.add_argument("--baud", type=int, default=115200)
-    ap.add_argument("--name", default="Plasma table")
+    ap.add_argument("--name", default="Porta Plazma CNC")
     ap.add_argument("--token-file", default=None, help="file holding the pairing token (created if missing)")
     ap.add_argument("--origin", action="append", default=[], help="extra allowed Origin (repeatable allowlist)")
     ap.add_argument("--origins-file", default=None, help="file of extra allowed Origins, one per line")

@@ -1,4 +1,4 @@
--- Plasma table accounts: security fixes (migration 2). IDEMPOTENT: safe to run more than once.
+-- Porta Plazma CNC accounts: security fixes (migration 2). IDEMPOTENT: safe to run more than once.
 -- Run in the Supabase SQL Editor AFTER the existing supabase/schema.sql has been applied
 -- (it is also appended to supabase/schema.sql in fixes.patch, so a fresh install gets both).
 -- Deploy the matching js/account.js first or together: claim_machine now RETURNS
