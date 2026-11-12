@@ -846,7 +846,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="3"] .zerobody { display: flex; flex-direction: column; gap: 8px; }
   body[data-screen="cut"][data-step="3"] .zerobody > * { margin: 0; }
   body[data-screen="cut"][data-step="3"] .zerobody > #btnZero { position: sticky; bottom: 0; z-index: 2;
-    box-shadow: 0 0 0 8px var(--card), 40px 0 0 8px var(--card), -40px 0 0 8px var(--card); }
+    box-shadow: 0 0 0 8px var(--card), 60px 0 0 8px var(--card), 120px 0 0 8px var(--card), 180px 0 0 8px var(--card), -60px 0 0 8px var(--card); }
   body[data-screen="cut"][data-step="3"] .zerobody .connectcard { padding: 8px 10px; }
   body[data-screen="cut"][data-step="3"] .zerobody .connectcard .xl, body[data-screen="cut"][data-step="3"] .homerow button { min-height: 44px; font-size: 15px; }
   body[data-screen="cut"][data-step="3"] #connectLock { margin-top: 8px; flex-wrap: nowrap; }
