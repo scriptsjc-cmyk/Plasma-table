@@ -2,7 +2,7 @@
 import { estopOn } from "../ui/flow.js";
 import * as Setup from "./setup.js";
 import { S, sketch } from "../core/state.js";
-import { fit, wcoNow } from "./preview.js";
+import { fit } from "./preview.js";
 import { ampsNow, row } from "./material.js";
 import { $, $$, esc } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
@@ -11,9 +11,8 @@ import { refresh } from "../core/hooks.js";
 // Round 5 (safety): the first line, "Start point set", is not a box you tick. It follows the machine's zeroConfirmed flag
 // (S.zeroSet): ticked by Start here, unticked by STOP / reset / home / alarm, and never editable by hand.
 function zeroLineText() {
-  if (!S.zeroSet) return "Start point not set yet: press Start here";
-  const w = wcoNow();
-  return `Start point set at ${Number(w[0]).toFixed(1)}, ${Number(w[1]).toFixed(1)} mm`;
+  if (!S.zeroSet) return "Sheet corner not set yet — press Start here";
+  return "Sheet corner set ✓";
 }
 // r7 J13: ONE tick box before cutting. Its label lists everything it confirms, so nothing is skipped by ticking it.
 // A practice run (torch off) says so as a line of text, not as a box to tick (r7 U24).
@@ -61,7 +60,7 @@ export function blockers() {
   if (!S.prepared) b.push("No part chosen yet (step 1).");
   if (estopOn()) b.push("E-STOP is ON – press and hold the red button to reset it first.");
   const sm = scoreMarkProblem(); if (sm) b.push(sm);
-  if (S.connected && !S.zeroSet) b.push("Start point has not been set: press Start here.");
+  if (S.connected && !S.zeroSet) b.push("Sheet corner has not been set: put the torch on the sheet's bottom-left corner and press Start here. The part already cuts where you placed it.");
   const st = S.status.state;
   if (S.connected && st === "Alarm") b.push("Machine is in alarm – press Unlock at the top.");
   else if (S.connected && st !== "Idle") b.push(`Machine is busy (${st}). Wait for it to stop.`);

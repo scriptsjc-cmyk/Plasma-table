@@ -45,7 +45,7 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   ck("setup: ready to start (zero set, boxes ticked)", await startable(page), await blockersText(page));
   ck("9 zero is a machine flag now: M.zeroConfirmed mirrors S.zeroSet", await T(page, "window.plasmaTest.getM().zeroConfirmed === true && window.plasmaTest.S.zeroSet === true"));
   let zl = await zeroLine(page);
-  ck("9b Start here ticked the \"Start point set\" line by itself, and it can't be edited", zl && zl.on && zl.locked && /Start point set at/.test(zl.text), JSON.stringify(zl));
+  ck("9b Start here ticked the \"Start point set\" line by itself, and it can't be edited", zl && zl.on && zl.locked && /Sheet corner set/.test(zl.text), JSON.stringify(zl));
   await hook(page);
 
   // ---- 10: Esc is not STOP; Space is
@@ -56,7 +56,7 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   ck("10 Space presses the E-stop (feed hold + reset sent)", (await latched(page)) && (await tx(page)).includes("\x18"));
   ck("10 the button title / label say Space only", await T(page, "(() => { const b = document.getElementById('btnStop'); return !/Esc/.test(b.title + b.getAttribute('aria-label')); })()"));
   ck("9 the STOP cleared work zero (machine flag and UI)", await T(page, "window.plasmaTest.getM().zeroConfirmed === false && window.plasmaTest.S.zeroSet === false"));
-  ck("9 Start is blocked and the reason is the start point", !(await startable(page)) && /Start point/.test(await blockersText(page)), await blockersText(page));
+  ck("9 Start is blocked and the reason is the start point", !(await startable(page)) && /Sheet corner|Start point|Start here/.test(await blockersText(page)), await blockersText(page));
   zl = await zeroLine(page);
   ck("9b the STOP unticked the \"Start point set\" line at once (no redraw needed)", zl && !zl.on && zl.locked && /press Start here/.test(zl.text), JSON.stringify(zl));
   await page.locator('#checklist input[data-chk="zero"]').click({ force: true, timeout: 2000 }).catch(() => {}); await sleep(200);
@@ -129,9 +129,9 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   // ---- 9: zero must be confirmed again before a job starts
   await page.evaluate(() => { const u = document.getElementById("btnUnlock"); if (u && u.offsetParent) u.click(); }); await sleep(1500);
   const NZ = await throws(page, "window.plasmaTest.getM().startJob()");
-  ck("9 startJob refuses without confirmed work zero (machine level)", /start point/i.test(NZ || ""), NZ);
+  ck("9 startJob refuses without confirmed work zero (machine level)", /sheet corner|start point|Start here/i.test(NZ || ""), NZ);
   const NZ2 = await throws(page, "window.plasmaTest.getM().startJob({ fromCut: 2 })");
-  ck("9 Continue from cut N (startJob fromCut) refuses too", /start point/i.test(NZ2 || ""), NZ2);
+  ck("9 Continue from cut N (startJob fromCut) refuses too", /sheet corner|start point|Start here/i.test(NZ2 || ""), NZ2);
   await T(page, "window.plasmaTest.refresh()");
   ck("9 the Start button is blocked until zero is set again", !(await startable(page)));
   await page.evaluate(() => { document.querySelectorAll(".do-home").forEach((h) => h.offsetParent && h.click()); }); await sleep(5500);
@@ -201,7 +201,7 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   await page.evaluate(() => document.getElementById("btnRestart").click()); await sleep(600);
   ck("9 Continue: Start stays locked and asks to confirm work zero", !(await startable(page)) && /zero|start point/i.test(await blockersText(page) + await T(page, "document.getElementById('resumeWhy').textContent")), await blockersText(page));
   const NZ3 = await throws(page, "window.plasmaTest.getM().startJob({ fromCut: window.plasmaTest.S.startCut })");
-  ck("9 ...and the machine refuses it even if the button were bypassed", /start point/i.test(NZ3 || ""), NZ3);
+  ck("9 ...and the machine refuses it even if the button were bypassed", /sheet corner|start point|Start here/i.test(NZ3 || ""), NZ3);
   await page.evaluate(() => { document.querySelectorAll(".do-home").forEach((h) => h.offsetParent && h.click()); }); await sleep(5500);
   ck("9 re-homing does not bring zero back either", await T(page, "window.plasmaTest.S.zeroSet === false"));
   await zeroAndTick(page);

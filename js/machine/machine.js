@@ -17,7 +17,7 @@ const LATCH_BLOCKED = new Set(["resume", "jog", "jog_dir", "home", "goto_zero", 
 export const ALARM_DEFAULT = "The controller is locked (Alarm) and won't move. Check the torch is clear, then press Unlock (or Home).";
 const ALARM_MSG = "The controller is in Alarm, so it won't move. Press Unlock at the top of the screen first (or Home).";
 const ALARM_BLOCKED = new Set(["jog", "jog_dir", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test", "zero_xy", "set_origin"]);
-const NO_ZERO_MSG = "The start point isn't set. Move the torch over the start of the work and press Start here first.";
+const NO_ZERO_MSG = "The sheet corner isn't set. Put the torch on the sheet's bottom-left corner and press Start here first. The part already cuts where you placed it.";
 
 export class Machine {
   constructor(machineCfg, chart, settingsText, store) {
@@ -200,10 +200,13 @@ export class Machine {
         break;
       }
       case "goto_zero": {
+        // default is work zero (the sheet corner). A given x,y (job / first pierce) is in work coordinates.
+        const x = Number(body.x), y = Number(body.y);
+        const tx = Number.isFinite(x) ? x : 0, ty = Number.isFinite(y) ? y : 0;
         const w = this.wco();
-        const problem = this.safety.checkPointsMachine([[w[0], w[1]]], "Going to the start point");
+        const problem = this.safety.checkPointsMachine([[w[0] + tx, w[1] + ty]], "Going to the start point");
         if (problem) throw new JobError(problem);
-        g.sendLines([...this.raiseLines(false), "G90 G0 X0 Y0"]);
+        g.sendLines([...this.raiseLines(false), `G90 G0 X${fmt(tx)} Y${fmt(ty)}`]);
         break;
       }
       case "raise": g.sendLines(this.raiseLines()); break;

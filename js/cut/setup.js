@@ -166,7 +166,7 @@ function drawBg(sk, ctx, S, C, w, h) {
   // the start point = the sheet's bottom-left corner
   const [ox, oy] = S(0, 0);
   ctx.fillStyle = "#c05600"; ctx.beginPath(); ctx.arc(ox, oy, 5, 0, 7); ctx.fill();
-  if (H.S.zeroSet) ctx.fillText("Start point (0, 0)", Math.min(w - 110, ox + 8), Math.min(h - 26, oy - 24));     // round 5 item 21: named only once it is set
+  if (H.S.zeroSet) ctx.fillText("Sheet corner (0, 0)", Math.min(w - 110, ox + 8), Math.min(h - 26, oy - 24));     // work zero: the sheet corner, not the part
 }
 function drawTop(sk, ctx, S, C) {
   const a = last, gap = a.gap ?? gapMm();

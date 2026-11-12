@@ -95,7 +95,7 @@ for (const prof of ["d1366", "d1440"]) {
   l = await ev(page, () => ({ zero: window.plasmaTest.S.zeroSet, bar: document.getElementById("cutBarStart").textContent, zs: document.getElementById("zeroState").textContent }));
   t.check(n("J15: 'Cut starts here' moves with the part"), m0 && m1 && Math.abs(m1[0] - m0[0] - 40) < 0.6 && Math.abs(m1[1] - m0[1]) < 0.6, JSON.stringify([m0, m1]));
   t.check(n("J15: the job start (first pierce) follows the part"), j0.jobStart && j1.jobStart && Math.abs(j1.jobStart[0] - j0.jobStart[0] - 40) < 0.6 && Math.abs(j1.jobStart[1] - j0.jobStart[1]) < 0.6, JSON.stringify([j0, j1]));
-  t.check(n("J15: the start point stays set after moving parts, and says so"), l.zero && /set/i.test(l.bar) && /cut follows/i.test(l.zs), JSON.stringify(l));
+  t.check(n("J15: the start point stays set after moving parts, and says so"), l.zero && /set/i.test(l.bar) && /place it/i.test(l.zs), JSON.stringify(l));
   t.check(n("J15: moving the part does not send a machine zero or move"), JSON.stringify(j0.wco) === JSON.stringify(j1.wco) && JSON.stringify(j0.wpos) === JSON.stringify(j1.wpos), JSON.stringify([j0, j1]));
 
   // J14: Layout mode, move a panel, resize, saved, reset; STOP never moves

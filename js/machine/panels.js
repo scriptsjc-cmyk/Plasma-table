@@ -140,7 +140,7 @@ export function bindMachineControls() {
   $("btnDemoEstop").onclick = () => { if (S.demo) S.demo.setEstop(!S.demo.estop); };
   $$(".do-home").forEach((b) => (b.onclick = () => cmd("home")));
   $$(".do-raise").forEach((b) => (b.onclick = () => cmd("raise")));
-  $("btnGoStart").onclick = () => cmd("goto_zero");
+  $("btnGoStart").onclick = () => { const at = S.prepared && S.prepared.jobStart; cmd("goto_zero", at && Number.isFinite(at[0]) && Number.isFinite(at[1]) ? { x: at[0], y: at[1] } : {}); };
   $$("[data-cmd]").forEach((b) => (b.onclick = () => cmd(b.dataset.cmd)));
   $("btnRef").onclick = async () => { if (await askConfirm({ title: "Set the home corner?", body: "Is the torch exactly at the home corner, raised right up?", ok: "Yes", cancel: "Cancel" })) cmd("set_reference"); };
   $("btnClearLimits").onclick = async () => { if (await askConfirm({ title: "Clear the saved edges?", body: "Crash protection will be off until you set them again.", ok: "Clear edges", cancel: "Cancel", danger: true })) cmd("limits_clear"); };

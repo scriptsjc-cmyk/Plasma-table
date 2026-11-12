@@ -5,7 +5,7 @@ const STEPS = [
     "1. On Make a part, pick a simple shape (a rectangle is fine) and type its size.",
     "2. Press Cut this part. That opens the cutting screen on the Part step, where you pick the material and thickness.",
     "3. Tick Practice run – the torch stays off. The header chip says “Practice run · torch off” on a real machine. You can try this without a linked machine.",
-    "4. On Bed & start, press Start here at the sheet's bottom-left corner (skipped in Practice if the app already has a start point).",
+    "4. The part cuts where you place it on the bed. Then press Start here at the sheet's bottom-left corner so the table knows where that corner is (skipped in Practice if it is already set).",
     "5. Press Start cutting and watch the path. This is the safest first job. The red STOP button (or the space bar) cancels at once.",
   ]},
   { id: "make", title: "Make a part", body: [

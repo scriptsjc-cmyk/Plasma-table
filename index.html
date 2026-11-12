@@ -584,9 +584,10 @@
         </details>
 
         <details class="setupcard" id="zeroCard" open>
-          <summary><b>Connect and set the start point</b> <span id="zeroState" class="layoutstate muted small">Not set yet.</span></summary>
+          <summary><b>Connect the table</b> <span id="zeroState" class="layoutstate muted small">The part cuts where you place it.</span></summary>
           <div class="zerobody">
           <div class="zeroscroll">
+            <p class="muted small" id="bedStartHelp">The part cuts where you place it on the bed. You do not set a start point on the part. <b>Start here</b> only tells the table where the sheet's bottom-left corner is (that corner is 0, 0 on the layout; every cut is measured from there). The torch does not move. <b>Go to start point</b> then goes to where the cut begins.</p>
             <div id="connectCard" class="connectcard">
               <div class="row wrap">
                 <button id="btnConnect" class="xl go">Connect with USB</button>
@@ -615,7 +616,6 @@
               <button class="do-raise">⤒ Raise torch</button>
               <button id="btnGoStart">Go to start point</button>
             </div>
-            <p class="muted small">Put the sheet on the table. Move the torch over the sheet's <b>bottom-left corner</b> and press <b>Start here</b>. That corner is where the sheet picture's 0, 0 is.</p>
             <div class="jogmount"></div>
             <p class="muted small keyhint">Keyboard: arrows move the torch, Page Up / Page Down raise and lower it. Tap for one step, hold to glide; Shift goes slow.</p>
             <details id="originCard" class="originbox">
@@ -638,7 +638,7 @@
           <summary><b>Check, then cut</b></summary>
           <p class="checkmat"><span id="checkMat"></span> <button type="button" id="btnChangeMat" class="small" aria-label="Change material or part" title="Change material or part">Change</button></p>
           <ul class="checklist" id="checklist"></ul>
-          <p id="zeroWarn" class="warntext hidden">The start point isn’t set yet. Move the torch over the sheet’s bottom-left corner and press Start here, or the part may be cut in the wrong place.</p>
+          <p id="zeroWarn" class="warntext hidden">Press Start here at the sheet corner. The part already cuts where you placed it.</p>
         <div id="startCutRow" class="startcut hidden">
           <label>Start from cut
             <select id="startCut" aria-label="Start from cut number"></select>

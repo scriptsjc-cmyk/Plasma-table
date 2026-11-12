@@ -1,11 +1,13 @@
-// r7 J15: where the cut begins, marked on the bed. Moving a part updates the job start (the first pierce
-// in the prepared job / G-code) so the origin of the cut follows the part. Work zero on the machine is
-// unchanged: nothing here sends a zero, origin or move command to the hardware.
+// r7 J15: where the cut begins, marked on the bed (the first pierce). The mark follows its part while you
+// drag; the G-code is rebuilt on drop so the job cuts at that bed position. Work zero is the sheet's
+// bottom-left corner, not the part: nothing here sends a zero, origin or move command to the hardware.
 let anchor = null;                  // { prep, id, off }: the first pierce, relative to the lower-left corner of its part's box
 
 function firstPierce(prep) {
+  const j = prep && prep.cutIndex && prep.cutIndex[0] && prep.cutIndex[0].at;
+  if (j) return j;                  // the XY in the G-code where the torch actually comes on
   const c = prep && prep.cutInfo && prep.cutInfo.find((ci) => ci.start);
-  return c ? c.start : null;        // design coordinates = sheet coordinates on the bed
+  return c ? c.start : null;
 }
 const boxDist = (p, b) => Math.hypot(Math.max(0, b[0] - p[0], p[0] - b[2]), Math.max(0, b[1] - p[1], p[1] - b[3]));
 
@@ -21,15 +23,8 @@ export function startMarkAt(prep, units) {
   return u ? [u.box[0] + anchor.off[0], u.box[1] + anchor.off[1]] : null;
 }
 
-// write the mark position onto the prepared job so Start cutting / G-code use the same start
-export function applyJobStart(prep, units) {
-  const at = startMarkAt(prep, units);
-  if (prep) prep.jobStart = at ? at.slice() : null;
-  return at;
-}
-
 export function drawStartMark(sk, ctx, S, prep, units) {
-  const at = applyJobStart(prep, units); if (!at) return;
+  const at = startMarkAt(prep, units); if (!at) return;
   const [x, y] = S(at[0], at[1]);
   const GO = getComputedStyle(document.documentElement).getPropertyValue("--go").trim() || "#0A6A32";   // Start here's green, per theme
   ctx.strokeStyle = GO; ctx.lineWidth = 2;

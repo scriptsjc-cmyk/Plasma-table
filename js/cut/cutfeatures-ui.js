@@ -128,7 +128,7 @@ function saveHere() {
   const M = H.M(), S = H.S;
   if (!(S.connected && M && M.grbl)) { H.toast("Connect the table first.", true); return; }
   if (!(S.safety && S.safety.referenced)) { H.toast("Home the machine (or set the home corner) first. A saved start point is measured from the home corner.", true); return; }
-  if (!M.zeroConfirmed) { H.toast("Set the start point first: move the torch there and press Start here. Then save it.", true); return; }
+  if (!M.zeroConfirmed) { H.toast("Put the torch on the sheet's bottom-left corner and press Start here first. Then save it. The part already cuts where you placed it.", true); return; }
   const w = H.wcoNow(), v = H.toView(w[0], w[1]);
   try {
     const { rec, replaced } = saveOrigin(originStore() || undefined, { name: $("woName").value, x: v[0], y: v[1] });

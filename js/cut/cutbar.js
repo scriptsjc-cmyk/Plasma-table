@@ -17,7 +17,7 @@ function placeStepper() {
 export function paintCutBar() {
   const el = $("cutBarStart"); if (!el) return;
   const state = !S.connected ? "off" : S.zeroSet ? "set" : "unset";
-  const text = { off: "Not connected", set: "Start point set ✓", unset: "Start point not set" }[state];
+  const text = { off: "Not connected", set: "Sheet corner set ✓", unset: "Sheet corner not set" }[state];
   if (el.textContent !== text) el.textContent = text;
   el.dataset.state = state;
 }
