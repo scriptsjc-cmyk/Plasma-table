@@ -161,6 +161,20 @@ for (const [type, d] of [["rect", 5], ["rect", -5], ["plate", 3], ["plate", -3],
   straight.finishDraw();
   const sb = (straight.items[0] && straight.items[0].shape && straight.items[0].shape.cs[0].bulges) || [];
   t.check("draw with Arc off: every edge stays straight", sb.every((b) => Math.abs(b || 0) < 1e-9), `bulges=${JSON.stringify(sb)}`);
+  // Fillet radius smaller than half the edge must not silently flatten a curve
+  const keep = mk([]);
+  keep.setTool("draw");
+  keep.pushDrawPoint(0, 0); keep.pushDrawPoint(120, 0);
+  keep.drawArc = true; keep.pushDrawPoint(120, 120); keep.drawArc = false;
+  keep.pushDrawPoint(0, 120); keep.finishDraw();
+  const curved = keep.items[0];
+  const bBefore = (curved.shape.cs[0].bulges || []).slice();
+  t.check("setup: the right-hand edge is curved", bBefore.some((b) => Math.abs(b) > 0.05), `bulges=${JSON.stringify(bBefore)}`);
+  keep.selectEdge(curved.id, 0, bBefore.findIndex((b) => Math.abs(b) > 0.05));
+  keep.setEdgeCurve({ radius: 8 });
+  const bAfter = (keep.items[0].shape.cs[0].bulges || []).slice();
+  t.check("fillet radius 8 mm on a 120 mm curved edge is refused and the curve is kept", bAfter.some((b) => Math.abs(b) > 0.05) && Math.abs((bAfter.find((b) => Math.abs(b) > 0.05) || 0) - (bBefore.find((b) => Math.abs(b) > 0.05) || 0)) < 1e-6, `before=${JSON.stringify(bBefore)} after=${JSON.stringify(bAfter)} msg=${keep.messages.slice(-1)}`);
+  t.check("fillet refusal explains the minimum radius", /too small|at least 60/i.test(String(keep.messages.slice(-1))), String(keep.messages.slice(-1)));
 }
 // ---------- nest / auto-arrange
 {

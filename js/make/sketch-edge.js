@@ -111,7 +111,7 @@ export class EdgeMethods {
   _withEdge(fn, msg) {
     const info = this.edgeInfo();
     if (!info) { if (msg) this.onMessage("Click an edge of a drawn outline first."); return false; }
-    return this._guarded(info.it, () => { fn(info.it, info); });
+    return this._guarded(info.it, () => fn(info.it, info));
   }
   // Move corner v of a closed outline to `to`. The edge leaving that corner (dir +1 = next, -1 = previous)
   // keeps its direction: its far corner slides along ITS neighbour's line to stay parallel. Without this,
@@ -202,7 +202,15 @@ export class EdgeMethods {
       c.bulges = c.bulges || c.pts.map(() => 0);
       let b = 0;
       if (bulge != null && Number.isFinite(+bulge)) b = +bulge;
-      else if (radius != null && Number(radius) > 0) b = bulgeFromRadius(p, q, Number(radius), true);
+      else if (radius != null && Number(radius) > 0) {
+        const chord = Math.hypot(q[0] - p[0], q[1] - p[1]);
+        const r = Number(radius);
+        if (r < chord / 2 - 1e-6) {
+          this.onMessage("That radius is too small for this edge. It needs to be at least " + r1(chord / 2) + " mm (half the length).");
+          return false;
+        }
+        b = bulgeFromRadius(p, q, r, true);
+      }
       else if (sagitta != null && Number.isFinite(+sagitta)) b = bulgeFromSagitta(p, q, Number(sagitta));
       else b = 0.2;
       c.bulges[info.ei] = clampBulge(b);
