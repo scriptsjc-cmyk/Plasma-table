@@ -528,7 +528,7 @@
         <h2>Place the parts, then get set up</h2>
         <div id="cutCheck3" class="cutcheck"></div>
         <details class="setupcard" id="layoutCard" open>
-          <summary><b>1 · Put the parts on the bed</b> <span id="layoutState" class="layoutstate"></span></summary>
+          <summary><b>Parts on the bed</b> <span id="layoutState" class="layoutstate"></span></summary>
           <div class="sheetrow">
             <label>Sheet width <input id="sheetW" type="number" min="50" step="any" inputmode="decimal"> mm</label>
             <label>Height <input id="sheetH" type="number" min="50" step="any" inputmode="decimal"> mm</label>
@@ -583,7 +583,7 @@
         </details>
 
         <details class="setupcard" id="zeroCard" open>
-          <summary><b>2 · Connect, home and set the start point</b> <span id="zeroState" class="layoutstate muted small">Not set yet.</span></summary>
+          <summary><b>Connect and set the start point</b> <span id="zeroState" class="layoutstate muted small">Not set yet.</span></summary>
           <div class="zerobody">
           <div id="connectCard" class="connectcard">
             <div class="row wrap">
@@ -632,8 +632,8 @@
         </details>
 
         <details class="setupcard" id="checkCard" open>
-          <summary><b>3 · Check, then cut</b></summary>
-          <p class="checkmat"><span id="checkMat"></span> <button type="button" id="btnChangeMat" class="small">Change material or part</button></p>
+          <summary><b>Check, then cut</b></summary>
+          <p class="checkmat"><span id="checkMat"></span> <button type="button" id="btnChangeMat" class="small" aria-label="Change material or part" title="Change material or part">Change</button></p>
           <ul class="checklist" id="checklist"></ul>
           <p id="zeroWarn" class="warntext hidden">The start point isn’t set yet. Move the torch over the sheet’s bottom-left corner and press Start here, or the part may be cut in the wrong place.</p>
         <div id="startCutRow" class="startcut hidden">

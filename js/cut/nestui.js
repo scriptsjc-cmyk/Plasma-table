@@ -1,4 +1,4 @@
-// "Get set up" > Put the parts on the bed: Nest to fit (true-shape packing) and saved remnants.
+// Bed & start > Parts on the bed: Nest to fit (true-shape packing) and saved remnants.
 // The maths is in nest.js; this file reads the parts off the sketch, moves them, and keeps the list of saved remnants.
 import { nestUnits, turnAngles, leftoverPieces, applyPlacement, ringsBox, ringsArea } from "./nest.js";
 
