@@ -56,8 +56,8 @@ html, body { margin: 0; background: var(--bg); color: var(--text);
   max-width: 1200px; margin: 8px auto 0; padding: 10px 14px; border-radius: var(--r);
   margin-left: max(8px, env(safe-area-inset-left)); margin-right: max(8px, env(safe-area-inset-right));
   border: 1px solid var(--line); background: var(--card); color: var(--text); min-width: 0; }
-.banner.red { background: var(--alarm-bg); color: #7A1A12; border: 2px solid var(--alarm); font-weight: 650; }
-.banner.amber { background: var(--warn-bg); color: #7A3B00; border: 1px solid var(--warn); }
+.banner.red { background: var(--alarm-bg); color: var(--alarm-text); border: 2px solid var(--alarm); font-weight: 650; }
+.banner.amber { background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn); }
 .banner.big { font-size: var(--fs-lg); border-width: 3px; }
 .banner button { flex: none; }
 /* views + panels */
@@ -132,7 +132,7 @@ label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm)
 .progress div { height: 100%; width: 0; background: var(--accent); transition: width .15s linear; }
 .torchbig { margin: 14px 0; padding: 10px; text-align: center; border-radius: var(--r);
   background: var(--well); border: 2px solid var(--line); font-weight: 800; font-size: var(--fs-lg); }
-.torchbig.on { background: var(--warn-bg); color: #7A3B00; border-color: var(--torch);
+.torchbig.on { background: var(--warn-bg); color: var(--warn-text); border-color: var(--torch);
   box-shadow: 0 0 0 3px rgba(192, 86, 0, .25); }
 /* setup */
 .status2 div { background: var(--well); border-radius: var(--r); padding: 10px 12px; border: 1px solid var(--line); }
@@ -155,14 +155,14 @@ label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm)
 .lamps.mini .lamp.on::before { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
 .lamps.mini .lamp.on[data-in="estop"]::before { background: var(--alarm); box-shadow: 0 0 6px var(--alarm); }
 .lamps.mini .lamp.on[data-in="torch"]::before { background: var(--torch); box-shadow: 0 0 6px var(--torch); }
-.lamp.on[data-in="estop"] { border-color: var(--alarm) !important; color: #7A1A12 !important; background: var(--alarm-bg) !important; }
-.lamp.on[data-in="torch"] { border-color: var(--torch) !important; color: #7A3B00 !important; background: var(--warn-bg) !important; }
+.lamp.on[data-in="estop"] { border-color: var(--alarm) !important; color: var(--alarm-text) !important; background: var(--alarm-bg) !important; }
+.lamp.on[data-in="torch"] { border-color: var(--torch) !important; color: var(--warn-text) !important; background: var(--warn-bg) !important; }
 .tiles button { min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: var(--fs-sm); background: var(--well); }
 .tiles button i { font-style: normal; font-size: 24px; color: var(--text); }
 .tiles button.sel { background: var(--accent-weak); border-color: var(--accent); color: var(--text); }
 .tiles.small button { min-height: 62px; font-size: 13px; }
 .skbtns button { flex: 1 1 96px; min-height: var(--tap); min-width: 0; font-size: var(--fs-sm); }
-.skbtns .danger, .quickbar button.danger { background: var(--alarm-bg); border-color: var(--alarm); color: #7A1A12; }
+.skbtns .danger, .quickbar button.danger { background: var(--alarm-bg); border-color: var(--alarm); color: var(--alarm-text); }
 .sktools button { min-height: var(--tap); font-size: var(--fs-sm); padding: 6px; min-width: 0; }
 .shapeform .alignrow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
 .shapeform .alignrow button { min-height: var(--tap); font-size: 13px; padding: 4px; min-width: 0; }
