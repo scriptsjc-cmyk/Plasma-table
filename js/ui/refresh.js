@@ -62,7 +62,7 @@ export function paintChrome() {
   if (zs) {
     if (S.zeroSet) {
       const w = wcoNow();
-      zs.textContent = "Start point set at " + Number(w[0]).toFixed(1) + ", " + Number(w[1]).toFixed(1) + " mm.";
+      zs.textContent = "Start point set at " + Number(w[0]).toFixed(1) + ", " + Number(w[1]).toFixed(1) + " mm. Move parts freely: the cut follows them.";
       zs.classList.remove("warntext");
     } else {
       zs.textContent = S.connected ? "Not set yet. Put the torch on the sheet's bottom-left corner, then press Start here." : "Connect to the table to set it. On the layout the sheet's bottom-left corner is the start point.";

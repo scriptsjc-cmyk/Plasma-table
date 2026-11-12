@@ -11,6 +11,7 @@ import { contoursToEditable } from "../make/editable.js";
 import * as Acc from "../account/account.js";
 import { insideRegion } from "./nest.js";
 import { initNestUi, paintNest, nestNow } from "./nestui.js";
+import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
@@ -121,6 +122,7 @@ export function blockText() {
   return out;
 }
 export const layoutActive = () => layoutOn;
+export const startMarkAt = () => markAt(H.S.prepared, last.units);       // where the cut begins on the sheet (tests, J15)
 
 // ------------------------------------------------------------------ drawing on the sketch canvas
 let zoomParts = true;                                          // B5 19: open zoomed to the parts (with a margin); "Whole sheet" shows the whole sheet again
@@ -173,6 +175,7 @@ function drawTop(sk, ctx, S, C) {
     ctx.fillStyle = a.bad.has(u.id) ? C.danger : "#475569"; ctx.font = "bold 13px Barlow, system-ui"; ctx.textAlign = "center";
     ctx.fillText(String(u.n), X, Y + 4); ctx.textAlign = "left";
   }
+  drawStartMark(sk, ctx, S, H.S.prepared, a.units);
   // live distances for the picked part: to the sheet edges and to the nearest part on each side
   const one = sk.selected();
   const me = one && a.units.find((u) => u.id === one.id || (sk.hostOf && sk.hostOf(one) && u.id === sk.hostOf(one).id));
