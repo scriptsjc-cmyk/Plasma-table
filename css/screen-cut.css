@@ -112,8 +112,10 @@ body.app-shell .drop { min-height: 88px; padding: 10px; }
   body.app-shell:not(.short-land) .previewDock {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 4;
     max-height: 42%; overflow: auto;
-    background: color-mix(in srgb, var(--card) 94%, transparent);
+    background: var(--card);
   }
+  /* on Cut the job stats sit in this dock: keep the canvas grid/snap line from showing through */
+  body.app-shell:not(.short-land)[data-screen="cut"] .previewDock { background: var(--card); }
 }
 @media (min-width: 1280px) {
   body.app-shell[data-screen="cut"] .step[data-step="3"] > #layoutCard { grid-column: 1; grid-row: 1; }
@@ -801,8 +803,10 @@ body.short-land .dimedit label { margin-bottom: 2px; }
     display: inline-flex; align-items: center; justify-content: center; flex: none; max-width: none; overflow: visible; white-space: nowrap; }
 }
 @media (max-width: 899px) and (orientation: portrait) {
-  /* header upright: brand, Menu and the menu button on one row, Ready / Moving and TORCH under them, both rows beside the taller STOP */
+  /* header upright: brand and Menu on the first row; Ready / Moving and TORCH together on the second, both rows beside the taller STOP */
   body[data-screen="cut"] .topbar-main { row-gap: 4px; }
+  body[data-screen="cut"] .topbar-main::after { content: ""; flex-basis: 100%; order: 10; height: 0; }
+  body[data-screen="cut"] #stateBadge, body[data-screen="cut"] #torchPill { order: 11; }
   body[data-screen="cut"] #stateBadge:not(.hidden), body[data-screen="cut"] #torchPill:not([hidden]) { font-size: 13px; padding: 0 10px; }
 }
 @media (orientation: landscape) and (max-height: 540px) {
@@ -850,10 +854,12 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="3"] #jobStats, body[data-screen="cut"][data-step="4"] #jobStats { display: none; }
   body[data-screen="cut"][data-step="3"] #jobCard, body[data-screen="cut"][data-step="4"] #jobCard { display: block; flex: 1 1 100%; margin: 0; padding: 6px 10px;
     background: var(--well); border: 1px solid var(--line); border-radius: var(--r); }
-  .jobcard dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 16px; margin: 0; }
+  .jobcard dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2px 16px; margin: 0; }
   .jobcard dl > div { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
   .jobcard dt { flex: none; width: 60px; font-size: 12px; font-weight: 700; color: var(--muted); }
-  .jobcard dd { margin: 0; min-width: 0; font-size: 13px; line-height: 1.35; font-weight: 650; color: var(--text); overflow-wrap: anywhere; }
+  .jobcard dd { margin: 0; min-width: 0; font-size: 13px; line-height: 1.35; font-weight: 650; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .jobcard dl > div:last-child { grid-column: 1 / -1; }
 
   /* r7 J14: column dividers and Layout mode (js/cut/cutpanels.js); the columns come from --s3-* / --s4-* on the grid */
   body[data-screen="cut"] .cutgrid { position: relative; }
@@ -939,7 +945,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
     grid-template-columns: var(--s4-cols, minmax(0, 1fr) minmax(480px, 40vw)) !important; grid-template-rows: minmax(0, 1fr) !important; grid-template-areas: none !important; }
   body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .previewPane { grid-column: var(--s4-bed, 1); grid-row: 1; order: 0; max-height: none; }
   body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .stepPane { grid-column: var(--s4-run, 2); grid-row: 1; order: 0; min-height: 0; overflow: auto; }
-  body[data-screen="cut"] #running:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 16px; align-content: start;
+  body[data-screen="cut"] #running:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 16px; align-content: start;
     grid-template-areas: "title speed" "nums speed" "prog speed" "info speed" "pos speed" "torch speed" "live live" "note note" "ctl ctl" "help help"; }
   #running > #runTitle { grid-area: title; margin: 0; }
   #running > .runnums { grid-area: nums; margin: 0; }
@@ -961,7 +967,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   #running > #lpNote { grid-area: note; margin: 0; }
   #running > #lpNote:empty { display: none; }
   #running > .runctl { grid-area: ctl; position: sticky; bottom: 0; z-index: 2; margin: 0; padding: 4px 0; background: var(--card); }
-  #running > #runHelp { grid-area: help; margin: 0; }
+  #running > #runHelp { grid-area: help; margin: 0; font-size: 12px; line-height: 1.35; }
 
   /* STOP stays the biggest: no other cutting-screen button is wider than 300px or taller than 56px */
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button,

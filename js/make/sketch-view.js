@@ -4,6 +4,18 @@ import { def, r1, themeColor } from "./sketch-util.js";
 import { clickVerb, clickVerbLower } from "../ui/laptop.js";
 import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
 
+// When the preview dock is overlaid on the canvas (phone Cut), lift the footer captions above it
+function dockFoot() {
+  try {
+    if (typeof document === "undefined" || typeof document.querySelector !== "function") return 8;
+    const dock = document.querySelector(".previewDock");
+    if (!dock) return 8;
+    const cs = getComputedStyle(dock);
+    if (cs.position !== "absolute") return 8;
+    return Math.max(8, (dock.offsetHeight || 0) + 10);
+  } catch (e) { return 8; }
+}
+
 export class ViewMethods {
   fitView() {
     const [w, h] = this.size(), b = this.layout ? this.layout.viewBox(this) : this.allBox();
@@ -91,8 +103,11 @@ export class ViewMethods {
         ctx.stroke();
       }
     }
-    ctx.fillStyle = C.label; ctx.font = "11px Barlow, system-ui";
-    ctx.textAlign = "right"; ctx.fillText(`${prefs.grid ? "grid " + G + " mm" : "grid off"} · snap ${this.opts.snap ? this.opts.snap + " mm" : "off"}`, w - 8, h - 8); ctx.textAlign = "start";
+    const hideFoot = (typeof document !== "undefined" && document.body && document.body.dataset && document.body.dataset.screen === "cut" && dockFoot() > 8);
+    if (!hideFoot) {
+      ctx.fillStyle = C.label; ctx.font = "11px Barlow, system-ui";
+      ctx.textAlign = "right"; ctx.fillText(`${prefs.grid ? "grid " + G + " mm" : "grid off"} · snap ${this.opts.snap ? this.opts.snap + " mm" : "off"}`, w - 8, h - 8); ctx.textAlign = "start";
+    }
     if (!this.layout) {
       const sh = drawingSheet();
       const [sx0, sy0] = S(0, sh.h), [sx1, sy1] = S(sh.w, 0);
@@ -281,7 +296,7 @@ export class ViewMethods {
       ctx.fillStyle = C.label; ctx.font = "12px Barlow, system-ui";
       const tool = this.tool === "draw" ? " · DRAW: " + clickVerbLower() + " points, then Close" : this.tool === "measure" ? " · MEASURE: " + clickVerbLower() + " two points" : "";
       const np = this.partTotal();
-      ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${formatLen(b[2] - b[0], 1)} × ${formatLen(b[3] - b[1], 1)}${tool}`, 8, h - 8);
+      if (!hideFoot) ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${formatLen(b[2] - b[0], 1)} × ${formatLen(b[3] - b[1], 1)}${tool}`, 8, h - 8);
     } else {
       ctx.fillStyle = C.label; ctx.font = "15px Barlow, system-ui"; ctx.textAlign = "center";
       ctx.fillText(this.tool === "draw" ? (clickVerb() + " to place the first point of the outline") : (clickVerb() + " a shape to add it"), w / 2, h / 2); ctx.textAlign = "start";

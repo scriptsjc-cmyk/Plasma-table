@@ -107,7 +107,7 @@ function paintJobCard() {
   }
   setText("jcMat", mat);
   const t = S.cfg && S.cfg.travel_mm, conn = $("connPill").title || "Not connected", badge = $("stateBadge");
-  setText("jcMach", `${conn}${S.connected && badge && badge.textContent ? ` · ${badge.textContent}` : ""}${t ? ` · table ${Math.round(t.x)} × ${Math.round(t.y)} mm` : ""}`);
+  setText("jcMach", `${conn}${S.connected && badge && badge.textContent ? ` · ${badge.textContent}` : ""}${t ? ` · ${Math.round(t.x)} × ${Math.round(t.y)} mm` : ""}`);
 }
 export function refresh() {
   paintChrome();
