@@ -49,7 +49,7 @@ export function startOver() {
   S.job = null; S.prepared = null; S.gcode = null; S.design = null; S.currentPart = null; S.fileName = ""; S.startCut = 1; S.resume = null;
   if (sketch && sketch.items.length) { sketch.layout = null; sketch.remember(); sketch.items = []; sketch.pick([]); sketch.commit(); }
   S.src = "file"; $("file").value = "";
-  $("dropTitle").textContent = "Upload a file"; $("drop").classList.remove("loaded");
+  $("dropTitle").textContent = "Upload a file"; $("drop").classList.remove("loaded", "drop-open"); $("drop").classList.add("drop-slim");
   $("warnings").innerHTML = "";
   goStep(1); refresh();
 }
@@ -95,7 +95,8 @@ function openText(name, text, remember, scale) {
   designChanged(-1);                                    // a new file: forget old cut order, tabs and start points
   const finish = (k) => {
     $("dropTitle").textContent = "✓ " + name;
-    $("drop").classList.add("loaded");
+    $("drop").classList.add("loaded", "drop-slim");
+    $("drop").classList.remove("drop-open");
     if (remember) saveRecent(name, text, k);
     loadJob();
     if (S.prepared) goStep(3);                             // straight onto the bed
@@ -190,8 +191,15 @@ export function bindFiles() {
   if ($("btnEditDrawing")) $("btnEditDrawing").onclick = editDrawing;
   bindResize();
   // step 1
-  $("file").onchange = () => { const fl = [...$("file").files]; $("file").value = ""; handleFiles(fl); };   // several files = they all go on the bed, each with a quantity
   const drop = $("drop");
+  const openDrop = () => { drop.classList.add("drop-open"); drop.classList.remove("drop-slim"); };
+  const slimDrop = () => { if (!drop.classList.contains("drag")) { drop.classList.remove("drop-open"); drop.classList.add("drop-slim"); } };
+  drop.addEventListener("click", openDrop);
+  drop.addEventListener("focusin", openDrop);
+  drop.addEventListener("dragenter", () => { drop.classList.add("drag"); openDrop(); });
+  drop.addEventListener("dragleave", () => { drop.classList.remove("drag"); });
+  drop.addEventListener("focusout", () => setTimeout(slimDrop, 100));
+  $("file").onchange = () => { const fl = [...$("file").files]; $("file").value = ""; handleFiles(fl); };   // several files = they all go on the bed, each with a quantity
   const cutDrop = () => screen() === "cut" && S.tab === "cut" && !navBusy();
   ["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); if (cutDrop()) drop.classList.add("over"); }));
   ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));

@@ -976,3 +976,114 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="3"] #cutView #btnTrace { min-height: 44px; padding: 4px 10px; font-size: 14px; }
   body[data-screen="cut"][data-step="4"] .runctl #btnPause { flex: 0 1 300px; min-height: 56px; }
 }
+
+
+/* ---- r8: one connect control, cut-status box, E-STOP zone, slim upload ---- */
+body[data-screen="cut"] #connPill { display: none !important; }
+
+/* E-STOP sits in its own yellow zone so it stands out; size is not reduced. */
+body[data-screen="cut"] #btnStop,
+body.header-hidden.header-stop-float #btnStop {
+  box-shadow: 0 0 0 4px #F5C542, 0 0 0 6px #8A6A00;
+  background-clip: padding-box;
+  border-radius: 14px;
+}
+/* Never shrink the header enough that STOP overflows the viewport. */
+body[data-screen="cut"] .topbar {
+  overflow: visible;
+  padding-top: max(8px, env(safe-area-inset-top));
+  padding-bottom: 8px;
+}
+
+/* Show machine belongs on Bed & start, not on Part. */
+body[data-screen="cut"][data-step="1"] #showMachWrap { display: none !important; }
+body[data-screen="cut"][data-step="3"] #showMachWrap { display: flex !important; visibility: visible; }
+
+
+.cutstatus {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  margin: 0 8px 0 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--well);
+  color: var(--text);
+  font: 650 13px/1.2 var(--font);
+  cursor: pointer;
+  position: relative;
+  z-index: 5;
+}
+.cutstatus.is-ok { background: var(--well); }
+.cutstatus.is-bad {
+  background: #FFF4C2;
+  border-color: #E0B400;
+  color: #5A4500;
+  animation: cutPulse 1.6s ease-in-out infinite;
+}
+.cutstatus-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.cutstatus.is-ok .cutstatus-dot { background: var(--go, #1B7A3D); }
+.cutstatus.is-bad .cutstatus-dot { background: #E0B400; }
+.cutstatus-n { font-weight: 800; }
+@keyframes cutPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 180, 0, 0.55); }
+  50% { box-shadow: 0 0 0 8px rgba(224, 180, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cutstatus.is-bad { animation: none; }
+}
+.cutstatus-pop {
+  position: absolute;
+  top: 100%;
+  left: 8px;
+  z-index: 140;
+  min-width: 260px;
+  max-width: min(420px, 90vw);
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+.cutstatus-pop[hidden], .cutstatus-pop.hidden { display: none; }
+.cutstatus-pop ul { margin: 0; padding: 0 0 0 18px; }
+.cutstatus-pop li { margin: 6px 0; }
+.cutstatus-head { font-weight: 700; margin: 0 0 6px; }
+.cutstatus-setup { margin-left: 6px; }
+
+/* Slim upload bar on Part: expands when clicked, focused or a file is dragged. */
+#drop.drop-slim {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+#drop.drop-slim .drop-detail { display: none; }
+#drop.drop-open, #drop.over, #drop.drag {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: 20px 16px;
+}
+#drop.drop-open .drop-detail, #drop.over .drop-detail, #drop.drag .drop-detail { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+
+.ampsdl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; }
+.ampsdl > div { display: contents; }
+.ampsdl dt { color: var(--muted); font-size: 12px; font-weight: 700; }
+.ampsdl dd { margin: 0; font-weight: 650; }
+.ampsdl .est, .ampssrc { color: var(--muted); font-weight: 500; font-size: 12px; }
+.ampssrc { margin: 8px 0 0; }
+
+/* tabs: Machine setup tab is gone; keep the Cut tab from stretching */
+body[data-screen="cut"] .tabs .tab { flex: 0 0 auto; min-width: 88px; }
+body[data-screen="cut"] .tabs { position: relative; }
+
+/* Check cut button in the Make header */
+#btnMakeCheckCut { flex: none; }

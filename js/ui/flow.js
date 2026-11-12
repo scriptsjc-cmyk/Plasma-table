@@ -157,6 +157,10 @@ export function initFlow(host) {
   $("btnHome").onclick = () => { if (!navLocked()) showScreen("menu"); };
   $("menuMake").onclick = () => showScreen("make");
   $("menuCut").onclick = () => showScreen("cut");
+  if ($("menuSetup")) $("menuSetup").onclick = () => {
+    showScreen("cut");
+    import("./nav.js").then((n) => n.showTab("setup"));
+  };
   try { history.replaceState({ s: "boot" }, "", location.href); } catch (e) { /* ignore */ }
   window.addEventListener("popstate", (e) => {
     const cur = screen();

@@ -37,7 +37,12 @@ export function renderCutCheck() {
   const cutting = screen() === "cut";
   $("cutCheck").innerHTML = "";
   $("cutCheck2").innerHTML = html + tabBtn;
-  if ($("cutCheck3")) $("cutCheck3").innerHTML = cutting ? html + tabBtn : "";
+  // r8 item 3: the full check lives on step 1 (Part). Bed & start only repeats a short list when something is wrong.
+  if ($("cutCheck3")) {
+    const issues = chk && chk.groups && chk.groups.length;
+    $("cutCheck3").innerHTML = issues ? html + tabBtn
+      : (chk ? `<p class="ok">✓ Looks cuttable<span class="okmore"> – the full check is on Part</span>.</p>` : "");
+  }
   if (sketch) sketch.setMarks(cutting && S.src === "shape" && chk ? chk.issues : []);
   const L = machineLimits(limitsNow());
   const rows = [

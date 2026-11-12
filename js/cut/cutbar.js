@@ -16,8 +16,11 @@ function placeStepper() {
 }
 export function paintCutBar() {
   const el = $("cutBarStart"); if (!el) return;
-  const state = !S.connected ? "off" : S.zeroSet ? "set" : "unset";
-  const text = { off: "Not connected", set: "Sheet corner set ✓", unset: "Sheet corner not set" }[state];
+  // r8 item 4: the cut-status box next to Cut covers connection problems. This slot is only for the sheet-corner state.
+  if (!S.connected) { el.hidden = true; el.textContent = "Not connected"; el.dataset.state = "off"; return; }
+  const state = S.zeroSet ? "set" : "unset";
+  const text = state === "set" ? "Sheet corner set ✓" : "Sheet corner not set";
+  el.hidden = false;
   if (el.textContent !== text) el.textContent = text;
   el.dataset.state = state;
 }

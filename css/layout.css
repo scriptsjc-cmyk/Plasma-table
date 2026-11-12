@@ -802,8 +802,9 @@ body.header-hidden[data-screen="cut"] .banner {
 }
 #btnShowEmail { padding: 6px 10px; }
 
-/* Make step 1: leave room above the sticky Next so fields are not covered */
-body[data-screen="make"] .step[data-step="1"] { padding-bottom: 80px; }
+/* Make and Cut step 1: leave room above the sticky Next so thickness buttons are not covered (1366x768). */
+body[data-screen="make"] .step[data-step="1"],
+body[data-screen="cut"] .step[data-step="1"] { padding-bottom: 96px; }
 body[data-screen="make"] .step[data-step="1"] .nav,
 body[data-screen="cut"] .step[data-step="1"] .nav {
   position: sticky; bottom: 0; z-index: 3;
