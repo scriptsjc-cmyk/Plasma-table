@@ -890,6 +890,9 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="3"] #connectLock { margin-top: 8px; flex-wrap: nowrap; }
   body[data-screen="cut"][data-step="3"] #connectLock .locknote { flex: 1 1 auto; font-size: 13px; }
   body[data-screen="cut"][data-step="3"] #connectLock .xl { flex: none; }
+  /* r7 J4: with a keyboard, the arrows move the torch; say so once connected */
+  body.machine-connected[data-screen="cut"] #zeroCard .keyhint { display: block; font-size: 12px; }
+  body:not(.machine-connected)[data-screen="cut"] #zeroCard .keyhint { display: none; }
   body[data-screen="cut"][data-step="3"] .homerow { gap: 6px; flex-wrap: nowrap; }
   body[data-screen="cut"][data-step="3"] .homerow button { min-height: 38px; padding: 4px 8px; font-size: 13px; white-space: nowrap; }
   /* a clean cut check is one line: the head and the tick side by side */

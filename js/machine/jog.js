@@ -67,14 +67,23 @@ export function renderPos() {
   const html = `<div><span>X</span><b>${Number(w[0]).toFixed(1)}</b></div><div><span>Y</span><b>${Number(w[1]).toFixed(1)}</b></div><div><span>Z</span><b>${Number(w[2]).toFixed(1)}</b></div>`;
   $$(".small-pos").forEach((el) => (el.innerHTML = html));
 }
+// r7 J4: on the cutting screen the arrows move the torch (where Start here will set the start point), unless the focused control
+// uses the arrows itself: a text or number box, a list, a slider, a panel divider, a radio group
+const ARROW_ROLES = "[role=separator], [role=slider], [role=radiogroup], [role=listbox], [role=menu], [role=tablist]";
+function arrowsTaken(el) {
+  if (!el || el === document.body) return false;
+  if (el.isContentEditable || el.tagName === "TEXTAREA" || el.tagName === "SELECT") return true;
+  if (el.tagName === "INPUT") return !["checkbox", "button", "submit", "reset"].includes((el.getAttribute("type") || "text").toLowerCase());
+  return !!el.closest(ARROW_ROLES);
+}
 export function bindJog() {
   // keyboard + on-screen pad: tap = one step, hold = glide until released (diagonals too).
   // Arrows = X/Y, Page Up/Down = Z, hold Shift for slow.
   const KEYS = { ArrowLeft: ["X", -1], ArrowRight: ["X", 1], ArrowUp: ["Y", 1], ArrowDown: ["Y", -1], PageUp: ["Z", 1], PageDown: ["Z", -1] };
   document.addEventListener("keydown", (e) => {
-    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+    if (arrowsTaken(document.activeElement)) return;
     if (e.key === "Shift") { J.slow = true; return; }                     // (the space bar is the E-stop: see flow.js)
-    if (!S.connected || screen() !== "cut") return;
+    if (!S.connected || screen() !== "cut" || document.body.classList.contains("cut-arrange")) return;
     if (S.job && S.job.running) return;
     const k = KEYS[e.key];
     if (!k) return;
