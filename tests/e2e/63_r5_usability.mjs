@@ -308,6 +308,8 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   await up("ws-a@example.com");
   ck("10 a different account signs in with a drawing on screen: 'Keep this drawing?' is asked", await prompt() && /Keep this drawing/.test(await T(page, `document.getElementById("migrateTitle").textContent`)));
   await snap(page, "keep-drawing");
+  await page.keyboard.press("Escape"); await sleep(200);
+  ck("10 the question has no Close (it needs an answer) and Esc leaves it up", await prompt() && await T(page, `!document.querySelector("#migrateDlg .acct-close")`));
   await page.click("#migrateNo"); await sleep(400);
   const fresh = await ws();
   ck("10 Start fresh: no drawing, no undo back to it, no recent files, material back to the first one", fresh.items === 0 && fresh.undo === 0 && !fresh.recent && fresh.material === firstMat, fresh);
