@@ -1,4 +1,4 @@
 // The release this copy of the app belongs to. scripts/stamp-version.sh rewrites this file, version.json and the
 // service-worker cache name together, so a new release always gets a new cache and the "New version" banner.
 // (The page itself reads version.json at start-up, so footer/About match the deployed commit even if only that file is stamped.)
-export const VERSION = { id: "2026.11.12-8c18f19", commit: "8c18f19", built: "2026-11-12" };
+export const VERSION = { id: "2026.11.12-84c901b", commit: "84c901b", built: "2026-11-12" };

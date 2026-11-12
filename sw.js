@@ -9,7 +9,7 @@
 //    you always get the deployed file. The cache is used only when the network fails or is too slow, and only the cache of THIS release
 //    is read, never an older one. Precached files are written once at install, never from later fetches, so the offline copy is always
 //    one consistent release. version.json is always asked of the network (offline it falls back to the installed release's copy).
-const CACHE = "plasma-cad-2026.11.12-8c18f19";
+const CACHE = "plasma-cad-2026.11.12-84c901b";
 const PRECACHE = [
   /* precache:start */
   "./",
@@ -30,6 +30,7 @@ const PRECACHE = [
   "css/screen-make.css",
   "css/screen-signin-menu.css",
   "css/tokens.css",
+  "css/yours.css",
   "js/account/account-ui.js",
   "js/account/account.js",
   "js/account/accounthome.js",
@@ -57,6 +58,7 @@ const PRECACHE = [
   "js/core/expr.js",
   "js/core/geom.js",
   "js/core/hooks.js",
+  "js/core/prefs.js",
   "js/core/state.js",
   "js/cut/cam.js",
   "js/cut/camedit.js",
@@ -76,6 +78,7 @@ const PRECACHE = [
   "js/cut/playback.js",
   "js/cut/prepare.js",
   "js/cut/preview.js",
+  "js/cut/previewnav.js",
   "js/cut/progress.js",
   "js/cut/restart.js",
   "js/cut/run.js",
@@ -146,10 +149,12 @@ const PRECACHE = [
   "js/ui/mode.js",
   "js/ui/nav.js",
   "js/ui/refresh.js",
+  "js/ui/scrollrow.js",
   "js/ui/viewport.js",
   "js/ui/whyoff.js",
   "js/ui/whytip.js",
   "js/ui/wifisetup.js",
+  "js/ui/yours.js",
   "js/version.js",
   "config/cut_chart.json",
   "config/fluidnc-plasma.yaml",
