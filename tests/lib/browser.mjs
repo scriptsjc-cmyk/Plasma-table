@@ -47,6 +47,12 @@ export async function newPage(browser, profileName, { base, query = "?test=1&tur
   await ctx.addInitScript(INIT(!!safariLike));
   const page = await ctx.newPage();
   page.errors = []; page.consoleMsgs = []; page.requests = []; page.dialogs = []; page.failed = [];
+  page._safeConfirmAuto = "accept";
+  await page.exposeFunction("__reportSafeConfirm", (msg) => {
+    page.dialogs.push("confirm: " + String(msg || ""));
+    page._dlg = String(msg || "");
+    return page._safeConfirmAuto || "accept";
+  });
   page.on("pageerror", (e) => page.errors.push(String(e && e.stack || e)));
   page.on("console", (m) => { page.consoleMsgs.push(`${m.type()}: ${m.text()}`); if (consoleErrors && m.type() === "error") page.errors.push("console.error: " + m.text()); });
   page.on("request", (r) => page.requests.push(r.url()));

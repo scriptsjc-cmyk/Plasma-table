@@ -1,5 +1,6 @@
 // New-version banner and the About lines: reads version.json and offers a reload when a new release is out.
 import { $ } from "../core/dom.js";
+import { askConfirm } from "../core/safeprompt.js";
 import { H } from "./host.js";
 import { VERSION } from "../version.js";
 
@@ -22,9 +23,9 @@ function showUpdate(info) {
   bar.classList.remove("hidden");
   if ($("aboutNote")) $("aboutNote").textContent = `A newer version (${info.id}) is available. You are on ${RUN.id}.`;
 }
-function doReload() {
+async function doReload() {
   if (H.jobRunning()) { H.toast("A job is running. Reload after it finishes.", true); return; }
-  if (H.dirtyDesign() && !confirm("Reload now? The shape you are drawing is not saved to your account.")) return;
+  if (H.dirtyDesign() && !(await askConfirm({ title: "Reload now?", body: "The shape you are drawing is not saved to your account.", ok: "Reload", cancel: "Cancel", danger: true }))) return;
   navigator.serviceWorker && navigator.serviceWorker.getRegistration && navigator.serviceWorker.getRegistration()
     .then((r) => { if (r && r.waiting) r.waiting.postMessage("skip"); }).catch(() => {});
   location.reload();

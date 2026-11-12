@@ -59,6 +59,7 @@ const PRECACHE = [
   "js/core/geom.js",
   "js/core/hooks.js",
   "js/core/prefs.js",
+  "js/core/safeprompt.js",
   "js/core/state.js",
   "js/cut/cam.js",
   "js/cut/camedit.js",

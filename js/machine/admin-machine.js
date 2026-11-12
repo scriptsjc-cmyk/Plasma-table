@@ -299,7 +299,7 @@ function applyValues(map) {
   });
 }
 
-function askConfirm(msg) { try { return host && host.confirm ? host.confirm(msg) : window.confirm(msg); } catch (e) { return false; } }
+async function askConfirm(msg) { try { const fn = host && host.confirm ? host.confirm : null; if (fn) return !!(await fn(msg)); return false; } catch (e) { return false; } }
 
 function logLine(text) {
   const pre = $("advConsoleLog");
@@ -315,7 +315,7 @@ function bindAdvanced(root) {
   if (!read || read._bound) return;
   read._bound = true;
   q(root, "advRead").onclick = () => host && host.readSettings && host.readSettings();
-  q(root, "advApply").onclick = () => {
+  q(root, "advApply").onclick = async () => {
     if (!(host && host.writeSettings)) return;
     if (!baseline) { if (host.toast) host.toast("Press Read $ settings first, so only real changes are written.", true); return; }
     const cur = currentValues(), changes = {}, notes = [];
@@ -331,7 +331,7 @@ function bindAdvanced(root) {
     const ids = Object.keys(changes);
     if (!ids.length) { if (host.toast) host.toast("Nothing has changed since the last read.", true); return; }
     const list = ids.map((k) => "$" + k + ": " + baseline[k] + " -> " + changes[k]).join("\n");
-    if (!askConfirm("Write " + ids.length + " setting" + (ids.length > 1 ? "s" : "") + " to the controller?\n\n" + list + (notes.length ? "\n\nCheck these carefully:\n" + notes.join("\n") : "") + "\n\nSTOP stays available. Have you taken a backup?")) return;
+    if (!(await askConfirm("Write " + ids.length + " setting" + (ids.length > 1 ? "s" : "") + " to the controller?\n\n" + list + (notes.length ? "\n\nCheck these carefully:\n" + notes.join("\n") : "") + "\n\nSTOP stays available. Have you taken a backup?"))) return;
     host.writeSettings(changes);
   };
   q(root, "advBackup").onclick = () => {
@@ -355,16 +355,16 @@ function bindAdvanced(root) {
     applyValues(r.map);
     logLine("Loaded backup " + String(f.name).replace(/[^\x20-\x7e]/g, "?").slice(0, 60) + " (" + Object.keys(r.map).length + " settings; nothing is sent until you press Write changed settings)");
   };
-  q(root, "formAdvConsole").addEventListener("submit", (e) => {
+  q(root, "formAdvConsole").addEventListener("submit", async (e) => {
     e.preventDefault();
     const raw = q(root, "advConsole").value;
     let r = filterConsoleCommand(raw);
     if (r.needsTorchConfirm) {
-      if (!askConfirm("Send " + String(raw).trim() + "?\n\nThis would fire the torch. Torch over scrap, earth clamp on, hands clear.\n\nSTOP stays available.")) return;
+      if (!(await askConfirm("Send " + String(raw).trim() + "?\n\nThis would fire the torch. Torch over scrap, earth clamp on, hands clear.\n\nSTOP stays available."))) return;
       r = filterConsoleCommand(raw, { allowTorch: true });
     }
     if (!r.ok) { if (host && host.toast) host.toast(r.reason, true); return; }
-    if (r.confirm && !askConfirm("Send " + r.send + "?\n\n" + r.confirm.join("\n") + "\n\nSTOP stays available.")) return;
+    if (r.confirm && !(await askConfirm("Send " + r.send + "?\n\n" + r.confirm.join("\n") + "\n\nSTOP stays available."))) return;
     logLine("> " + r.send);
     if (host && host.send) host.send(r.send, r);
     q(root, "advConsole").value = "";

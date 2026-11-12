@@ -1,5 +1,6 @@
 // The saved-parts list in the account dialog: folders, rows, rename, delete, open.
 import { $, closeAll, esc, host, toast } from "./uibase.js";
+import { askConfirm } from "../core/safeprompt.js";
 import { MY, addKnownFolder, cleanFolderName, deleteFolder, folderOf, groupParts, moveParts, openImport, renameFolder, sizeText, thumbSvg } from "./partsfolders.js";
 import * as A from "./account.js";
 
@@ -86,7 +87,7 @@ export function bindPartsList() {
           await renameFolder(folder, n, partsRows); await refreshPartsList(); toast("Folder renamed to “" + n + "”");
         } else if (fb.dataset.fact === "fdelete") {
           const n = partsRows.filter((r) => folderOf(r) === folder).length;
-          if (!confirm(`Delete the folder “${folder}”${n ? ` and the ${n} part${n === 1 ? "" : "s"} in it` : ""}? This can't be undone.`)) return;
+          if (!(await askConfirm({ title: "Delete this folder?", body: `Delete the folder “${folder}”${n ? ` and the ${n} part${n === 1 ? "" : "s"} in it` : ""}? This can't be undone.`, ok: "Delete", cancel: "Cancel", danger: true }))) return;
           await deleteFolder(folder, partsRows); await refreshPartsList(); toast("Folder deleted");
         }
       } catch (err) { toast(err.message, true); }
@@ -120,7 +121,7 @@ export function bindPartsList() {
         await A.renamePart(id, name);
         await refreshPartsList();
       } else if (b.dataset.act === "del") {
-        if (!confirm("Delete this part from your account?")) return;
+        if (!(await askConfirm({ title: "Delete this part?", body: "Delete this part from your account?", ok: "Delete", cancel: "Cancel", danger: true }))) return;
         await A.deletePart(id);
         await refreshPartsList();
         toast("Deleted");

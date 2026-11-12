@@ -4,6 +4,7 @@ import { screen } from "../ui/flow.js";
 import { designChanged } from "../cut/camedit.js";
 import { S, sketch } from "../core/state.js";
 import { $, $$, toast } from "../core/dom.js";
+import { askConfirm } from "../core/safeprompt.js";
 import { loadJob } from "../cut/prepare.js";
 import { refresh } from "../ui/refresh.js";
 import { setShapeFs } from "./protools.js";
@@ -84,6 +85,6 @@ export function bindSketchBar() {
   $("skUndo").onclick = () => sketch.undo();
   $("skRedo").onclick = () => sketch.redo();
   $("skFit").onclick = () => sketch.fitView();
-  $("skClear").onclick = () => { if (confirm("Remove every shape from the drawing?")) sketch.clear(); };
+  $("skClear").onclick = async () => { if (await askConfirm({ title: "Clear the drawing?", body: "Remove every shape from the drawing?", ok: "Clear", cancel: "Cancel", danger: true })) sketch.clear(); };
   ["cpX", "cpY", "cpGap"].forEach((id) => $(id).addEventListener("input", useShapeSoon));
 }

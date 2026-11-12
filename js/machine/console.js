@@ -2,6 +2,7 @@
 import { filterConsoleCommand } from "./admin-machine.js";
 import { estopOn } from "../ui/flow.js";
 import { $, toast } from "../core/dom.js";
+import { askConfirm } from "../core/safeprompt.js";
 import { cmd, lockText, requireMachine } from "./access.js";
 import { M } from "../core/state.js";
 
@@ -11,7 +12,7 @@ export function log(text, level = "rx") {
   while (el.childNodes.length > 300) el.removeChild(el.firstChild);
   el.scrollTop = el.scrollHeight;
 }
-export function sendConsoleLine(raw, inputEl) {
+export async function sendConsoleLine(raw, inputEl) {
   const l = String(raw || "").trim();
   if (!l) return;
   // STOP / realtime bytes are never behind the account lock, the Idle check or a confirm
@@ -30,11 +31,11 @@ export function sendConsoleLine(raw, inputEl) {
     if (M.grbl && needsIdle && M.state() !== "Idle") { toast("The machine must be Idle (it is " + M.state() + ").", true); return; }
   }
   if (f.needsTorchConfirm) {
-    if (!confirm("Send " + l + "?\n\nThis would fire the torch. Torch over scrap, earth clamp on, hands clear.\n\nSTOP stays available.")) return;
+    if (!(await askConfirm({ title: "This would fire the torch", body: "Send " + l + "?\n\nTorch over scrap, earth clamp on, hands clear. STOP stays available.", ok: "Send", cancel: "Cancel", danger: true }))) return;
     f = filterConsoleCommand(l, { allowTorch: true });
   }
   if (!f.ok) { toast(f.reason, true); return; }
-  if (f.confirm && !confirm("Send " + f.send + "?\n\n" + f.confirm.join("\n") + "\n\nSTOP stays available.")) return;
+  if (f.confirm && !(await askConfirm({ title: "Send this command?", body: "Send " + f.send + "?\n\n" + f.confirm.join("\n") + "\n\nSTOP stays available.", ok: "Send", cancel: "Cancel" }))) return;
   if (f.send === "!") { cmd("stop"); }
   else if (f.send === "\x18") { cmd("reset"); }
   else cmd("console", { line: f.send, allowTorch: !!f.send && /M[34]/.test(f.send) });

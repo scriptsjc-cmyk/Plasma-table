@@ -1,6 +1,7 @@
 // Machine panels on the Get set up screen: edge/limits panel, controller settings backup, test patterns, command buttons.
-import { showScreen } from "../ui/flow.js";
+import { showScreen, estopOn } from "../ui/flow.js";
 import { $, $$, toast } from "../core/dom.js";
+import { askConfirm } from "../core/safeprompt.js";
 import { M, S, sketch } from "../core/state.js";
 import { goStep, showTab } from "../ui/nav.js";
 import { useShape } from "../make/useshape.js";
@@ -125,22 +126,26 @@ export function addTestPattern(kind) {
 const UNLOCK_CONFIRM = "Unlock the controller ($X)?\n\nIt will accept moves again, but it may not know where the torch is. Check the torch is clear and nothing is in the way. Home or set the start point again before cutting.";
 export function bindMachineControls() {
   // Unlock ($X) only after the operator confirms: it clears the alarm without the machine knowing where it is
-  const unlock = () => { if (confirm(UNLOCK_CONFIRM)) cmd("unlock"); };
+  const unlock = async () => {
+    const latched = !!(typeof estopOn === "function" && estopOn());
+    const ok = await askConfirm({ title: "Unlock the controller?", body: UNLOCK_CONFIRM, ok: "Unlock", cancel: "Cancel", danger: true, okDisabled: latched, okDisabledReason: "Unlock is blocked while E-STOP is latched. Press and hold the red STOP button to reset it first." });
+    if (ok) cmd("unlock");
+  };
   $("btnUnlock").onclick = unlock;
-  $("btnUnlock2").onclick = () => {
+  $("btnUnlock2").onclick = async () => {
     if (S.status.inputs && S.status.inputs.estop) { toast("Release the e-stop first (twist it), then press Unlock.", true); return; }
-    unlock();
+    await unlock();
   };
   $("btnDemoEstop").onclick = () => { if (S.demo) S.demo.setEstop(!S.demo.estop); };
   $$(".do-home").forEach((b) => (b.onclick = () => cmd("home")));
   $$(".do-raise").forEach((b) => (b.onclick = () => cmd("raise")));
   $("btnGoStart").onclick = () => cmd("goto_zero");
   $$("[data-cmd]").forEach((b) => (b.onclick = () => cmd(b.dataset.cmd)));
-  $("btnRef").onclick = () => { if (confirm("Is the torch exactly at the home corner, raised right up?")) cmd("set_reference"); };
-  $("btnClearLimits").onclick = () => { if (confirm("Clear the saved edges? Crash protection will be off until you set them again.")) cmd("limits_clear"); };
+  $("btnRef").onclick = async () => { if (await askConfirm({ title: "Set the home corner?", body: "Is the torch exactly at the home corner, raised right up?", ok: "Yes", cancel: "Cancel" })) cmd("set_reference"); };
+  $("btnClearLimits").onclick = async () => { if (await askConfirm({ title: "Clear the saved edges?", body: "Crash protection will be off until you set them again.", ok: "Clear edges", cancel: "Cancel", danger: true })) cmd("limits_clear"); };
   $("btnTouchTest").onclick = () => cmd("touchoff_test", { material: S.material, thickness: S.thickness, overrides: overrides() });
-  $("btnTorchTest").onclick = () => { if (!requireMachine("Link your machine to run jobs")) return; if (confirm("Fire the torch for half a second?\nTorch over scrap, earth clamp on, hands clear.")) cmd("torch_test", { confirm: true }); };
-  $("btnPushSettings").onclick = () => { if (confirm("Send the controller settings? Only after editing the CHANGE-ME values for your machine.")) cmd("push_settings"); };
+  $("btnTorchTest").onclick = async () => { if (!requireMachine("Link your machine to run jobs")) return; if (await askConfirm({ title: "Fire the torch?", body: "Fire the torch for half a second? Torch over scrap, earth clamp on, hands clear.", ok: "Fire torch", cancel: "Cancel", danger: true })) cmd("torch_test", { confirm: true }); };
+  $("btnPushSettings").onclick = async () => { if (await askConfirm({ title: "Send controller settings?", body: "Only after editing the CHANGE-ME values for your machine.", ok: "Send settings", cancel: "Cancel" })) cmd("push_settings"); };
   $("consoleForm").onsubmit = (e) => { e.preventDefault(); sendConsoleLine($("consoleIn").value, $("consoleIn")); };
   bindEdgePanel();
 }

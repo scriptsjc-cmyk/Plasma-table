@@ -52,7 +52,7 @@ try {
     await p.waitForSelector("#advConsole");
     await hookTx(p);
     // Torch lines (M3/M03...) are allowed from the console only after a "this would fire the torch" confirmation. Every line below must send nothing: the filter refuses it, or the user says No.
-    p.removeAllListeners("dialog"); p.on("dialog", async (d) => { p.dialogs.push(`${d.type()}: ${d.message()}`); await d.dismiss(); });
+    p._safeConfirmAuto = "dismiss"; p.removeAllListeners("dialog"); p.on("dialog", async (d) => { p.dialogs.push(`${d.type()}: ${d.message()}`); await d.dismiss(); });
     const before = (await txOf(p)).length;
     for (const bad of ["M3", "M03", "M5 M03", "$RST=$", "G0 X10 $21=0", "$21=0.5", "G20 G0 X10", "G0 X80"]) { await p.fill("#advConsole", bad); await p.press("#advConsole", "Enter"); }
     await sleep(300);
@@ -60,7 +60,7 @@ try {
     t.check("console M3: asks 'This would fire the torch' first (declined = nothing sent)", p.dialogs.some((d) => /fire the torch/i.test(d)), p.dialogs.slice(0, 2).join(" | "), "CONSOLE-TORCH");
     {
       const m0 = (await txOf(p)).length;
-      p.removeAllListeners("dialog"); p.on("dialog", async (d) => { p.dialogs.push(`${d.type()}: ${d.message()}`); await d.accept(); });
+      p._safeConfirmAuto = "accept"; p.removeAllListeners("dialog"); p.on("dialog", async (d) => { p.dialogs.push(`${d.type()}: ${d.message()}`); await d.accept(); });
       // the E-stop is latched (STOP pressed) -> even a confirmed torch line must be refused (round 5: latch blocks console M3/M4/moves)
       await p.click("#btnStop"); await sleep(400);
       const m1 = (await txOf(p)).length;
@@ -69,7 +69,7 @@ try {
       // KNOWN APP BUG #2 (tests/KNOWN-BUGS.md): the latch is enforced in machine.js for M.command({cmd:"console"}) but the Admin > Advanced console goes through
       // app.js sendAdvanced -> M.grbl.send(...) directly (app.js ~2622), so a latched E-stop does not stop a confirmed M3 or a move typed there.
       t.check("E-stop latched: Admin > Advanced console refuses a confirmed M3 and a move (nothing but status polls reach the controller)", (await txOf(p)).slice(m1).replace(/[?]/g, "").length === 0, JSON.stringify((await txOf(p)).slice(m1)), "BUG-2-ADMIN-CONSOLE-LATCH");
-      p.removeAllListeners("dialog"); p.on("dialog", async (d) => { p.dialogs.push(`${d.type()}: ${d.message()}`); await d.dismiss(); });
+      p._safeConfirmAuto = "dismiss"; p.removeAllListeners("dialog"); p.on("dialog", async (d) => { p.dialogs.push(`${d.type()}: ${d.message()}`); await d.dismiss(); });
     }
     // a newline cannot be typed into the <input>, but set it through the DOM like a paste would
     await p.evaluate(() => { const i = document.getElementById("advConsole"); i.value = "G0 X5\n$21=0"; });
@@ -307,7 +307,9 @@ try {
     }
     // (b) real cloud mode as an ordinary user: UI role can be forged, the server is what refuses
     {
-      const page = (await ctx.addInitScript(J_INIT()), await ctx.newPage()); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
+      const page = (await ctx.addInitScript(J_INIT()), await ctx.newPage()); page.errors = []; page.dialogs = []; page._safeConfirmAuto = "accept";
+      await page.exposeFunction("__reportSafeConfirm", (msg) => { page.dialogs.push("confirm: " + String(msg || "")); return page._safeConfirmAuto || "accept"; });
+      page.on("pageerror", (e) => page.errors.push(String(e)));
       await page.goto(LIVE + "/index.html", { waitUntil: "load" }); await sleep(800);
       const r = await page.evaluate(async () => {
         const A = await import(window.__J["account"]);
@@ -343,6 +345,7 @@ try {
       t.check("cloud mode: linked machine + simulator lets Start enable", startEnabled, await page.locator("#blockers").innerText().catch(() => ""));
       if (startEnabled) {
         mock.log.length = 0; await page.click("#btnStart");
+        if (await page.locator("#safeDlg:not(.hidden)").count()) await page.click("#safeDlgOk");
         await page.waitForSelector("#done:not(.hidden)", { timeout: 120000 }).catch(() => {});
         await sleep(1500);
         const started = mock.log.filter((s) => s === "started").length, ended = mock.log.filter((s) => s !== "started").length;

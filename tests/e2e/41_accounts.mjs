@@ -157,6 +157,7 @@ try {
     await p.fill("#admSerial", "TABLE-0002");
     await p.click("#btnGenCode");
     const code2 = await p.inputValue("#admCode");
+    p._safeConfirmAuto = "manual";
     await p.click('#formAddMachine [type=submit]');
     await p.waitForSelector("#safeDlg:not(.hidden)", { timeout: 8000 });
     t.check("saving the same serial again asks before replacing the code", /already saved/.test(await p.locator("#safeDlgBody").textContent()));

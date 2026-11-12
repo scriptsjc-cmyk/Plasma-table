@@ -8,6 +8,7 @@ import * as Setup from "../cut/setup.js";
 import { askSize, scaleContours, sizeCheckWanted } from "./sizecheck.js";
 import { designChanged } from "../cut/camedit.js";
 import { $, esc, toast } from "../core/dom.js";
+import { askConfirm } from "../core/safeprompt.js";
 import { S, sketch } from "../core/state.js";
 import { goStep } from "../ui/nav.js";
 import { refresh } from "../ui/refresh.js";
@@ -110,12 +111,12 @@ function openText(name, text, remember, scale) {
 function setFile(name, text, remember, scale) { openText(name, text, remember, scale); }
 // An imported drawing becomes shapes the editor understands (lines + true arcs; one part per outline, holes travel
 // with their part) so every click-a-line tool works on it: set length, square up, angle, curve, move, resize, holes.
-export function editDrawing() {
+export async function editDrawing() {
   const d = S.design;
   if (!d || d.straight || !d.contours || !d.contours.length) { toast("Open a drawing first.", true); return; }
   const e = contoursToEditable(d.contours);
   if (!e) { toast("There is nothing in this drawing the editor can use.", true); return; }
-  if (sketch.items.length && !confirm("The shape maker already has shapes on it. Replace them with this drawing? (Undo brings them back.)")) return;
+  if (sketch.items.length && !(await askConfirm({ title: "Replace the shapes already on the maker?", body: "The shape maker already has shapes on it. Replace them with this drawing? (Undo brings them back.)", ok: "Replace", cancel: "Cancel" }))) return;
   sketch.importParts(e.parts, true);
   S.currentPart = null;
   S.fileName = String(d.name || "Imported drawing").replace(/\.[^.]+$/, "");
@@ -183,7 +184,7 @@ export function renderRecent() {
   $("recent").innerHTML = list.map((r, i) => `<button data-recent="${i}">${esc(r.name)}</button>`).join("");
 }
 export function bindFiles() {
-  $("btnClearBed").onclick = () => { if (!bedHasParts() || confirm("Take everything off the bed and start over?")) startOver(); };
+  $("btnClearBed").onclick = async () => { if (!bedHasParts() || await askConfirm({ title: "Start over?", body: "Take everything off the bed and start over?", ok: "Start over", cancel: "Cancel", danger: true })) startOver(); };
   $("btnPickSaved").onclick = () => addPartsFlow(null);
   if ($("btnEditDrawing")) $("btnEditDrawing").onclick = editDrawing;
   bindResize();

@@ -64,10 +64,10 @@ function onMachineEvent(kind, d) {
   else if (kind === "job") { paintLive(); if (!d.running) maybeAskCouponResult(d); }
 }
 function bindLive() {
-  $("btnLostResume").onclick = () => {
+  $("btnLostResume").onclick = async () => {
     const M = H.M(); if (M.jobRunning()) { H.toast("Stop the job first (STOP or the space bar).", true); return; }
     const n = (watch.lost && watch.lost.cut) || 1;
-    if (!H.confirm(`The arc was lost during cut ${n}.\n\nGo on from cut ${n}? You will check the sheet, set the start point again and tick the checklist first. The torch only fires when you press Start. Nothing starts now.`)) return;
+    if (!(await H.confirm(`The arc was lost during cut ${n}.\n\nGo on from cut ${n}? You will check the sheet, set the start point again and tick the checklist first. The torch only fires when you press Start. Nothing starts now.`))) return;
     // the same road as "Continue from cut N" after any stop: work zero is NOT kept unless the machine still knows where it is,
     // Start asks its confirm box, the checklist and every start check apply, and nothing fires until Start is pressed
     H.continueFromCut(n);
@@ -136,7 +136,7 @@ function saveHere() {
     H.toast(`${replaced ? "Updated" : "Saved"} start point “${rec.name}” (X ${rec.x}, Y ${rec.y} mm from the home corner).`);
   } catch (e) { H.toast(e.message, true); }
 }
-function recall(id) {
+async function recall(id) {
   const M = H.M(), S = H.S, o = loadOrigins(originStore() || undefined).find((x) => x.id === id);
   if (!o) return;
   if (!(S.connected && M && M.grbl)) { H.toast("Connect the table first.", true); return; }
@@ -148,7 +148,7 @@ function recall(id) {
   const [mx, my] = H.fromView(o.x, o.y);
   const problem = M.safety.checkPointsMachine ? M.safety.checkPointsMachine([[mx, my]], "That start point") : "";
   if (problem) { H.toast(problem, true); return; }
-  if (!H.confirm(`Set the start point to “${o.name}”?\n\nX ${o.x}, Y ${o.y} mm from the home corner. The torch does NOT move. Check the torch is where you expect before you cut.`)) return;
+  if (!(await H.confirm(`Set the start point to “${o.name}”?\n\nX ${o.x}, Y ${o.y} mm from the home corner. The torch does NOT move. Check the torch is where you expect before you cut.`))) return;
   const r = H.cmd("set_origin", { x: mx, y: my });       // same as Start here: G10 L2, work zero confirmed; refused while the E-stop is latched
   if (r) { H.toast(`Start point set to “${o.name}”. The torch did not move.`); H.refresh(); }
 }
@@ -158,11 +158,11 @@ function bindOrigins() {
   g.onclick = (e) => { const b = e.target.closest("button[data-anchor]"); if (b) setOrigin9(b.dataset.anchor); };
   $("originDefault").onclick = () => { if (originActive()) setOrigin9(origin9); };
   $("woSave").onclick = saveHere;
-  $("woList").onclick = (e) => {
+  $("woList").onclick = async (e) => {
     const b = e.target.closest("button[data-wo]"); if (!b) return;
     const id = b.closest("li").dataset.id;
-    if (b.dataset.wo === "recall") recall(id);
-    else if (b.dataset.wo === "del") { const o = loadOrigins(originStore() || undefined).find((x) => x.id === id); if (o && H.confirm(`Delete the saved start point “${o.name}”?`)) { deleteOrigin(originStore() || undefined, id); paintSaved(); H.toast("Deleted."); } }
+    if (b.dataset.wo === "recall") await recall(id);
+    else if (b.dataset.wo === "del") { const o = loadOrigins(originStore() || undefined).find((x) => x.id === id); if (o && (await H.confirm(`Delete the saved start point “${o.name}”?`))) { deleteOrigin(originStore() || undefined, id); paintSaved(); H.toast("Deleted."); } }
   };
   $("woName").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); saveHere(); } e.stopPropagation(); });
 }

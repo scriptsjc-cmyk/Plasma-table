@@ -6,6 +6,7 @@ import { SimTransport } from "./sim.js";
 import * as Acc from "../account/account.js";
 import { M, S } from "../core/state.js";
 import { $, toast } from "../core/dom.js";
+import { askConfirm } from "../core/safeprompt.js";
 import { refreshGate } from "../ui/gate.js";
 import { refresh } from "../ui/refresh.js";
 import { lockText, machineAllowed, requireMachine } from "./access.js";
@@ -112,9 +113,9 @@ async function connectDemo() {
   setConnected(true, "the demo (nothing real moves)");
 }
 async function disconnect() {
-  if (M.jobRunning() && !confirm(S.wifi
+  if (M.jobRunning() && !(await askConfirm({ title: "Disconnect while a job is running?", body: S.wifi
     ? "A job is running on the Pi. Disconnecting stops it, and the torch may stay on until the Pi stops the job. Disconnect anyway?"
-    : "A job is running. Disconnecting now leaves the controller mid-cut — the torch may stay on. Press STOP first if you can. Disconnect anyway?")) return;
+    : "A job is running. Disconnecting now leaves the controller mid-cut — the torch may stay on. Press STOP first if you can. Disconnect anyway?", ok: "Disconnect", cancel: "Cancel", danger: true }))) return;
   S.userDisconnected = true;
   await M.disconnect();
   setConnected(false);

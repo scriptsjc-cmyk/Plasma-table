@@ -207,7 +207,7 @@ export function bindAdmin() {
     const ser = b.closest("tr").dataset.serial;
     try {
       if (b.dataset.act === "unlink") {
-        if (!confirm("Unlink " + ser + " from its account?")) return;
+        if (!(await askConfirm({ title: "Unlink this machine?", body: "Unlink " + ser + " from its account?", ok: "Unlink", cancel: "Cancel", danger: true }))) return;
         await A.adminUnlinkMachine(ser);
         toast("Unlinked " + ser);
       } else if (b.dataset.act === "transfer") {

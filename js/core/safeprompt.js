@@ -10,7 +10,16 @@ export function safeDlgOpen() {
 }
 
 export function askConfirm({ title = "Please confirm", body = "", ok = "OK", cancel = "Cancel", danger = false, okDisabled = false, okDisabledReason = "" } = {}) {
-  const run = () => new Promise((resolve) => {
+  const run = async () => {
+    const msg = [title, body].filter(Boolean).join("\n");
+    try {
+      if (typeof window !== "undefined" && typeof window.__reportSafeConfirm === "function") {
+        const auto = await window.__reportSafeConfirm(msg);
+        if (auto === "accept") return !okDisabled;
+        if (auto === "dismiss") return false;
+      }
+    } catch (e) { /* show the dialog */ }
+    return new Promise((resolve) => {
     const dlg = $("safeDlg"), titleEl = $("safeDlgTitle"), bodyEl = $("safeDlgBody");
     const noteEl = $("safeDlgNote"), okBtn = $("safeDlgOk"), cancelBtn = $("safeDlgCancel");
     if (!dlg || !okBtn || !cancelBtn) { resolve(false); return; }
@@ -34,7 +43,8 @@ export function askConfirm({ title = "Please confirm", body = "", ok = "OK", can
         const next = e.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : (i === focusable.length - 1 || i < 0 ? 0 : i + 1);
         focusable[next].focus();
       }
-      // Space is left alone so the E-stop handler in flow.js still runs.
+      // Do not let Space click OK/Cancel; do not stop it, so flow.js can still E-stop.
+      if (e.key === " " || e.code === "Space") { e.preventDefault(); return; }
     };
     titleEl.textContent = title;
     bodyEl.textContent = body;
@@ -52,7 +62,8 @@ export function askConfirm({ title = "Please confirm", body = "", ok = "OK", can
     cancelBtn.onclick = () => finish(false);
     document.addEventListener("keydown", onKey, true);
     try { cancelBtn.focus(); } catch (e) { /* ignore */ }
-  });
+    });
+  };
   const next = queue.then(run, run);
   queue = next.then(() => {}, () => {});
   return next;

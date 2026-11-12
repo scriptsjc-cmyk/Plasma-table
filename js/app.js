@@ -36,6 +36,7 @@ import { CFH, M, S, inspectorApi, makeTools, setCFH, setInspectorApi, setM, setS
 import { onEvent, onSafety } from "./machine/events.js";
 import { navBusy, scoreMarkProblem } from "./cut/checklist.js";
 import { $, esc, toast } from "./core/dom.js";
+import { askConfirm } from "./core/safeprompt.js";
 import { cmd, machineAllowed, requireMachine } from "./machine/access.js";
 import { paintChrome, refresh } from "./ui/refresh.js";
 import { drawPreview, fromView, toView, wcoNow, workAreaSheet } from "./cut/preview.js";
@@ -114,7 +115,7 @@ async function init() {
   });
   setCFH(CF.initCutFeatures({
     S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, loadJob, esc, row, setSpeed: (v) => { saveSpeed(v); S.speed = v; }, useCoupon, continueFromCut: continueFromCut,
-    confirm: (m) => window.confirm(m), wcoNow, toView, fromView, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
+    confirm: (m) => askConfirm({ body: String(m), ok: "OK", cancel: "Cancel" }), wcoNow, toView, fromView, applyPresetsAndRender: () => { if (S.job && S.job.running) { renderMaterials(); return; } applyMatchingPreset(); renderMaterials(); loadJob(); },
   }));
   try { if (new URLSearchParams(location.search).get("turn") !== "0" && localStorage.getItem("plasma.turnOverlay") !== "0") document.body.classList.add("turn-on"); } catch (e) { document.body.classList.add("turn-on"); }
   initPartsFolders({ toast, esc, openSignIn: () => openAccount("in"), uiBlock: () => { S.uiBlockUntil = Date.now() + 450; } });
@@ -243,7 +244,7 @@ if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } }
     toast, esc,
     applyMode: applyAccountMode,
     refreshGate,
-    confirm: (msg) => confirm(msg),
+    confirm: (msg) => askConfirm({ body: String(msg), ok: "OK", cancel: "Cancel" }),
     sendAdvanced: (line, meta) => {
       if (firmwareDenied()) return;
       if (!M.grbl) { toast("Connect the table first.", true); return; }
