@@ -83,12 +83,20 @@ for (const prof of ["d1366", "d1440"]) {
 
   // J15: the cut-start mark follows the part as it moves; no new Start here needed
   await ev(page, () => { document.getElementById("zeroCard").open = true; document.getElementById("btnZero").click(); }); await sleep(400);
+  const jobSnap = () => ev(page, () => {
+    const p = window.plasmaTest.S.prepared, st = window.plasmaTest.S.status || {};
+    return { jobStart: p && p.jobStart && p.jobStart.slice(), wpos: (st.WPos || []).slice(), wco: (st.WCO || st.Wco || []).slice() };
+  });
   const m0 = await ev(page, () => window.plasmaTest.Setup.startMarkAt());
+  const j0 = await jobSnap();
   await ev(page, () => { const sk = window.plasmaTest.sketch; for (const it of sk.items) it.x += 40; sk.commit(); }); await sleep(500);
   const m1 = await ev(page, () => window.plasmaTest.Setup.startMarkAt());
+  const j1 = await jobSnap();
   l = await ev(page, () => ({ zero: window.plasmaTest.S.zeroSet, bar: document.getElementById("cutBarStart").textContent, zs: document.getElementById("zeroState").textContent }));
   t.check(n("J15: 'Cut starts here' moves with the part"), m0 && m1 && Math.abs(m1[0] - m0[0] - 40) < 0.6 && Math.abs(m1[1] - m0[1]) < 0.6, JSON.stringify([m0, m1]));
+  t.check(n("J15: the job start (first pierce) follows the part"), j0.jobStart && j1.jobStart && Math.abs(j1.jobStart[0] - j0.jobStart[0] - 40) < 0.6 && Math.abs(j1.jobStart[1] - j0.jobStart[1]) < 0.6, JSON.stringify([j0, j1]));
   t.check(n("J15: the start point stays set after moving parts, and says so"), l.zero && /set/i.test(l.bar) && /cut follows/i.test(l.zs), JSON.stringify(l));
+  t.check(n("J15: moving the part does not send a machine zero or move"), JSON.stringify(j0.wco) === JSON.stringify(j1.wco) && JSON.stringify(j0.wpos) === JSON.stringify(j1.wpos), JSON.stringify([j0, j1]));
 
   // J14: Layout mode, move a panel, resize, saved, reset; STOP never moves
   await page.click("#btnLayout"); await sleep(150);
@@ -116,6 +124,14 @@ for (const prof of ["d1366", "d1440"]) {
   await ev(page, () => window.plasmaTest.account.signOut()); await sleep(400);
   const back = await order();
   t.check(n("J14: saved per user (another account has the default; back again it returns)"), other.bed < other.zero && back.zero < back.bed, JSON.stringify([other, back]));
+  const pref = await ev(page, () => {
+    const uid = (window.plasmaTest.account.currentUser() || {}).id || "";
+    const key = "plasma.yours.v1" + (uid ? "." + uid : "");
+    const raw = JSON.parse(localStorage.getItem(key) || "null");
+    const old = Object.keys(localStorage).filter((k) => k.startsWith("plasma.cutLayout"));
+    return { has: !!(raw && raw.cutLayout && raw.cutLayout.s3 && raw.cutLayout.s3.order), old };
+  });
+  t.check(n("J14: layout is kept in account prefs (not a separate key)"), pref.has && !pref.old.length, JSON.stringify(pref));
   await page.click("#btnLayout"); await page.click("#btnLayoutReset"); await page.click("#btnLayout"); await sleep(150);
   l = await ev(page, () => ({ zero: __box("#zeroCard").l, bed: __box(".previewPane").l, side: __box("#checkCard").l }));
   t.check(n("J14: Reset layout puts the panels back"), l.side < l.bed && l.bed < l.zero, JSON.stringify(l));
