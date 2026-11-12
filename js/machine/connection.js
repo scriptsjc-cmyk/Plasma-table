@@ -22,7 +22,6 @@ export function setConnected(on, label = "") {
   document.body.classList.toggle("demo-on", !!(on && S.demo));
   $("connPill").className = "pill " + (on ? "on" : "off");
   if (!on) { S.fluidnc = false; S.zeroSet = false; }
-  $("stateBadge").classList.toggle("hidden", !on);
   if (on && label) toast("Connected to " + label);
   // the connect card (step "Connect, home and set the start point"): connect buttons while disconnected, Disconnect once connected
   for (const id of ["btnConnect", "btnDemo", "fnBox", "connectHelp"]) if ($(id)) $(id).classList.toggle("hidden", !!(on || (id === "btnConnect" && S.noUsb)));

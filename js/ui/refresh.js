@@ -1,5 +1,5 @@
 // The big repaint: refresh() brings every button, banner and lamp in line with the current state.
-import { estopPaint, paintLock, screen } from "./flow.js";
+import { estopOn, estopPaint, paintLock, screen } from "./flow.js";
 import { ALARM_DEFAULT, POSITION_LOST_ALARMS } from "../machine/machine.js";
 import * as Acc from "../account/account.js";
 import { paintDelay } from "../cut/pierce.js";
@@ -19,6 +19,17 @@ import { liveProgress } from "../cut/progress.js";
 import { ampsNow } from "../cut/material.js";
 import { matchPreset } from "../machine/settings.js";
 
+// The header's state chip. While the E-stop is latched it says "Stopped" (red) whatever the controller reports, so a green
+// "Ready" never sits next to E-STOP ON (r7 U7).
+const STATE_WORDS = { Idle: "Ready", Run: "Moving", Jog: "Moving", Home: "Homing", Hold: "Paused", Alarm: "Alarm", Disconnected: "" };
+function paintStateBadge() {
+  const badge = $("stateBadge"); if (!badge) return;
+  const st = (S.status && S.status.state) || "", stopped = S.connected && estopOn();
+  const word = stopped ? "Stopped" : (STATE_WORDS[st] ?? st);
+  if (badge.textContent !== word) badge.textContent = word;
+  badge.className = "badge " + (stopped ? "Alarm" : st);
+  badge.classList.toggle("hidden", !S.connected || !word);
+}
 export function paintChrome() {
   const b = document.querySelector(".topbar");
   if (b) document.documentElement.style.setProperty("--topbar-h", Math.ceil(b.getBoundingClientRect().height) + "px");
@@ -64,7 +75,7 @@ export function paintChrome() {
   // Round 5 safety: with a machine connected, STOP is lifted above every overlay (css/screen-cut.css), not only during a job
   document.body.classList.toggle("machine-connected", !!S.connected);
   document.body.classList.toggle("is-admin", !!Acc.isAdmin());
-  paintLock(); estopPaint();
+  paintLock(); estopPaint(); paintStateBadge();
   const lost = S.lastAlarmCode != null && POSITION_LOST_ALARMS.has(S.lastAlarmCode);
   const again = $("btnAgain"), rezero = $("btnRezero");
   if (again && rezero) {

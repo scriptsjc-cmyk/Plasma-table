@@ -15,12 +15,7 @@ import { log } from "./console.js";
 function onStatus(st) {
   S.status = st;
   trackProgress(st);
-  const badge = $("stateBadge");
-  const words = { Idle: "Ready", Run: "Moving", Jog: "Moving", Home: "Homing", Hold: "Paused", Alarm: "Alarm", Disconnected: "" };
-  badge.textContent = words[st.state] ?? st.state;
-  badge.className = "badge " + st.state;
-  badge.classList.toggle("hidden", !S.connected);
-  renderPos();
+  renderPos();                      // (the state chip's word is painted by refresh(): it has to agree with the E-stop latch)
   renderLamps(st);
   refresh();
 }
