@@ -5,7 +5,7 @@ import { shapeDef } from "./sketch.js";
 import { S, sketch } from "../core/state.js";
 import { $, esc, toast } from "../core/dom.js";
 import { isProMode } from "../ui/mode.js";
-import { matchesQuery, openLibrary, openVersions } from "./library.js";
+import { matchesQuery, openLibrary, openMakeTool, openVersions } from "./library.js";
 import { openResize } from "./files.js";
 import { openCad, runPro } from "./cad.js";
 import { setShapeFs } from "./protools.js";
@@ -20,7 +20,7 @@ function sizeDimForSelection() {
 const PALETTE = [
   { g: "Shapes", items: [["rect", "▭", "Rectangle"], ["disc", "◯", "Circle"], ["triangle", "△", "Triangle"], ["slot", "⊂⊃", "Slot"], ["sector", "◔", "Arc / sector"], ["lib", "⋯", "All shapes…"]] },
   { g: "Holes", items: [["hole", "◦", "Hole"], ["slothole", "⊖", "Slot hole"], ["boltcircle", "⁘", "Bolt circle"]] },
-  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"]] },
+  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"]] },
   { g: "Combine", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"]] },
   { g: "Arrange", items: [["rot", "⟳", "Turn 90°"], ["mir", "⇋", "Mirror"], ["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["alignl", "⇤", "Align left"], ["alignb", "⤓", "Align bottom"], ["nest", "⊞", "Auto-arrange"]] },
   { g: "Edit", items: [["size", "↔", "Size"], ["resize", "⤡", "Width × height"], ["dims", "↔ mm", "Dimensions"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"], ["del", "🗑", "Delete"], ["undo", "↶", "Undo"], ["redo", "↷", "Redo"]] },
@@ -80,6 +80,7 @@ function quickAction(a) {
     case "rect": case "disc": case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
       if (shapeDef(a)) sketch.add(a); else toast("That shape isn't available.", true); break;
     case "lib": openLibrary(); break;
+    case "text": case "trace": openMakeTool(a); break;
     case "undo": sketch.undo(); break;
     case "redo": sketch.redo(); break;
     case "dup": sketch.duplicate(); break;

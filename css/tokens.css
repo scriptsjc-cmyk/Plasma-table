@@ -19,12 +19,12 @@
   --shadow: 0 1px 2px rgba(16, 24, 40, .06);
 
   /* one restrained accent — CAD blue — for selection and primary actions */
-  --accent: #0078D4;
+  --accent: #005A9E;        /* round 5 look M10: white on it and it on --bg both pass WCAG AA 4.5:1 */
   --accent-weak: #E8F3FB;
   --on-accent: #FFFFFF;
 
   /* status only: go / connected, warning, danger, torch */
-  --go: #0F7B3A;
+  --go: #0A6A32;
   --on-go: #FFFFFF;
   --warn: #C05600;
   --warn-text: #7A3200;
@@ -35,7 +35,7 @@
   --alarm: #C42B1C;
   --alarm-bg: #FDECEC;
   --ok-bg: #E8F6EE;
-  --ok-text: #0F7B3A;
+  --ok-text: #0A6A32;
 
   /* canvas drawing tokens (read by sketch.js / app.js) */
   --cad-canvas: #FFFFFF;

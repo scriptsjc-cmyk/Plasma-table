@@ -36,12 +36,12 @@ function renderLamps(st) {
 export function onSafety(sf) {
   S.safety = sf || {};
   $("refState").textContent = sf.referenced ? (sf.ref_mode === "homed" ? "Homed ✓" : "Home corner set ✓") : "Unknown";
-  $("refState").className = sf.referenced ? "good" : "bad";
+  $("refState").className = sf.referenced ? "good" : "todo";      // round 5 look M4: "not set yet" is a to-do, not an alarm
   if (sf.limits) {
     const span = (a) => Math.round(Math.abs(sf.limits[a][1] - sf.limits[a][0]));
     $("limState").textContent = `${span("x")} × ${span("y")} mm` + (sf.referenced ? " ✓" : " (home first)");
-    $("limState").className = sf.referenced ? "good" : "bad";
-  } else { $("limState").textContent = "Not set"; $("limState").className = "bad"; }
+    $("limState").className = sf.referenced ? "good" : "todo";
+  } else { $("limState").textContent = "Not set"; $("limState").className = "todo"; }
   $("safetyHint").textContent = sf.limits
     ? "The machine checks every move against these edges. Jogs stop at the edge; parts that don't fit won't start."
     : "Do this once: it stops the torch ever being driven off the rails or into the slats.";

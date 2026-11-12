@@ -14,6 +14,8 @@ const ICON_GLYPHS = [
   ["⌜", "corner"], ["◈", "diamond"], ["⌗", "grid"], ["✲", "asterisk"], ["⋯", "more"],
   ["↶", "undo"], ["↷", "redo"], ["▲", "arrow-up"], ["▼", "arrow-down"], ["◀", "arrow-left"],
   ["←", "arrow-left"], ["→", "arrow-right"], ["↑", "arrow-up"], ["↓", "arrow-down"],
+  ["📁", "folder"], ["🧪", "flask"], ["⇪", "upload"], ["⬇", "download"], ["🔓", "unlock"], ["▧", "image"], ["▦", "arrange"],
+  ["⇅", "flip"], ["↩", "undo"], ["◎", "circle"], ["◦", "circle"],
 ].sort((a, b) => b[0].length - a[0].length);
 function iconForGlyph(ch, el) {
   if (ch === "▶" && el.closest(".jog")) return "arrow-right";

@@ -29,7 +29,10 @@ body.short-land[data-screen="cut"] .step[data-step="4"] .runnums .bigpct, body.s
 body.short-land .runnums span { font-size: 12px; }
 body.short-land .progress { height: 10px; }
 .progress { height: 16px; background: var(--well); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
-.wizard li.done > b::after { content: " ✓"; color: var(--ok-text); }
+.wizard li.done > p > b:first-child::after { content: " ✓"; color: var(--ok-text); }
+/* round 5 look M15: each step's words first, then its buttons on their own row */
+.wizard li p { margin: 0 0 6px; }
+.wizard .wzbtns { display: flex; flex-wrap: wrap; gap: 8px; }
 .cutcheck { margin-top: 14px; padding: 12px 14px; border-radius: var(--r); background: var(--well); border: 1px solid var(--line); }
 .cutcheck .cchead { font-size: var(--fs-lg); font-weight: 650; margin-bottom: 6px; }
 @media (orientation: landscape) and (max-height: 540px) {
@@ -147,7 +150,7 @@ body.short-land #btnStop.stop { min-height: 72px; min-width: 72px; }
 .campanel h3, .cutlistcard h3 { margin: 0 0 6px; }
 .delayrow .row { margin-top: 4px; }
 .delayrow button { min-height: 48px; }
-.startcut { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); padding: 8px 12px; }
+.startcut { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px; }     /* round 5 item 21: a normal option, not a warning */
 .startcut select { min-height: 44px; font-size: 16px; }
 .restartbox { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); padding: 10px 12px; margin: 10px 0; }
 .restartbox select { min-height: 48px; font-size: 18px; }
@@ -535,7 +538,8 @@ body[data-screen="cut"] #btnStart:not(:disabled) { background: var(--go); border
 body[data-screen="cut"] .nav .back { min-height: 64px; min-width: 96px; font-size: 18px; }
 body[data-screen="cut"] .matline { font-size: 17px; margin: 0 0 8px; }
 body[data-screen="cut"] #materials button { min-height: 64px; font-size: 20px; }
-body[data-screen="cut"] #thicknesses { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+body[data-screen="cut"] #thicknesses { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }     /* round 5 item 22: equal chips, every row the same width */
+#thicknesses button { white-space: nowrap; }
 body[data-screen="cut"] #thicknesses button { min-height: 56px; font-size: 18px; }
 body[data-screen="cut"] .amps .big { font-size: 34px; }
 body[data-screen="cut"] #btnZero { min-height: 64px; font-size: 20px; }

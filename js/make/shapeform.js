@@ -151,7 +151,7 @@ export function renderShapeForm() {
   const sh = shapeDef(it.type), b = sketch.boxOf(it);
   if (!sketch.opts.pro) {                        // Beginner: just the sizes, turn, add a hole, remove
     $("shapeForm").innerHTML = beginnerPartsHtml() + `
-      <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}</div>
+      <div class="selhead"><b>${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}</div>
       ${it.lock ? `<p class="tip lockline">This part is locked, so it can't change. <button type="button" data-sk="toggleLock">🔓 Unlock</button></p>` : `<p class="tip">Type the size in millimetres.</p>`}
       <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
         `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}</div>${customSizeHtml(it, b)}
@@ -181,7 +181,7 @@ export function renderShapeForm() {
         <button data-sk="flipV">⇅ Flip up/down</button>
       </div>` : "";
   $("shapeForm").innerHTML = `
-    <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
+    <div class="selhead"><b>${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
     ${varBox}
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
     ${customSizeHtml(it, b)}

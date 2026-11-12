@@ -36,7 +36,7 @@ html, body { margin: 0; background: var(--bg); color: var(--text);
 .badge { flex: none; min-height: var(--tap); padding: 8px 12px; border-radius: 999px;
   background: var(--well); border: 1px solid var(--line); font-weight: 700; font-size: var(--fs-sm); white-space: nowrap; }
 .badge.Idle { background: var(--ok-bg); color: var(--ok-text); border-color: var(--go); }
-.badge.Run, .badge.Jog, .badge.Home { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); }
+.badge.Run, .badge.Jog, .badge.Home { background: var(--accent-weak); color: var(--accent-text); border-color: var(--accent); }
 .badge.Hold { background: var(--warn-bg); color: var(--warn); border-color: var(--warn); }
 .badge.Alarm { background: var(--alarm-bg); color: var(--alarm); border-color: var(--alarm); }
 .stop { flex: none; background: var(--stop); border: 1px solid var(--stop); color: var(--on-stop);
@@ -139,16 +139,22 @@ label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm)
 .status2 span { display: block; font-size: var(--fs-xs); color: var(--muted); }
 .status2 b.good { color: var(--ok-text); }
 .status2 b.bad { color: var(--alarm); }
+.status2 b.todo { color: var(--warn-text); }
 .wizard { margin: 12px 0 0; padding-left: 22px; display: grid; gap: 12px; }
 .log .error { color: var(--alarm); }
 .log .warn { color: var(--warn); }
-.lamps.mini .lamp { flex: 1; text-align: center; padding: 8px 4px; border-radius: var(--r); background: var(--well);
-  border: 1px solid var(--line); font-size: var(--fs-sm); font-weight: 700; color: var(--muted); }
+.lamps.mini { flex-wrap: wrap; gap: 4px 14px; }
+.lamps.mini .lamp { display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; background: none; border: 0;
+  font-size: 14px; font-weight: 650; color: var(--muted); }
+.lamps.mini .lamp::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); flex: none; }
 .lamps.grid .lamp { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 10px 38px; position: relative;
   border-radius: var(--r); background: var(--well); border: 1px solid var(--line); }
 .lamps.grid .lamp span { font-size: var(--fs-sm); color: var(--muted); }
 .lamp.on { border-color: var(--warn) !important; color: var(--warn) !important; }
-.lamps.mini .lamp.on { background: var(--warn-bg); }
+.lamps.mini .lamp.on { background: none; }
+.lamps.mini .lamp.on::before { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+.lamps.mini .lamp.on[data-in="estop"]::before { background: var(--alarm); box-shadow: 0 0 6px var(--alarm); }
+.lamps.mini .lamp.on[data-in="torch"]::before { background: var(--torch); box-shadow: 0 0 6px var(--torch); }
 .lamp.on[data-in="estop"] { border-color: var(--alarm) !important; color: #7A1A12 !important; background: var(--alarm-bg) !important; }
 .lamp.on[data-in="torch"] { border-color: var(--torch) !important; color: #7A3B00 !important; background: var(--warn-bg) !important; }
 .tiles button { min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: var(--fs-sm); background: var(--well); }
@@ -170,7 +176,7 @@ h3 .muted.small { text-transform: none; font-weight: 400; }
 .protools button { min-height: var(--tap); font-size: 13px; padding: 6px 8px; min-width: 0; }
 .protools button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .numpad-keys button { min-height: var(--tap); font-size: 22px; font-weight: 700; }
-.numpad-keys button.op { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); }
+.numpad-keys button.op { background: var(--accent-weak); color: var(--accent-text); border-color: var(--accent); }
 .numpad-row button { min-height: var(--tap); font-size: 18px; font-weight: 700; }
 .cadfields label { font-size: var(--fs-sm); }
 .toolbar button { flex: 1; min-height: var(--tap); font-weight: 700; }
@@ -304,7 +310,7 @@ body[data-screen="make"] #demoAcctBar { display: none; }
   #numPad .numpad-keys button { min-height: 44px; }
 }
 .pill.torch { background: var(--well); border-color: var(--line); color: var(--muted); font-weight: 800; letter-spacing: .04em; }
-.pill.chip { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+.pill.chip { background: var(--accent-weak); border-color: var(--accent); color: var(--accent-text); }
 .pill.chip.practice { background: var(--ok-bg); border-color: var(--go); color: var(--ok-text); }
 .iconbtn { min-width: var(--tap); padding: 8px 10px; font-weight: 800; }
 label.check.prominent { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-weight: 650; min-height: var(--tap); }
@@ -649,3 +655,4 @@ body[data-screen="cut"] .nav { margin-top: 14px; flex-wrap: wrap; }
 body[data-screen="cut"] .stepPane > .step .nav { position: sticky; bottom: 0; background: var(--card); padding: 8px 0 2px; z-index: 3; }
 /* phone on its side: every pixel of height goes to the bed and the buttons */
 body.short-land[data-screen="cut"] #stepper { display: none; }
+.lamps.mini .lamp.on[data-in="estop"], .lamps.mini .lamp.on[data-in="torch"] { padding: 4px 10px; border-radius: 999px; }

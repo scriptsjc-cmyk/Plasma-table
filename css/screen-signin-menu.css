@@ -13,7 +13,7 @@
 }
 /* accounts / gating */
 .pill.acct { background: var(--well); border-color: var(--line-strong); color: var(--text); }
-.pill.acct.in { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+.pill.acct.in { background: var(--accent-weak); border-color: var(--accent); color: var(--accent-text); }
 .locknote { margin: 10px 0 0; color: var(--warn); font-weight: 700; }
 .acctdlg { z-index: 120; top: var(--topbar-h, 56px); }
 .acctcard.wide { width: min(860px, 100%); }

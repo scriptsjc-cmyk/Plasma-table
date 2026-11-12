@@ -92,7 +92,7 @@ function drawCanvas(cv, main) {
     label: themeColor("--cad-label", "#4B5563"),
     tagText: themeColor("--cad-tag-text", "#FFFFFF"),
     danger: themeColor("--cad-danger", "#C42B1C"),
-    go: themeColor("--go", "#0F7B3A"),
+    go: themeColor("--go", "#0A6A32"),
     bed: themeColor("--cad-grid", "#ECEEF1"),
     slat: themeColor("--cad-grid-major", "#D5DAE0"),
   };
@@ -151,7 +151,7 @@ function drawMachineBed(ctx, T, X, Y, sc) {
     for (let y = y0 + 50; y < y1; y += 50) for (let x = Math.ceil((x0 + 1) / 100) * 100; x < x1; x += 100) { ctx.moveTo(X(x) - 2, Y(y)); ctx.lineTo(X(x) + 2, Y(y)); }
     ctx.stroke();
   }
-  ctx.strokeStyle = edgesOn() ? themeColor("--go", "#0F7B3A") : themeColor("--line-strong", "#B8BFC9"); ctx.lineWidth = edgesOn() ? 2 : 1;
+  ctx.strokeStyle = edgesOn() ? themeColor("--go", "#0A6A32") : themeColor("--line-strong", "#B8BFC9"); ctx.lineWidth = edgesOn() ? 2 : 1;
   ctx.strokeRect(...R(x0, y0, x1 - x0, y1 - y0));
   ctx.fillStyle = themeColor("--cad-label", "#4B5563"); ctx.font = "12px Barlow, system-ui";
   ctx.textAlign = "right"; ctx.fillText(`${T.label} ${Math.round(x1 - x0)} × ${Math.round(y1 - y0)} mm`, X(x1) - 8, Y(y1) - 8 + 20); ctx.textAlign = "start";

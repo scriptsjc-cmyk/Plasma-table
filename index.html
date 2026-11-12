@@ -30,7 +30,7 @@
      Only one view shows at a time: js sets body[data-screen] (boot | login | menu | make | cut). -->
 <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
   <defs>
-    <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6"/></g></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor"><circle cx="12" cy="12" r="6" stroke-width="2.2"/><circle cx="12" cy="12" r="2.2" stroke-width="2"/><path stroke-width="3.4" d="M18.00 12.00L21.60 12.00 M16.24 16.24L18.79 18.79 M12.00 18.00L12.00 21.60 M7.76 16.24L5.21 18.79 M6.00 12.00L2.40 12.00 M7.76 7.76L5.21 5.21 M12.00 6.00L12.00 2.40 M16.24 7.76L18.79 5.21"/></g></symbol>
     <symbol id="i-cut" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="17" r="2.2"/><circle cx="6" cy="7" r="2.2"/><path d="M8 8.2 20 18M8 15.8 20 6"/></g></symbol>
     <symbol id="i-move" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3v18M3 12h18M12 3l-2.2 2.2M12 3l2.2 2.2M12 21l-2.2-2.2M12 21l2.2-2.2M3 12l2.2-2.2M3 12l2.2 2.2M21 12l-2.2-2.2M21 12l-2.2 2.2"/></symbol>
     <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="6" y="10" width="12" height="9" rx="1.5"/><path d="M8.5 10V8a3.5 3.5 0 0 1 7 0v2"/></g></symbol>
@@ -80,6 +80,12 @@
     <symbol id="i-grid" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M4 9h16M4 15h16M9 4v16M15 4v16"/></symbol>
     <symbol id="i-fullscreen" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></symbol>
     <symbol id="i-asterisk" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 4v16M5 8l14 8M19 8 5 16"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.4a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.4-2.7 4.1"/></g><circle cx="12" cy="17.6" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9.5 3h5M10.5 3v6L5 19.2A1.3 1.3 0 0 0 6.1 21h11.8a1.3 1.3 0 0 0 1.1-1.8L13.5 9V3M7.6 15h8.8"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 16V4M7 9l5-5 5 5M4 17v3h16v-3"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12M7 11l5 5 5-5M4 17v3h16v-3"/></symbol>
+    <symbol id="i-unlock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="1.5"/><path d="M8 11V7.5a4 4 0 0 1 7.7-1.5"/></g></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="1.5"/><path d="M3.5 17l5-5.5 4 4 2.5-2.5 5.5 5.5" stroke-linecap="round"/><circle cx="15.5" cy="9" r="1.5"/></g></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5 9.5 17 19 7"/></symbol>
   </defs>
 </svg>
@@ -104,8 +110,8 @@
   </button>
   <div id="topMenu" class="topmenu">
   <button id="acctPill" class="pill acct" title="Account">Sign in</button>
-  <button type="button" id="btnHowto" class="pill iconbtn" title="How to use" aria-label="How to use">?</button>
-  <button type="button" id="btnSettings" class="pill iconbtn" title="Settings" aria-label="Settings">⚙</button>
+  <button type="button" id="btnHowto" class="pill iconbtn" title="How to use" aria-label="How to use"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-help"></use></svg></button>
+  <button type="button" id="btnSettings" class="pill iconbtn" title="Settings" aria-label="Settings"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-gear"></use></svg></button>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
   <div id="topModeSwitch" class="modesw topmodesw" role="group" aria-label="Design mode for Make a part">
     <button type="button" class="modesw-btn" data-mode="beginner" title="Make a part: guided, step by step">Beginner</button>
@@ -428,10 +434,10 @@
             </div>
           </div>
           <div id="proTools" class="protools hidden"></div>
-          <h3>Add a part</h3>
-          <div id="shapeTiles" class="tiles small"></div>
-          <h3>Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
-          <div id="holeTiles" class="tiles small"></div>
+          <h3 class="addtiles">Add a part</h3>
+          <div id="shapeTiles" class="tiles small addtiles"></div>
+          <h3 class="addtiles">Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
+          <div id="holeTiles" class="tiles small addtiles"></div>
           <div id="shapeForm" class="shapeform"></div>
           <section id="cutSummary" class="cutsummary" aria-label="Cut settings"></section>
           <div id="cutCheck" class="cutcheck"></div>
@@ -678,21 +684,19 @@
   <div class="card">
     <h2>Machine edges (crash protection)</h2>
     <div class="grid2 status2">
-      <div><span>Position</span><b id="refState">Unknown</b></div>
-      <div><span>Edges</span><b id="limState">Not set</b></div>
+      <div><span>Position</span><b id="refState" class="todo">Unknown</b></div>
+      <div><span>Edges</span><b id="limState" class="todo">Not set</b></div>
     </div>
     <p class="muted small" id="safetyHint"></p>
     <ol class="wizard" id="wizard">
-      <li id="wz1"><b>Find home.</b> Press <button class="do-home small">Home</button>
-        No home switches? Move the torch to your marked home corner, raised right up, then
-        <button id="btnRef" class="small">Torch is at home corner</button></li>
-      <li id="wz2"><b>Far corner.</b> Move to the furthest corner the torch can safely reach, then
-        <button class="small" data-cmd="limits_far">Set far corner</button> <span id="wzFar" class="muted"></span></li>
-      <li id="wz3"><b>Lowest point.</b> No sheet on. Lower the torch onto a slat (1 mm steps at the end) until the
-        <b>Floating head</b> light comes on, then <button class="small" data-cmd="limits_zbottom">Set lowest point</button>
-        <span id="wzZ" class="muted"></span></li>
-      <li id="wz4"><b>Save.</b> <button class="small accent" data-cmd="limits_save">Save edges</button>
-        <button class="small" id="btnClearLimits">Clear edges</button></li>
+      <li id="wz1"><p><b>Find home.</b> Press Home. No home switches? Move the torch to your marked home corner, raised right up, then press “Torch is at home corner”.</p>
+        <div class="wzbtns"><button class="do-home small">Home</button><button id="btnRef" class="small">Torch is at home corner</button></div></li>
+      <li id="wz2"><p><b>Far corner.</b> Move to the furthest corner the torch can safely reach. <span id="wzFar" class="muted"></span></p>
+        <div class="wzbtns"><button class="small" data-cmd="limits_far">Set far corner</button></div></li>
+      <li id="wz3"><p><b>Lowest point.</b> No sheet on. Lower the torch onto a slat (1 mm steps at the end) until the <b>Floating head</b> light comes on. <span id="wzZ" class="muted"></span></p>
+        <div class="wzbtns"><button class="small" data-cmd="limits_zbottom">Set lowest point</button></div></li>
+      <li id="wz4"><p><b>Save.</b> The machine then checks every move against these edges.</p>
+        <div class="wzbtns"><button class="small accent" data-cmd="limits_save">Save edges</button><button class="small" id="btnClearLimits">Clear edges</button></div></li>
     </ol>
     <div class="jogmount"></div>
   </div>
