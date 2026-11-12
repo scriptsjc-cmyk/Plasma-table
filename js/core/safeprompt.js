@@ -1,8 +1,12 @@
 // In-app confirm. Native window.confirm() freezes the page, so STOP and Space
-// would not work; this overlay starts below the header and never captures them.
-import { $ } from "./dom.js";
+// would not work; this overlay starts below the header and the safety banners, and never captures them.
+import { $, bannerBottom, placeToast } from "./dom.js";
 
 let queue = Promise.resolve();
+let closeOpen = null;            // answers the confirm on screen (if any) with "no"
+
+// STOP answers any open confirm with Cancel, so a "Start anyway" can't be left waiting behind a latched E-stop (r7 U6)
+export function cancelConfirm() { if (closeOpen) closeOpen(false); }
 
 export function safeDlgOpen() {
   const el = $("safeDlg");
@@ -24,6 +28,7 @@ export function askConfirm({ title = "Please confirm", body = "", ok = "OK", can
     const noteEl = $("safeDlgNote"), okBtn = $("safeDlgOk"), cancelBtn = $("safeDlgCancel");
     if (!dlg || !okBtn || !cancelBtn) { resolve(false); return; }
     const finish = (yes) => {
+      closeOpen = null;
       dlg.classList.add("hidden");
       dlg.setAttribute("aria-hidden", "true");
       okBtn.onclick = cancelBtn.onclick = null;
@@ -56,8 +61,11 @@ export function askConfirm({ title = "Please confirm", body = "", ok = "OK", can
       noteEl.textContent = okDisabled ? (okDisabledReason || "This action isn't available right now.") : "";
       noteEl.classList.toggle("hidden", !okDisabled);
     }
+    dlg.style.top = Math.ceil(bannerBottom()) + "px";
     dlg.classList.remove("hidden");
     dlg.setAttribute("aria-hidden", "false");
+    closeOpen = finish;
+    placeToast();
     okBtn.onclick = () => { if (!okBtn.disabled) finish(true); };
     cancelBtn.onclick = () => finish(false);
     document.addEventListener("keydown", onKey, true);

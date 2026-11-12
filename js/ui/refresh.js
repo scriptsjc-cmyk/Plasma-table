@@ -76,6 +76,9 @@ export function paintChrome() {
   document.body.classList.toggle("machine-connected", !!S.connected);
   document.body.classList.toggle("is-admin", !!Acc.isAdmin());
   paintLock(); estopPaint(); paintStateBadge();
+  // r7 U6: while the E-stop is latched, Unlock is off with the reason beside it (css/screen-cut.css .unlockwhy)
+  document.body.classList.toggle("estop-latched", estopOn());
+  for (const id of ["btnUnlock", "btnUnlock2"]) if ($(id)) $(id).disabled = estopOn();
   const lost = S.lastAlarmCode != null && POSITION_LOST_ALARMS.has(S.lastAlarmCode);
   const again = $("btnAgain"), rezero = $("btnRezero");
   if (again && rezero) {

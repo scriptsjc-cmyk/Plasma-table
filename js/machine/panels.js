@@ -123,12 +123,13 @@ export function addTestPattern(kind) {
   }
   useShape(); goStep(3);
 }
-const UNLOCK_CONFIRM = "Unlock the controller ($X)?\n\nIt will accept moves again, but it may not know where the torch is. Check the torch is clear and nothing is in the way. Home or set the start point again before cutting.";
+const UNLOCK_CONFIRM = "It will accept moves again, but it may not know where the torch is. Check the torch is clear and nothing is in the way. Home or set the start point again before cutting.\n\n(This sends $X to the controller.)";
 export function bindMachineControls() {
-  // Unlock ($X) only after the operator confirms: it clears the alarm without the machine knowing where it is
+  // Unlock ($X) only after the operator confirms: it clears the alarm without the machine knowing where it is.
+  // While the E-stop is latched the banner's Unlock buttons are disabled with the reason beside them (refresh.js), so no dialog opens just to say no.
   const unlock = async () => {
-    const latched = !!(typeof estopOn === "function" && estopOn());
-    const ok = await askConfirm({ title: "Unlock the controller?", body: UNLOCK_CONFIRM, ok: "Unlock", cancel: "Cancel", danger: true, okDisabled: latched, okDisabledReason: "Unlock is blocked while E-STOP is latched. Press and hold the red STOP button to reset it first." });
+    if (estopOn()) { toast("Unlock is blocked while E-STOP is latched. Press and hold the red STOP button to reset it first.", true); return; }
+    const ok = await askConfirm({ title: "Unlock the controller?", body: UNLOCK_CONFIRM, ok: "Unlock", cancel: "Cancel", danger: true });
     if (ok) cmd("unlock");
   };
   $("btnUnlock").onclick = unlock;

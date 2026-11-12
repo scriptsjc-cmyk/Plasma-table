@@ -154,11 +154,13 @@
 <!-- ============================================================ banners -->
 <div id="estopBar" class="banner red big hidden">
   <div><b>E-STOP PRESSED</b><br>Everything is stopped. Fix the problem, twist the e-stop to release it, then press Unlock.</div>
-  <button id="btnUnlock2">Unlock</button>
+  <button id="btnUnlock2" aria-describedby="btnUnlock2Why">Unlock</button>
+  <span id="btnUnlock2Why" class="unlockwhy">Unlock is off while E-STOP is on: hold STOP 1.5 s first</span>
 </div>
 <div id="alarmBar" class="banner red hidden">
   <div><b id="alarmTitle">Alarm</b><br><span id="alarmText"></span></div>
-  <button id="btnUnlock">Unlock</button>
+  <button id="btnUnlock" aria-describedby="btnUnlockWhy">Unlock</button>
+  <span id="btnUnlockWhy" class="unlockwhy">Unlock is off while E-STOP is on: hold STOP 1.5 s first</span>
 </div>
 <div id="lostBar" class="banner red big hidden" role="alert">
   <div><b id="lostTitle">Connection lost while the machine was running.</b><br><span id="lostText">The torch may still be ON and the table may still be moving. Use the machine's own E-stop or power switch now.</span></div>

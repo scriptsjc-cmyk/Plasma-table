@@ -4,6 +4,7 @@
 //   boot -> login (nothing works until someone is signed in) -> menu -> make (design) | cut (the one cutting screen)
 // body[data-screen] says which one is showing. The E-stop here only ever calls the app's existing STOP path (host.stop),
 // so a soft reset and torch-off are exactly what they were before: no new machine commands.
+import { cancelConfirm } from "../core/safeprompt.js";
 const $ = (id) => document.getElementById(id);
 let H = null;
 
@@ -59,6 +60,7 @@ export function estopPress(source) {
   if (screen() === "cut") {
     const fresh = !latched;
     latched = true; paintEstop(); H.refresh && H.refresh();
+    cancelConfirm();
     H.onEstop && H.onEstop(source);
     if (fresh && H.toast) H.toast("E-STOP ON. Nothing will move or light. To reset it, press and hold the red button for 1.5 seconds.", true);
   }

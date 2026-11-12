@@ -586,6 +586,9 @@ body[data-screen="make"].beginner #btnSavePartQuick, body[data-screen="make"].be
 body.short-land .tabs .tab { min-height: 44px; padding-top: 2px; padding-bottom: 2px; font-size: 14px; }
 body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .holeadd button { min-height: 44px; }
+/* r7 U6: the banner's Unlock is disabled while the E-stop is latched, and says why beside it */
+.unlockwhy { display: none; }
+body.estop-latched .unlockwhy { display: block; flex: 0 1 220px; font-size: 13px; font-weight: 600; line-height: 1.25; }
 /* the E-stop reset is a press-and-hold: show it while it is being held */
 #btnStop.holding { filter: brightness(1.25); }
 /* Round 5 (safety): while a machine is connected, nothing covers STOP on the cutting screen. The header that holds it is lifted above

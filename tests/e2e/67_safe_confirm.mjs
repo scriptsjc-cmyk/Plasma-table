@@ -41,22 +41,17 @@ const snap = async (page, name) => { await sleep(200); await page.screenshot({ p
   })()`);
   ck("the confirm sits below the header and does not cover STOP", layers.hitStop && layers.dlgTop >= layers.barBottom - 1, JSON.stringify(layers));
   await page.keyboard.press("Space"); await sleep(600);
-  ck("Space still latches the E-stop while the confirm is open", await T(page, "window.plasmaTest.estopOn()") && await T(page, "!document.getElementById('safeDlg').classList.contains('hidden')"));
+  ck("Space latches the E-stop and answers the open confirm with Cancel (r7 U6)", await T(page, "window.plasmaTest.estopOn()") && await T(page, "document.getElementById('safeDlg').classList.contains('hidden')"));
   await snap(page, "start-without-homing");
-  await page.click("#safeDlgCancel");
-  await page.waitForFunction(() => document.getElementById("safeDlg").classList.contains("hidden"), null, { timeout: 5000 });
-  ck("Cancel leaves the job unstarted", await T(page, "!(window.plasmaTest.S.job && window.plasmaTest.S.job.running)"));
+  ck("the cancelled confirm leaves the job unstarted", await T(page, "!(window.plasmaTest.S.job && window.plasmaTest.S.job.running)"));
 
-  await T(page, "window.plasmaTest.getM().onGrbl('alarm', { code: 2, message: 'Bad G-code' }); window.plasmaTest.refresh();");
+  await T(page, `(() => { const M = window.plasmaTest.getM(); M.grbl.status.state = "Alarm"; M.onGrbl("status", { ...M.grbl.status, state: "Alarm" }); M.onGrbl("alarm", { code: 2, message: "Bad G-code" }); window.plasmaTest.refresh(); })()`);
   await sleep(200);
-  await page.evaluate(() => document.getElementById("btnUnlock").click());
-  await page.waitForSelector("#safeDlg:not(.hidden)", { timeout: 8000 });
-  const u = await T(page, `({ body: document.getElementById("safeDlgBody").textContent, note: (document.getElementById("safeDlgNote") || {}).textContent || "", okOff: document.getElementById("safeDlgOk").disabled, focus: document.activeElement && document.activeElement.id })`);
-  ck("Unlock while E-STOP is latched shows a confirm with OK disabled", u.okOff && /E-STOP/.test(u.note) && /\$X/.test(u.body), JSON.stringify(u));
-  ck("Cancel is focused on the blocked Unlock confirm", u.focus === "safeDlgCancel", JSON.stringify(u));
+  const u = await T(page, `(() => { document.getElementById("alarmBar").classList.remove("hidden");     // (the practice table reports Idle again at once)
+    const b = document.getElementById("btnUnlock"), w = document.getElementById("btnUnlockWhy"); b.click();
+    return { off: b.disabled, why: w && w.getClientRects().length ? w.textContent : "", dlg: !document.getElementById("safeDlg").classList.contains("hidden") }; })()`);
+  ck("Unlock while E-STOP is latched is disabled, with the reason beside it, and opens no dialog", u.off && /E-STOP/.test(u.why) && !u.dlg, JSON.stringify(u));
   await snap(page, "unlock-blocked");
-  await page.click("#safeDlgCancel");
-  await page.waitForFunction(() => document.getElementById("safeDlg").classList.contains("hidden"), null, { timeout: 5000 });
   await page.context().close();
 }
 
