@@ -1,5 +1,5 @@
 // The shape library, the shape-versions pop-up and the Add text / Trace tool launchers.
-import { SHAPE_GROUPS, presetOrShape, shapeThumb } from "./shapes.js";
+import { LIBRARY_SHAPE_GROUPS, presetOrShape, shapeThumb } from "./shapes.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { shapeDef } from "./sketch.js";
 import { initMakeTools } from "./maketools.js";
@@ -7,6 +7,7 @@ import { S, makeTools, setMakeTools, sketch } from "../core/state.js";
 import { showSource, useShape } from "./useshape.js";
 import { $, esc, toast } from "../core/dom.js";
 import { isProMode } from "../ui/mode.js";
+import { clickVerb } from "../ui/laptop.js";
 import { addShapeId, beginnerPick, paintGuide } from "./shapeform.js";
 
 // keep the boxes in step while dragging, without rebuilding them
@@ -36,11 +37,11 @@ export function matchesQuery(hay, q) {
 }
 function renderLibrary() {
   const q = $("libSearch").value.trim().toLowerCase();
-  const cats = [{ id: "all", name: "All" }, ...SHAPE_GROUPS];
+  const cats = [{ id: "all", name: "All" }, ...LIBRARY_SHAPE_GROUPS];
   $("libCats").innerHTML = cats.map((c) => `<button type="button" data-cat="${esc(c.id)}" class="${c.id === libCat ? "on" : ""}">${esc(c.name)}</button>`).join("");
   let ids;
-  if (libCat === "all" || q) { const seen = new Set(); ids = SHAPE_GROUPS.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id)); }
-  else ids = (SHAPE_GROUPS.find((g) => g.id === libCat) || { ids: [] }).ids;
+  if (libCat === "all" || q) { const seen = new Set(); ids = LIBRARY_SHAPE_GROUPS.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id)); }
+  else ids = (LIBRARY_SHAPE_GROUPS.find((g) => g.id === libCat) || { ids: [] }).ids;
   const list = ids.map((id) => presetOrShape(id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
   $("libGrid").innerHTML = list.length ? list.map((s) => `<button type="button" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 64, 44)}<span class="libname">${esc(s.name)}</span></button>`).join("")
@@ -48,7 +49,7 @@ function renderLibrary() {
 }
 export function openVersions() {
   const it = sketch.selected();
-  if (!it) { toast("Tap a shape first, then Versions."); return; }
+  if (!it) { toast(clickVerb() + " a shape first, then Versions."); return; }
   const vs = variantsFor(it.type);
   if (!vs.length) { toast("This shape has no other versions."); return; }
   const cur = sketch.currentVariantKey();

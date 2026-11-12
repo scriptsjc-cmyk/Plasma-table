@@ -228,6 +228,70 @@ export const SHAPES = [
     },
   },
   {
+    id: "oval", name: "Oval", icon: "⬭",
+    group: "basic",
+    tip: "An oval (ellipse). Set the two diameters.",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
+    params: [["w", "Width", 120], ["h", "Height", 70]],
+    make: (p) => {
+      const rx = p.w / 2, ry = p.h / 2, n = Math.max(48, Math.round(Math.max(rx, ry) * 0.8));
+      const pts = [];
+      for (let i = 0; i < n; i++) { const a = (i * 2 * Math.PI) / n; pts.push([rx + rx * Math.cos(a), ry + ry * Math.sin(a)]); }
+      return [{ pts, closed: true }];
+    },
+  },
+  {
+    id: "parallelogram", name: "Parallelogram", icon: "▱",
+    group: "basic",
+    tip: "A slanted rectangle. Skew is how far the top edge is shifted.",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
+    params: [["w", "Width", 120], ["h", "Height", 70], ["skew", "Skew", 25]],
+    make: (p) => {
+      const s = Math.max(-p.w * 0.8, Math.min(p.w * 0.8, p.skew || 0));
+      const pts = [[0, 0], [p.w, 0], [p.w + s, p.h], [s, p.h]];
+      const minx = Math.min(...pts.map((q) => q[0]));
+      return [{ pts: pts.map(([x, y]) => [x - minx, y]), closed: true }];
+    },
+  },
+  {
+    id: "trapezoid", name: "Trapezoid", icon: "⏢",
+    group: "basic",
+    tip: "A four-sided shape with the top shorter or longer than the base.",
+    fit: (p, W, H) => ({ ...p, w: W, h: H }),
+    params: [["w", "Base width", 120], ["h", "Height", 70], ["top", "Top width", 70]],
+    make: (p) => {
+      const top = Math.max(2, Math.min(p.w * 2, p.top || p.w / 2));
+      const inset = (p.w - top) / 2;
+      const pts = [[0, 0], [p.w, 0], [p.w - inset, p.h], [inset, p.h]];
+      const minx = Math.min(...pts.map((q) => q[0]));
+      return [{ pts: pts.map(([x, y]) => [x - minx, y]), closed: true }];
+    },
+  },
+  {
+    id: "crescent", name: "Crescent", icon: "☾",
+    group: "basic",
+    tip: "A moon-shaped outline. Offset is how far the inner curve is shifted.",
+    fit: (p, W) => ({ ...p, d: W }),
+    params: [["d", "Outside Ø", 100], ["inner", "Inner Ø", 80], ["offset", "Offset", 25]],
+    make: (p) => {
+      // A lune: two crossing circles joined at their exact intersection points, thick enough to cut.
+      const R = Math.max(8, p.d / 2);
+      const r = Math.max(6, Math.min(R - 2, (p.inner || R * 1.6) / 2));
+      const minOff = Math.abs(R - r) + Math.max(4, 0.12 * Math.min(R, r));
+      const maxOff = R + r - Math.max(6, 0.16 * Math.min(R, r));
+      const off = Math.max(minOff, Math.min(maxOff, p.offset || (R * 0.55)));
+      const x = (off * off + R * R - r * r) / (2 * off);
+      const y = Math.sqrt(Math.max(0, R * R - x * x));
+      const aOut = Math.atan2(y, x), aIn = Math.atan2(y, x - off);
+      const n = Math.max(24, Math.round(Math.max(R, r) * 0.8));
+      const q = [];
+      for (let i = 0; i <= n; i++) { const a = -aOut + (2 * aOut * i) / n; q.push([R * Math.cos(a), R * Math.sin(a)]); }
+      for (let i = 0; i <= n; i++) { const a = aIn - (2 * aIn * i) / n; q.push([off + r * Math.cos(a), r * Math.sin(a)]); }
+      const minx = Math.min(...q.map((pt) => pt[0])), miny = Math.min(...q.map((pt) => pt[1]));
+      return [{ pts: q.map(([x, y]) => [x - minx, y - miny]), closed: true }];
+    },
+  },
+  {
     id: "eqtriangle", name: "Equilateral triangle", icon: "▲",
     group: "basic",
     tip: "All three sides the same length.",
@@ -580,13 +644,19 @@ export function makeShape(id, values) {
 }
 
 
-export const SHAPE_GROUPS = [
-  { id: "basic", name: "Basic", ids: ["square", "rect", "roundrect", "chamfer", "disc", "ellipse", "eqtriangle", "rtriangle", "triangle", "polygon", "hexagon", "octagon", "star", "slot", "sector", "ring"] },
-  { id: "plasma", name: "Plasma / fab", ids: ["plate", "slotted", "slot2", "baseplate", "tab", "lbracket", "bracket", "tplate", "strap", "gusset", "wgusset", "shelf", "lug", "banjo", "keyhole", "dshape", "plus", "arrow", "link", "sign", "hook", "heart"] },
+export const BASIC_SHAPE_GROUPS = [
+  { id: "basic", name: "Basic", ids: ["square", "rect", "roundrect", "chamfer", "disc", "ellipse", "oval", "eqtriangle", "rtriangle", "triangle", "polygon", "hexagon", "octagon", "star", "slot", "sector", "ring", "parallelogram", "trapezoid", "crescent", "plus", "arrow", "heart"] },
+  { id: "holes", name: "Holes", ids: ["hole", "slothole", "boltcircle", "cornerholes", "holerow", "holegrid"] },
+];
+export const LIBRARY_SHAPE_GROUPS = [
+  ...BASIC_SHAPE_GROUPS,
+  { id: "plasma", name: "Plasma / fab", ids: ["plate", "slotted", "slot2", "baseplate", "tab", "lbracket", "bracket", "tplate", "strap", "gusset", "wgusset", "shelf", "lug", "banjo", "keyhole", "dshape", "link", "sign", "hook"] },
   { id: "flanges", name: "Flanges & washers", ids: ["flange4", "flange6", "flange8", "flange10", "flange12", "flangeblind", "flange", "ring", "sqwasher", "frame"] },
   { id: "duct", name: "Duct & rolled", ids: ["s2r", "cone", "tube"] },
-  { id: "holes", name: "Holes", ids: ["hole", "slothole", "boltcircle", "cornerholes", "holerow", "holegrid"] },
-].concat(PRESET_GROUPS)
+];
+export const SHAPE_GROUPS = [
+  ...LIBRARY_SHAPE_GROUPS,
+].concat(PRESET_GROUPS);
 
 // Library tiles that are a shape with some sizes already set (so "Flange – 6 holes" is one tap). id -> { base shape, sizes }.
 // Bolt holes start half a step round from the top so they straddle the centre lines, as on a standard flange.
