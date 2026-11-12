@@ -187,3 +187,24 @@ html, body.app-shell { overscroll-behavior-x: none; }
   body.app-shell.pro-mode:not(.short-land) .cutgrid.with-qb .stepPane:empty,
   body.app-shell.pro-mode:not(.short-land) .cutgrid.with-qb .stepPane:not(:has(*:not(.hidden))) { min-height: 0; }
 }
+
+/* Laptop Advanced tool rail: keep the tools roomy and show the key hints (yours compact row rules would shrink them). */
+body.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #quickBar.quickbar button,
+body.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar button,
+body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) .cutgrid.with-qb #quickBar button {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 52px !important;
+  height: auto !important;
+  flex-direction: column !important;
+  flex-wrap: wrap !important;
+  white-space: normal;
+  padding: 4px 2px !important;
+  font-size: 11px !important;
+}
+body.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #quickBar.quickbar button kbd {
+  display: block !important;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+}

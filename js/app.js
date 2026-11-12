@@ -57,6 +57,7 @@ import { addTestPattern, adminMayTalk, bindMachineControls, fillEdgePanel, readC
 import { bindShapeForm, paintGuide, renderShapeForm, renderShapeTiles } from "./make/shapeform.js";
 import { bindConnection, connectWiFi, setConnected, wifiWatch } from "./machine/connection.js";
 import { bindQuickBar, renderQuickBar } from "./make/quickbar.js";
+import { bindCadUi } from "./make/cadui.js";
 import { bindPhoneSheet } from "./make/phonesheet.js";
 import { bindDialogKeys } from "./ui/dialogs.js";
 import { bindRun } from "./cut/run.js";
@@ -76,6 +77,7 @@ function bind() {
   bindShapeForm();
   bindExport();
   bindQuickBar();
+  bindCadUi();
   bindPhoneSheet();
   bindGate();
   bindMachineControls();

@@ -206,8 +206,40 @@ export class ViewMethods {
       ctx.strokeStyle = C.sel; ctx.fillStyle = C.sel; ctx.lineWidth = 2;
       ctx.beginPath();
       this.drawPts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+      if (this.drawDraft && this.drawDraft.kind === "line") {
+        const [X, Y] = S(this.drawDraft.x, this.drawDraft.y); ctx.lineTo(X, Y);
+      }
       ctx.stroke();
       for (const p of this.drawPts) { const [X, Y] = S(p[0], p[1]); ctx.beginPath(); ctx.arc(X, Y, 5, 0, 7); ctx.fill(); }
+    }
+    if (this.drawDraft && this.drawDraft.kind === "rect") {
+      const d = this.drawDraft;
+      const [x0, y0] = S(d.x, d.y), [x1, y1] = S(d.x + d.w, d.y + d.h);
+      ctx.strokeStyle = C.sel; ctx.setLineDash([5, 3]); ctx.lineWidth = 1.5;
+      ctx.strokeRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0)); ctx.setLineDash([]);
+    }
+    if (this.drawDraft && this.drawDraft.kind === "disc") {
+      const d = this.drawDraft, r = Math.abs(d.d) / 2;
+      const [cx, cy] = S(d.cx, d.cy);
+      ctx.strokeStyle = C.sel; ctx.setLineDash([5, 3]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cx, cy, r * s, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (this.snapMark) {
+      const [X, Y] = S(this.snapMark.x, this.snapMark.y);
+      const col = { endpoint: "#c42b1c", midpoint: "#0078d4", centre: "#0b6a0b", tangent: "#7a3db3", grid: "#c05600" }[this.snapMark.kind] || C.guide;
+      ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      if (this.snapMark.kind === "midpoint") { ctx.moveTo(X - 7, Y); ctx.lineTo(X + 7, Y); ctx.moveTo(X, Y - 7); ctx.lineTo(X, Y + 7); ctx.stroke(); }
+      else if (this.snapMark.kind === "centre") { ctx.arc(X, Y, 6, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.arc(X, Y, 2, 0, Math.PI * 2); ctx.fill(); }
+      else if (this.snapMark.kind === "tangent") { ctx.moveTo(X - 6, Y - 6); ctx.lineTo(X + 6, Y + 6); ctx.moveTo(X - 6, Y + 6); ctx.lineTo(X + 6, Y - 6); ctx.stroke(); }
+      else if (this.snapMark.kind === "grid") { ctx.strokeRect(X - 5, Y - 5, 10, 10); }
+      else { ctx.beginPath(); ctx.arc(X, Y, 5, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.font = "11px Barlow, system-ui"; ctx.fillStyle = col;
+      ctx.fillText(this.snapMark.kind, X + 8, Y - 8);
+    }
+    if (this.constraintHint && this.constraintHint.length) {
+      ctx.font = "12px Barlow, system-ui"; ctx.fillStyle = C.lock;
+      ctx.fillText(this.constraintHint.join(" · "), 8, 18);
     }
     if (this.tool === "measure" && this.measure && this.measure.a) {
       const a = this.measure.a, b = this.measure.b || this.measure.hover;

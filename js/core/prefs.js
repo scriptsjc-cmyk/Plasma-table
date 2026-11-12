@@ -48,6 +48,7 @@ export function defaultPrefs() {
     snap: true,
     canvas: "default",
     wheelZoom: false,
+    dismissSideways: false,
   };
 }
 
@@ -66,6 +67,7 @@ export function sanitizePrefs(raw) {
   if (typeof src.snap === "boolean") out.snap = src.snap;
   if (Object.hasOwn(CANVAS_BG, src.canvas)) out.canvas = src.canvas;
   if (typeof src.wheelZoom === "boolean") out.wheelZoom = src.wheelZoom;
+  if (typeof src.dismissSideways === "boolean") out.dismissSideways = src.dismissSideways;
   return out;
 }
 

@@ -115,7 +115,7 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   const v0 = await T(page, `(() => { const v = window.plasmaTest.sketch.view; return { s: v.s, vx: v.vx, vy: v.vy }; })()`);
   await page.mouse.move(g6.cv.l + g6.cv.w / 2, g6.cv.t + g6.cv.h / 2); await page.mouse.wheel(80, -400); await sleep(250);
   const v1 = await T(page, `(() => { const v = window.plasmaTest.sketch.view; return { s: v.s, vx: v.vx, vy: v.vy }; })()`);
-  ck("5 laptop: scrolling over the picture pans the view and does not zoom", Math.abs(v1.s - v0.s) < 1e-6 && (Math.abs(v1.vx - v0.vx) > 0.01 || Math.abs(v1.vy - v0.vy) > 0.01), { v0, v1 });
+  ck("5 laptop: scrolling over the picture zooms to the cursor", v1.s !== v0.s, { v0, v1 });
   await page.keyboard.down("Control"); await page.mouse.wheel(0, -400); await page.keyboard.up("Control"); await sleep(250);
   const s1 = await T(page, `window.plasmaTest.sketch.view.s`);
   ck("5 laptop: Ctrl+scroll zooms in", s1 > v0.s * 1.05, { s0: v0.s, s1 });

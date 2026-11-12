@@ -23,7 +23,7 @@ export class Sketch {
     this.view = null; this.active = false;
     this.past = []; this.future = []; this.clip = null;
     this.drag = null; this.pointers = new Map(); this.label = null; this.guides = []; this.marks = [];
-    this.dimHits = []; this.tool = null; this.drawPts = []; this.measure = null;
+    this.dimHits = []; this.tool = null; this.drawPts = []; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null;
     this.opts = { snap: 1, guides: true, pro: false, pointSnap: true };
     this.maxMm = 2600; // 2× typical table travel; app may tighten from machine.json
     try {
@@ -209,7 +209,7 @@ export class Sketch {
   setPointSnap(on) { this.opts.pointSnap = !!on; this.saveOpts(); }
   setTool(name) {
     this.tool = this.tool === name ? null : (name || null);
-    this.drawPts = []; this.measure = null;
+    this.drawPts = []; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null;
     this.cv.style.cursor = this.tool ? "crosshair" : "";
     this.draw();
   }
@@ -219,7 +219,7 @@ export class Sketch {
   canResize(it) { return it && !this.layout && !it.lock && (it.rot || 0) % 90 === 0 && !(def(it.type) && def(it.type).noResize) && !!(def(it.type).fit || it.type === "custom"); }
   contours() { return this.items.filter((i) => !this.layerHidden(i)).flatMap((i) => this.contoursOf(i)); }
   // layers = the operation label of a shape (cut / score / mark). A hidden layer is neither drawn nor cut.
-  layerHidden(it) { return !!(this.hiddenLayers && this.hiddenLayers.has(it.op || "cut")); }
+  layerHidden(it) { return !!(it && (it.hide || (this.hiddenLayers && this.hiddenLayers.has(it.op || "cut")))); }
   // how many separate parts are on the bed (holes don't count): the app sets partCounter so every screen uses the one count
   partTotal() { try { const n = this.partCounter ? this.partCounter(this) : NaN; return Number.isFinite(n) ? n : this.items.length; } catch (e) { return this.items.length; } }
   name() {

@@ -12,6 +12,7 @@ import { setShapeFs } from "./protools.js";
 import { openDimEdit } from "./dimedit.js";
 import { savePrefs } from "../core/prefs.js";
 import { mountScrollRow, refreshScrollRows } from "../ui/scrollrow.js";
+import { openPresetBrowser } from "./presetbrowser.js";
 
 function sizeDimForSelection() {
   const it = sketch.selected(); if (!it) return null;
@@ -20,7 +21,7 @@ function sizeDimForSelection() {
 }
 // Tool palette: labelled groups with a search box (replaces the icon-only rail)
 const PALETTE = [
-  { g: "Shapes", items: [["rect", "▭", "Rectangle"], ["disc", "◯", "Circle"], ["triangle", "△", "Triangle"], ["slot", "⊂⊃", "Slot"], ["sector", "◔", "Arc / sector"], ["lib", "⋯", "All shapes…"]] },
+  { g: "Shapes", items: [["presets", "▦", "Preset parts"], ["rect", "▭", "Rectangle"], ["disc", "◯", "Circle"], ["triangle", "△", "Triangle"], ["slot", "⊂⊃", "Slot"], ["sector", "◔", "Arc / sector"], ["lib", "⋯", "All shapes…"]] },
   { g: "Holes", items: [["hole", "◦", "Hole"], ["slothole", "⊖", "Slot hole"], ["boltcircle", "⁘", "Bolt circle"]] },
   { g: "Draw", items: [["draw", "✎", "Draw outline"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"]] },
   { g: "Combine", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"]] },
@@ -47,7 +48,7 @@ export function renderQuickBar() {
     offset: !one || locked, linarray: !one || locked, polar: !one || locked,
     alignl: !many, alignb: !many, edge: !(one && one.type === "custom"),
   };
-  const onCls = { snap: !!sketch.opts.snap, draw: sketch.tool === "draw", measure: sketch.tool === "measure", fs: S.shapeFs, size: !!one };
+  const onCls = { snap: !!sketch.opts.snap, draw: sketch.tool === "draw", measure: sketch.tool === "measure", rect: sketch.tool === "rect", disc: sketch.tool === "disc", fs: S.shapeFs, size: !!one };
   // UX2 fix: a greyed tool says why (tooltip + screen reader label)
   const whyOff = (id) => {
     if (id === "undo") return "nothing to undo"; if (id === "redo") return "nothing to redo";
@@ -58,7 +59,7 @@ export function renderQuickBar() {
     if (["size", "resize", "offset", "linarray", "polar"].includes(id)) return "select one shape first";
     return "select a shape first";
   };
-  const HINTS = { rot: "R", mir: "M", undo: "Ctrl+Z", redo: "Ctrl+Y", del: "Del", dup: "Ctrl+D", fit: "F", fs: "Esc", join: "Ctrl+J", snap: "S", rect: "1", disc: "2" };
+  const HINTS = { rot: "", mir: "", undo: "Ctrl+Z", redo: "Ctrl+Y", del: "Del", dup: "Ctrl+D", fit: "F", fs: "Esc", join: "Ctrl+J", snap: "S", rect: "R", disc: "C", draw: "L", measure: "D", select: "M", presets: "" };
   const B = (id, icon, label) => {
     const hint = (sketch.opts.pro && HINTS[id]) ? HINTS[id] : "";
     const title = hint ? `${label} (${hint})` : label;
@@ -132,6 +133,7 @@ function bindQbRoving() {
 
 function quickAction(a) {
   switch (a) {
+    case "presets": openPresetBrowser(); break;
     case "rect": case "disc": case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
       if (shapeDef(a)) sketch.add(a); else toast("That shape isn't available.", true); break;
     case "lib": openLibrary(); break;

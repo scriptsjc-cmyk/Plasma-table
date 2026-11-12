@@ -91,18 +91,14 @@ for (const [w, h, label, mobile] of [[1366, 768, "laptop", false]]) {
       hasOverflowClass: wrap && wrap.classList.contains("has-overflow"),
     };
   })()`);
-  ck(`${label}: the tools are one sideways-scrolling row under the picture`, g.visible && g.row && g.overflowX && g.oneRow && g.below, g);
+  if (label === "laptop") {
+    ck("laptop: the tools are a slim vertical rail on the left of the picture", g.visible && !g.row && g.hasWrap, g);
+  } else {
+    ck(`${label}: the tools are one sideways-scrolling row under the picture`, g.visible && g.row && g.overflowX && g.oneRow && g.below, g);
+  }
   ck(`${label}: the toolbar does not cover Start or Save`, !g.coversSave && !g.coversStart, g);
   if (label === "laptop") {
-    ck("laptop: compact tools are shorter than a 44 px tap target (fine pointer)", g.btnH > 20 && g.btnH <= 40, g);
-    ck("laptop: more tools sit off-screen and the end fade is on", g.overflow > 20 && g.hasWrap && (g.fadeEnd || g.hasOverflowClass), g);
-    const scrolled = await T(page, `(() => {
-      const qb = document.getElementById("quickBar");
-      const before = qb.scrollLeft;
-      qb.dispatchEvent(new WheelEvent("wheel", { deltaY: 140, deltaX: 0, shiftKey: true, bubbles: true, cancelable: true }));
-      return { before, after: qb.scrollLeft, max: qb.scrollWidth - qb.clientWidth };
-    })()`);
-    ck("laptop: shift-wheel slides the toolbar", scrolled.after > scrolled.before, scrolled);
+    ck("laptop: tool buttons stay usable (at least 44 px tall) with a key hint", g.btnH >= 44, g);
   } else {
     ck(`${label}: tools stay at least 44 px tall on a touch screen`, g.btnH >= 43.5, g);
   }
@@ -154,7 +150,16 @@ for (const [w, h, label] of [[390, 844, "phone portrait"], [844, 390, "phone lan
     const v = window.plasmaTest.sketch.view;
     return { vx: v.vx, vy: v.vy, s: v.s };
   })()`);
-  ck("wheel deltaX/deltaY pans the Make canvas and does not zoom", Math.abs(wheel.vx - before.vx) > 0.01 && Math.abs(wheel.vy - before.vy) > 0.01 && Math.abs(wheel.s - before.s) < 1e-6, { before, wheel });
+  ck("wheel over the laptop Make canvas zooms to the cursor", Math.abs(wheel.s - before.s) > 1e-6, { before, wheel });
+  const panned = await T(page, `(() => {
+    const cv = document.getElementById("preview");
+    const r = cv.getBoundingClientRect();
+    const v0 = { vx: window.plasmaTest.sketch.view.vx, vy: window.plasmaTest.sketch.view.vy, s: window.plasmaTest.sketch.view.s };
+    cv.dispatchEvent(new WheelEvent("wheel", { deltaX: 40, deltaY: 30, shiftKey: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true, cancelable: true }));
+    const v = window.plasmaTest.sketch.view;
+    return { v0, vx: v.vx, vy: v.vy, s: v.s };
+  })()`);
+  ck("shift+wheel still pans the laptop Make canvas", (Math.abs(panned.vx - panned.v0.vx) > 0.01 || Math.abs(panned.vy - panned.v0.vy) > 0.01) && Math.abs(panned.s - panned.v0.s) < 1e-6, panned);
 
   const zoomed = await T(page, `(() => {
     const cv = document.getElementById("preview");

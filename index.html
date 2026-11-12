@@ -214,6 +214,7 @@
     <div id="editorSwitch" class="editorsw" role="group" aria-label="Drawing tools">
       <button type="button" id="btnAdvancedTools" class="modesw-btn">Advanced tools</button>
       <button type="button" id="btnSimpleView" class="modesw-btn hidden">Simple view</button>
+      <button type="button" id="btnPresetParts" class="modesw-btn">Preset parts</button>
     </div>
   </div>
   <ol class="stepper" id="stepper">
@@ -441,6 +442,10 @@
           <h3 class="addtiles">Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
           <div id="holeTiles" class="tiles small addtiles"></div>
           <div id="shapeForm" class="shapeform"></div>
+          <section id="layersPanel" class="layerspanel" aria-label="Parts list">
+            <h3>Parts</h3>
+            <ul id="layersList" class="layerslist"></ul>
+          </section>
           <section id="cutSummary" class="cutsummary" aria-label="Cut settings"></section>
           <div id="cutCheck" class="cutcheck"></div>
           <details class="guide"><summary>What this machine can cut</summary><div class="limitsBody"></div></details>
@@ -459,8 +464,8 @@
               <li><b>Join</b> – pick shapes that touch or overlap and press <b>Join into one part</b>. They become one outline, with all their holes. Now copy it, resize it or turn it as one part.</li>
               <li><b>Line up</b> – with several picked, the Line-up buttons move them to match the biggest one (e.g. pick a plate and a hole, press <b>Dead centre</b>).</li>
               <li><b>Copy</b> – Copy button, or Ctrl+C then Ctrl+V. For lots of the same thing use <b>How many</b> below.</li>
-              <li><b>Keys</b> – arrows nudge 1 mm (Shift 10, Alt 0.1), R turns 90°, M mirrors, Delete removes, Ctrl+Z undo, Ctrl+J join.</li>
-              <li><b>View</b> – scroll or pinch to zoom; drag with the right mouse button, a finger or Space held to pan; double-click empty space to fit.</li>
+              <li><b>Keys</b> – arrows nudge 1 mm (Shift 10, Alt 0.1), L line, R rectangle, C circle, D dimension, M move, Delete removes, Ctrl+Z undo, Ctrl+Y redo, Ctrl+J join. Keys are ignored while you type in a box.</li>
+              <li><b>View</b> – on a laptop the wheel zooms to the cursor, the middle button pans and right-click opens a menu. On a phone, scroll still pans; pinch to zoom. Hold Space to pan. Double-click empty space to fit.</li>
             </ul>
           </details>
           <h3>How many of the whole drawing?</h3>
@@ -800,6 +805,18 @@
     <input id="libSearch" type="search" placeholder="Search shapes" enterkeyhint="search" autocomplete="off">
     <div id="libCats" class="libcats"></div>
     <div id="libGrid" class="libgrid"></div>
+  </div>
+</div>
+<!-- Preset parts browser -->
+<div id="presetBrowser" class="presetbrowser hidden" hidden role="dialog" aria-modal="true" aria-labelledby="pbTitle" aria-hidden="true">
+  <div class="pb-frame">
+    <header class="pb-head">
+      <h2 id="pbTitle">Preset parts</h2>
+      <input id="pbSearch" type="search" placeholder="Search parts" enterkeyhint="search" autocomplete="off" aria-label="Search parts">
+      <button type="button" id="pbClose">Close</button>
+    </header>
+    <div id="pbCats" class="pbcats" role="tablist" aria-label="Part categories"></div>
+    <div id="pbGrid" class="pbgrid"></div>
   </div>
 </div>
 <!-- version / release popover -->
@@ -1241,6 +1258,12 @@
 </div>
 
 <!-- dimension typing (replaces the on-screen calculator pad) -->
+<div id="drawHud" class="drawhud hidden" hidden aria-label="Type while drawing"></div>
+<div id="cadCtxMenu" class="cadctx hidden" hidden role="menu" aria-label="Drawing menu"></div>
+<div id="sidewaysHint" class="sideways-hint hidden" hidden role="status" aria-live="polite">
+  <span>Turn your phone sideways for more room</span>
+  <button type="button" id="sidewaysHintDismiss" class="small" aria-label="Dismiss">✕</button>
+</div>
 <div id="dimEdit" class="dimedit hidden" hidden>
   <label id="dimEditLabel" for="dimEditInput">Size (mm)</label>
   <input id="dimEditInput" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done">

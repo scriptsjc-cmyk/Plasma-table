@@ -2,6 +2,15 @@
 import { getPrefs } from "../core/prefs.js";
 import { boxOverlap, clone, r1, unionBox, wholeSet } from "./sketch-util.js";
 import { pointInPoly } from "../core/geom.js";
+import { snapWorld, constraintOf, applyConstraints } from "./snaps.js";
+import { afterDrawPoint, startRectAt, startDiscAt, paintDrawHud, commitRectDisc, closeDrawHud, cancelDrawHud } from "./drawhud.js";
+import { openCtxMenu } from "./ctxmenu.js";
+
+
+function laptopPointer() {
+  try { return !!(window.matchMedia && window.matchMedia("(min-width: 900px) and (pointer: fine)").matches); }
+  catch (e) { return false; }
+}
 
 export class InputMethods {
   hitDim(sx, sy, touch) {
@@ -32,6 +41,7 @@ export class InputMethods {
     const [wx, wy] = this.toWorld(sx, sy);
     const list = this.order().reverse();
     for (const it of list) {
+      if (this.layerHidden && this.layerHidden(it)) continue;
       const cs = this.contoursOf(it); if (!cs.length) continue;
       if (wholeSet(it.type)) { if (cs.some((c) => pointInPoly([wx, wy], c.pts))) return { kind: "move", it: this.holeOwner(it) || it }; continue; }
       if (!pointInPoly([wx, wy], cs[0].pts)) continue;
@@ -117,14 +127,37 @@ export class InputMethods {
       }
       if (this.pointers.size > 2) return;
       const touch = e.pointerType === "touch";
-      const panBtn = e.button === 1 || e.button === 2 || this.spaceDown;
+      const panBtn = e.button === 1 || this.spaceDown;
+      if (e.button === 2 && !this.spaceDown) {
+        this.drag = { kind: "ctx", sx, sy, wx, wy, moved: false };
+        return;
+      }
       const [wx, wy] = this.toWorld(sx, sy);
-      if (this.tool === "draw" && !panBtn) {
-        const step = this.opts.snap || 0.1;
-        const px = Math.round(wx / step) * step, py = Math.round(wy / step) * step;
+      if ((this.tool === "draw" || this.tool === "rect" || this.tool === "disc") && !panBtn) {
+        let px = wx, py = wy;
+        const sn = snapWorld(this, wx, wy);
+        if (sn) { px = sn.x; py = sn.y; this.snapMark = sn; }
+        else if (this.opts.snap) {
+          const step = this.opts.snap || 0.1;
+          px = Math.round(wx / step) * step; py = Math.round(wy / step) * step;
+        }
         if (!Number.isFinite(px) || !Number.isFinite(py)) return;
         if (Math.abs(px) > this.maxMm || Math.abs(py) > this.maxMm) { this.onMessage("That point is off the table."); return; }
+        if (this.tool === "rect") {
+          if (this.drawDraft && this.drawDraft.kind === "rect") { commitRectDisc(); return; }
+          startRectAt(px, py); this.draw(); return;
+        }
+        if (this.tool === "disc") {
+          if (this.drawDraft && this.drawDraft.kind === "disc") { commitRectDisc(); return; }
+          startDiscAt(px, py); this.draw(); return;
+        }
+        const last = this.drawPts[this.drawPts.length - 1];
+        if (last) {
+          const tags = constraintOf(this, last, [px, py]);
+          if (tags) { const c = applyConstraints(last, [px, py], tags); px = c[0]; py = c[1]; this.constraintHint = tags; }
+        }
         this.drawPts.push([px, py]);
+        afterDrawPoint();
         this.draw(); return;
       }
       if (this.tool === "measure" && !panBtn) {
@@ -174,6 +207,27 @@ export class InputMethods {
       if (!d) {                                                 // hover cursor
         const h = this.spaceDown ? null : this.hit(sx, sy, false);
         cv.style.cursor = this.spaceDown ? "grab" : !h ? "crosshair" : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
+        const [mwx, mwy] = this.toWorld(sx, sy);
+        const sn = snapWorld(this, mwx, mwy);
+        this.snapMark = sn;
+        if (this.tool === "draw" && this.drawPts.length) {
+          let to = sn ? [sn.x, sn.y] : [mwx, mwy];
+          const last = this.drawPts[this.drawPts.length - 1];
+          const tags = constraintOf(this, last, to);
+          if (tags) { to = applyConstraints(last, to, tags); this.constraintHint = tags; } else this.constraintHint = null;
+          const len = Math.hypot(to[0] - last[0], to[1] - last[1]);
+          const ang = Math.atan2(to[1] - last[1], to[0] - last[0]) * 180 / Math.PI;
+          this.drawDraft = { kind: "line", x: to[0], y: to[1], len, ang };
+        } else if (this.tool === "rect" && this.drawDraft && this.drawDraft.kind === "rect") {
+          const d = this.drawDraft;
+          const x = sn ? sn.x : mwx, y = sn ? sn.y : mwy;
+          d.w = x - d.x; d.h = y - d.y;
+        } else if (this.tool === "disc" && this.drawDraft && this.drawDraft.kind === "disc") {
+          const d = this.drawDraft;
+          const x = sn ? sn.x : mwx, y = sn ? sn.y : mwy;
+          d.d = 2 * Math.hypot(x - d.cx, y - d.cy);
+        }
+        this.draw();
         return;
       }
       if (d.kind === "pinch") {
@@ -188,7 +242,7 @@ export class InputMethods {
         this.draw();
         return;
       }
-      if (d.kind === "dim") {
+      if (d.kind === "dim" || d.kind === "ctx") {
         if (Math.hypot(sx - d.sx, sy - d.sy) > 6) d.moved = true;
         return;
       }
@@ -252,6 +306,14 @@ export class InputMethods {
         if (!d.moved) this.onDimTap(d.dim);
         this.draw(); return;
       }
+      if (d.kind === "ctx") {
+        if (!d.moved) {
+          const h = this.hit(d.sx, d.sy, false);
+          if (h && h.it) { this.pick([h.it.id]); this.onSelect(); }
+          openCtxMenu(d.sx, d.sy, h);
+        }
+        this.draw(); return;
+      }
       if (d.kind === "pan") {
         if (!d.moved && this.sel.ids.length) { this.pick([]); this.onSelect(); }
         this.draw(); return;
@@ -297,7 +359,8 @@ export class InputMethods {
       if (!this.view) return;
       const k = e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? 400 : 1);
       const dx = e.deltaX * k, dy = e.deltaY * k;
-      if (getPrefs().wheelZoom) {
+      const cadZoom = laptopPointer() && !e.shiftKey;
+      if (getPrefs().wheelZoom || cadZoom) {
         this.zoomAt(sx, sy, Math.exp(-dy * 0.0015));
         return;
       }
@@ -328,8 +391,9 @@ export class InputMethods {
       if (!this.active || !this.cv.offsetParent) return;
       const overlay = (id) => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); };
       // the type-in size box owns the keys from the moment it opens (its input only takes focus on the next frame, so focus alone isn't enough)
-      if (overlay("dimEdit") || overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop") || document.querySelector(".acctdlg:not(.hidden)")) return;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) return;
+      if (overlay("dimEdit") || overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop") || overlay("presetBrowser") || document.querySelector(".acctdlg:not(.hidden)")) return;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement && document.activeElement.tagName)) return;
+      if (document.getElementById("drawHud") && !document.getElementById("drawHud").classList.contains("hidden") && document.getElementById("drawHud").contains(document.activeElement)) return;
       if (document.activeElement.getAttribute("role") === "separator") return;      // the focused picture divider owns its arrow keys
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
@@ -342,16 +406,38 @@ export class InputMethods {
       if (ctrl && k === "d") { stop(); this.duplicate(); return; }
       if (ctrl && k === "j") { stop(); this.join(); return; }          // (join is refused in the sheet layout)
       const isArrow = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown"].includes(e.key);
-      if (!this.sel.ids.length) { if (isArrow) stop(); return; }
+      // drawing shortcuts: never steal Space (pan on Make, STOP on Cut). Ignore when typing (checked above).
+      if (!ctrl && !this.layout) {
+        if (k === "l") { stop(); this.setTool("draw"); afterDrawPoint(); if (this.onSelect) this.onSelect(); return; }
+        if (k === "r") { stop(); this.setTool("rect"); if (this.onSelect) this.onSelect(); return; }
+        if (k === "c") { stop(); this.setTool("disc"); if (this.onSelect) this.onSelect(); return; }
+        if (k === "d") { stop(); this.setTool("measure"); if (this.onSelect) this.onSelect(); return; }
+        if (k === "m") { stop(); this.setTool(null); if (this.onSelect) this.onSelect(); return; }
+      }
+      if (e.key === "Escape") {
+        // Cancel an in-progress line / rect / disc first; otherwise leave Escape
+        // for the full-screen editor (dialogs.js) and other dialogs.
+        if (this.drawPts && this.drawPts.length || this.drawDraft) {
+          e.stopImmediatePropagation(); e.preventDefault();
+          cancelDrawHud(); return;
+        }
+        // Leave Escape for the full-screen editor and the cutting-screen sheet.
+        if (this.layout || document.body.classList.contains("shape-fs")) return;
+        e.stopImmediatePropagation(); e.preventDefault();
+        if (this.tool) { this.setTool(null); if (this.onSelect) this.onSelect(); return; }
+        this.pick([]); this.onSelect(); this.draw(); return;
+      }
+      if (!this.sel.ids.length) {
+        if (e.key === "Delete" || e.key === "Backspace") return;
+        if (isArrow) stop();
+        return;
+      }
       if (e.key === "PageUp" || e.key === "PageDown") { stop(); return; }
       if (this.layout && isArrow) { stop(); return; }          // on the cutting screen the arrows are for jogging, never for nudging a part (the nudge buttons are there)
       const st = e.shiftKey ? 10 : e.altKey ? 0.1 : 1;
       const mv = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, st], ArrowDown: [0, -st] }[e.key];
       if (mv) { stop(); this.nudge(...mv); return; }
       if (e.key === "Delete" || e.key === "Backspace") { stop(); if (!this.layout && this.edgeSel && this.edgeSel.vi != null) this.deleteVertex(); else this.remove(); return; }
-      if (k === "r") { stop(); this.rotateBy(e.shiftKey ? -90 : 90); return; }
-      if (k === "m") { stop(); this.mirror(); return; }
-      if (e.key === "Escape") { e.stopImmediatePropagation(); this.pick([]); this.onSelect(); this.draw(); }
     }, true);
   }
 }
