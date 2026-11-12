@@ -795,6 +795,11 @@ body.short-land .dimedit label { margin-bottom: 2px; }
    tablets (touch, or under 1100 x 560) never see any of this. */
 .jobcard { display: none; }
 @media (min-width: 1100px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  /* STOP: the mushroom and the word side by side */
+  body[data-screen="cut"] #btnStop.estop { flex-direction: row; gap: 8px; width: clamp(208px, 14vw, 260px); min-width: 208px; min-height: 86px; padding: 4px 12px; }
+  body[data-screen="cut"] #btnStop.estop .estop-svg { width: 76px; height: 76px; }
+  body[data-screen="cut"] #btnStop.estop .estop-label { font-size: 24px; margin: 0; padding: 6px 12px; border-radius: 8px; }
+  body[data-screen="cut"] #btnStop.pressed .estop-label { font-size: 17px; line-height: 1.1; padding: 4px 8px; white-space: normal; text-align: center; }
   /* the job and machine card, in place of the one-line stats under the picture */
   body[data-screen="cut"][data-step="3"] #jobStats, body[data-screen="cut"][data-step="4"] #jobStats { display: none; }
   body[data-screen="cut"][data-step="3"] #jobCard, body[data-screen="cut"][data-step="4"] #jobCard { display: block; flex: 1 1 100%; margin: 0; padding: 6px 10px;
@@ -803,4 +808,10 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .jobcard dl > div { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
   .jobcard dt { flex: none; width: 60px; font-size: 12px; font-weight: 700; color: var(--muted); }
   .jobcard dd { margin: 0; min-width: 0; font-size: 13px; line-height: 1.35; font-weight: 650; color: var(--text); overflow-wrap: anywhere; }
+
+  /* STOP stays the biggest: no other cutting-screen button is wider than 300px or taller than 56px */
+  body[data-screen="cut"][data-step="3"] #cutView .stepPane button:not(.blocker-jump),
+  body[data-screen="cut"][data-step="4"] #cutView .stepPane button:not(.blocker-jump) { max-width: 300px; }
+  body[data-screen="cut"][data-step="3"] #cutView .stepPane button.xl, body[data-screen="cut"][data-step="4"] #cutView .stepPane button.xl { min-height: 48px; max-height: 56px; }
+  body[data-screen="cut"][data-step="4"] .runctl #btnPause { flex: 0 1 300px; min-height: 56px; }
 }
