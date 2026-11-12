@@ -8,6 +8,7 @@ import { shapeDef } from "./sketch.js";
 import { variantsFor, variantKey } from "./variants.js";
 import { evalExpr } from "../core/expr.js";
 import { runPro } from "./cad.js";
+import { getToolIds, toolInfo, openToolbarCustom } from "./toolbarcustom.js";
 
 const PHONE_MQ = "(max-width: 699px), ((max-height: 520px) and (max-width: 950px)), ((max-width: 900px) and (any-pointer: coarse))";
 
@@ -128,21 +129,16 @@ function selectedSheetHtml() {
 }
 
 function moreSheetHtml() {
+  const skip = new Set(["undo"]); // Undo is already on the compact bar
+  const btns = getToolIds().filter((id) => !skip.has(id)).map((id) => {
+    const info = toolInfo(id) || { label: id };
+    return `<button type="button" data-more="${id}">${info.label}</button>`;
+  }).join("");
   return `<h3>More tools</h3>
-    <div class="skbtns">
-      <button type="button" data-more="redo">Redo</button>
-      <button type="button" data-more="fit">Zoom to fit</button>
-      <button type="button" data-more="del">Delete</button>
-      <button type="button" data-more="dup">Copy</button>
-      <button type="button" data-more="rot">Turn 90°</button>
-      <button type="button" data-more="mir">Mirror</button>
-      <button type="button" data-more="join">Join</button>
-      <button type="button" data-more="offset">Offset</button>
-      <button type="button" data-more="linarray">Linear array</button>
-      <button type="button" data-more="polar">Circular array</button>
-      <button type="button" data-more="snap">Snap</button>
+    <div class="skbtns">${btns}
+      <button type="button" data-more="customise">Customise toolbar</button>
     </div>
-    <p class="muted small">The same tools as on a laptop; the ones you use less often live here.</p>`;
+    <p class="muted small">The same tools as on a laptop; pick which ones appear here with Customise toolbar.</p>`;
 }
 
 export function paintPhoneSheet() {
@@ -207,6 +203,7 @@ function onSheetClick(e) {
   const more = e.target.closest("[data-more]");
   if (!more) return;
   const k = more.dataset.more;
+  if (k === "customise") { openToolbarCustom(); return; }
   if (k === "redo" && sketch.future && sketch.future.length) sketch.redo();
   else if (k === "fit") sketch.fitView();
   else if (k === "del") sketch.remove();
@@ -218,7 +215,12 @@ function onSheetClick(e) {
     sketch.opts.snap = sketch.opts.snap ? 0 : 1;
     try { sketch.saveOpts && sketch.saveOpts(); } catch (err) { /* ignore */ }
     toast(sketch.opts.snap ? "Snap on" : "Snap off");
-  } else if (k === "offset" || k === "linarray" || k === "polar") runPro(k);
+  } else if (k === "offset" || k === "linarray" || k === "polar" || k === "draw" || k === "measure" || k === "subtract" || k === "nest") runPro(k);
+  else if (k === "presets" || k === "lib" || k === "text" || k === "trace" || k === "size" || k === "resize" || k === "dims" || k === "ver" || k === "fillet" || k === "chamfer" || k === "edge" || k === "alignl" || k === "alignb" || k === "fs") {
+    import("./quickbar.js").then((m) => m.quickAction(k)).catch(() => {});
+  } else if (k === "rect" || k === "disc" || k === "triangle" || k === "slot" || k === "sector" || k === "hole" || k === "slothole" || k === "boltcircle") {
+    import("./quickbar.js").then((m) => m.quickAction(k)).catch(() => {});
+  }
   paintPhoneBar();
   paintPhoneSheet();
 }

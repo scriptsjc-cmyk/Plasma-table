@@ -8,7 +8,7 @@
 //  8  Pro on a phone: the inspector is a bottom sheet, the tool list one row, the status under the picture
 // 15  the first reason Start is greyed shows right under the button
 //  9  mode switch in the header on every screen but Make; one Cut settings summary in both modes; Beginner parts list and Unlock
-//  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Zoom to fit, Expand picture, scroll zoom
+//  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Fit in the header, scroll zoom
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
 const s = await serve(), br = await launch();
@@ -66,13 +66,13 @@ const makeBeginner = async (page, pick = true) => {
   await sleep(500);
 };
 const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.querySelector(q); if (!e) return null; const b = e.getBoundingClientRect(); return { l: Math.round(b.left), t: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height), b: Math.round(b.bottom), r: Math.round(b.right) }; };
-  return { grid: r(".cutgrid"), pane: r(".previewPane"), cv: r("#preview"), dock: r(".previewDock"), step: r(".stepPane"), split: r("#makeSplit"), tools: r("#picTools"), modesw: r("#editorSwitch"), title: r("#ghTitle") }; })()`);
+  return { grid: r(".cutgrid"), pane: r(".previewPane"), cv: r("#preview"), dock: r(".previewDock"), step: r(".stepPane"), split: r("#makeSplit"), tools: r("#picTools"), pin: r("#makeBar #qbPinned"), bar: r("#makeBar"), modesw: r("#editorSwitch"), title: r("#ghTitle") }; })()`);
 { // phone portrait
   const page = await phone(390, 664); await makeBeginner(page);
   const g = await geom(page);
   ck("5 phone: the picture gets at least 55% of the Make a part pane", g.pane.h >= 0.55 * g.grid.h, g);
   ck("5 phone: the status / Save / Download row sits under the picture, not over it", g.dock.t >= g.cv.b - 1, g);
-  ck("5 phone: Zoom to fit and Expand picture sit over the picture, 44 px each", g.tools.t >= g.cv.t && g.tools.h >= 44 && g.tools.b <= g.cv.b, g);
+  ck("5 phone: Undo, Redo, Fit and Delete sit in the Make a part bar, not over the canvas", g.pin && g.pin.w >= 44 && g.pin.h >= 44 && g.pin.b <= g.cv.t + 1 && (!g.tools || !g.tools.h), g);
   ck("5 phone: no divider on a phone", !g.split.w, g);
   await snap(page, "make-phone");
   await page.context().close();
@@ -119,14 +119,10 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   await page.keyboard.down("Control"); await page.mouse.wheel(0, -400); await page.keyboard.up("Control"); await sleep(250);
   const s1 = await T(page, `window.plasmaTest.sketch.view.s`);
   ck("5 laptop: Ctrl+scroll zooms in", s1 > v0.s * 1.05, { s0: v0.s, s1 });
-  await page.click("#btnPicFit"); await sleep(200);
-  ck("5 laptop: Zoom to fit shows the whole part again", Math.abs(await T(page, `window.plasmaTest.sketch.view.s`) - v0.s) < v0.s * 0.02);
-  await page.click("#btnPicFs"); await sleep(400);
-  const fs1 = await T(page, `({ fs: document.body.classList.contains("shape-fs"), cv: Math.round(document.getElementById("preview").getBoundingClientRect().width), done: !!document.getElementById("fsDone").offsetParent, expandShown: !!document.getElementById("btnPicFs").offsetParent })`);
-  ck("5 laptop: Expand picture opens the big picture (with its Done button), and hides itself", fs1.fs && fs1.cv > g6.cv.w && fs1.done && !fs1.expandShown, fs1);
-  await snap(page, "make-laptop-expanded");
-  await page.click("#fsDone"); await sleep(400);
-  ck("5 laptop: Done brings the controls back", await T(page, `!document.body.classList.contains("shape-fs") && !!document.getElementById("bgChange").offsetParent`));
+  await page.click("#makeBar #qbPinned [data-qb=\"fit\"]"); await sleep(200);
+  ck("5 laptop: Fit in the header shows the whole part again", Math.abs(await T(page, `window.plasmaTest.sketch.view.s`) - v0.s) < v0.s * 0.02);
+  const pin = await geom(page);
+  ck("5 laptop: the four edit buttons sit in the Make a part bar and leave the canvas clear", pin.pin && pin.pin.h >= 44 && pin.pin.b <= pin.cv.t + 1 && (!pin.tools || !pin.tools.h), pin);
   // Pro is unchanged: no divider, no Beginner picture buttons
   await T(page, `window.plasmaTest.setAppMode("pro", { persist: false, autoFs: false }); window.plasmaTest.setShapeFs(false)`); await sleep(400);
   ck("5 laptop: Pro keeps its own layout (no Beginner divider or picture buttons)", await T(page, `!document.getElementById("makeSplit").offsetParent && !document.getElementById("picTools").offsetParent`));
@@ -182,11 +178,9 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   ck("9 Make a part starts in Simple view with an Advanced tools button", await vis("#btnAdvancedTools") && !(await vis("#btnSimpleView")) && await T(page, `!window.plasmaTest.isProMode() && document.body.classList.contains("beginner")`));
   await page.click("#btnAdvancedTools"); await sleep(400);
   ck("9 Advanced tools opens the full editor", await T(page, `window.plasmaTest.isProMode() && document.body.classList.contains("pro-mode")`) && await vis("#btnSimpleView"));
-  // Pro: the cut settings at the foot of the inspector
+  // A part so the Simple-view lock / parts-list checks below have something to show
   await T(page, `(() => { const T = window.plasmaTest; T.sketch.clear(); T.sketch.add("plate", true); T.sketch.fitView(); T.renderShapeForm ? T.renderShapeForm() : 0; })()`); await sleep(400);
-  const rowsOf = (q) => T(page, `[...document.querySelectorAll(${JSON.stringify(q + " dt")})].map((d) => d.textContent)`);
-  const want = ["Material", "Thickness", "Cut width (kerf)", "Pierce delay", "Cut speed", "Lead-in", "Practice run"];
-  ck("9 Pro: the inspector shows Cut settings (material, thickness, kerf, pierce delay, speed, lead-in, practice)", JSON.stringify(await rowsOf("#ptInspCutSum")) === JSON.stringify(want) && await vis("#ptInspCutSum [data-cutsum=change]"), await rowsOf("#ptInspCutSum"));
+  ck("9 Advanced: cut settings and machine/edge status stay off the drawing screen", !(await vis("#cutSummary")) && !(await vis("#ptInspCutSum")) && !(await vis("#fit")) && !(await vis("#homeBar")) && !(await vis("#jobCard")));
   // lock it in Pro, then switch to Beginner: the lock is visible with an Unlock button
   await T(page, `(() => { const k = window.plasmaTest.sketch; k.pick([k.items[0].id]); k.toggleLock(); })()`); await sleep(200);
   await page.click("#btnSimpleView"); await sleep(500);
@@ -194,12 +188,7 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   ck("9 a part locked in Pro shows as locked in Beginner, with Unlock", await vis('#shapeForm .lockline [data-sk="toggleLock"]') || await vis('#shapeForm [data-sk="unlockAll"]'));
   await page.click('#shapeForm .lockline button'); await sleep(300);
   ck("9 Unlock in Beginner frees it", await T(page, `!window.plasmaTest.sketch.items.some((i) => i.lock)`));
-  // Beginner: the same cut settings, Change behind Advanced
-  ck("9 Beginner: Cut settings shows the same seven values", JSON.stringify(await rowsOf("#cutSummary")) === JSON.stringify(want) && !(await vis("#ptInspCutSum")), await rowsOf("#cutSummary"));
-  ck("9 Beginner: Change is behind the Advanced fold", await T(page, `!!document.querySelector("#cutSummary details.cutsum-adv:not([open]) [data-cutsum=change]")`));
-  await T(page, `(() => { const d = document.getElementById("dryRun"); d.checked = !d.checked; d.dispatchEvent(new Event("change")); })()`); await sleep(300);
-  const dry = await T(page, `[document.getElementById("dryRun").checked, [...document.querySelectorAll("#cutSummary dd")].pop().textContent]`);
-  ck("9 the summary follows the Practice run box", dry[0] ? /^On/.test(dry[1]) : dry[1] === "Off", dry);
+  ck("9 Simple view: cut settings and the edges-not-set-up notice stay off the drawing screen", !(await vis("#cutSummary")) && !(await vis("#ptInspCutSum")) && !(await vis("#fit")) && !(await vis("#showMachWrap")));
   // Beginner parts list: two parts, tap the second to pick it
   await T(page, `(() => { const k = window.plasmaTest.sketch; k.add("disc", true); k.pick([]); k.draw(); window.plasmaTest.sketch.onSelect(); })()`); await sleep(400);
   const pl = await T(page, `[...document.querySelectorAll("#shapeForm .bgparts [data-bpart]")].map((b) => b.textContent)`);
@@ -207,9 +196,8 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   await page.click("#shapeForm .bgparts li:nth-child(2) button"); await sleep(300);
   ck("9 tapping a part in the list picks it", await T(page, `(() => { const k = window.plasmaTest.sketch, p = k.picked(); return p.length === 1 && p[0].type === "disc"; })()`));
   await snap(page, "mode-beginner-parts");
-  await page.click("#cutSummary .cutsum-adv > summary"); await sleep(200);
-  await page.click("#cutSummary [data-cutsum=change]"); await sleep(600);
-  ck("9 Change opens the cutting screen's material step with More cut options open", await T(page, `window.plasmaTest.screen() === "cut" && document.getElementById("advCut").open && document.body.dataset.step === "1"`), await T(page, `[window.plasmaTest.screen(), document.body.dataset.step]`));
+  await T(page, `window.plasmaTest.sendToCutting()`); await sleep(600);
+  ck("9 sending the part opens the cutting screen, which hides Simple / Advanced", await T(page, `window.plasmaTest.screen() === "cut"`), await T(page, `window.plasmaTest.screen()`));
   ck("9 the cutting screen hides Simple / Advanced and has no Beginner / Pro styling", !(await vis("#editorSwitch")) && !(await vis("#topModeSwitch")) && await T(page, `!document.body.classList.contains("beginner") && !document.body.classList.contains("pro-mode")`));
   ck("9 no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await page.context().close();

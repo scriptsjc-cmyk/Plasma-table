@@ -151,6 +151,7 @@ const PRECACHE = [
   "js/make/straight.js",
   "js/make/svg.js",
   "js/make/textshape.js",
+  "js/make/toolbarcustom.js",
   "js/make/trace.js",
   "js/make/useshape.js",
   "js/make/variants.js",

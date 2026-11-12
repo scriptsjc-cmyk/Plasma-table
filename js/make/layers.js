@@ -34,9 +34,39 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+export function openPartsList() {
+  const el = $("layersPanel");
+  if (!el) return;
+  paintLayers();
+  el.classList.add("is-open");
+  el.hidden = false;
+  const close = $("layersClose");
+  if (close) close.focus();
+}
+
+export function closePartsList() {
+  const el = $("layersPanel");
+  if (!el) return;
+  el.classList.remove("is-open");
+}
+
 export function bindLayers() {
   const list = $("layersList");
   if (!list) return;
+  const view = $("btnViewParts");
+  if (view && !view.dataset.bound) {
+    view.dataset.bound = "1";
+    view.addEventListener("click", () => {
+      const el = $("layersPanel");
+      if (el && el.classList.contains("is-open")) closePartsList();
+      else openPartsList();
+    });
+  }
+  const close = $("layersClose");
+  if (close && !close.dataset.bound) {
+    close.dataset.bound = "1";
+    close.addEventListener("click", () => closePartsList());
+  }
   list.addEventListener("click", (e) => {
     if (!sketch) return;
     const hide = e.target.closest(".layer-hide");

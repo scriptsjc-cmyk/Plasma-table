@@ -4,6 +4,7 @@ import { bindLayers, paintLayers } from "./layers.js";
 import { bindCtxMenu } from "./ctxmenu.js";
 import { bindDrawHud, startRectAt, startDiscAt, applyHudPoint, cancelDrawHud, paintDrawHud } from "./drawhud.js";
 import { bindPresetBrowser } from "./presetbrowser.js";
+import { bindToolbarCustom } from "./toolbarcustom.js";
 import { sketch } from "../core/state.js";
 import { renderQuickBar } from "./quickbar.js";
 
@@ -15,6 +16,7 @@ export function bindCadUi() {
   bindCtxMenu();
   bindDrawHud();
   bindPresetBrowser();
+  bindToolbarCustom();
   if (sketch) {
     const prevSel = sketch.onSelect;
     sketch.onSelect = (...a) => { try { if (prevSel) prevSel(...a); } finally { paintLayers(); } };

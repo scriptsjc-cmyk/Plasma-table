@@ -343,13 +343,57 @@ body[data-screen="make"] #makeBar { display: flex; }
 }
 body[data-screen="cut"] #srcShape, body[data-screen="cut"] #bgPick, body[data-screen="cut"] #guideHead, body[data-screen="cut"] #quickBar,
 body[data-screen="cut"] #fsBar, body[data-screen="cut"] #toolBar { display: none !important; }
-/* make bar: title + the Beginner / Pro switch (the only place it lives) */
-.makebar { align-items: center; justify-content: space-between; gap: 10px; padding: 6px 12px; background: var(--card); border-bottom: 1px solid var(--line); flex: none; }
-.makebar h1, .makebar h2 { margin: 0; font-size: var(--fs-lg); font-weight: 700; }
+/* make bar: title, the four edit buttons, then Simple / Advanced */
+.makebar { align-items: center; justify-content: flex-start; gap: 8px 10px; padding: 6px 12px; background: var(--card); border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.makebar h1, .makebar h2 { margin: 0; font-size: var(--fs-lg); font-weight: 700; flex: 0 0 auto; }
+#makeBar #qbPinned {
+  display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center;
+  gap: 4px; min-width: 0; padding: 0; border: 0;
+}
+#makeBar #qbPinned.hidden { display: none !important; }
+#makeBar #qbPinned button {
+  min-height: 44px; min-width: 44px; padding: 4px 8px;
+  flex: 0 0 auto; gap: 2px;
+}
+#makeBar #editorSwitch { margin-left: auto; flex: 0 0 auto; }
+#btnViewParts { display: none; min-height: 44px; }
+body.phone-ui.pro-mode[data-screen="make"] #btnViewParts,
+body.phone-ui.advanced-mode[data-screen="make"] #btnViewParts { display: inline-flex; align-items: center; }
+
+/* Narrow and short screens: icon-only header tools so the four sit beside the title on one compact row. */
+@media (max-width: 699px) {
+  #makeBar { padding: 4px 8px; gap: 6px; }
+  #makeBar h1 { font-size: 16px; }
+  #makeBar #qbPinned { flex: 0 1 auto; flex-wrap: nowrap; }
+  #makeBar #qbPinned button { min-width: 44px; width: 44px; padding: 4px 0; }
+  #makeBar #qbPinned button span, #makeBar #qbPinned button kbd {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);
+  }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  #makeBar { padding: 2px 8px; gap: 4px; }
+  #makeBar h1 { font-size: 15px; }
+  #makeBar #qbPinned button { min-height: 36px; min-width: 36px; width: 36px; }
+  #makeBar .modesw-btn { min-height: 36px; }
+}
+
+
 body.shape-fs .makebar { display: none; }
 body[data-screen="cut"] .step[data-step="4"] .nav { display: none; }
 /* Round 5 (CAD): the cut check and job warnings belong to cutting, not to designing */
 body[data-screen="make"] #warnings, body[data-screen="make"] #cutCheck { display: none !important; }
+/* Machine / cutting status belongs on the cutting and Machine setup screens, not on the drawing screen. */
+body[data-screen="make"] #fit,
+body[data-screen="make"] #jobStats,
+body[data-screen="make"] #jobCard,
+body[data-screen="make"] #playRow,
+body[data-screen="make"] #showMachWrap,
+body[data-screen="make"] #cutSummary,
+body[data-screen="make"] #ptInspCutSum,
+body[data-screen="make"] #homeBar,
+body[data-screen="make"] details.guide:has(.limitsBody) {
+  display: none !important;
+}
 /* Round 5 (bugs 20): the inspector's job-wide cut settings sit in their own labelled box */
 #ptInspector .pt-jobset { margin: 8px 0 0; padding: 6px 8px 8px; border: 1px dashed var(--line); border-radius: 8px; min-width: 0; }
 #ptInspector .pt-jobset legend { padding: 0 4px; font-size: 12px; font-weight: 700; color: var(--muted); }
@@ -388,7 +432,8 @@ body.short-land .dimedit .dimops { margin-top: 4px; }
 /* ---- Round 5 item 5: in Beginner the picture fills the free space ---- */
 /* picture tools (Zoom to fit / Expand picture) sit over the picture on Make a part; pinch or scroll also zooms */
 .pictools { display: none; }
-body[data-screen="make"].beginner .pictools { display: flex; position: absolute; top: 8px; left: 8px; z-index: 3; gap: 6px; flex-wrap: wrap; }
+body[data-screen="make"] .pictools,
+body[data-screen="make"].beginner .pictools { display: none !important; }
 body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
 .pictools button { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: 14px; font-weight: 650; background: color-mix(in srgb, var(--card) 92%, transparent); }
 @media (max-width: 899px), (max-height: 540px) {
@@ -433,10 +478,11 @@ body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
 @media (orientation: landscape) and (max-height: 540px) {
   /* phone on its side: the mode switch sits at the end of the guide line and the status under the picture is one line, so the picture gets the height */
   body.short-land.beginner[data-screen="make"]:not(.shape-fs) #cutView { position: relative; }
-  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar { position: absolute; top: 0; right: 0; z-index: 4; padding: 2px 8px; background: transparent; border: 0; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar { position: relative; top: auto; right: auto; z-index: auto; padding: 1px 8px; background: var(--card); border-bottom: 1px solid var(--line); }
   body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar h2 { display: none; }
-  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar .modesw-btn { min-height: 44px; min-width: 76px; }
-  body.short-land.beginner[data-screen="make"]:not(.shape-fs) .guidehead { min-height: 48px; padding-right: 180px; align-items: center; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar h1 { font-size: 15px; }
+  body.short-land.beginner[data-screen="make"]:not(.shape-fs) #makeBar .modesw-btn { min-height: 36px; min-width: 64px; }
+  body.short-land[data-screen="make"]:not(.shape-fs) .guidehead { display: none; }
   body.short-land.beginner[data-screen="make"]:not(.shape-fs) .cutgrid,
   body.short-land.beginner[data-screen="make"]:not(.shape-fs) .cutgrid.editing { grid-template-columns: minmax(0, 1.25fr) minmax(250px, 40vw); }
   body.short-land.beginner[data-screen="make"]:not(.shape-fs) .previewPane { grid-column: 1; order: 0; }
@@ -472,7 +518,7 @@ body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
   body.app-shell.pro-mode[data-screen="make"] .cutgrid.with-qb #quickBar .qb-search { flex: 0 0 130px; display: flex; }
   body.app-shell.pro-mode[data-screen="make"] .cutgrid.with-qb #quickBar .qb-search input { width: 100%; min-height: 44px; }
   body.app-shell.pro-mode[data-screen="make"] .cutgrid.with-qb #quickBar button { flex: 0 0 auto; width: auto; min-width: 72px; min-height: 52px; }
-  /* the "fits on the machine" status: a line under the picture, never on it */
+  /* Save / Download sit under the picture, never on it */
   body.app-shell.pro-mode[data-screen="make"]:not(.short-land) .previewDock { position: static; max-height: none; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; background: var(--card); }
   body.app-shell.pro-mode[data-screen="make"] .previewDock .fit { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   body.app-shell.pro-mode[data-screen="make"] .previewDock #jobStats { display: none; }
@@ -784,15 +830,35 @@ body.laptop-ui.pro-mode[data-screen="make"] #ptInspector {
   body.laptop-ui.pro-mode[data-screen="make"] #makeSplit { display: none; }
 }
 
-/* parts list */
-.layerspanel { margin-top: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
-.layerspanel h3 { margin: 0 0 8px; font-size: 15px; }
-.layerslist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+/* The one Advanced parts list: every shape and hole, with pick / hide / lock. */
+.layerspanel { margin-top: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); min-width: 0; }
+.layershead { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.layerspanel h3 { margin: 0; font-size: 15px; flex: 1; }
+#layersClose { display: none; min-width: 44px; min-height: 44px; }
+.layerslist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: min(420px, 45vh); overflow: auto; }
 .layer-row { display: grid; grid-template-columns: minmax(0, 1fr) 36px 36px; gap: 4px; align-items: center; }
 .layer-row.on .layer-pick { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .layer-row.is-hidden .layer-pick { opacity: 0.55; }
 .layer-pick { text-align: left; min-height: 40px; padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body.phone-ui .layerspanel { display: none; } /* keep the phone layout as it is */
+/* Phone Advanced: the same list opens as a roomy sheet from the Parts button, and does not sit over the canvas until then. */
+body.phone-ui .layerspanel { display: none; }
+body.phone-ui.pro-mode[data-screen="make"] #srcShape #layersPanel.is-open,
+body.phone-ui.advanced-mode[data-screen="make"] #srcShape #layersPanel.is-open {
+  display: flex !important;
+  flex-direction: column;
+  position: fixed;
+  left: 10px; right: 10px; bottom: 64px; top: auto;
+  max-height: 55dvh;
+  z-index: 30;
+  pointer-events: auto;
+  margin: 0;
+  box-shadow: var(--shadow);
+}
+body.phone-ui.pro-mode[data-screen="make"] #srcShape #layersPanel.is-open #layersClose,
+body.phone-ui.advanced-mode[data-screen="make"] #srcShape #layersPanel.is-open #layersClose {
+  display: inline-flex !important;
+}
+body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; flex: 1 1 auto; overflow: auto; }
 
 /* type-while-drawing HUD */
 .drawhud {
@@ -880,3 +946,39 @@ body.phone-ui .layerspanel { display: none; } /* keep the phone layout as it is 
 }
 .sideways-hint.hidden { display: none !important; }
 .sideways-hint button { min-width: 36px; min-height: 36px; border-radius: 999px; pointer-events: auto; }
+
+/* Customise toolbar: a roomy dialog, not a control that sits on the canvas. */
+.toolbarcustom {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, #000 35%, transparent);
+  opacity: 0; pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.toolbarcustom.is-open { opacity: 1; pointer-events: auto; }
+.toolbarcustom.hidden { display: none !important; }
+.tc-card {
+  width: min(920px, calc(100vw - 24px));
+  max-height: min(640px, calc(100dvh - 24px));
+  display: flex; flex-direction: column;
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--line-strong); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 14px 16px 16px; min-height: 0;
+}
+.tc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.tc-head h2 { margin: 0; flex: 1; font-size: 18px; }
+.tc-head button { min-height: 44px; }
+.tc-note { margin: 0 0 12px; }
+.tc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.tc-col, .tc-catalog { min-height: 0; overflow: auto; }
+.tc-col h3, .tc-catalog h3 { margin: 0 0 8px; font-size: 15px; }
+.tc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 6px; align-items: center; }
+.tc-catalog .tc-row { grid-template-columns: minmax(0, 1fr) auto; }
+.tc-lab { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.tc-row button { min-height: 40px; }
+.tc-row.is-on { opacity: 0.7; }
+@media (max-width: 699px) {
+  .tc-cols { grid-template-columns: 1fr; }
+  .tc-card { max-height: calc(100dvh - 16px); }
+}

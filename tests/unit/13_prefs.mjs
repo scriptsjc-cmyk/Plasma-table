@@ -66,6 +66,15 @@ ck("a saved Beginner mode becomes Simple", P.sanitizePrefs({ mode: "beginner" })
 ck("a saved Pro mode becomes Advanced", P.sanitizePrefs({ mode: "pro" }).mode === "advanced");
 ck("an unknown mode falls back to Simple", P.sanitizePrefs({ mode: "nope" }).mode === "simple");
 
+
+ck("tools defaults to unset (the default toolbar)", P.defaultPrefs().tools === null);
+ck("a tools list is kept unique and trimmed", JSON.stringify(P.sanitizePrefs({ tools: ["rect", "rect", "nope-id-is-ok-as-string", "disc"] }).tools) === JSON.stringify(["rect", "nope-id-is-ok-as-string", "disc"]));
+ck("junk tools fall back to unset", P.sanitizePrefs({ tools: "all" }).tools === null && P.sanitizePrefs({ tools: null }).tools === null);
+ck("resetting tools returns to unset", P.sanitizePrefs({ ...P.defaultPrefs(), tools: ["rect"] }).tools[0] === "rect" && P.sanitizePrefs({ tools: null }).tools === null);
+
 process.exit(t.done() ? 1 : 0);
 
-
+ck("tools defaults to unset (the default toolbar)", P.defaultPrefs().tools === null);
+ck("a tools list is kept unique and trimmed", JSON.stringify(P.sanitizePrefs({ tools: ["rect", "rect", "nope-id-is-ok-as-string", "disc"] }).tools) === JSON.stringify(["rect", "nope-id-is-ok-as-string", "disc"]));
+ck("junk tools fall back to unset", P.sanitizePrefs({ tools: "all" }).tools === null && P.sanitizePrefs({ tools: null }).tools === null);
+ck("resetting tools returns to unset", P.sanitizePrefs({ ...P.defaultPrefs(), tools: ["rect"] }).tools[0] === "rect" && P.sanitizePrefs({ tools: null }).tools === null);

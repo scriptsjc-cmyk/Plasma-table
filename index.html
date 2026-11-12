@@ -211,6 +211,8 @@
 <section id="cutView" class="view hidden">
   <div id="makeBar" class="makebar">
     <h1>Make a part</h1>
+    <div id="qbPinned" class="qb-pinned" role="group" aria-label="Edit the drawing"></div>
+    <button type="button" id="btnViewParts" class="small viewparts">Parts</button>
     <div id="editorSwitch" class="editorsw" role="group" aria-label="Drawing tools">
       <button type="button" id="btnAdvancedTools" class="modesw-btn">Advanced tools</button>
       <button type="button" id="btnSimpleView" class="modesw-btn hidden">Simple view</button>
@@ -453,7 +455,10 @@
           <div id="holeTiles" class="tiles small addtiles"></div>
           <div id="shapeForm" class="shapeform"></div>
           <section id="layersPanel" class="layerspanel" aria-label="Parts list">
-            <h3>Parts</h3>
+            <div class="layershead">
+              <h3>Parts</h3>
+              <button type="button" id="layersClose" class="small" aria-label="Close the parts list">✕</button>
+            </div>
             <ul id="layersList" class="layerslist"></ul>
           </section>
           <section id="cutSummary" class="cutsummary" aria-label="Cut settings"></section>
@@ -1267,6 +1272,27 @@
   </div>
 </div>
 
+<!-- Customise toolbar: add / remove / reorder Advanced tools; does not sit over the canvas until opened. -->
+<div id="toolbarCustom" class="toolbarcustom hidden" hidden role="dialog" aria-modal="true" aria-labelledby="tcTitle" aria-hidden="true">
+  <div class="tc-card">
+    <div class="tc-head">
+      <h2 id="tcTitle">Customise toolbar</h2>
+      <button type="button" id="tcReset" class="small">Reset to default</button>
+      <button type="button" id="tcClose" class="small" aria-label="Close">✕</button>
+    </div>
+    <p class="muted small tc-note">Pick which drawing tools appear in the Advanced toolbar, and in which order. Undo, Redo, Fit and Delete stay in the Make a part header. Your choices are saved on this device for the signed-in account.</p>
+    <div class="tc-cols">
+      <section class="tc-col" aria-labelledby="tcMineTitle">
+        <h3 id="tcMineTitle">Your toolbar</h3>
+        <ul id="tcMine" class="tc-list"></ul>
+      </section>
+      <section class="tc-col" aria-labelledby="tcCatTitle">
+        <h3 id="tcCatTitle">Catalogue</h3>
+        <div id="tcCatalog" class="tc-catalog"></div>
+      </section>
+    </div>
+  </div>
+</div>
 <!-- dimension typing (replaces the on-screen calculator pad) -->
 <div id="drawHud" class="drawhud hidden" hidden aria-label="Type while drawing"></div>
 <div id="cadCtxMenu" class="cadctx hidden" hidden role="menu" aria-label="Drawing menu"></div>

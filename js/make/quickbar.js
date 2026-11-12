@@ -13,23 +13,42 @@ import { openDimEdit } from "./dimedit.js";
 import { savePrefs } from "../core/prefs.js";
 import { mountScrollRow, refreshScrollRows } from "../ui/scrollrow.js";
 import { openPresetBrowser } from "./presetbrowser.js";
+import { getToolIds, toolInfo, openToolbarCustom, TOOL_GROUPS } from "./toolbarcustom.js";
 
 function sizeDimForSelection() {
   const it = sketch.selected(); if (!it) return null;
   sketch.draw();
   return sketch.dimHits.find((h) => h.kind === "w") || sketch.dimHits.find((h) => h.kind === "d") || null;
 }
-// Tool palette: labelled groups with a search box (replaces the icon-only rail)
-const PALETTE = [
-  { g: "Shapes", items: [["presets", "▦", "Preset parts"], ["rect", "▭", "Rectangle"], ["disc", "◯", "Circle"], ["triangle", "△", "Triangle"], ["slot", "⊂⊃", "Slot"], ["sector", "◔", "Arc / sector"], ["lib", "⋯", "All shapes…"]] },
-  { g: "Holes", items: [["hole", "◦", "Hole"], ["slothole", "⊖", "Slot hole"], ["boltcircle", "⁘", "Bolt circle"]] },
-  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"]] },
-  { g: "Combine", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"]] },
-  { g: "Arrange", items: [["rot", "⟳", "Turn 90°"], ["mir", "⇋", "Mirror"], ["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["alignl", "⇤", "Align left"], ["alignb", "⤓", "Align bottom"], ["nest", "⊞", "Auto-arrange"]] },
-  { g: "Edit", items: [["size", "↔", "Size"], ["resize", "⤡", "Width × height"], ["dims", "↔ mm", "Dimensions"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"]] },
-  { g: "View", items: [["snap", "⌗", "Snap"], ["fs", "⛶", "Full screen"]] },
-];
 let paletteQ = "";
+// Undo, Redo, Fit and Delete sit in the Make a part header, not over the canvas.
+// In the full-screen editor the same four move to the tool bar under the picture.
+function paintPinnedTools(B, wrap, qb) {
+  let pin = $("qbPinned");
+  if (!pin) {
+    pin = document.createElement("div");
+    pin.id = "qbPinned";
+    pin.className = "qb-pinned";
+    pin.setAttribute("role", "group");
+    pin.setAttribute("aria-label", "Edit the drawing");
+  }
+  const show = screen() === "make" || S.shapeFs;
+  pin.hidden = !show;
+  pin.classList.toggle("hidden", !show);
+  const bar = $("makeBar");
+  if (show && S.shapeFs && wrap) {
+    if (pin.parentElement !== wrap) wrap.insertBefore(pin, qb || wrap.firstChild);
+  } else if (bar) {
+    const slot = $("btnViewParts") || $("editorSwitch");
+    if (pin.parentElement !== bar) bar.insertBefore(pin, slot || null);
+  }
+  if (!show) { pin.innerHTML = ""; return; }
+  pin.innerHTML = B("undo", "↶", "Undo") + B("redo", "↷", "Redo") + B("fit", "⤢", "Fit") + B("del", "🗑", "Delete");
+  pin.querySelectorAll("[data-qb]").forEach((btn) => {
+    btn.onclick = () => { if (Date.now() < (S.uiBlockUntil || 0)) return; if (btn.getAttribute("aria-disabled") !== "true") quickAction(btn.dataset.qb); };
+  });
+}
+
 export function renderQuickBar() {
   const qb = $("quickBar"); if (!qb || !sketch) return;
   const on = screen() === "make" && S.src === "shape" && ((S.cur === 1 && isProMode()) || S.shapeFs);
@@ -37,7 +56,6 @@ export function renderQuickBar() {
   const wrap = document.getElementById("quickBarWrap") || qb.closest(".scrollrow-wrap");
   if (wrap) wrap.classList.toggle("hidden", !on);
   const grid = qb.closest(".cutgrid"); if (grid) grid.classList.toggle("with-qb", on);
-  if (!on) { qb.innerHTML = ""; refreshScrollRows(); return; }
   const one = sketch.selected(), any = sketch.picked().length > 0, many = sketch.picked().length > 1;
   const locked = sketch.picked().some((i) => i.lock);
   const hasVer = !!(one && variantsFor(one.type).length);
@@ -64,33 +82,41 @@ export function renderQuickBar() {
     const hint = (sketch.opts.pro && HINTS[id]) ? HINTS[id] : "";
     const title = hint ? `${label} (${hint})` : label;
     const kbd = hint ? ` <kbd>${esc(hint)}</kbd>` : "";
-    const why = dis[id] ? ` \u2013 ${whyOff(id)}` : "";
+    const why = dis[id] ? ` – ${whyOff(id)}` : "";
     return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" ? " danger" : ""}" ${dis[id] ? 'aria-disabled="true"' : ""} data-why="${esc(dis[id] ? whyOff(id) : "")}" data-label="${esc(label)}" title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
   };
-  if (wrap) {
-    let pin = document.getElementById("qbPinned");
-    if (!pin) {
-      pin = document.createElement("div");
-      pin.id = "qbPinned";
-      pin.className = "qb-pinned";
-      pin.setAttribute("role", "group");
-      pin.setAttribute("aria-label", "Common tools");
-      wrap.insertBefore(pin, qb);
-    }
-    pin.innerHTML = B("undo", "↶", "Undo") + B("redo", "↷", "Redo") + B("fit", "⤢", "Zoom to fit") + B("del", "🗑", "Delete");
-    pin.querySelectorAll("[data-qb]").forEach((btn) => {
-      btn.onclick = () => { if (Date.now() < (S.uiBlockUntil || 0)) return; if (btn.getAttribute("aria-disabled") !== "true") quickAction(btn.dataset.qb); };
-    });
-  }
+  paintPinnedTools(B, wrap, qb);
+  if (!on) { qb.innerHTML = ""; refreshScrollRows(); return; }
   const q = paletteQ;
   const parts = [`<div class="qb-search"><button type="button" id="qbSearchBtn" class="qb-search-btn" aria-label="Search tools" title="Search tools">🔍</button><input id="qbSearch" type="search" placeholder="Search" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`];
-  for (const grp of PALETTE) {
-    const items = grp.items.filter(([id, , lab]) => !q || matchesQuery(lab + " " + id + " " + grp.g, q));
-    if (!items.length) continue;
-    parts.push(`<div class="qb-group" role="heading" aria-level="3">${esc(grp.g)}</div>`);
-    parts.push(...items.map(([id, ic, lab]) => B(id, ic, lab)));
+  const chosen = getToolIds();
+  const chosenSet = new Set(chosen);
+  const grouped = [];
+  for (const grp of TOOL_GROUPS) {
+    const items = grp.items.filter(([id, , lab]) => chosenSet.has(id) && (!q || matchesQuery(lab + " " + id + " " + grp.g, q)));
+    if (items.length) grouped.push({ g: grp.g, items });
+  }
+  // Keep the user's order, and put a group heading wherever the group changes.
+  if (!q) {
+    const infoOf = (id) => toolInfo(id) || { icon: "", label: id, group: "Tools" };
+    let lastG = null;
+    for (const id of chosen) {
+      const n = infoOf(id);
+      const g = n.group || "Tools";
+      if (g !== lastG) {
+        parts.push(`<div class="qb-group" role="heading" aria-level="3">${esc(g)}</div>`);
+        lastG = g;
+      }
+      parts.push(B(id, n.icon, n.label));
+    }
+  } else {
+    for (const grp of grouped) {
+      parts.push(`<div class="qb-group" role="heading" aria-level="3">${esc(grp.g)}</div>`);
+      parts.push(...grp.items.map(([id, ic, lab]) => B(id, ic, lab)));
+    }
   }
   if (parts.length === 1) parts.push(`<p class="muted small">No tool matches “${esc(q)}”.</p>`);
+  parts.push(B("customise", "⚙", "Customise toolbar"));
   const hadFocus = document.activeElement && document.activeElement.id === "qbSearch";
   qb.innerHTML = parts.join("");
   if (hadFocus) { const s = $("qbSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
@@ -131,9 +157,10 @@ function bindQbRoving() {
   });
 }
 
-function quickAction(a) {
+export function quickAction(a) {
   switch (a) {
     case "presets": openPresetBrowser(); break;
+    case "customise": openToolbarCustom(); break;
     case "rect": case "disc": case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
       if (shapeDef(a)) sketch.add(a); else toast("That shape isn't available.", true); break;
     case "lib": openLibrary(); break;

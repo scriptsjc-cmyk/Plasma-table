@@ -161,8 +161,10 @@ html, body.app-shell { overscroll-behavior-x: none; }
 
 /* Pinned Undo / Redo / Fit / Delete, compact search, and a visible More control */
 #quickBarWrap { display: flex; align-items: stretch; min-width: 0; }
-#qbPinned { display: flex; flex: 0 0 auto; align-items: stretch; gap: 2px; padding: 2px 4px; border-right: 1px solid var(--line); }
-#qbPinned button { min-width: var(--tool-minw, 56px); }
+#quickBarWrap #qbPinned { display: flex; flex: 0 0 auto; align-items: stretch; gap: 2px; padding: 2px 4px; border-right: 1px solid var(--line); }
+#quickBarWrap #qbPinned button { min-width: var(--tool-minw, 56px); }
+#makeBar #qbPinned button { min-width: 44px; min-height: 44px; }
+
 #quickBarWrap .scrollrow-more {
   flex: 0 0 36px; width: 36px; min-height: var(--tap); border: 0; border-left: 1px solid var(--line);
   background: var(--well); color: var(--text); font-size: 22px; font-weight: 700; cursor: pointer;

@@ -49,6 +49,7 @@ export function defaultPrefs() {
     canvas: "default",
     wheelZoom: false,
     dismissSideways: false,
+    tools: null,
   };
 }
 
@@ -68,6 +69,18 @@ export function sanitizePrefs(raw) {
   if (Object.hasOwn(CANVAS_BG, src.canvas)) out.canvas = src.canvas;
   if (typeof src.wheelZoom === "boolean") out.wheelZoom = src.wheelZoom;
   if (typeof src.dismissSideways === "boolean") out.dismissSideways = src.dismissSideways;
+  if ("tools" in src) {
+    if (src.tools === null) out.tools = null;
+    else if (Array.isArray(src.tools)) {
+      const ids = [], seen = new Set();
+      for (const id of src.tools) {
+        if (typeof id !== "string" || !id || id.length > 40 || seen.has(id)) continue;
+        seen.add(id);
+        ids.push(id);
+      }
+      out.tools = ids;
+    }
+  }
   return out;
 }
 
