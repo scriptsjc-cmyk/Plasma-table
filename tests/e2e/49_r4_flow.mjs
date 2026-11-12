@@ -253,23 +253,28 @@ for (const prof of ["desktop", "iphone14", "iphone14land"]) {
   // Esc
   await hook(p); await p.keyboard.press("Escape"); await sleep(700);
   t.check("ESTOP: Esc is NOT a stop key any more (round 5: Space is the one STOP key)", await p.evaluate(() => !window.plasmaTest.estopOn()) && !(await tx(p)).includes("\x18"));
-  // Space typed into inputs must NOT stop the machine
+  // Space typed into a text box must NOT stop the machine; a number box or a drop-down can't take a typed space, so there it stops (r7 U27)
   await p.evaluate(() => window.plasmaTest.goStep(1)); await sleep(2500);   // let the STOP from the Esc check above finish completely
   t.note("ESTOP: latched before the typing checks?", await p.evaluate(() => window.plasmaTest.estopOn()));
-  const fields = ["#ovKerf", "#ovDelay"];
-  for (const sel of fields) {
+  {
+    await p.evaluate(() => { const i = document.createElement("input"); i.type = "text"; i.id = "zzTxt"; document.body.appendChild(i); i.focus(); });
+    await hook(p); await p.keyboard.press("Space"); await sleep(250);
+    const ok = await p.evaluate(() => !window.plasmaTest.estopOn()), sent = (await tx(p)).replace(/\?/g, "");
+    t.check("ESTOP: Space typed in a text box does NOT press the E-stop and sends nothing", ok && !sent.includes("\x18") && !sent.includes("!"), JSON.stringify({ ok, sent: sent.slice(0, 40) }));
+    await p.evaluate(() => document.getElementById("zzTxt").remove());
+  }
+  for (const sel of ["#ovKerf", "#ovDelay"]) {
     if (!(await p.locator(sel).count())) { t.note(`ESTOP: ${sel}`, "not in this build"); continue; }
     await p.evaluate((sel) => { const e = document.querySelector(sel); const d = e.closest("details"); if (d) d.open = true; e.scrollIntoView && e.scrollIntoView({ block: "center" }); e.focus(); }, sel);
     t.check(`ESTOP: (setup) ${sel} really has focus`, await p.evaluate((sel) => document.activeElement === document.querySelector(sel), sel));
     await hook(p); await p.keyboard.press("Space"); await sleep(250);
-    const ok = await p.evaluate(() => !window.plasmaTest.estopOn());
-    const sent = (await tx(p)).replace(/\?/g, "");
-    t.check(`ESTOP: Space typed in ${sel} does NOT press the E-stop and sends nothing`, ok && !sent.includes("\x18") && !sent.includes("!"), JSON.stringify({ ok, sent: sent.slice(0, 40) }));
+    t.check(`ESTOP: Space in the number box ${sel} presses the E-stop (r7 U27)`, await p.evaluate(() => window.plasmaTest.estopOn()));
+    await p.evaluate(() => window.plasmaTest.estopReset()); await sleep(300);
   }
   await p.evaluate(() => { const sel = document.createElement("select"); sel.id = "zzSel"; sel.innerHTML = "<option>a</option><option>b</option>"; document.body.appendChild(sel); sel.focus(); });
   await hook(p); await p.keyboard.press("Space"); await sleep(250);
-  t.check("ESTOP: Space on a drop-down does NOT press it", await p.evaluate(() => !window.plasmaTest.estopOn()));
-  await p.evaluate(() => { document.getElementById("zzSel").remove(); });
+  t.check("ESTOP: Space on a drop-down presses it (r7 U27)", await p.evaluate(() => window.plasmaTest.estopOn()));
+  await p.evaluate(() => { document.getElementById("zzSel").remove(); window.plasmaTest.estopReset(); }); await sleep(300);
   await p.evaluate(() => { const ta = document.createElement("textarea"); ta.id = "zzTa"; document.body.appendChild(ta); ta.focus(); });
   await hook(p); await p.keyboard.press("Space"); await sleep(250);
   t.check("ESTOP: Space typed in a textarea does NOT press it", await p.evaluate(() => !window.plasmaTest.estopOn()));
