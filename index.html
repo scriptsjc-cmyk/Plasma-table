@@ -1652,7 +1652,11 @@
 </div>
 
 <!-- ============================================================ phone portrait: turn sideways overlay, footer, scripts -->
-<div id="turnOverlay" class="turnoverlay" aria-hidden="true"><div class="turnicon">⟳</div><div class="turntext">Turn your phone sideways</div></div>
+<div id="turnOverlay" class="turnoverlay" role="region" aria-label="Turn your phone sideways">
+  <div class="turnicon" aria-hidden="true">⟳</div><div class="turntext">Turn your phone sideways</div>
+  <p class="turnhint">Rotation locked? Unlock it in Control Centre or Quick Settings.</p>
+  <button type="button" id="btnTurnUpright" class="turnupright">Use it upright</button>
+</div>
 
 <footer class="appfoot"><span id="footVer"></span></footer>
 

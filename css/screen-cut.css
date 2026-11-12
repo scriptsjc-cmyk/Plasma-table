@@ -275,12 +275,18 @@ body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
 }
 body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
 body[data-step="3"] #exportRow { display: none; }
-/* ---- ROUND 2: optional portrait "turn your phone sideways" cover. Only on the cutting bed (cut screen, "Bed & start" step, Cut tab): sign-in, the menu, Make a part and the Part step all work upright. A full-screen cover with no banners; once a machine is connected the header and STOP stay above it (round 5 safety, below). It is only paint (nothing is paused, hidden from the app or reset), so a running job carries on underneath. Off unless body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
+/* ---- Portrait "turn your phone sideways" cover. Only on the cutting bed (cut screen, "Bed & start" step, Cut tab): sign-in, the menu,
+   Make a part and the Part step all work upright. It starts below the header, which is lifted above it, so Menu / Back and STOP are
+   never covered (r7 U10); "Use it upright" hides it for this visit (js/cut/turncover.js). It is only paint (nothing is paused, hidden
+   from the app or reset), so a running job carries on underneath. Off unless body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
 .turnoverlay { display: none; }
 @media (max-width: 599px) and (orientation: portrait) {
-  body.turn-on[data-screen="cut"][data-step="3"]:not(.job-live):has(.tab[data-tab="cut"].sel) .turnoverlay { display: flex; position: fixed; inset: 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+  body.turn-on:not(.turn-upright)[data-screen="cut"][data-step="3"]:not(.job-live):has(.tab[data-tab="cut"].sel) .turnoverlay { display: flex; position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+  body.turn-on:not(.turn-upright)[data-screen="cut"][data-step="3"] .topbar { z-index: 2147483001; }
   body.turn-on .turnoverlay .turnicon { font-size: 72px; line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
   body.turn-on .turnoverlay .turntext { font-size: 26px; font-weight: 700; }
+  .turnoverlay .turnhint { margin: 0; max-width: 300px; font-size: 15px; color: #c9d4df; }
+  .turnoverlay .turnupright { min-height: 48px; padding: 8px 20px; font-size: 16px; color: #fff; background: transparent; border: 1px solid #8fa3b8; }
 }
 @media (max-width: 899px) and (orientation: portrait) {
   body[data-step="3"] .previewDock .fit { font-size: 12px; margin: 0; }
@@ -583,11 +589,10 @@ body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text
 /* the E-stop reset is a press-and-hold: show it while it is being held */
 #btnStop.holding { filter: brightness(1.25); }
 /* Round 5 (safety): while a machine is connected, nothing covers STOP on the cutting screen. The header that holds it is lifted above
-   every overlay (numpad, dialogs, the "turn sideways" cover), and the full-screen overlays start below the header. */
+   every overlay (numpad, dialogs), and the full-screen overlays start below the header. */
 body.machine-connected[data-screen="cut"] .topbar { z-index: 2147483001; }
 body.machine-connected[data-screen="cut"] .numpad,
-body.machine-connected[data-screen="cut"] .shapelib,
-body.machine-connected[data-screen="cut"] .turnoverlay { top: var(--topbar-h, 56px) !important; }
+body.machine-connected[data-screen="cut"] .shapelib { top: var(--topbar-h, 56px) !important; }
 /* ...and with it showing, the long "Practice, nothing moves" pill gives way (ellipsis) instead of running under it */
 body.short-land[data-screen="cut"] #topMenu #connPill { flex: 0 1 auto; min-width: 0; }
 .dimops button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; font-size: 20px; font-weight: 700; }

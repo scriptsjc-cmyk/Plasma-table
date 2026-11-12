@@ -63,6 +63,7 @@ import { clickVerb, clickVerbLower } from "./ui/laptop.js";
 import { bindPhoneSheet } from "./make/phonesheet.js";
 import { bindDialogKeys } from "./ui/dialogs.js";
 import { bindRun } from "./cut/run.js";
+import { bindTurnCover } from "./cut/turncover.js";
 import { bindViewport } from "./ui/viewport.js";
 import { bindPicture } from "./make/picture.js";
 import { bindWifiSetup } from "./ui/wifisetup.js";
@@ -92,6 +93,7 @@ function bind() {
   bindCad();
   bindDialogKeys();
   bindRun();
+  bindTurnCover();
   bindJog();
   bindViewport();
   bindPicture();

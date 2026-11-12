@@ -37,14 +37,15 @@ export function bindLaptopUi() {
   } catch (e) { /* ignore */ }
 }
 
-// Small dismissable hint on a phone in portrait, on Make and Cut only.
+// Small dismissable hint on a phone in portrait, on Make only: on the cutting screen it would sit on Pause / More / Start
+// (r7 U2), and Bed & start upright already has its own turn-sideways cover.
 export function paintSidewaysHint() {
   const el = $("sidewaysHint");
   if (!el) return;
   const onPhone = document.body.classList.contains("phone-ui");
   const portrait = window.matchMedia("(orientation: portrait)").matches;
   const scr = typeof screen === "function" ? screen() : document.body.dataset.screen;
-  const allowed = scr === "make" || scr === "cut";
+  const allowed = scr === "make";
   const dismissed = !!getPrefs().dismissSideways;
   const show = onPhone && portrait && allowed && !dismissed;
   el.classList.toggle("hidden", !show);
