@@ -46,7 +46,11 @@ export function paintAbout() {
   if ($("aboutVer")) $("aboutVer").innerHTML = `<b>${RUN.id}</b><br><span class="muted small">commit ${RUN.commit} · built ${RUN.built}</span>`;
 }
 export function bindVersion() {
-  window.addEventListener("pt-new-version", (e) => showUpdate((e && e.detail) || { id: "new" }));
+  window.addEventListener("pt-new-version", (e) => {
+    const d = e && e.detail;
+    if (d && d.id && d.id !== "new") showUpdate(d);
+    else checkVersion(false);
+  });
   if ($("btnReload")) $("btnReload").onclick = doReload;
   if ($("btnAboutReload")) $("btnAboutReload").onclick = doReload;
   if ($("btnCheckVer")) $("btnCheckVer").onclick = async () => {

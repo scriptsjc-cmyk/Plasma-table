@@ -101,7 +101,7 @@ export function filterConsoleCommand(raw, opts = {}) {
     if (words.length > 10) return fail("Too many words on one line.");
   }
   // The torch is only ever lit by a bare M3 / M4 (confirmed), never together with a move: a rapid with the torch on is a crash.
-  if (words.some(([w, v]) => w === "M" && (v === 3 || v === 4)) && words.length > 1) return fail("Send M3 on its own line. Moving with the torch lit is not allowed from the console.");
+  if (words.some(([w, v]) => w === "M" && (v === 3 || v === 4)) && words.length > 1) return fail("Send a bare M3 on its own line. Extra words such as S1000 are not sent from the console.");
   const OKG = new Set([0, 1, 21, 90, 91, 92]);
   let moves = false;
   for (const [w, v] of words) {

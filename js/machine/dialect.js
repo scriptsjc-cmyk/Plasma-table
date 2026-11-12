@@ -71,7 +71,7 @@ export function convertGcode(text, dialect, { lineNumbers = false } = {}) {
     out.push("%");
     lines = out;
   } else if (d === "fluidnc") {
-    const out = ["; Porta Plazma CNC — FluidNC dialect", "; Settings live in config.yaml, not $ numbers."];
+    const out = ["; Porta Plazma CNC - FluidNC dialect", "; Settings live in config.yaml, not $ numbers."];
     for (const raw of lines) {
       const line = raw.trim();
       if (!line) continue;

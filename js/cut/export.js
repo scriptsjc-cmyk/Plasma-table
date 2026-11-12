@@ -41,7 +41,7 @@ export function exportGcode() {
   const blob = new Blob([text], { type: "text/plain" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = ((S.fileName || "part").replace(/\.[^.]+$/, "") || "part") + ext;
+  a.download = (String(S.fileName || "part").replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "part") + ext;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   toast("Downloaded " + dialect.toUpperCase() + " file");

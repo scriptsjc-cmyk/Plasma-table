@@ -3,7 +3,7 @@
 if ("serviceWorker" in navigator) {
   var hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("message", function (e) {
-    if (e.data && e.data.type === "new-version") { window.__ptNewVersion = true; window.dispatchEvent(new Event("pt-new-version")); }
+    if (e.data && e.data.type === "new-version") { window.__ptNewVersion = true; window.dispatchEvent(new CustomEvent("pt-new-version", { detail: e.data.version || e.data })); }
   });
   navigator.serviceWorker.addEventListener("controllerchange", function () {
     if (hadController) { window.__ptNewVersion = true; window.dispatchEvent(new Event("pt-new-version")); }
