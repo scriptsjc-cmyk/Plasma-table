@@ -1,7 +1,7 @@
 // Linking a machine (claim code) and the admin machine list: add, unlink, transfer, claim log.
 import { CONFIG } from "./config.js";
 import { authFetch, refreshIfNeeded } from "./cloud.js";
-import { cloudOn, normCode, normEmail, nowIso, uid } from "./acctbase.js";
+import { cloudOn, normCode, normClaimCode, normEmail, nowIso, uid } from "./acctbase.js";
 import { currentUser, isAdmin, notify } from "./acctstate.js";
 import { demoState, saveDemo } from "./demostore.js";
 import { refreshLinked } from "./auth.js";
@@ -17,7 +17,7 @@ function logClaim(s, userId, ok, detail) {
 // user who typed it used to hit claim_machine and get "not recognised" (or a
 // toast hidden under the dialog). Say so clearly, and never send it to the server.
 export function machineSavedMessage(serial, code) {
-  const ser = normCode(serial), c = normCode(code);
+  const ser = normCode(serial), c = normClaimCode(code);
   if (!ser || !c) return "";
   return "Machine saved: " + ser + ", code " + c;
 }
@@ -29,12 +29,12 @@ export function overwriteCodeWarning(serial, existingSerials) {
   return ser + " is already saved. Saving again replaces its claim code, and the old code will stop working.";
 }
 export function practiceCodeOnCloudMessage(code) {
-  if (normCode(code) !== normCode(CONFIG.DEMO_CLAIM_CODE)) return null;
+  if (normClaimCode(code) !== normClaimCode(CONFIG.DEMO_CLAIM_CODE)) return null;
   return "The practice code DEMO-0000 only works in local demo mode. On this site, use the claim code from the table sticker, or one generated under Admin → Machines.";
 }
 export async function claimMachine(code, serial) {
   const u = requireUser();
-  const c = normCode(code);
+  const c = normClaimCode(code);
   if (!c) throw new Error("Enter the claim code from the sticker.");
   if (cloudOn()) {
     const demoMsg = practiceCodeOnCloudMessage(c);
@@ -45,7 +45,7 @@ export async function claimMachine(code, serial) {
     if (ser) body.p_serial = ser;
     const r = await authFetch("/rest/v1/rpc/claim_machine", { method: "POST", body: JSON.stringify(body) });
     // The server answers wrong codes with {ok:false,error} (so the attempt is logged and counted).
-    if (!r || r.ok !== true) throw new Error((r && r.error) || "That code is not recognised.");
+    if (!r || r.ok !== true) throw new Error((r && r.error) || "Couldn't link right now.");
     await refreshLinked();
     notify();
     return r;
@@ -59,7 +59,7 @@ export async function claimMachine(code, serial) {
   }
   // The practice code works for EVERY local demo account: the first one links the built-in practice table, later ones get
   // their own practice table record (never the real thing: demo accounts cannot drive hardware on the live site).
-  if (c === normCode(CONFIG.DEMO_CLAIM_CODE)) {
+  if (c === normClaimCode(CONFIG.DEMO_CLAIM_CODE)) {
     const mine = s.machines.find((m) => m.owner === u.id);
     if (mine) { logClaim(s, u.id, true, "claimed:" + mine.serial + ":again"); saveDemo(s); notify(); return { ok: true, serial: mine.serial, already: true }; }
     let rec = s.machines.find((m) => m.serial === CONFIG.DEMO_SERIAL && !m.owner);
@@ -110,7 +110,7 @@ export async function adminListMachines() {
 export async function adminAddMachine(serial, code, notes) {
   if (!isAdmin()) throw new Error("Admin only");
   const ser = normCode(serial);
-  const c = normCode(code);
+  const c = normClaimCode(code);
   if (!ser || c.length < 8) throw new Error("A serial and a claim code of at least 8 characters are required (use Generate).");
   if (cloudOn()) {
     await refreshIfNeeded();

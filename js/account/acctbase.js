@@ -37,6 +37,12 @@ export function uid() {
 }
 export function normEmail(s) { return String(s || "").trim().toLowerCase(); }
 export function normCode(s) { return String(s || "").trim().toUpperCase(); }
+export function normClaimCode(s) {
+  const compact = String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (compact.length === 8) return compact.slice(0, 4) + "-" + compact.slice(4);
+  return normCode(s);
+}
+
 export function okEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normEmail(s)); }
 export function configHasBackend() {
   return !!(CONFIG.SUPABASE_URL && (CONFIG.SUPABASE_ANON_KEY || CONFIG.SUPABASE_ANON_JWT));
