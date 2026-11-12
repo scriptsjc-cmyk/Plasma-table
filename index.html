@@ -177,7 +177,7 @@
   </div>
 </div>
 
-<div id="demoAcctBar" class="banner amber hidden" role="status">Local demo accounts — nothing is sent to the cloud. Claim code <b>DEMO-0000</b> unlocks a practice machine.</div>
+<div id="demoAcctBar" class="banner amber hidden" role="status">Demo: accounts stay in this browser. Claim code <b>DEMO-0000</b> links a practice machine.</div>
 <!-- ============================================================ MAIN MENU (after sign-in) -->
 
 <section id="menuView" class="view hidden" aria-label="Main menu">
@@ -228,7 +228,7 @@
   </ol>
 
   <div id="guideHead" class="guidehead beginner-only" aria-live="polite">
-    <b id="ghStep">Step 1 of 5</b><span id="ghTitle">Pick a shape</span>
+    <b id="ghStep">Make a part</b><span id="ghTitle">Pick a shape</span>
     <p id="ghHelp"></p>
   </div>
 
@@ -583,7 +583,7 @@
           <summary><b>3 · Check, then cut</b></summary>
           <p class="checkmat"><span id="checkMat"></span> <button type="button" id="btnChangeMat" class="small">Change material or part</button></p>
           <ul class="checklist" id="checklist"></ul>
-          <p id="zeroWarn" class="warntext hidden">Start point has not been set. Press Start here in “Set the start point” above, or you may cut in the wrong place.</p>
+          <p id="zeroWarn" class="warntext hidden">The start point isn’t set yet. Move the torch over the start of the work and press Start here (in “Connect, home and set the start point” above), or the part may be cut in the wrong place.</p>
         <div id="startCutRow" class="startcut hidden">
           <label>Start from cut
             <select id="startCut" aria-label="Start from cut number"></select>
@@ -656,7 +656,7 @@
             <div class="row"><button type="button" id="cpSave" class="xl accent grow" disabled>Save to the cut chart</button><button type="button" id="cpSkip" class="grow">Not now</button></div>
           </div>
           <div id="restartBox" class="restartbox hidden">
-            <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">After a stop the machine may have lost its position, so you will Home it and confirm work zero again in Get set up before the torch can fire. The torch stays off until it is over the start of the cut.</span></p>
+            <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">After a stop the machine may have lost its position, so you will Home it and set the start point again on Bed &amp; start before the torch can fire. The torch stays off until it is over the start of the cut.</span></p>
             <div class="row">
               <label class="grow">Continue from cut <select id="restartCut" aria-label="Continue from cut number"></select></label>
               <button type="button" id="btnRestart" class="xl accent grow">Continue from cut 1</button>
@@ -831,7 +831,6 @@
         <path fill="currentColor" d="M2.8 3.6h3.5V14.6H2.8z"/><path fill="currentColor" d="M2.8 17.4h3.5v10.8H2.8z"/><path fill="currentColor" d="M2.8 3.6h12.2v3.5H2.8z"/><path fill="currentColor" d="M11.5 3.6h3.5v10.1h-3.5z"/><path fill="currentColor" d="M2.8 10.2h12.2v3.5H2.8z"/><path fill="currentColor" d="M17.4 3.6H29.2v3.5H17.4z"/><path fill="currentColor" d="M21.75 3.6h3.5V14.6h-3.5z"/><path fill="currentColor" d="M21.75 17.4h3.5v10.8h-3.5z"/><path d="M1.6 16h28.8" stroke="var(--accent)" stroke-width="2" stroke-linecap="square"/>
       </svg>
       <h1>Plasma Table</h1>
-      <p class="muted">Sign in or create an account to get started.</p>
     </div>
     <div class="shapelib-head">
       <h2 id="acctTitle">Account</h2>
@@ -840,7 +839,7 @@
     <div id="acctBody">
 
       <div data-pane="in">
-        <p class="muted" id="acctDemoTag2">Sign in or create an account to use Plasma Table. Running a real table also needs a linked machine.</p>
+        <p class="muted" id="acctDemoTag2">Sign in or create an account. Running a real table also needs a linked machine.</p>
         <form id="formSignIn" class="col">
           <label>Email<input id="inEmail" type="email" autocomplete="username" required></label>
           <label>Password<span class="pwfield"><input id="inPin" type="password" autocomplete="current-password" required minlength="6"><button type="button" class="pwshow" data-pw="inPin" aria-pressed="false" aria-label="Show password">Show</button></span></label>
@@ -1198,7 +1197,7 @@
 <!-- full-screen shape editor chrome -->
 <div id="fsBar" class="fsbar hidden" hidden>
   <button type="button" id="fsDone" class="go">Done</button>
-  <button type="button" id="fsSave" title="Save this part to your account">Save…</button>
+  <button type="button" id="fsSave" title="Save this part to your account">Save</button>
   <span class="muted small">Esc also exits. The part stays on the canvas.</span>
 </div>
 
@@ -1309,12 +1308,12 @@
       <h2 id="settingsTitle">Settings</h2>
       <button type="button" class="acct-close" id="settingsClose">Close</button>
     </div>
-    <p class="muted small">Beginner sees the everyday fields with a short explanation under each one. Pro unlocks firmware tools (steps/mm, invert, raw $ settings) after a warning. Those writes only go out when the machine is Idle and no job is running, and the current $$ list is backed up first.</p>
+    <p class="muted small setintro"><span class="beg-copy">The everyday settings for your table, each with a short explanation.</span><span class="pro-copy">Firmware tools (steps/mm, invert, raw $ settings) are under Firmware, after a warning. Those writes only go out when the machine is Idle and no job is running, and the current $$ list is backed up first.</span></p>
     <div id="settingsTabs" class="settabs" role="tablist"></div>
 
     <div class="setpane" data-setpane="machine">
       <h3>Machine and axes</h3>
-      <p class="muted small">Bed size is the travel the torch may use. Invert an axis if it moves the wrong way. Pro users can push invert and travel to the controller from Firmware.</p>
+      <p class="muted small">Bed size is the travel the torch may use. Invert an axis if it moves the wrong way.<span class="pro-copy"> Firmware can push invert and travel to the controller.</span></p>
       <div class="grid3">
         <label>Bed X (mm)<input id="setBedX" type="number" min="50" step="1" inputmode="decimal"></label>
         <label>Bed Y (mm)<input id="setBedY" type="number" min="50" step="1" inputmode="decimal"></label>

@@ -243,7 +243,7 @@ function fillBasics() {
   if (fw) {
     fw.textContent = (host && host.isFluidNC && host.isFluidNC())
       ? "Connected to FluidNC. Machine geometry lives in config.yaml, not GRBL $ settings. Download the template below, edit the GPIO to match your breakout, and copy it onto the ESP32."
-      : "GRBL / grblHAL keeps these as $ settings. Pro users can open Firmware to read and write them (with a backup first).";
+      : "GRBL / grblHAL keeps these as $ settings." + (document.body.dataset.mode === "pro" ? " Firmware reads and writes them (with a backup first)." : "");
   }
 }
 

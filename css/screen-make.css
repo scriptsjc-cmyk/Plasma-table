@@ -119,12 +119,10 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
 }
 /* ---- UX2: Pro / Beginner mode switch ---- */
 .modesw { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--well); }
-.modesw-btn { min-height: 44px; min-width: 44px; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; font-weight: 700; font-size: 12px; color: var(--muted); }
+.modesw-btn { min-height: 44px; min-width: 44px; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; font-weight: 700; font-size: 14px; color: var(--muted); }
 .modesw-btn.sel, .modesw-btn.sel:hover:not(:disabled), .modesw-btn.sel:focus-visible { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 @media (max-width: 640px) {
-  /* UX2 fix: button:hover (0,2,1) used to beat .sel and left white text on a pale background */
-  .modesw-btn[data-mode="beginner"] { font-size: 0; padding: 4px 10px; min-width: 36px; }
-  .modesw-btn[data-mode="beginner"]::after { content: "Bgn"; font-size: 11px; }
+  .modesw-btn { padding: 4px 12px; font-size: 14px; }        /* round 5 look M6: "Beginner" in full, never "Bgn" */
 }
 body.pro-mode .beginner-help, body.pro-mode .guide.howto, body.pro-mode .mattip,
 body.pro-mode p.skhelp, body.pro-mode .step[data-step="2"] > p.muted,
@@ -222,7 +220,6 @@ body.bg-picked .bgmore { display: none; }
 @media (max-width: 560px) {
   .topbar.menu-open .topmenu { display: flex; }
   .topmenu .modesw { display: flex; width: 100%; }
-  .topmenu .modesw-btn[data-mode="beginner"]::after { content: none; }
   body.beginner[data-step="3"] .guidehead { padding: 4px 10px 6px; }
 }
 @media (min-width: 561px) and (max-width: 899px) {
@@ -348,7 +345,6 @@ body[data-screen="cut"] #fsBar, body[data-screen="cut"] #toolBar { display: none
 .makebar h2 { margin: 0; font-size: var(--fs-lg); }
 body.shape-fs .makebar { display: none; }
 @media (max-height: 540px) {
-  #accountDlg.loginpage .loginbrand p { display: none; }
 }
 @media (max-width: 640px) {
   .menubig > span { display: none; }

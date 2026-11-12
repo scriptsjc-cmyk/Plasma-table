@@ -275,6 +275,8 @@ body.short-land #setupView {
 .libcats button { flex: 0 1 auto; min-height: var(--tap); padding: 6px 14px; font-weight: 650; }
 .libgrid button { min-height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 650; padding: 8px 6px; background: var(--card); }
 #demoAcctBar { cursor: pointer; display: block; line-height: 1.4; }
+/* round 5 item 25: the demo note is the same in both modes: on the menu and cutting screens, never over the drawing (Pro's editor never had it) */
+body[data-screen="make"] #demoAcctBar { display: none; }
 #exportRow button { min-height: var(--tap); }
 @media (max-width: 520px) {
   /* narrow phones: keep the top bar on one row without overflow */

@@ -17,6 +17,7 @@ export function applyBodyMode() {
   const cutting = screen() === "cut", pro = !!(sketch && sketch.opts.pro);
   document.body.classList.toggle("beginner", !cutting && !pro);
   document.body.classList.toggle("pro-mode", !cutting && pro);
+  document.body.dataset.mode = pro ? "pro" : "beginner";      // on every screen, for mode-specific wording (Settings); the layout classes above stay Make-only
 }
 export function syncModeSwitch() {
   const pro = isProMode();

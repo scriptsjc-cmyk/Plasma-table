@@ -91,8 +91,6 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
   .cutlist .mv button { min-height: 44px; min-width: 44px; }
   .cutlist label { min-height: 44px; }
   .settab, .admtab, .movesel, body.pro-mode .choice.small button { min-height: 44px; font-size: 14px; }
-  .modesw-btn[data-mode="pro"] { font-size: 14px; }
-  .modesw-btn[data-mode="beginner"] { min-width: 44px; }
-  .modesw-btn[data-mode="beginner"]::after { font-size: 14px; }
+  .modesw-btn { font-size: 14px; }
   .qb-group { font-size: 13px; }
 }
