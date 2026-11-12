@@ -601,6 +601,8 @@ body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text
 .holeadd button { min-height: 44px; }
 /* r7 U4: a phone on its side keeps the cutting header on one row: the account is in the menu, so its pill steps aside here */
 body.short-land[data-screen="cut"] #acctPill { display: none; }
+/* r7 U8: a phone on its side keeps Bed & start short: sheet size, nest and saved start points live in More (js/ui/menu.js) */
+body.short-land[data-screen="cut"] #layoutCard .sheetrow, body.short-land[data-screen="cut"] #layoutCard #nestBox, body.short-land[data-screen="cut"] #zeroCard #originCard { display: none; }
 /* r7 U12: the connect card's link line is a suggestion (Practice always works), not a warning */
 #connectLock .locknote { color: var(--text); font-weight: 600; }
 /* r7 U6: the banner's Unlock is disabled while the E-stop is latched, and says why beside it */
@@ -712,8 +714,11 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .cutsheet-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 8px 10px 10px;
     display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
   .cutsheet-body > * { margin: 0; }
-  .cutsheet-body > button { align-self: flex-start; min-height: 48px; }
+  .cutsheet-body > button { align-self: flex-start; min-height: 48px; white-space: nowrap; }
   .cutsheet-body #showMachWrap { position: static; display: flex; align-self: flex-start; }
+  .cutsheet-body .sheetrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .cutsheet-body .sheetrow label { flex-direction: column; align-items: stretch; gap: 2px; white-space: nowrap; }
+  .cutsheet-body .sheetrow input { flex: 1 1 auto; width: 100%; min-width: 0; }
   .cutsheet-body .livespeed .row { gap: 6px; }
   /* Bed & start: Back / Start / More in the sticky bar; Download G-code is in More */
   body[data-screen="cut"] .step[data-step="3"] > .nav #btnExport3 { display: none; }

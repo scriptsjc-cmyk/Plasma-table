@@ -249,8 +249,13 @@ function paintSetupCards() {
     if (!done) { el.open = true; el.dataset.wasDone = ""; return; }
     if (el.dataset.wasDone !== "1") { el.open = false; el.dataset.wasDone = "1"; }
   };
-  // layout and start-point cards stay open: those actions are used again after the first time
   apply("checkCard", checkOk);
+  // on a laptop or a phone held upright the layout and start-point cards stay open (those actions are used again). A phone on its
+  // side has little height, so they fold once done too, leaving the next thing to do in view (r7 U8); a tap opens them again.
+  if (document.body.classList.contains("short-land")) {
+    apply("layoutCard", Setup.layoutActive() && !Setup.blockText().length);
+    apply("zeroCard", !!S.zeroSet);
+  }
 }
 document.addEventListener("click", (e) => {
   const b = e.target.closest && e.target.closest(".blocker-jump");
