@@ -47,8 +47,8 @@
 }
 @media (max-width: 899px) {
   body.running-job #exportRow, body.running-job #showMachWrap { display: none !important; }
-  body.running-job .runctl { position: sticky; bottom: 0; background: var(--card); padding: 8px 0; z-index: 8; }
 }
+body.running-job .runctl { position: sticky; bottom: 0; background: var(--card); padding: 8px 0; z-index: 8; }
 .lockexplain { background: var(--well); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; margin: 8px 0 12px; }
 .lockexplain ul { margin: 6px 0 0; padding-left: 20px; }
 body.app-shell { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
