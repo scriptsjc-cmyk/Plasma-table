@@ -1,7 +1,7 @@
 // Sketch: the view (fit, zoom, pan) and drawing the canvas.
 import { bbox } from "../core/geom.js";
 import { def, r1, themeColor } from "./sketch-util.js";
-import { getPrefs } from "../core/prefs.js";
+import { formatLen, getPrefs } from "../core/prefs.js";
 
 export class ViewMethods {
   fitView() {
@@ -22,11 +22,28 @@ export class ViewMethods {
   }
   toScreen(x, y) { const [, h] = this.size(), v = this.view; return [(x - v.vx) * v.s, h - (y - v.vy) * v.s]; }
   toWorld(sx, sy) { const [, h] = this.size(), v = this.view; return [sx / v.s + v.vx, (h - sy) / v.s + v.vy]; }
+
+  clampView() {
+    if (!this.view) return;
+    const [w, h] = this.size();
+    if (!(w > 0 && h > 0)) return;
+    const b = this.layout ? this.layout.viewBox(this) : this.allBox();
+    const bw = Math.max(1, (b[2] - b[0]) || 40), bh = Math.max(1, (b[3] - b[1]) || 40);
+    const s = this.view.s, m = 40 / s;
+    // visible world: [vx, vx+w/s] x [vy, vy+h/s] (y is flipped on screen but world y increases up; vy is the bottom world y)
+    // Keep the parts box intersecting the visible world by at least m.
+    const visW = w / s, visH = h / s;
+    const minVx = b[0] + m - visW, maxVx = b[2] - m;
+    const minVy = b[1] + m - visH, maxVy = b[3] - m;
+    if (minVx <= maxVx) this.view.vx = Math.max(minVx, Math.min(maxVx, this.view.vx));
+    if (minVy <= maxVy) this.view.vy = Math.max(minVy, Math.min(maxVy, this.view.vy));
+  }
   zoomAt(sx, sy, k) {
     const [wx, wy] = this.toWorld(sx, sy);
     this.view.s = Math.max(0.05, Math.min(60, this.view.s * k));
     const [nx, ny] = this.toWorld(sx, sy);
     this.view.vx += wx - nx; this.view.vy += wy - ny;
+    this.clampView();
     this.draw();
   }
   draw() {
@@ -207,17 +224,23 @@ export class ViewMethods {
       ctx.fillStyle = C.label; ctx.font = "12px Barlow, system-ui";
       const tool = this.tool === "draw" ? " · DRAW: tap points, then Close" : this.tool === "measure" ? " · MEASURE: tap two points" : "";
       const np = this.partTotal();
-      ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${r1(b[2] - b[0])} × ${r1(b[3] - b[1])} mm${tool}`, 8, h - 8);
+      ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${formatLen(b[2] - b[0], 1)} × ${formatLen(b[3] - b[1], 1)}${tool}`, 8, h - 8);
     } else {
       ctx.fillStyle = C.label; ctx.font = "15px Barlow, system-ui"; ctx.textAlign = "center";
-      ctx.fillText(this.tool === "draw" ? "Tap to place the first point of the outline" : "Tap a shape below to add it", w / 2, h / 2); ctx.textAlign = "start";
+      ctx.fillText(this.tool === "draw" ? "Tap to place the first point of the outline" : "Tap a shape to add it", w / 2, h / 2); ctx.textAlign = "start";
     }
   }
   tag(ctx, text, x, y, bg) {
     ctx.font = "600 14px Barlow, system-ui";
     const tw = Math.max(44, ctx.measureText(text).width + 16), th = 28, [w, h] = this.size();
+    let bottom = this.items && this.items.length ? 22 : 2;
+    const dock = document.querySelector(".previewDock");
+    if (dock) {
+      const cs = getComputedStyle(dock);
+      if (cs.position === "absolute") bottom = Math.max(bottom, (dock.offsetHeight || 0) + 4);
+    }
     x = Math.max(tw / 2 + 2, Math.min(w - tw / 2 - 2, x));
-    y = Math.max(th / 2 + 2, Math.min(h - th / 2 - 2, y));
+    y = Math.max(th / 2 + 2, Math.min(h - th / 2 - bottom, y));
     ctx.fillStyle = bg; ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x - tw / 2, y - th / 2, tw, th, 8); else ctx.rect(x - tw / 2, y - th / 2, tw, th);
     ctx.fill();

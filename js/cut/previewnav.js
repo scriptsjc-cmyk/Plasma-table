@@ -3,6 +3,7 @@
 // here so a tap never starts a cut-side edit.
 import { $ } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
+import { getPrefs } from "../core/prefs.js";
 
 // cam is a multiplier and pixel offset on top of the fitted view that drawCanvas already computes.
 const cam = { s: 1, x: 0, y: 0 };
@@ -11,6 +12,24 @@ let drag = null;
 
 export function previewCam() { return cam; }
 export function resetPreviewCam() { cam.s = 1; cam.x = 0; cam.y = 0; }
+// Keep some of the fitted bed in view so a fling of the wheel can't blank the picture.
+export function clampPreviewCam() {
+  const cv = $("preview");
+  if (!cv) return;
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (!(w > 0 && h > 0)) return;
+  const m = Math.min(80, Math.max(24, Math.min(w, h) * 0.15));
+  const s = cam.s;
+  const maxX = w / 2 + s * w / 2 - m, minX = m - w / 2 - s * w / 2;
+  const maxY = h / 2 + s * h / 2 - m, minY = m - h / 2 - s * h / 2;
+  cam.x = Math.max(minX, Math.min(maxX, cam.x));
+  cam.y = Math.max(minY, Math.min(maxY, cam.y));
+}
+function wheelDelta(e) {
+  // Firefox line-mode (deltaMode 1) would otherwise pan only a few pixels per notch.
+  const k = e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? 400 : 1);
+  return [e.deltaX * k, e.deltaY * k];
+}
 export function applyPreviewCam(ctx, w, h) {
   if (cam.s === 1 && !cam.x && !cam.y) return;
   ctx.translate(w / 2 + cam.x, h / 2 + cam.y);
@@ -28,17 +47,18 @@ function bind() {
 
   cv.addEventListener("pointerdown", (e) => {
     if (sketchOn()) return;
-    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic / already released */ }
     const [sx, sy] = pos(e);
     pointers.set(e.pointerId, [sx, sy]);
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       drag = { kind: "pinch", d: Math.hypot(a[0] - b[0], a[1] - b[1]), mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2, s: cam.s, x: cam.x, y: cam.y };
+      try { cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic / already released */ }
       e.preventDefault();
       return;
     }
-    // one-finger on the cut preview does not pan (that would surprise; two fingers / wheel / space+drag do)
+    // one-finger left button stays with the bed / layout drag; only middle/right-button pans
     if (e.button === 1 || e.button === 2) {
+      try { cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic / already released */ }
       drag = { kind: "pan", sx, sy, x: cam.x, y: cam.y };
       e.preventDefault();
     }
@@ -58,6 +78,7 @@ function bind() {
       cam.x = drag.x + (mx - drag.mx);
       cam.y = drag.y + (my - drag.my);
       e.preventDefault();
+      clampPreviewCam();
       redraw();
       return;
     }
@@ -65,6 +86,7 @@ function bind() {
       cam.x = drag.x + (sx - drag.sx);
       cam.y = drag.y + (sy - drag.sy);
       e.preventDefault();
+      clampPreviewCam();
       redraw();
     }
   });
@@ -79,8 +101,10 @@ function bind() {
     if (sketchOn()) return;
     e.preventDefault();
     const [sx, sy] = pos(e);
-    if (e.ctrlKey || e.metaKey) {
-      const k = Math.exp(-e.deltaY * 0.0015);
+    const [dx, dy] = wheelDelta(e);
+    const zoomWheel = e.ctrlKey || e.metaKey || (typeof window !== "undefined" && (getPrefs().wheelZoom === true));
+    if (zoomWheel) {
+      const k = Math.exp(-dy * 0.0015);
       const next = Math.max(0.25, Math.min(8, cam.s * k));
       const r = cv.getBoundingClientRect();
       const cx = r.width / 2, cy = r.height / 2;
@@ -88,9 +112,10 @@ function bind() {
       cam.y = sy - cy + (cam.y - (sy - cy)) * (next / cam.s);
       cam.s = next;
     } else {
-      cam.x -= e.deltaX;
-      cam.y -= e.deltaY;
+      cam.x -= dx;
+      cam.y -= dy;
     }
+    clampPreviewCam();
     redraw();
   }, { passive: false });
   cv.addEventListener("dblclick", (e) => {

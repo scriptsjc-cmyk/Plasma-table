@@ -1,4 +1,5 @@
 // Turns the drawing into a job: kerf / lead-in, the safety check and loadJob().
+import { resetPreviewCam } from "../cut/previewnav.js";
 import { checkDesign, machineLimits } from "./check.js";
 import { screen } from "../ui/flow.js";
 import { designToGcode } from "./cam.js";
@@ -55,6 +56,7 @@ export function renderCutCheck() {
 }
 export function loadJob() {
   if (!S.gcode && !S.design) return;
+  try { resetPreviewCam(); } catch (e) { /* ignore */ }
   try {
     let gcode = S.gcode, cam = null, pre = [];
     if (S.design) {

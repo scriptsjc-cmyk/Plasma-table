@@ -1,4 +1,5 @@
 // Sketch: mouse, touch and keyboard (picking, dragging, snapping guides, resize handles, pan and zoom).
+import { getPrefs } from "../core/prefs.js";
 import { boxOverlap, clone, r1, unionBox, wholeSet } from "./sketch-util.js";
 import { pointInPoly } from "../core/geom.js";
 
@@ -182,7 +183,7 @@ export class InputMethods {
         const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         this.view = { ...d.view };
         this.zoomAt(d.mx, d.my, (d.d > 0 ? dist / d.d : 1));
-        this.view.vx -= (mx - d.mx) / this.view.s;
+        this.view.vx -= (mx - d.mx) / this.view.s; this.clampView && this.clampView();
         this.view.vy += (my - d.my) / this.view.s;
         this.draw();
         return;
@@ -196,7 +197,7 @@ export class InputMethods {
       }
       if (d.kind === "pan") {
         if (Math.abs(sx - d.sx) + Math.abs(sy - d.sy) > 3) d.moved = true;
-        this.view.vx = d.vx - (sx - d.sx) / this.view.s; this.view.vy = d.vy + (sy - d.sy) / this.view.s;
+        this.view.vx = d.vx - (sx - d.sx) / this.view.s; this.view.vy = d.vy + (sy - d.sy) / this.view.s; this.clampView && this.clampView();
         cv.style.cursor = "grabbing";
         this.draw(); return;
       }
@@ -294,8 +295,15 @@ export class InputMethods {
         return;
       }
       if (!this.view) return;
-      this.view.vx += e.deltaX / this.view.s;
-      this.view.vy -= e.deltaY / this.view.s;
+      const k = e.deltaMode === 1 ? 16 : (e.deltaMode === 2 ? 400 : 1);
+      const dx = e.deltaX * k, dy = e.deltaY * k;
+      if (getPrefs().wheelZoom) {
+        this.zoomAt(sx, sy, Math.exp(-dy * 0.0015));
+        return;
+      }
+      this.view.vx += dx / this.view.s;
+      this.view.vy -= dy / this.view.s;
+      this.clampView && this.clampView();
       this.draw();
     }, { passive: false });
     for (const ev of ["gesturestart", "gesturechange", "gestureend"]) {

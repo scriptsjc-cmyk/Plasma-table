@@ -4,6 +4,7 @@ import { sketch } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { setShapeFs } from "./protools.js";
 import { drawPreview } from "../cut/preview.js";
+import { resetPreviewCam } from "../cut/previewnav.js";
 
 const KEY = "plasma.makeSplit", MIN = 300, MIN_PICTURE = 320, CHROME = 40;     // CHROME: the divider, the gaps and the grid padding
 const grid = () => document.querySelector(".cutgrid");
@@ -21,7 +22,7 @@ function setSplit(px, { save = true } = {}) {
 }
 
 export function bindPicture() {
-  $("btnPicFit").addEventListener("click", () => { if (sketch && sketch.active) sketch.fitView(); else drawPreview(); });
+  $("btnPicFit").addEventListener("click", () => { if (sketch && sketch.active) sketch.fitView(); else { resetPreviewCam(); drawPreview(); } });
   $("btnPicFs").addEventListener("click", () => setShapeFs(true));      // the full-screen editor's own Done button brings it back
   const bar = $("makeSplit");
   let saved = null; try { saved = Number(localStorage.getItem(KEY)) || null; } catch (e) { /* ignore */ }

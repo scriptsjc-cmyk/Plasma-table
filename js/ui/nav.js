@@ -15,6 +15,7 @@ import { renderShapeForm } from "../make/shapeform.js";
 import { drawPreview } from "../cut/preview.js";
 import { renderChecklist } from "../cut/checklist.js";
 import { paintChrome, refresh, renderQuickBar, showSource, useShape } from "../core/hooks.js";
+import { resetPreviewCam } from "../cut/previewnav.js";
 
 // ------------------------------------------------------------------ screens (login -> menu -> make | cut)
 // body[data-screen] is owned by flow.js; this is what each screen shows.
@@ -89,6 +90,7 @@ export function onScreen(name, prev) {
 export function sendToCutting() {
   if (S.src === "shape" && sketch) useShape();
   if (!S.prepared) { toast("Pick or draw a part first.", true); return; }
+  try { resetPreviewCam(); } catch (e) { /* ignore */ }
   if (!showScreen("cut")) return;
   goStep(3);
 }
