@@ -74,11 +74,12 @@ export function paintChrome() {
 }
 // The laptop cutting screen's "Job and machine" card (#jobCard, shown by css/screen-cut.css on a wide screen with a mouse)
 function setText(id, text) { const el = $(id); if (el && el.textContent !== text) el.textContent = text; }
+const jobSize = (P) => (P.summary ? `${formatLen(P.summary.width, 1)} × ${formatLen(P.summary.height, 1)}` : `${formatLen(P.stats.width_mm, 1)} × ${formatLen(P.stats.height_mm, 1)}`);
 function paintJobCard() {
   if (!$("jobCard")) return;
-  const P = S.prepared, st = P && P.stats, sum = P && P.summary;
+  const P = S.prepared, st = P && P.stats;
   setText("jcFile", P ? S.fileName || "Untitled" : "No part yet");
-  setText("jcSize", !P ? "–" : sum ? `${formatLen(sum.width, 1)} × ${formatLen(sum.height, 1)}` : `${formatLen(st.width_mm, 1)} × ${formatLen(st.height_mm, 1)}`);
+  setText("jcSize", P ? jobSize(P) : "–");
   setText("jcCuts", !P ? "–" : `${st.pierces} ${st.pierces === 1 ? "cut" : "cuts"} · about ${fmtTime(st.estimated_seconds)}${P.dry_run ? " · practice run" : ""}`);
   let mat = "–";
   if (S.material && S.thickness != null) {
@@ -107,7 +108,7 @@ export function refresh() {
   $("fit").title = f.cls === "unknown" ? "Open Machine setup" : "";
   if (S.prepared) {
     const st = S.prepared.stats;
-    $("jobStats").innerHTML = `<span><b>${esc(S.fileName)}</b></span><span>Size <b>${S.prepared.summary ? `${formatLen(S.prepared.summary.width, 1)} × ${formatLen(S.prepared.summary.height, 1)}` : `${formatLen(st.width_mm, 1)} × ${formatLen(st.height_mm, 1)}`}</b></span>
+    $("jobStats").innerHTML = `<span><b>${esc(S.fileName)}</b></span><span>Size <b>${jobSize(S.prepared)}</b></span>
       ${S.prepared.summary ? `<span>Parts <b>${(S.src !== "file" && sketch && sketch.items.length && Setup.partCount(sketch)) || S.prepared.summary.parts}</b> · holes <b>${S.prepared.summary.holes}</b></span>` : `<span>Cuts <b>${st.pierces}</b></span>`}<span>About <b>${fmtTime(st.estimated_seconds)}</b></span>${S.prepared.dry_run ? "<span><b>PRACTICE RUN</b></span>" : ""}`;
   } else $("jobStats").innerHTML = "";
   $("next1").disabled = !S.prepared;
