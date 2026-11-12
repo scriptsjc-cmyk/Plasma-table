@@ -6,7 +6,7 @@
 import { T } from "../lib/t.mjs"; import { startServer, launch, newPage, demoToShape, PROFILES } from "../lib/browser.mjs";
 import { devices } from "playwright";
 
-const t = new T("73_r7_cut"); const srv = await startServer(); const br = await launch();
+const t = new T("74_r7_cut"); const srv = await startServer(); const br = await launch();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const phone = (w, h) => ({ ...devices["iPhone 14"], viewport: { width: w, height: h }, screen: { width: w, height: h } });
 PROFILES.phone844x390 ||= phone(844, 390); PROFILES.phone390x844 ||= phone(390, 844);
@@ -119,6 +119,27 @@ for (const prof of ["d1366", "d1440"]) {
   await page.click("#btnLayout"); await page.click("#btnLayoutReset"); await page.click("#btnLayout"); await sleep(150);
   l = await ev(page, () => ({ zero: __box("#zeroCard").l, bed: __box(".previewPane").l, side: __box("#checkCard").l }));
   t.check(n("J14: Reset layout puts the panels back"), l.side < l.bed && l.bed < l.zero, JSON.stringify(l));
+  await page.ctx.close();
+}
+
+// ---------------------------------------------------------------- the header hidden (js/ui/header.js): the Cut layouts still fit, STOP stays
+for (const prof of ["d1440", "d1366", "phone844x390"]) {
+  const n = (s) => `${prof}, header hidden: ${s}`;
+  const page = await bedPage(prof);
+  const stop0 = await ev(page, () => __box("#btnStop"));
+  await ev(page, () => window.plasmaTest.setHeaderHidden(true)); await sleep(300);
+  l = await ev(page, () => ({ hidden: document.body.classList.contains("header-hidden"), stop: __box("#btnStop"), bigger: __stopBiggest(), scroll: __noPageScroll() }));
+  t.check(n("STOP is still there, the same size and the largest control; no page scroll"), l.hidden && l.stop && Math.round(l.stop.w * l.stop.h) >= Math.round(stop0.w * stop0.h) - 1 && !l.bigger.length && l.scroll, JSON.stringify([stop0, l]));
+  if (prof !== "phone844x390") {
+    const hits = await ev(page, (cs) => { const out = []; for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) if (__overlap(cs[i], cs[j])) out.push(cs[i] + " / " + cs[j]); return out; }, CARDS);
+    const wraps = await ev(page, (s) => __wrapped(s), ONE_LINE);
+    t.check(n("panels don't overlap and labels stay on one line"), !hits.length && !wraps.length, JSON.stringify({ hits, wraps }));
+    await page.click("#btnLayout"); await page.click('.arrcover[data-panel="main"] [data-dir="-1"]'); await page.click("#btnLayout"); await sleep(150);
+    l = await ev(page, () => ({ zero: __box("#zeroCard").l, bed: __box(".previewPane").l, stop: __box("#btnStop"), bigger: __stopBiggest() }));
+    t.check(n("J14 Layout still works and STOP stays put"), l.zero < l.bed && JSON.stringify(l.stop) === JSON.stringify(await ev(page, () => __box("#btnStop"))) && !l.bigger.length, JSON.stringify(l));
+  }
+  await ev(page, () => window.plasmaTest.setHeaderHidden(false)); await sleep(200);
+  t.check(n("Show header brings it back"), await ev(page, () => !document.body.classList.contains("header-hidden")));
   await page.ctx.close();
 }
 
