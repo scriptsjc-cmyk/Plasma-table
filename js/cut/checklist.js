@@ -20,15 +20,15 @@ function zeroLineText() {
 export function checkItems() {
   const dry = S.prepared && S.prepared.dry_run;
   // Short lines, so each fits on one line in the laptop's narrow left column
-  return dry ? ["the material is flat on the slats", "the area is clear, hands away", "the e-stop is within reach"]
-    : [...(row().check ? [row().check] : []), `the plasma is ON, set to ${ampsNow()} A`, `the air is on, ${row().air_bar ?? S.chart.air_bar} bar`,
-      "the material is clamped flat", "the earth clamp is on the sheet", "the area is clear, hands away", "the e-stop is within reach"];
+  return dry ? ["material flat on the slats", "area clear, hands away", "e-stop within reach"]
+    : [...(row().check ? [row().check] : []), `plasma ON, set to ${ampsNow()} A`, `air on, ${row().air_bar ?? S.chart.air_bar} bar`,
+      "material clamped flat", "earth clamp on the sheet", "area clear, hands away", "e-stop within reach"];
 }
 export function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;
   $("checklist").innerHTML = `<li class="autochk"><label><input type="checkbox" data-chk="zero" disabled> <span>${esc(zeroLineText())}</span></label></li>`
     + (dry ? `<li class="checknote">Practice run: the torch stays off.</li>` : "")
-    + `<li class="onecheck"><label><input type="checkbox" data-chk="1"> <span><b>I've checked that</b>${checkItems().map((t) => `<span class="checkwhat">${esc(t)}</span>`).join("")}</span></label></li>`;
+    + `<li class="onecheck"><label><input type="checkbox" data-chk="1"> <span><b>I've checked:</b>${checkItems().map((t) => `<span class="checkwhat">${esc(t)}</span>`).join("")}</span></label></li>`;
   const cm = $("checkMat");
   if (cm) cm.textContent = S.material && S.thickness != null ? `${S.material} · ${S.thickness} mm` : "";
   paintZeroWarn();
