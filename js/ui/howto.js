@@ -21,7 +21,7 @@ const STEPS = [
   ]},
   { id: "zero", title: "Set zero (Start here)", body: [
     "Put the sheet on the slats. In step 3, jog the torch to the sheet's bottom-left corner, at a safe height.",
-    "Press Start here. That is work zero. Step 3 ticks “Start point set” only after you do this. If you skip it, Start is blocked and you’ll see a warning — you could cut in the wrong place.",
+    "Press Start here. That sets the start point. Step 3 ticks “Start point set” only after you do this. If you skip it, Start is blocked and you’ll see a warning — you could cut in the wrong place.",
     "Use Trace the outline (torch off) to walk the path on the sheet before a real cut.",
   ]},
   { id: "practice", title: "A practice (dry) run", body: [
@@ -75,6 +75,11 @@ function paintNav(id) {
   const title = document.getElementById("howtoTitle");
   if (!nav || !body) return;
   nav.replaceChildren();
+  const pick = document.createElement("select");                 // a phone: one compact picker instead of ten stacked buttons
+  pick.className = "howto-pick"; pick.setAttribute("aria-label", "Guide section");
+  for (const s of STEPS) { const o = document.createElement("option"); o.value = s.id; o.textContent = s.title; o.selected = s.id === id; pick.appendChild(o); }
+  pick.onchange = () => paintNav(pick.value);
+  nav.appendChild(pick);
   for (const s of STEPS) {
     const b = document.createElement("button");
     b.type = "button"; b.className = "howto-step" + (s.id === id ? " sel" : "");
@@ -83,8 +88,9 @@ function paintNav(id) {
     nav.appendChild(b);
   }
   const step = STEPS.find((s) => s.id === id) || STEPS[0];
-  if (title) title.textContent = step.title;
+  if (title) title.textContent = "How to use";
   body.replaceChildren();
+  const h = document.createElement("h3"); h.textContent = step.title; body.appendChild(h);
   for (const para of step.body) {
     const p = document.createElement("p"); p.textContent = para; body.appendChild(p);
   }
