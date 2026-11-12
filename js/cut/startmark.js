@@ -27,5 +27,5 @@ export function drawStartMark(sk, ctx, S, prep, units) {
   const GO = getComputedStyle(document.documentElement).getPropertyValue("--go").trim() || "#0A6A32";   // Start cutting's green, per theme
   ctx.strokeStyle = GO; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.moveTo(x - 11, y); ctx.lineTo(x + 11, y); ctx.moveTo(x, y - 11); ctx.lineTo(x, y + 11); ctx.stroke();
-  sk.tag(ctx, `Cut starts here · ${Math.round(at[0])}, ${Math.round(at[1])} mm`, x, y - 20, GO);
+  sk.tag(ctx, `Cut starts here · ${Math.round(at[0])}, ${Math.round(at[1])} mm`, x, y + 24, GO);    // below: the pierce sits just outside the part
 }
