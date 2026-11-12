@@ -79,7 +79,7 @@ body.app-shell .banner { max-width: none; margin: 0; border-radius: 0; flex: non
 #formSignUp .signup-submit { position: static; margin-top: 14px; }
 /* ---- sign-in page: the account dialog, full-screen and not dismissable ---- */
 .loginbrand { display: none; text-align: center; margin: 4px 0 12px; }
-.loginbrand .loginmark { display: block; height: 72px; width: auto; max-width: min(100%, 360px); margin: 0 auto; }
+.loginbrand .loginmark { display: block; height: 72px; width: auto; max-width: min(100%, 400px); margin: 0 auto; object-fit: contain; }
 #accountDlg.loginpage { top: 0; background: var(--bg); align-items: center; }
 #accountDlg.loginpage .acctcard { max-height: 100dvh; background: transparent; border: 0; box-shadow: none; padding-top: 0; }
 #accountDlg.loginpage .loginbrand { display: block; }
@@ -147,4 +147,4 @@ body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-wi
 #formSignUp .signup-submit, #formSignUp button.xl.go { width: 100%; }
 #formSignUp { gap: 10px; }
 #goSignIn { margin-top: 8px; display: inline-flex; }
-.loginbrand .loginmark { max-width: 280px; height: auto; }
+.loginbrand .loginmark { max-width: min(100%, 360px); height: auto; margin: 0 auto; object-fit: contain; }

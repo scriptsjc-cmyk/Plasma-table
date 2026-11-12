@@ -30,6 +30,7 @@
   --warn-text: #7A3200;
   --warn-bg: #FFF4E5;
   --stop: #C42B1C;
+  --toast-err: #C42B1C;
   --on-stop: #FFFFFF;
   --torch: #C05600;
   --alarm: #C42B1C;
@@ -68,8 +69,8 @@
   --bg: #18202a; --card: #202a35; --well: #161e27; --canvas: #121920; --line: #324050;
   --line-strong: #3d4c5c; --text: #edeee8; --muted: #9aa7b5; --shadow: 0 1px 2px rgba(0,0,0,.4);
   --accent: #4f9cf0; --accent-weak: #1e3a5f; --on-accent: #0b1220;
-  --go: #3DDC82; --on-go: #05210E; --warn: #e3a73c; --warn-text: #FFE3B0; --warn-bg: #4a3410; --stop: #e0342b; --on-stop: #fff;
-  --torch: #e07a3c; --alarm: #e0342b; --alarm-text: #FFD5D1; --alarm-bg: #4c1717; --ok-bg: #13301f; --ok-text: #86efac;
+  --go: #3DDC82; --on-go: #05210E; --warn: #e3a73c; --warn-text: #FFE3B0; --warn-bg: #4a3410; --stop: #c62a22; --on-stop: #fff; --toast-err: #c62a22;
+  --torch: #e07a3c; --alarm: #FFB4AE; --alarm-text: #FFD5D1; --alarm-bg: #5a1515; --ok-bg: #13301f; --ok-text: #86efac;
   --cad-canvas: #121920; --cad-grid: #18212b; --cad-grid-major: #243040;
   --cad-part-fill: #2c3a49; --cad-part-sel: #26385a; --cad-hole: #121920;
   --cad-part-line: #c9d1d9; --cad-sel: #7aa2f0; --cad-lock: #e3a73c; --cad-dim: #4f9cf0;

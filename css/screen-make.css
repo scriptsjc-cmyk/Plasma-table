@@ -371,9 +371,13 @@ body.phone-ui.advanced-mode[data-screen="make"] #btnViewParts { display: inline-
   }
 }
 @media (orientation: landscape) and (max-height: 540px) {
-  #makeBar { padding: 2px 8px; gap: 4px; }
+  #makeBar { padding: 2px 8px; gap: 4px; flex-wrap: nowrap; }
   #makeBar h1 { font-size: 15px; }
+  #makeBar #qbPinned { flex: 0 1 auto; flex-wrap: nowrap; }
   #makeBar #qbPinned button { min-height: 36px; min-width: 36px; width: 36px; }
+  #makeBar #qbPinned button span, #makeBar #qbPinned button kbd {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);
+  }
   #makeBar .modesw-btn { min-height: 36px; }
 }
 
@@ -886,7 +890,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 
 /* Preset parts browser */
 .presetbrowser {
-  position: fixed; inset: 0; z-index: 60;
+  position: fixed; left: 0; right: 0; bottom: 0; top: var(--topbar-h, 56px); z-index: 125;
   display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, #000 35%, transparent);
   opacity: 0; pointer-events: none;
@@ -896,7 +900,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 .presetbrowser.hidden { display: none !important; }
 .pb-frame {
   width: min(1100px, calc(100vw - 32px));
-  height: min(760px, calc(100dvh - 40px));
+  height: min(760px, calc(100dvh - var(--topbar-h, 56px) - 24px));
   display: flex; flex-direction: column;
   background: var(--card); color: var(--text);
   border-radius: 16px; box-shadow: var(--shadow);
@@ -910,7 +914,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 .pb-head input { flex: 1; min-height: 44px; font-size: 16px; }
 .pb-head #pbClose { min-height: 44px; min-width: 72px; }
 .pbcats { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
-.pbcats button { min-height: 40px; padding: 6px 12px; }
+.pbcats button { min-height: 44px; padding: 6px 12px; }
 .pbcats button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .pbgrid {
   flex: 1; overflow: auto; padding: 16px;
@@ -945,7 +949,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
   pointer-events: none;
 }
 .sideways-hint.hidden { display: none !important; }
-.sideways-hint button { min-width: 36px; min-height: 36px; border-radius: 999px; pointer-events: auto; }
+.sideways-hint button { min-width: 44px; min-height: 44px; border-radius: 999px; pointer-events: auto; }
 
 /* Customise toolbar: a roomy dialog, not a control that sits on the canvas. */
 .toolbarcustom {
@@ -981,4 +985,116 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 @media (max-width: 699px) {
   .tc-cols { grid-template-columns: 1fr; }
   .tc-card { max-height: calc(100dvh - 16px); }
+}
+
+
+/* ---- r7: sheet size, Fit nowrap, Advanced chrome, phone peek ---- */
+.sheetsize {
+  margin: 12px 0 8px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--well);
+}
+.sheetsize h3 { margin: 0 0 8px; font-size: 15px; font-weight: 700; }
+.sheetsize .grid2 { gap: 8px 12px; }
+.sheetsize input { min-height: 40px; width: 100%; }
+
+/* Advanced already has Undo / Redo / Fit on the toolbar — keep Pick all and Clear here. */
+body.pro-mode #skUndo, body.advanced-mode #skUndo,
+body.pro-mode #skRedo, body.advanced-mode #skRedo,
+body.pro-mode #skFit, body.advanced-mode #skFit { display: none !important; }
+#skFit, #btnPicFit, #btnPicFit .picword { white-space: nowrap; }
+.pictools { flex-wrap: nowrap; gap: 6px; }
+.pictools button { white-space: nowrap; }
+
+/* Remove is a quiet secondary action, not a danger button */
+.shapeform button.quiet, button[data-sk="remove"].quiet {
+  background: var(--well); color: var(--text); border-color: var(--line);
+}
+
+/* Phone Advanced shape sheet: a peek bar that expands, so the drawing stays in view */
+body.phone-ui[data-screen="make"].pro-mode .cutgrid,
+body.phone-ui[data-screen="make"].advanced-mode .cutgrid {
+  padding-bottom: calc(var(--phonebar-h, 56px) + 64px);
+}
+.phonesheet {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: var(--phonebar-h, 56px);
+  top: auto;
+  z-index: 21;
+  max-height: 64px;
+  height: 64px;
+  overflow: hidden;
+  background: var(--card);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 24px rgba(16, 24, 40, .18);
+  padding: 0 12px 8px;
+  display: flex; flex-direction: column;
+}
+.phonesheet.is-expanded {
+  max-height: 45dvh;
+  height: auto;
+  overflow: auto;
+}
+.phonesheet-handle {
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 20px; min-height: 20px; margin: 0;
+  border: 0; background: transparent; position: relative;
+}
+.phonesheet.is-expanded .phonesheet-handle,
+.phonesheet-handle { min-height: 28px; }
+.phonesheet-peek {
+  display: flex; align-items: baseline; gap: 8px;
+  min-height: 36px; padding: 0 4px 4px;
+  cursor: pointer;
+}
+.phonesheet-peek b { font-size: 15px; }
+.phonesheet.is-expanded .phonesheet-peek { cursor: default; }
+
+@media (orientation: landscape) and (max-height: 540px) {
+  body.phone-ui[data-screen="make"].pro-mode .cutgrid,
+  body.phone-ui[data-screen="make"].advanced-mode .cutgrid {
+    padding-bottom: 0;
+    padding-right: 52px;
+  }
+  body.phone-ui[data-screen="make"].pro-mode:has(#phoneSheet.is-expanded) .cutgrid,
+  body.phone-ui[data-screen="make"].advanced-mode:has(#phoneSheet.is-expanded) .cutgrid {
+    padding-right: min(320px, 40vw);
+  }
+  body.phone-ui.short-land[data-screen="make"] .phonesheet,
+  body.phone-ui[data-screen="make"].pro-mode .phonesheet,
+  body.phone-ui[data-screen="make"].advanced-mode .phonesheet {
+    top: var(--topbar-h, 56px);
+    right: 0; left: auto; bottom: 0;
+    width: 52px;
+    max-height: none;
+    height: auto;
+    border-radius: 16px 0 0 16px;
+    box-shadow: -8px 0 24px rgba(16, 24, 40, .12);
+    padding: 8px 6px;
+  }
+  body.phone-ui[data-screen="make"] .phonesheet.is-expanded {
+    width: min(320px, 40vw);
+    padding: 8px 12px;
+  }
+  body.phone-ui[data-screen="make"] .phonesheet:not(.is-expanded) .phonesheet-peek {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    min-height: 0; padding: 8px 0;
+    align-items: center;
+  }
+}
+
+/* G-code download pop on Make (Cut keeps its own rules in screen-cut.css) */
+body[data-screen="make"] .exportpop {
+  position: absolute; bottom: 100%; left: 0; z-index: 16;
+  min-width: 260px; padding: 12px;
+  background: var(--well); border: 1px solid var(--line); border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+body[data-screen="make"] .exportpop.hidden { display: none !important; }
+body[data-screen="make"] .exportpop-actions { gap: 8px; margin-top: 8px; justify-content: flex-end; }
+
+#makeBar .modesw-btn, .editorsw .modesw-btn, #editorSwitch .modesw-btn {
+  min-height: 44px;
 }

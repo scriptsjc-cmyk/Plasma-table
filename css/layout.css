@@ -186,7 +186,7 @@ canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px s
   color: #fff; font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: 145;
   box-shadow: 0 8px 24px rgba(16, 24, 40, .2); max-width: min(92vw, 480px);
   pointer-events: none; /* a toast must never swallow a tap meant for STOP or the quick bar */ }
-.toast.err { background: var(--alarm); color: #fff; }
+.toast.err { background: var(--toast-err, var(--stop)); color: #fff; }
 /* sits just under the header (STOP stays clear above it) and above claim/account dialogs (z-index 120) so an error is visible; never over Start, Save or the readouts at the bottom */
 @media (max-width: 899px) {
   /* phones: choices first until a drawing exists */
@@ -363,7 +363,7 @@ body.shape-fs canvas#preview { flex: 1; min-height: 0; height: auto !important; 
 /* ---- UX2: viewport-fitting app shell (zero page scroll on a typical laptop) ---- */
 html, body.app-shell { height: 100%; height: 100dvh; }
 body.app-shell .tabs { max-width: none; width: 100%; margin: 0; padding: 0 8px; flex: none; }
-body.app-shell .tab { min-height: 40px; }
+body.app-shell .tab { min-height: 44px; }
 body.app-shell .banner.big { font-size: var(--fs-md); border-width: 2px; }
 body.app-shell #appMain {
   flex: 1 1 auto; min-height: 0; min-width: 0; width: 100%;
@@ -693,3 +693,48 @@ body[data-screen="cut"] #topModeSwitch { display: none !important; }
 
 /* Blocker jump buttons look like text links */
 .blocker-jump { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; min-height: 44px; }
+
+
+/* ---- r7: header hide, 44px targets, sticky Next ---- */
+/* Hide the header cluster only. STOP is a sibling of .topbar-main and must not move, shrink, or hide. */
+body.header-hidden .topbar-main > :not(#btnShowHeader) { display: none !important; }
+body.header-hidden #btnShowHeader {
+  display: inline-flex !important;
+  align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px;
+  padding: 4px; border: 0; background: transparent;
+}
+body.header-hidden .topbar {
+  gap: 8px;
+  align-items: center;
+}
+#btnShowHeader.hidden, #btnHideHeader.hidden { display: none !important; }
+#btnHideHeader { flex: none; }
+@media (orientation: landscape) and (max-height: 540px) {
+  #btnHideHeader { display: none !important; }
+}
+
+/* 44px touch targets that are not in screen-cut.css */
+.pbcats button, #btnShowEmail, #sidewaysHintDismiss, .phonesheet-handle, .modesw-btn {
+  min-height: 44px; min-width: 44px;
+}
+#btnShowEmail { padding: 6px 10px; }
+
+/* Make step 1: leave room above the sticky Next so fields are not covered */
+body[data-screen="make"] .step[data-step="1"] { padding-bottom: 80px; }
+body[data-screen="make"] .step[data-step="1"] .nav,
+body[data-screen="cut"] .step[data-step="1"] .nav {
+  position: sticky; bottom: 0; z-index: 3;
+  background: var(--card);
+  padding: 10px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  margin-top: 12px;
+}
+#next1, .nav .next { white-space: nowrap; }
+@media (orientation: landscape) {
+  /* Disabled "Pick a template to continue" is just noise in landscape — hide it. */
+  body[data-screen="make"] #next1:disabled { display: none; }
+}
+
+/* Sign-in wordmark stays in the box and centred */
+.loginbrand { display: flex; flex-direction: column; align-items: center; }
+.loginbrand .loginmark { object-fit: contain; }

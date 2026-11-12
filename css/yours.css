@@ -29,14 +29,14 @@ body.yours-btns-large { --tool-h: 52px; --tool-minw: 72px; --tool-fs: 13px; --to
 .scrollrow-wrap.fade-start > .scrollrow-fade.start,
 .scrollrow-wrap.fade-end > .scrollrow-fade.end { opacity: 1; }
 
-/* ---- #quickBar is always one sideways-scrolling row, sitting at the bottom (or top) of the canvas ---- */
+/* ---- #quickBar sits at the bottom (or top) of the canvas. Bottom/top wrap so every tool is visible. ---- */
 #quickBarWrap { min-width: 0; z-index: 16; min-height: calc(var(--tool-h, 36px) + 8px); }
 .cutgrid.with-qb #quickBar.quickbar {
-  display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
-  overflow-x: auto !important; overflow-y: hidden !important;
+  display: flex !important; flex-direction: row !important; flex-wrap: wrap !important;
+  overflow-x: hidden !important; overflow-y: visible !important;
   height: auto !important; max-height: none !important; width: 100% !important;
   position: static !important; top: auto !important;
-  align-items: stretch; gap: 4px; padding: 4px 6px;
+  align-items: stretch; align-content: flex-start; gap: 4px; padding: 4px 6px;
   background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
   padding-bottom: max(4px, env(safe-area-inset-bottom));
 }
@@ -190,10 +190,10 @@ html, body.app-shell { overscroll-behavior-x: none; }
   body.app-shell.pro-mode:not(.short-land) .cutgrid.with-qb .stepPane:not(:has(*:not(.hidden))) { min-height: 0; }
 }
 
-/* Laptop Advanced tool rail: keep the tools roomy and show the key hints (yours compact row rules would shrink them). */
-body.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #quickBar.quickbar button,
-body.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar button,
-body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) .cutgrid.with-qb #quickBar button {
+/* Laptop Advanced, left toolbar only: roomy column tools with key hints. */
+body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #quickBar.quickbar button,
+body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar button,
+body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) .cutgrid.with-qb #quickBar button {
   width: 100% !important;
   min-width: 0 !important;
   min-height: 52px !important;
@@ -204,9 +204,149 @@ body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) .cutgrid.wi
   padding: 4px 2px !important;
   font-size: 11px !important;
 }
-body.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #quickBar.quickbar button kbd {
-  display: block !important;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--muted);
+body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #quickBar.quickbar button kbd {
+  display: none !important;
+}
+
+
+/* ---- r7: honour toolbar position on laptop Advanced ----
+   Default (bottom) and top: wrap under / above the picture, every tool visible.
+   Left: a multi-column rail that fits without a sideways-only scroll.
+   These rules beat the older 76px left-rail block in screen-make.css. */
+@media (min-width: 900px) {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.editing {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    grid-template-areas: "preview props" "tools props" !important;
+    column-gap: 10px; row-gap: 6px;
+  }
+  body.yours-toolbar-top.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid,
+  body.yours-toolbar-top.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
+  body.yours-toolbar-top.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.editing {
+    grid-template-areas: "tools props" "preview props" !important;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid #quickBarWrap,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb #quickBarWrap,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) .cutgrid.with-qb #quickBarWrap,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) #quickBarWrap {
+    grid-area: tools !important;
+    width: auto !important; min-width: 0 !important; max-width: none !important;
+    height: auto !important; display: flex !important;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar.quickbar,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) #quickBar.quickbar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    gap: 4px;
+    padding: 4px 6px;
+    align-items: stretch;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar .qb-group {
+    display: none !important;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar .qb-search {
+    display: flex !important; flex: 0 0 auto !important;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) #quickBar.quickbar button,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar.quickbar button,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar button {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: var(--tool-minw, 56px) !important;
+    max-width: none !important;
+    min-height: var(--tool-h, 36px) !important;
+    height: var(--tool-h, 36px) !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap;
+    padding: var(--tool-pad, 2px 6px) !important;
+    font-size: var(--tool-fs, 11px) !important;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) #quickBar.quickbar button kbd {
+    display: none !important;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid .previewPane,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb .previewPane,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) .previewPane {
+    grid-area: preview !important;
+    min-width: 0 !important; min-height: 0 !important; width: auto !important;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid .stepPane,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb .stepPane,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) .stepPane {
+    grid-area: props !important;
+    display: block !important;
+    overflow: auto;
+    min-width: 0 !important;
+    width: auto !important;
+    min-height: 0;
+  }
+
+  /* Left: a two-column rail that fits the tools without a dedicated scroll strip. */
+  body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid,
+  body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
+  body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.editing {
+    display: grid !important;
+    grid-template-columns: 168px minmax(0, 1fr) minmax(300px, 360px) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: "tools preview props" !important;
+    column-gap: 10px;
+  }
+  body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid #quickBarWrap,
+  body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap,
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBarWrap,
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #quickBarWrap {
+    grid-area: tools !important;
+    width: 168px !important; min-width: 168px !important; max-width: 168px !important;
+    display: flex !important; flex-direction: column !important;
+    height: 100%; min-height: 0;
+  }
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar.quickbar,
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #quickBar.quickbar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 100%;
+    align-content: flex-start;
+    gap: 4px;
+    padding: 6px 4px;
+  }
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar .qb-group,
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar .qb-search {
+    flex: 0 0 100% !important; width: 100% !important; display: flex !important;
+  }
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #quickBar.quickbar button,
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar button {
+    box-sizing: border-box;
+    flex: 0 0 calc(50% - 4px) !important;
+    width: calc(50% - 4px) !important;
+    min-width: 0 !important;
+    max-width: calc(50% - 4px) !important;
+    min-height: 48px !important;
+    height: auto !important;
+    flex-direction: column !important;
+    padding: 4px 2px !important;
+    font-size: 11px !important;
+  }
+  body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .previewPane,
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .previewPane {
+    grid-area: preview !important;
+  }
+  body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
+  body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane {
+    grid-area: props !important;
+  }
 }
