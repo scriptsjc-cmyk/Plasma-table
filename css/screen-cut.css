@@ -865,6 +865,32 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="3"] .checklist label { min-height: 36px; padding: 4px 8px; gap: 10px; font-size: 15px; }
   body[data-screen="cut"][data-step="3"] .checklist input { width: 24px; height: 24px; min-width: 24px; min-height: 24px; }
 
+  /* Cut: the picture | the run panel */
+  body.app-shell[data-screen="cut"][data-step="4"] .cutgrid {
+    grid-template-columns: minmax(0, 1fr) minmax(480px, 40vw) !important; grid-template-rows: minmax(0, 1fr) !important; grid-template-areas: none !important; }
+  body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .previewPane { grid-column: 1; grid-row: 1; order: 0; max-height: none; }
+  body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .stepPane { grid-column: 2; grid-row: 1; order: 0; min-height: 0; overflow: auto; }
+  body[data-screen="cut"] #running:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 16px; align-content: start;
+    grid-template-areas: "title speed" "nums speed" "prog speed" "info speed" "pos speed" "torch speed" "live live" "note note" "ctl ctl" "help help"; }
+  #running > #runTitle { grid-area: title; margin: 0; }
+  #running > .runnums { grid-area: nums; margin: 0; }
+  #running > .progress { grid-area: prog; margin: 0; }
+  #running > #runInfo { grid-area: info; margin: 0; }
+  body[data-screen="cut"] #running > .runpos { grid-area: pos; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+  #running > .runpos div { display: flex; align-items: baseline; gap: 6px; padding: 4px 8px; }
+  #running > .runpos span { display: inline; font-size: 14px; }
+  #running > .runpos b { font-size: clamp(24px, 2vw, 36px); }
+  #running > .torchbig { grid-area: torch; margin: 0; }
+  #running > #liveSpeedBox { grid-area: speed; margin: 0; }
+  #running > #liveSpeedBox .row { flex-wrap: nowrap; gap: 8px; }
+  #running > #liveSpeedBox .row button { flex: 1 1 0; min-width: 0; min-height: 44px; }
+  #running > #liveSpeedBox p { margin: 4px 0 0; }
+  #running > #livePanel { grid-area: live; margin: 0; }
+  #running > #lpNote { grid-area: note; margin: 0; }
+  #running > #lpNote:empty { display: none; }
+  #running > .runctl { grid-area: ctl; position: sticky; bottom: 0; z-index: 2; margin: 0; padding: 4px 0; background: var(--card); }
+  #running > #runHelp { grid-area: help; margin: 0; }
+
   /* STOP stays the biggest: no other cutting-screen button is wider than 300px or taller than 56px */
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button:not(.blocker-jump),
   body[data-screen="cut"][data-step="4"] #cutView .stepPane button:not(.blocker-jump) { max-width: 300px; }
