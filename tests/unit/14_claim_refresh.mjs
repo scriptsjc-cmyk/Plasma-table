@@ -94,7 +94,15 @@ try {
   ck("cloud claim sends a normalised serial (same upper/trim as admin add)", /const ser = normCode\(serial\);\s*if \(ser\) body\.p_serial = ser;/.test(mach), "");
   ck("admin add treats a 200 {ok:false} response as a failure, not a save", /admin_add_machine[\s\S]*?if \(r && r\.ok === false\) throw/.test(mach));
   const view = readJs("adminview");
-  ck("the admin success toast includes the saved serial and comes after adminAddMachine", /Machine saved: /.test(view) && view.indexOf("adminAddMachine") < view.indexOf("Machine saved"));
+  ck("the admin receipt names the serial and the exact code after a save", /showSaveReceipt/.test(view) && /admSaveCopy/.test(view) && /machineSavedMessage/.test(mach));
+  ck("saving an existing serial asks before replacing the claim code", /overwriteCodeWarning/.test(view) && /Replace the claim code/.test(view));
+
+  ck("machineSavedMessage includes both the serial and the exact code", machines.machineSavedMessage("pt-test1", "r454-ccef") === "Machine saved: PT-TEST1, code R454-CCEF");
+  ck("overwriteCodeWarning is silent for a new serial", machines.overwriteCodeWarning("PT-TEST2", ["PT-TEST", "PT-TEST1"]) == null);
+  ck("overwriteCodeWarning explains a replace of an existing serial", /already saved/.test(machines.overwriteCodeWarning("Pt-test1", ["PT-TEST", "PT-TEST1"])) && /stop working/.test(machines.overwriteCodeWarning("PT-TEST1", ["PT-TEST1"])));
+
+  ck("the claim hint says the serial box is optional and a mismatch looks unrecognised", /serial box is optional/i.test(home) && /unrecognised code/i.test(home));
+  ck("a failed claim is also shown as an alert in the dialog", /claimError/.test(home) && /role="alert"/.test(fs.readFileSync(SITE + "index.html", "utf8")));
 } finally {
   globalThis.fetch = realFetch;
   cloud.setSessionListener(null);

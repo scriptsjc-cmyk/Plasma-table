@@ -766,6 +766,17 @@
 </template>
 
 <!-- ============================================================ OVERLAYS: toast, tooltip, dialogs (all start hidden) -->
+<div id="safeDlg" class="safedlg hidden" role="dialog" aria-modal="true" aria-labelledby="safeDlgTitle" aria-describedby="safeDlgBody" aria-hidden="true">
+  <div class="safedlg-card">
+    <h2 id="safeDlgTitle"></h2>
+    <p id="safeDlgBody"></p>
+    <p id="safeDlgNote" class="muted small hidden"></p>
+    <div class="row safedlg-actions">
+      <button type="button" id="safeDlgCancel">Cancel</button>
+      <button type="button" id="safeDlgOk">OK</button>
+    </div>
+  </div>
+</div>
 <div id="toast" class="toast hidden"></div>
 <div id="whyTip" class="whytip hidden" role="status" aria-live="polite"></div>
 
@@ -937,7 +948,8 @@
     <p id="claimHint" class="muted">Enter the one-off claim code from the sticker on the table.</p>
     <form id="formClaim" class="col">
       <label>Claim code<input id="claimCode" type="text" autocomplete="off" autocapitalize="characters" required placeholder="XXXX-XXXX"></label>
-      <label>Serial (optional)<input id="claimSerial" type="text" autocomplete="off" autocapitalize="characters" placeholder="If the sticker also has a serial"></label>
+      <label>Serial (optional — leave blank if you are not sure)<input id="claimSerial" type="text" autocomplete="off" autocapitalize="characters" placeholder="Optional. Leave blank unless you are sure it matches."></label>
+      <p id="claimError" class="claim-err hidden" role="alert"></p>
       <button type="submit" class="xl go">Link machine</button>
     </form>
   </div>
@@ -1128,7 +1140,7 @@
     </div>
 
     <div class="admpane hidden" data-admpane="machines">
-      <p class="muted small">Add a serial and a one-off claim code for each table. Codes are stored as a hash, not as plain text. Unlink or transfer a table if it changes hands.</p>
+      <p class="muted small">Add a serial and a one-off claim code for each table. After you save, the exact code stays on this page so you can copy it. Saving the same serial again replaces the code — you will be asked to confirm. Codes are stored as a hash, not as plain text.</p>
       <form id="formAddMachine" class="col">
         <div class="grid2">
           <label>Serial<input id="admSerial" required autocomplete="off" autocapitalize="characters"></label>
@@ -1142,6 +1154,13 @@
         <label>Notes<input id="admNotes" maxlength="200"></label>
         <button type="submit" class="go">Add / update machine</button>
       </form>
+      <div id="admSaveReceipt" class="adm-receipt hidden" role="status">
+        <p id="admSaveReceiptText"></p>
+        <div class="row">
+          <button type="button" id="admSaveCopy" class="small">Copy code</button>
+          <button type="button" id="admSaveDismiss" class="small">Dismiss</button>
+        </div>
+      </div>
       <h3>Serials</h3>
       <div id="adminTable"></div>
       <h3>Recent claim attempts</h3>

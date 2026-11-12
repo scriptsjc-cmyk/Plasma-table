@@ -16,6 +16,18 @@ function logClaim(s, userId, ok, detail) {
 // DEMO-0000 is a local-demo practice code only. On the live site a signed-in
 // user who typed it used to hit claim_machine and get "not recognised" (or a
 // toast hidden under the dialog). Say so clearly, and never send it to the server.
+export function machineSavedMessage(serial, code) {
+  const ser = normCode(serial), c = normCode(code);
+  if (!ser || !c) return "";
+  return "Machine saved: " + ser + ", code " + c;
+}
+export function overwriteCodeWarning(serial, existingSerials) {
+  const ser = normCode(serial);
+  if (!ser) return null;
+  const have = (existingSerials || []).map(normCode);
+  if (!have.includes(ser)) return null;
+  return ser + " is already saved. Saving again replaces its claim code, and the old code will stop working.";
+}
 export function practiceCodeOnCloudMessage(code) {
   if (normCode(code) !== normCode(CONFIG.DEMO_CLAIM_CODE)) return null;
   return "The practice code DEMO-0000 only works in local demo mode. On this site, use the claim code from the table sticker, or one generated under Admin → Machines.";
@@ -105,7 +117,7 @@ export async function adminAddMachine(serial, code, notes) {
     const r = await authFetch("/rest/v1/rpc/admin_add_machine", { method: "POST", body: JSON.stringify({ p_serial: ser, p_code: c, p_notes: notes || "" }) });
     if (r && r.ok === false) throw new Error((r && r.error) || "The machine was not saved.");
     notify();
-    return r;
+    return { ...(r || {}), ok: true, serial: (r && r.serial) || ser, code: c };
   }
   const s = demoState();
   const hash = await sha256hex(c);
@@ -114,7 +126,7 @@ export async function adminAddMachine(serial, code, notes) {
   else s.machines.push({ id: uid(), serial: ser, hash, owner: null, claimed_at: null, notes: notes || "", created_at: nowIso() });
   saveDemo(s);
   notify();
-  return { ok: true, serial: ser };
+  return { ok: true, serial: ser, code: c };
 }
 export async function adminUnlinkMachine(serial) {
   if (!isAdmin()) throw new Error("Admin only");

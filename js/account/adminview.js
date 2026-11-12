@@ -3,6 +3,7 @@ import { $, $$, esc, host, toast, when } from "./uibase.js";
 import { announcementNode, paintAnnouncements } from "./announceui.js";
 import { renderAdvancedMachine } from "../machine/admin-machine.js";
 import * as A from "./account.js";
+import { askConfirm } from "../core/safeprompt.js";
 
 export async function refreshAdmin() {
   if (!A.isAdmin()) return;
@@ -159,15 +160,44 @@ export async function refreshAdminPresets() {
     table.appendChild(tb); box.appendChild(table);
   } catch (e) { box.textContent = e.message; }
 }
+function listedAdminSerials() {
+  return [...document.querySelectorAll("#adminTable tr[data-serial]")].map((tr) => tr.dataset.serial);
+}
+async function copySavedCode(code) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(code);
+    else {
+      const i = document.createElement("textarea"); i.value = code; document.body.appendChild(i); i.select();
+      document.execCommand("copy"); i.remove();
+    }
+    toast("Copied " + code);
+  } catch (e) { toast("Copy failed — the code is still on the page", true); }
+}
+function showSaveReceipt(serial, code) {
+  const box = $("admSaveReceipt"), text = $("admSaveReceiptText");
+  if (!box || !text) return;
+  text.textContent = A.machineSavedMessage(serial, code);
+  box.dataset.code = code;
+  box.classList.remove("hidden");
+}
 export function bindAdmin() {
   $("btnGenCode").onclick = () => { $("admCode").value = A.makeClaimCode(); };
+  if ($("admSaveCopy")) $("admSaveCopy").onclick = () => { const c = $("admSaveReceipt") && $("admSaveReceipt").dataset.code; if (c) copySavedCode(c); };
+  if ($("admSaveDismiss")) $("admSaveDismiss").onclick = () => { const box = $("admSaveReceipt"); if (box) { box.classList.add("hidden"); box.dataset.code = ""; } };
   $("formAddMachine").addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
-      const r = await A.adminAddMachine($("admSerial").value, $("admCode").value, $("admNotes").value);
-      const saved = (r && r.serial) || $("admSerial").value;
+      const serialVal = $("admSerial").value, codeVal = $("admCode").value;
+      const warn = A.overwriteCodeWarning(serialVal, listedAdminSerials());
+      if (warn) {
+        const ok = await askConfirm({ title: "Replace the claim code?", body: warn, ok: "Replace code", cancel: "Cancel", danger: true });
+        if (!ok) return;
+      }
+      const r = await A.adminAddMachine(serialVal, codeVal, $("admNotes").value);
+      const saved = (r && r.serial) || serialVal;
+      const code = (r && r.code) || codeVal;
       $("admSerial").value = ""; $("admCode").value = ""; $("admNotes").value = "";
-      toast("Machine saved: " + saved);
+      showSaveReceipt(saved, code);
       await refreshAdmin();
     } catch (err) { toast(err.message, true); }
   });

@@ -94,3 +94,12 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
   .modesw-btn { font-size: 14px; }
   .qb-group { font-size: 13px; }
 }
+
+/* In-app confirm: sits under the header so STOP stays visible and clickable. */
+.safedlg { position: fixed; left: 0; right: 0; top: var(--topbar-h, 56px); bottom: 0; z-index: 125; background: rgba(20, 28, 36, .45); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; }
+.safedlg.hidden { display: none; }
+.safedlg-card { background: var(--well); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 16px; width: min(480px, 100%); box-shadow: 0 8px 24px rgba(16, 24, 40, .2); }
+.safedlg-card h2 { margin: 0 0 8px; font-size: var(--fs-lg); }
+.safedlg-card p { margin: 0 0 10px; white-space: pre-wrap; }
+.safedlg-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.safedlg-actions button { min-height: var(--tap); }

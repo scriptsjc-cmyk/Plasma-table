@@ -150,6 +150,19 @@ try {
     await p.click('#formAddMachine [type=submit]');
     await p.waitForFunction(() => /TABLE-0002/.test(document.getElementById("adminTable").textContent || ""), null, { timeout: 8000 });
     t.check("admin can add a new serial", /TABLE-0002/.test(await p.locator("#adminTable").textContent()));
+    await p.waitForSelector("#admSaveReceipt:not(.hidden)", { timeout: 8000 });
+    const receipt = await p.locator("#admSaveReceiptText").textContent();
+    t.check("the save receipt shows the serial and the exact generated code", /Machine saved: TABLE-0002, code /.test(receipt) && receipt.includes(code), receipt);
+    t.check("the form is cleared but the receipt keeps the code until dismissed", (await p.inputValue("#admCode")) === "" && await p.locator("#admSaveCopy").count() === 1);
+    await p.fill("#admSerial", "TABLE-0002");
+    await p.click("#btnGenCode");
+    const code2 = await p.inputValue("#admCode");
+    await p.click('#formAddMachine [type=submit]');
+    await p.waitForSelector("#safeDlg:not(.hidden)", { timeout: 8000 });
+    t.check("saving the same serial again asks before replacing the code", /already saved/.test(await p.locator("#safeDlgBody").textContent()));
+    await p.click("#safeDlgCancel");
+    await p.waitForFunction(() => document.getElementById("safeDlg").classList.contains("hidden"), null, { timeout: 5000 });
+    t.check("cancelling a replace leaves the original code on the receipt", (await p.locator("#admSaveReceiptText").textContent()).includes(code) && !(await p.locator("#admSaveReceiptText").textContent()).includes(code2), await p.locator("#admSaveReceiptText").textContent());
     // export is allowed
     await p.click("#adminDlg .acct-close");
     const exported = await p.evaluate(() => { try { window.plasmaTest.exportGcode(); return true; } catch (e) { return String(e); } });

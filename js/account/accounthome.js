@@ -51,8 +51,10 @@ export function openClaim() {
   $("claimCode").value = "";
   $("claimSerial").value = "";
   $("claimHint").textContent = A.isDemoMode()
-    ? "Local demo: use the practice code " + CONFIG.DEMO_CLAIM_CODE + ". Each demo account gets its own practice table; it exists only in this browser."
-    : "The claim code is on the sticker that came with the table. It can only be used once. The practice code DEMO-0000 only works in local demo mode.";
+    ? "Local demo: use the practice code " + CONFIG.DEMO_CLAIM_CODE + ". Each demo account gets its own practice table; it exists only in this browser. The serial box is optional — leave it blank unless you are sure it matches."
+    : "The claim code is on the sticker that came with the table. It can only be used once. The serial box is optional — leave it blank unless you are sure it matches the serial saved in Admin (a mismatch looks like an unrecognised code). The practice code DEMO-0000 only works in local demo mode.";
+  const err = $("claimError");
+  if (err) { err.textContent = ""; err.classList.add("hidden"); }
 }
 export function openGate(why) {
   const signed = A.isSignedIn();
@@ -160,11 +162,17 @@ export function bindHome() {
     const btn = e.target.querySelector("[type=submit]");
     btn.disabled = true;
     try {
+      const errBox = $("claimError");
+      if (errBox) { errBox.textContent = ""; errBox.classList.add("hidden"); }
       const r = await A.claimMachine($("claimCode").value, $("claimSerial").value);
       toast("Linked " + r.serial);
       closeAll();
       paintAccountChrome();         // header, machine list and the Start / Connect lock notes, without a reload
-    } catch (err) { toast(err.message, true); }
+    } catch (err) {
+      const errBox = $("claimError");
+      if (errBox) { errBox.textContent = err.message; errBox.classList.remove("hidden"); }
+      toast(err.message, true);
+    }
     finally { btn.disabled = false; }
   });
   $("gateSignIn").onclick = () => openAccount("in");

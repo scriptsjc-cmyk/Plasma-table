@@ -85,3 +85,9 @@ body.is-admin button.admin-only { display: inline-flex; }
 #advCut > summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; font-weight: 700; }
 /* round 5 look M3: Settings wording for the mode you are in (body[data-mode] is set on every screen by js/ui/mode.js) */
 body:not([data-mode="pro"]) .pro-copy, body[data-mode="pro"] .beg-copy { display: none; }
+
+/* The saved claim code stays on the Machines tab until the admin dismisses it. */
+.adm-receipt { margin: 10px 0 0; padding: 10px 12px; border: 2px solid var(--go); background: var(--ok-bg); color: var(--ok-text); border-radius: var(--r); }
+.adm-receipt p { margin: 0 0 8px; font-weight: 700; overflow-wrap: anywhere; }
+.adm-receipt .row { gap: 8px; }
+.claim-err { margin: 0; color: var(--alarm-text, var(--alarm)); font-weight: 650; }
