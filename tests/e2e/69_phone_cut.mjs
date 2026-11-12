@@ -18,7 +18,7 @@ const PAGE = `window.__inView = ${inView}; window.__onTop = ${onTop};
   window.__biggest = () => {   // every rendered button on the cutting screen and its banners, scrolled into view or not
     const s = document.getElementById("btnStop").getBoundingClientRect(), sa = s.width * s.height, out = [];
     for (const b of document.querySelectorAll("#cutView button, .banner button")) {
-      if (b.id === "btnStop" || b.classList.contains("blocker-jump") || !b.getClientRects().length || getComputedStyle(b).visibility === "hidden") continue;   // .blocker-jump: a sentence styled as a link
+      if (b.id === "btnStop" || !b.getClientRects().length || getComputedStyle(b).visibility === "hidden") continue;   // (r7 U28: the "Show me" jump buttons count too)
       const r = b.getBoundingClientRect(); if (r.width * r.height >= sa) out.push((b.id || b.className) + " " + Math.round(r.width) + "x" + Math.round(r.height));
     }
     return { stop: Math.round(s.width) + "x" + Math.round(s.height), area: Math.round(sa), bigger: out };

@@ -1,4 +1,4 @@
-// Pre-start checklist and the list of reasons Start is blocked (blockers()).
+// Pre-start check (the start-point line and one safety tick box) and the list of reasons Start is blocked (blockers()).
 import { estopOn } from "../ui/flow.js";
 import * as Setup from "./setup.js";
 import { S, sketch } from "../core/state.js";
@@ -11,16 +11,23 @@ import { refresh } from "../core/hooks.js";
 // Round 5 (safety): the first line, "Start point set", is not a box you tick. It follows the machine's zeroConfirmed flag
 // (S.zeroSet): ticked by Start here, unticked by STOP / reset / home / alarm, and never editable by hand.
 function zeroLineText() {
-  if (!S.zeroSet) return "Start point set (press Start here in “Connect, home and set the start point” above)";
+  if (!S.zeroSet) return "Start point not set yet: press Start here";
   const w = wcoNow();
   return `Start point set at ${Number(w[0]).toFixed(1)}, ${Number(w[1]).toFixed(1)} mm`;
 }
+// r7 J13: ONE tick box before cutting. Its label lists everything it confirms, so nothing is skipped by ticking it.
+// A practice run (torch off) says so as a line of text, not as a box to tick (r7 U24).
+export function checkItems() {
+  const dry = S.prepared && S.prepared.dry_run;
+  return dry ? ["the material (if any) is flat on the slats", "the area is clear and hands are away from the gantry", "the e-stop is within reach"]
+    : [...(row().check ? [row().check] : []), `the plasma is ON and set to ${ampsNow()} A`, `the air is on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`,
+      "the material is clamped flat on the slats", "the earth clamp is on the sheet", "the area is clear, hands away, e-stop within reach"];
+}
 export function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;
-  const items = dry ? ["Practice run: torch will stay OFF", "Hands clear, e-stop within reach"]
-    : [...(row().check ? [row().check] : []), `Plasma ON and set to ${ampsNow()} A`, `Air on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`, "Earth clamp on the sheet", "Hands clear, e-stop within reach"];
   $("checklist").innerHTML = `<li class="autochk"><label><input type="checkbox" data-chk="zero" disabled> <span>${esc(zeroLineText())}</span></label></li>`
-    + items.map((t, i) => `<li><label><input type="checkbox" data-chk="${i + 1}"> ${esc(t)}</label></li>`).join("");
+    + (dry ? `<li class="checknote">Practice run: the torch stays off.</li>` : "")
+    + `<li class="onecheck"><label><input type="checkbox" data-chk="1"> <span><b>I've checked that</b>${checkItems().map((t) => `<span class="checkwhat">${esc(t)}</span>`).join("")}</span></label></li>`;
   const cm = $("checkMat");
   if (cm) cm.textContent = S.material && S.thickness != null ? `${S.material} · ${S.thickness} mm` : "";
   paintZeroWarn();
@@ -53,7 +60,7 @@ export function blockers() {
   if (!S.prepared) b.push("No part chosen yet (step 1).");
   if (estopOn()) b.push("E-STOP is ON – press and hold the red button to reset it first.");
   const sm = scoreMarkProblem(); if (sm) b.push(sm);
-  if (S.connected && !S.zeroSet) b.push("Start point has not been set. Press Start here in “Connect, home and set the start point” above.");
+  if (S.connected && !S.zeroSet) b.push("Start point has not been set: press Start here.");
   const st = S.status.state;
   if (S.connected && st === "Alarm") b.push("Machine is in alarm – press Unlock at the top.");
   else if (S.connected && st !== "Idle") b.push(`Machine is busy (${st}). Wait for it to stop.`);
@@ -64,7 +71,7 @@ export function blockers() {
   if (fit().bad) b.push("The part doesn't fit the machine – move the parts or the sheet's start corner.");
   for (const t of Setup.blockText()) b.push(t);
   const boxes = $$("#checklist input:not([disabled])");      // the start-point line ticks itself (the blocker above covers it)
-  if (boxes.some((x) => !x.checked)) b.push("Tick every box above.");
+  if (boxes.some((x) => !x.checked)) b.push("Tick the safety check box.");
   return b;
 }
 // ------------------------------------------------------------------ refresh everything that depends on state
