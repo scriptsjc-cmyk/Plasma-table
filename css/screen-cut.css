@@ -733,3 +733,9 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"] #cutView .nestbox button, body[data-screen="cut"] #cutView .woform button, body[data-screen="cut"] #cutView #btnChangeMat,
   body[data-screen="cut"] #cutView #done button { font-size: 14px; padding: 4px 8px; }
 }
+@media (max-width: 899px) and (orientation: portrait) {
+  /* Bed & start upright: the layout canvas marks the grid "editing", which picked up Make's three-row picture / tools / step grid
+     and left an empty 140px band where Make's tool bar would be. The cutting screen has no tool bar: picture and step share the height. */
+  body.app-shell:not(.short-land)[data-screen="cut"] .cutgrid.editing:not(.with-qb) {
+    grid-template-areas: "preview" "step" !important; grid-template-rows: minmax(0, 0.85fr) minmax(0, 1.15fr) !important; }
+}
