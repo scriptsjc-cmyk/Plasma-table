@@ -2,6 +2,7 @@
 import { MIN, clone, def, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { bbox, differenceOutlines, offsetPolygon, pointInPoly, selfIntersects, signedArea, unionOutlines } from "../core/geom.js";
 import { variantKey, variantsFor } from "./variants.js";
+import { clickVerb } from "../ui/laptop.js";
 
 export class EditMethods {
   // Turn 90 keeps each shape's bottom-left and, when width/height exist, swaps them
@@ -218,6 +219,46 @@ export class EditMethods {
     }
     this.commit(); this.onSelect();
   }
+  centreBetween() {
+    const list = this.picked();
+    if (list.length !== 1) { this.onMessage("Pick one shape, then Centre between, then two edges."); return; }
+    this.centrePick = { id: list[0].id, edges: [] };
+    this.onMessage("Pick the first edge, then the second.");
+  }
+  takeCentreEdge(hit) {
+    const job = this.centrePick;
+    if (!job) return false;
+    if (!hit || hit.kind !== "edge" || !hit.it) { this.onMessage("Pick an edge."); return true; }
+    const c = this.contoursOf(hit.it)[hit.ci];
+    const pts = c && c.pts;
+    if (!pts || pts.length < 2) return true;
+    const i = hit.ei != null ? hit.ei : hit.vi;
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    if (!a || !b) return true;
+    job.edges.push({ a: [...a], b: [...b] });
+    if (job.edges.length < 2) { this.onMessage("Pick the second edge."); return true; }
+    const it = this.item(job.id);
+    this.centrePick = null;
+    if (!it) return true;
+    const mid = (e) => [(e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2];
+    const tall = (e) => Math.abs(e.b[1] - e.a[1]) >= Math.abs(e.b[0] - e.a[0]);
+    const m1 = mid(job.edges[0]), m2 = mid(job.edges[1]);
+    const box = this.boxOf(it);
+    this.remember();
+    if (tall(job.edges[0]) && tall(job.edges[1])) {
+      const x = (m1[0] + m2[0]) / 2;
+      it.x = r1(it.x + x - (box[0] + box[2]) / 2);
+    } else if (!tall(job.edges[0]) && !tall(job.edges[1])) {
+      const y = (m1[1] + m2[1]) / 2;
+      it.y = r1(it.y + y - (box[1] + box[3]) / 2);
+    } else {
+      it.x = r1(it.x + (m1[0] + m2[0]) / 2 - (box[0] + box[2]) / 2);
+      it.y = r1(it.y + (m1[1] + m2[1]) / 2 - (box[1] + box[3]) / 2);
+    }
+    this.commit(); this.onSelect();
+    this.onMessage("Centred between the two edges.");
+    return true;
+  }
   linearArray(n, gapX, gapY) {
     const list = this.picked(); if (!list.length) return;
     n = Math.max(2, Math.min(50, Math.round(n || 2)));
@@ -351,7 +392,7 @@ export class EditMethods {
     this.onMessage(msg);
   }
   finishDraw() {
-    if (this.drawPts.length < 3) { this.onMessage("Tap at least three points, then Close."); return; }
+    if (this.drawPts.length < 3) { this.onMessage(clickVerb() + " at least three points, then Close."); return; }
     const pts = this.drawPts.map((p) => [r1(p[0]), r1(p[1])]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
     const uniq = [];
     for (const p of pts) if (!uniq.length || Math.hypot(p[0] - uniq[uniq.length - 1][0], p[1] - uniq[uniq.length - 1][1]) > 0.05) uniq.push(p);

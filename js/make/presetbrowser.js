@@ -42,7 +42,7 @@ function renderPresetBrowser() {
   const q = (qEl && qEl.value || "").trim();
   const groups = allGroups();
   const cats = [{ id: "all", name: "All" }, ...groups];
-  catsEl.innerHTML = cats.map((c) => `<button type="button" data-pbcat="${esc(c.id)}" class="${c.id === cat ? "on" : ""}">${esc(c.name)}</button>`).join("");
+  catsEl.innerHTML = cats.map((c) => `<button type="button" role="tab" aria-selected="${c.id === cat ? "true" : "false"}" data-pbcat="${esc(c.id)}" class="${c.id === cat ? "on" : ""}">${esc(c.name)}</button>`).join("");
   let ids;
   if (cat === "all" || q) {
     const seen = new Set();

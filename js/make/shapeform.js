@@ -13,6 +13,7 @@ import { runPro } from "./cad.js";
 import { showSource, useShape, useShapeSoon } from "../core/hooks.js";
 import { paintCutSummary } from "./cutsummary.js";
 import { onShapeFormPainted } from "./phonesheet.js";
+import { clickVerb } from "../ui/laptop.js";
 
 let editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
@@ -60,12 +61,12 @@ export function paintGuide() {
   document.body.classList.toggle("bg-picked", !!(mk && beg && S.src === "shape" && has && !S.bgChoosing && S.cur === 1));
   const nx = $("next1");
   if (nx) nx.textContent = mk ? (S.prepared ? "✂ Cut this part →" : (has ? "Getting it ready…" : "Pick a template to continue")) : "Next: bed and start →";
-  const mt = $("matLine"); if (mt) mt.textContent = S.material ? `Cutting ${S.material.toLowerCase()}, ${S.thickness} mm thick. Not right? Tap a different one.` : "";
+  const mt = $("matLine"); if (mt) mt.textContent = S.material ? `Cutting ${S.material.toLowerCase()}, ${S.thickness} mm thick. Not right? ${clickVerb()} a different one.` : "";
   const t = $("step1Title"); if (t) t.textContent = mk ? "Make a part" : "What do you want to cut?";
   const gh = $("guideHead"); if (!gh || !mk || !beg) return;
   $("ghStep").textContent = "Make a part";
   $("ghTitle").textContent = has ? "Set the size" : "Pick a template";
-  $("ghHelp").textContent = has ? "Type how big it should be, turn it, add holes. When it looks right, press Cut this part." : "Tap a template and fill in the numbers, or open Advanced tools to draw freely.";
+  $("ghHelp").textContent = has ? "Type how big it should be, turn it, add holes. When it looks right, press Cut this part." : clickVerb() + " a template and fill in the numbers, or open Advanced tools to draw freely.";
   gh.style.setProperty("--prog", has ? "100%" : "0%");
 }
 const HOLE_ADDERS = [["slothole", "Slot hole"], ["cornerholes", "Corner holes (4)"], ["holerow", "Row of holes"], ["boltcircle", "Ring of holes"], ["holegrid", "Grid of holes"]];
@@ -123,7 +124,7 @@ function renderShapeFormCore() {
   if (!list.length) {
     $("shapeForm").innerHTML = !sketch.items.length ? "" : sketch.opts.pro
       ? `<p class="muted">Click a shape on the drawing to change it. Shift-click or drag a box round several to move, copy, join or line them up.</p>`
-      : beginnerPartsHtml() + `<p class="muted">Tap a part in the list or on the drawing to change it.</p>`;
+      : beginnerPartsHtml() + `<p class="muted">${clickVerb()} a part in the list or on the drawing to change it.</p>`;
     return;
   }
   if (list.length > 1) {
@@ -149,7 +150,11 @@ function renderShapeFormCore() {
         <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
       </div>
       <h4>Line up with the biggest one</h4>
-      <div class="alignrow">${ALIGN.map(([k, t]) => `<button data-sk="align" data-arg="${k}">${t}</button>`).join("")}</div>${pro}`;
+      <div class="alignrow">${ALIGN.map(([k, t]) => `<button data-sk="align" data-arg="${k}">${t}</button>`).join("")}</div>
+      <div class="alignrow">
+        <button data-sk="distribute" data-arg="x">↔ Space evenly</button>
+        <button data-sk="distribute" data-arg="y">↕ Space evenly</button>
+      </div>${pro}`;
     return;
   }
   const sh = shapeDef(it.type), b = sketch.boxOf(it);
@@ -164,7 +169,7 @@ function renderShapeFormCore() {
         ${!sh.hole && !sh.sheet && shapeDef("hole") ? `<button data-sk="add" data-arg="hole">◦ Add a hole</button>` : ""}
         ${sh.hole && sketch.hostPart(it) ? `<button data-sk="pickHost">↩ Back to the part</button><button data-sk="centreInHost">◎ Centre it</button>` : ""}
         ${sh.sheet ? `<button data-sk="explode" title="Make each piece its own part, so you can place them on the bed one by one">✂ Split into parts</button>` : ""}
-        <button data-sk="remove" class="danger">🗑 Remove</button>
+        <button data-sk="remove" class="quiet">🗑 Remove</button>
       </div>
       ${!sh.hole && !sh.sheet ? `<p class="tip">More holes:</p><div class="skbtns holeadd">${HOLE_ADDERS.map(([id, label]) => shapeDef(id) ? `<button data-sk="add" data-arg="${id}">${esc(label)}</button>` : "").join("")}</div>` : ""}`;
     return;
@@ -175,7 +180,7 @@ function renderShapeFormCore() {
     const d = shapeDef(v.id); const label = v.label || (d ? d.name : v.id);
     return `<button type="button" data-var="${esc(variantKey(v))}" class="${variantKey(v) === curKey ? "sel" : ""}">${esc(label)}</button>`;
   }).join("");
-  const varBox = vars ? `<div class="varbox"><h4>Versions of this shape</h4><div class="varrow">${vars}</div><p class="muted small">Keeps this size and place. Then edit holes, radii and so on below. Tap a blue size on the drawing to type an exact measurement.</p></div>` : `<p class="muted small">Tap a blue size on the drawing to type an exact measurement.</p>`;
+  const varBox = vars ? `<div class="varbox"><h4>Versions of this shape</h4><div class="varrow">${vars}</div><p class="muted small">Keeps this size and place. Then edit holes, radii and so on below. ${clickVerb()} a blue size on the drawing to type an exact measurement.</p></div>` : `<p class="muted small">${clickVerb()} a blue size on the drawing to type an exact measurement.</p>`;
   const proOne = sketch.opts.pro ? `
       <div class="skbtns">
         <button data-pro="linarray">Linear array</button>
@@ -202,11 +207,11 @@ function renderShapeFormCore() {
       <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
       ${moved ? `<button data-sk="resetHoles">↺ Holes back</button>` : ""}
       ${sh.sheet ? `<button data-sk="explode" title="Make each piece its own part, so you can place them on the bed one by one">✂ Split into parts</button>` : ""}
+      <button data-sk="centreBetween" title="Centre this shape between two edges">◎ Centre between…</button>
       <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
     </div>${proOne}${holeHostHtml(it, sh)}`;
 }
 export function bindShapeForm() {
-  if ($("bgDraw")) $("bgDraw").onclick = () => setAppMode("advanced");
   if ($("fsDone")) $("fsDone").onclick = () => setShapeFs(false);
   if ($("fsSave")) $("fsSave").onclick = () => saveCurrent().catch((e) => toast(e.message, true));
   if ($("btnShapeFs")) $("btnShapeFs").onclick = () => setShapeFs(true);

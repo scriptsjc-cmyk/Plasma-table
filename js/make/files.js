@@ -13,6 +13,7 @@ import { S, sketch } from "../core/state.js";
 import { goStep } from "../ui/nav.js";
 import { refresh } from "../ui/refresh.js";
 import { loadJob } from "../cut/prepare.js";
+import { clickVerb } from "../ui/laptop.js";
 import { showSource, useShape, useShapeSoon } from "./useshape.js";
 import { setShapeFs } from "./protools.js";
 import { navBusy } from "../cut/checklist.js";
@@ -40,7 +41,7 @@ export async function handleFiles(list) {
 }
 // put more parts on the bed (saved parts and/or several drawing files, each with a quantity)
 export async function addPartsFlow(files) {
-  if ((S.gcode && !S.design) || (S.design && S.design.straight)) { toast("A G-code file or a straight cut can't be mixed with drawings. Tap “Start over” first.", true); return; }
+  if ((S.gcode && !S.design) || (S.design && S.design.straight)) { toast("A G-code file or a straight cut can't be mixed with drawings. " + clickVerb() + " “Start over” first.", true); return; }
   if (S.prepared) goStep(3); else { S.src = "shape"; }          // step 3 turns a loaded drawing into movable parts first
   if (files) await Setup.addFilesToSheet(files); else Setup.openAdd();
 }

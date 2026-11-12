@@ -3,6 +3,7 @@ import { evalExpr } from "../core/expr.js";
 import { $, esc, toast } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
 import { renderProTools } from "./protools.js";
+import { clickVerb } from "../ui/laptop.js";
 
 export function openCad(title, fields, onOk) {
   $("cadTitle").textContent = title;
@@ -22,8 +23,8 @@ export function openCad(title, fields, onOk) {
 export function closeCad() { $("cadDialog").classList.add("hidden"); $("cadDialog")._ok = null; }
 export function runPro(cmd) {
   const sheet = S.cfg && S.cfg.travel_mm ? S.cfg.travel_mm : { x: 1300, y: 800 };
-  if (cmd === "draw") { sketch.setTool("draw"); renderProTools(); toast("Tap points on the drawing, then Close outline."); return; }
-  if (cmd === "measure") { sketch.setTool("measure"); renderProTools(); toast("Tap two points to measure."); return; }
+  if (cmd === "draw") { sketch.setTool("draw"); renderProTools(); toast(clickVerb() + " points on the drawing, then Close outline."); return; }
+  if (cmd === "measure") { sketch.setTool("measure"); renderProTools(); toast(clickVerb() + " two points to measure."); return; }
   if (cmd === "points") { sketch.setPointSnap(!sketch.opts.pointSnap); renderProTools(); return; }
   if (cmd === "lock") { sketch.toggleLock(); return; }
   if (cmd === "subtract") { sketch.subtract(); return; }

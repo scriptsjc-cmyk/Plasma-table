@@ -88,13 +88,13 @@ export function onScreen(name, prev) {
   try { paintChrome(); refresh(); } catch (e) { /* ignore */ }
   window.scrollTo(0, 0);
 }
-// Make a part -> the cutting screen, straight onto the bed
+// Make a part -> the cutting screen, starting at material / thickness (step 1), not the bed.
 export function sendToCutting() {
   if (S.src === "shape" && sketch) useShape();
   if (!S.prepared) { toast("Pick or draw a part first.", true); return; }
   try { resetPreviewCam(); } catch (e) { /* ignore */ }
   if (!showScreen("cut")) return;
-  goStep(3);
+  goStep(1);
 }
 // signed in -> menu; signed out -> the sign-in page
 export function routeAuth() {

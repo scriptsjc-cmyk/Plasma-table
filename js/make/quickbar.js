@@ -13,6 +13,7 @@ import { openDimEdit } from "./dimedit.js";
 import { savePrefs } from "../core/prefs.js";
 import { mountScrollRow, refreshScrollRows } from "../ui/scrollrow.js";
 import { openPresetBrowser } from "./presetbrowser.js";
+import { clickVerb } from "../ui/laptop.js";
 import { getToolIds, toolInfo, openToolbarCustom, TOOL_GROUPS } from "./toolbarcustom.js";
 
 function sizeDimForSelection() {
@@ -171,7 +172,7 @@ export function quickAction(a) {
     case "del": sketch.remove(); break;
     case "rot": sketch.rotateBy(90); break;
     case "mir": sketch.mirror(); break;
-    case "size": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast("Tap one shape first."); break; }
+    case "size": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast(clickVerb() + " one shape first."); break; }
     case "resize": openResize(); break;
     case "ver": openVersions(); break;
     case "fit": sketch.fitView(); break;
@@ -181,20 +182,20 @@ export function quickAction(a) {
     case "join": sketch.join(); break;
     case "alignl": sketch.align("left"); break;
     case "alignb": sketch.align("bottom"); break;
-    case "edge": { const ep = $("edgePanel"); if (ep) { ep.classList.remove("hidden"); ep.scrollIntoView({ block: "nearest" }); } toast("Tap an edge on the outline, then change its length, angle or curve."); break; }
+    case "edge": { const ep = $("edgePanel"); if (ep) { ep.classList.remove("hidden"); ep.scrollIntoView({ block: "nearest" }); } toast(clickVerb() + " an edge on the outline, then change its length, angle or curve."); break; }
     case "fs": setShapeFs(!S.shapeFs); break;
-    case "dims": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast("Tap a blue size on the drawing, then type the new number."); break; }
+    case "dims": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast(clickVerb() + " a blue size on the drawing, then type the new number."); break; }
     case "fillet":
       openCad("Fillet a corner", [{ id: "r", label: "Radius (mm)", value: 5 }], (v) => {
         if (!(v.r > 0)) { toast("Enter a radius.", true); return; }
         if (sketch.edgeInfo && sketch.edgeInfo()) { sketch.setEdgeCurve({ radius: v.r }); toast("Corner filleted."); }
-        else toast("Tap an edge on a custom outline first (Draw outline, then Edit edge), then Fillet.");
+        else toast(clickVerb() + " an edge on a custom outline first (Draw outline, then Edit edge), then Fillet.");
       });
       break;
     case "chamfer":
-      openCad("Chamfer / flatten an edge", [{ id: "none", label: "Tap an edge first. This makes that edge straight. Use a chamfered rectangle from the library for a ready-made chamfer.", value: "", text: true }], () => {
+      openCad("Chamfer / flatten an edge", [{ id: "none", label: clickVerb() + " an edge first. This makes that edge straight. Use a chamfered rectangle from the library for a ready-made chamfer.", value: "", text: true }], () => {
         if (sketch.edgeInfo && sketch.edgeInfo()) { sketch.setEdgeCurve({}); toast("Edge flattened. Adjust the corners by dragging."); }
-        else toast("Tap an edge first, or add a Chamfer rectangle from All shapes.");
+        else toast(clickVerb() + " an edge first, or add a Chamfer rectangle from All shapes.");
       });
       break;
   }

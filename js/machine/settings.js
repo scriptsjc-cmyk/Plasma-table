@@ -232,13 +232,8 @@ export function paintSettings() {
     box.appendChild(b);
   }
   const current = document.querySelector(".setpane:not(.hidden)");
-  const curId = current && current.dataset.setpane;
-  if (curId) {
-    const curBtn = box.querySelector(`.settab[data-settab="${curId}"]`);
-    if (curBtn) curBtn.classList.add("sel");
-  }
-  const first = box.querySelector(".settab");
-  if (first && !box.querySelector(".settab.sel")) first.classList.add("sel");
+  const curId = (current && current.dataset.setpane) || (box.querySelector(".settab") && box.querySelector(".settab").dataset.settab);
+  if (curId) showTab(curId);
   fillBasics();
 }
 

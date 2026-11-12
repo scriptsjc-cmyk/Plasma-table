@@ -95,6 +95,9 @@
 <!-- ============================================================ top bar -->
 <header class="topbar">
   <div class="topbar-main">
+  <button type="button" id="btnShowHeader" class="showheader hidden" title="Show header" aria-label="Show header" hidden>
+    <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0B1F33"/><path fill="#F4F7FA" d="M8 6.2h9.1c3.55 0 5.85 2.05 5.85 5.05 0 2.95-2.3 5.05-5.85 5.05H8V6.2zm4.15 3.15v3.8h4.85c1.45 0 2.35-.75 2.35-1.9s-.9-1.9-2.35-1.9H12.15z"/><path fill="#F4F7FA" d="M8 17.55h4.15V25.8H8z"/><path d="M5 16h19.2" stroke="#00B4D8" stroke-width="2.15" stroke-linecap="butt"/><circle cx="25.1" cy="16" r="1.85" fill="#FF7A1A"/></svg>
+  </button>
   <div class="brand"><svg width="32" height="32" viewBox="0 0 32 32" class="brand-mark" aria-hidden="true">
     <rect width="32" height="32" rx="8" fill="#0B1F33"/>
     <path fill="#F4F7FA" d="M8 6.2h9.1c3.55 0 5.85 2.05 5.85 5.05 0 2.95-2.3 5.05-5.85 5.05H8V6.2zm4.15 3.15v3.8h4.85c1.45 0 2.35-.75 2.35-1.9s-.9-1.9-2.35-1.9H12.15z"/>
@@ -104,6 +107,7 @@
     <circle cx="25.1" cy="16" r="1.85" fill="#FF7A1A"/>
     <circle cx="25.1" cy="16" r="0.7" fill="#FFF3C4"/>
   </svg><span id="machineName">Porta Plazma</span></div>
+  <button type="button" id="btnHideHeader" class="pill iconbtn hideheader" title="Hide header" aria-label="Hide header">⌃</button>
   <button type="button" id="btnHome" class="pill iconbtn homebtn" title="Back to the main menu" aria-label="Back to the main menu"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Menu</span></button>
   <button type="button" id="btnTopMenu" class="pill iconbtn" aria-expanded="false" aria-controls="topMenu" aria-label="Menu">
     <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -262,8 +266,8 @@
       <div id="exportRow" class="row exportrow">
         <button type="button" id="btnSavePartQuick" class="small">Save to account</button>
         <button type="button" id="btnExport" class="small">Download G-code</button>
-        <button type="button" id="btnExportMenu" class="small" aria-expanded="false" aria-controls="exportPop">Dialect ▾</button>
-        <div id="exportPop" class="exportpop hidden" hidden>
+        <div id="exportPop" class="exportpop hidden" hidden role="dialog" aria-labelledby="exportPopTitle">
+          <p id="exportPopTitle" class="exportpop-title">Save G-code as</p>
           <label>G-code dialect
             <select id="exportDialect">
               <option value="grbl">GRBL / grblHAL</option>
@@ -273,6 +277,10 @@
           </label>
           <label class="check"><input type="checkbox" id="exportN"> Line numbers (N10, N20…)</label>
           <p class="muted small" id="exportHint">Mach3: no $ commands, M3/M5 torch, G4 P in seconds, file wrapped in %.</p>
+          <div class="row wrap exportpop-actions">
+            <button type="button" id="exportGo" class="accent">Download</button>
+            <button type="button" id="exportCancel">Cancel</button>
+          </div>
         </div>
       </div>
       </div>
@@ -303,7 +311,6 @@
           <div id="bgShapes" class="bgshapes"></div>
           <div class="bgmore">
             <button type="button" id="bgMore" class="xl">More shapes…</button>
-            <button type="button" id="bgDraw" class="xl">✏ Advanced tools</button>
           </div>
         </div>
 
@@ -454,6 +461,13 @@
           <h3 class="addtiles">Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
           <div id="holeTiles" class="tiles small addtiles"></div>
           <div id="shapeForm" class="shapeform"></div>
+          <div id="sheetSizeBox" class="sheetsize">
+            <h3>Drawing sheet</h3>
+            <div class="grid2">
+              <label>Width <input id="sheetSizeW" type="number" min="50" max="20000" step="any" inputmode="decimal"> mm</label>
+              <label>Height <input id="sheetSizeH" type="number" min="50" max="20000" step="any" inputmode="decimal"> mm</label>
+            </div>
+          </div>
           <section id="layersPanel" class="layerspanel" aria-label="Parts list">
             <div class="layershead">
               <h3>Parts</h3>
@@ -657,8 +671,8 @@
             <div id="delayRow" class="delayrow">
               <div>Pierce delay <b id="liveDelay">–</b></div>
               <div class="row">
-                <button type="button" id="delDown" class="grow" aria-label="Pierce delay 0.1 seconds shorter">− 0.1 s</button>
-                <button type="button" id="delUp" class="grow" aria-label="Pierce delay 0.1 seconds longer">+ 0.1 s</button>
+                <button type="button" id="delDown" class="grow" aria-label="− 0.1 s, pierce delay shorter">− 0.1 s</button>
+                <button type="button" id="delUp" class="grow" aria-label="+ 0.1 s, pierce delay longer">+ 0.1 s</button>
                 <button type="button" id="delSave" class="grow small">Save to cut chart</button>
               </div>
               <p class="muted small" id="delNote">Applies from the next pierce that hasn't started yet.</p>
@@ -825,11 +839,11 @@
 <!-- Preset parts browser -->
 <div id="presetBrowser" class="presetbrowser hidden" hidden role="dialog" aria-modal="true" aria-labelledby="pbTitle" aria-hidden="true">
   <div class="pb-frame">
-    <header class="pb-head">
+    <div class="pb-head">
       <h2 id="pbTitle">Preset parts</h2>
       <input id="pbSearch" type="search" placeholder="Search parts" enterkeyhint="search" autocomplete="off" aria-label="Search parts">
       <button type="button" id="pbClose">Close</button>
-    </header>
+    </div>
     <div id="pbCats" class="pbcats" role="tablist" aria-label="Part categories"></div>
     <div id="pbGrid" class="pbgrid"></div>
   </div>
@@ -1445,15 +1459,16 @@
             <option value="green">Green</option>
             <option value="purple">Purple</option>
             <option value="navy">Navy</option>
-            <option value="rust">Rust</option>
           </select>
         </label>
         <label>Toolbar
           <select id="yoursToolbar">
             <option value="bottom">Bottom of the picture</option>
             <option value="top">Top of the picture</option>
+            <option value="left">Left of the picture</option>
           </select>
         </label>
+        <label class="check"><input type="checkbox" id="yoursHideHeader"> Hide the header on Make and Cut (a small logo brings it back; STOP stays visible)</label>
         <label>Toolbar button size
           <select id="yoursButtons">
             <option value="compact">Compact</option>

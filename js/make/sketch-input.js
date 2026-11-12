@@ -102,6 +102,22 @@ export class InputMethods {
     for (const [a, t] of gapY) { const d = t - (a + dy); if (Math.abs(d) < tol && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, y: t }; }
     for (const a of my) for (const t of ys) { const d = t - (a + dy); if (Math.abs(d) < tol && (!best || Math.abs(d) < Math.abs(best.d) - 1e-9)) best = { d, y: t }; }
     if (best) { dy += best.d; this.guides.push({ y: best.y }); }
+    // Centre-between: the moving shape's middle snaps to halfway between two other edges, with a guide.
+    const midX = (mb[0] + mb[2]) / 2, midY = (mb[1] + mb[3]) / 2;
+    const uniq = (arr) => [...new Set(arr.map((v) => r1(v)))].sort((a, b) => a - b);
+    const xsU = uniq(xs), ysU = uniq(ys);
+    let bet = null;
+    for (let i = 0; i < xsU.length; i++) for (let j = i + 1; j < xsU.length; j++) {
+      const mid = (xsU[i] + xsU[j]) / 2, d = mid - (midX + dx);
+      if (Math.abs(d) < tol && xsU[j] - xsU[i] > 4 && (!bet || Math.abs(d) < Math.abs(bet.d))) bet = { d, axis: "x", a: xsU[i], b: xsU[j], mid };
+    }
+    if (bet) { dx += bet.d; this.guides.push({ x: bet.mid, between: { a: bet.a, b: bet.b, axis: "x" } }); }
+    bet = null;
+    for (let i = 0; i < ysU.length; i++) for (let j = i + 1; j < ysU.length; j++) {
+      const mid = (ysU[i] + ysU[j]) / 2, d = mid - (midY + dy);
+      if (Math.abs(d) < tol && ysU[j] - ysU[i] > 4 && (!bet || Math.abs(d) < Math.abs(bet.d))) bet = { d, axis: "y", a: ysU[i], b: ysU[j], mid };
+    }
+    if (bet) { dy += bet.d; this.guides.push({ y: bet.mid, between: { a: bet.a, b: bet.b, axis: "y" } }); }
     return [r1(dx), r1(dy)];
   }
   // ---------------------------------------------------------------- input
@@ -133,6 +149,10 @@ export class InputMethods {
         return;
       }
       const [wx, wy] = this.toWorld(sx, sy);
+      if (this.centrePick && !panBtn) {
+        const eh = this.hit(sx, sy, touch);
+        if (this.takeCentreEdge && this.takeCentreEdge(eh)) { this.draw(); return; }
+      }
       if ((this.tool === "draw" || this.tool === "rect" || this.tool === "disc") && !panBtn) {
         let px = wx, py = wy;
         const sn = snapWorld(this, wx, wy);
@@ -169,8 +189,9 @@ export class InputMethods {
       if (dim) { this.drag = { kind: "dim", dim, sx, sy, moved: false }; return; }
       const h = panBtn ? null : this.hit(sx, sy, touch);
       if (!h) {
-        if (touch || panBtn) this.drag = { kind: "pan", sx, sy, vx: this.view.vx, vy: this.view.vy, moved: false };
-        else this.drag = { kind: "box", sx, sy, cx: sx, cy: sy, add: e.shiftKey || e.ctrlKey || e.metaKey, moved: false };
+        const boxSel = e.shiftKey || e.ctrlKey || e.metaKey;
+        if (touch || panBtn || !boxSel) this.drag = { kind: "pan", sx, sy, vx: this.view.vx, vy: this.view.vy, moved: false };
+        else this.drag = { kind: "box", sx, sy, cx: sx, cy: sy, add: true, moved: false };
         return;
       }
       const before = this.snapshot(), it = h.it;
@@ -206,7 +227,7 @@ export class InputMethods {
       const d = this.drag;
       if (!d) {                                                 // hover cursor
         const h = this.spaceDown ? null : this.hit(sx, sy, false);
-        cv.style.cursor = this.spaceDown ? "grab" : !h ? "crosshair" : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
+        cv.style.cursor = this.spaceDown || !h ? "grab" : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
         const [mwx, mwy] = this.toWorld(sx, sy);
         const sn = snapWorld(this, mwx, mwy);
         this.snapMark = sn;
@@ -429,7 +450,18 @@ export class InputMethods {
       }
       if (!this.sel.ids.length) {
         if (e.key === "Delete" || e.key === "Backspace") return;
-        if (isArrow) stop();
+        if (isArrow && this.view) {
+          stop();
+          const step = (e.shiftKey ? 80 : 40) / this.view.s;
+          if (e.key === "ArrowLeft") this.view.vx -= step;
+          if (e.key === "ArrowRight") this.view.vx += step;
+          if (e.key === "ArrowUp") this.view.vy += step;
+          if (e.key === "ArrowDown") this.view.vy -= step;
+          if (e.key === "PageUp") this.zoomAt(this.size()[0] / 2, this.size()[1] / 2, 1.15);
+          if (e.key === "PageDown") this.zoomAt(this.size()[0] / 2, this.size()[1] / 2, 1 / 1.15);
+          this.clampView && this.clampView();
+          this.draw();
+        }
         return;
       }
       if (e.key === "PageUp" || e.key === "PageDown") { stop(); return; }

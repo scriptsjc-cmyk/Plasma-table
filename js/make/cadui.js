@@ -5,6 +5,7 @@ import { bindCtxMenu } from "./ctxmenu.js";
 import { bindDrawHud, startRectAt, startDiscAt, applyHudPoint, cancelDrawHud, paintDrawHud } from "./drawhud.js";
 import { bindPresetBrowser } from "./presetbrowser.js";
 import { bindToolbarCustom } from "./toolbarcustom.js";
+import { bindSheetSize, paintSheetSize } from "./sheetsize.js";
 import { sketch } from "../core/state.js";
 import { renderQuickBar } from "./quickbar.js";
 
@@ -17,11 +18,12 @@ export function bindCadUi() {
   bindDrawHud();
   bindPresetBrowser();
   bindToolbarCustom();
+  bindSheetSize();
   if (sketch) {
     const prevSel = sketch.onSelect;
-    sketch.onSelect = (...a) => { try { if (prevSel) prevSel(...a); } finally { paintLayers(); } };
+    sketch.onSelect = (...a) => { try { if (prevSel) prevSel(...a); } finally { paintLayers(); paintSheetSize(); } };
     const prevCh = sketch.onChange;
-    sketch.onChange = (...a) => { try { if (prevCh) prevCh(...a); } finally { paintLayers(); } };
+    sketch.onChange = (...a) => { try { if (prevCh) prevCh(...a); } finally { paintLayers(); paintSheetSize(); } };
   }
   syncLaptopUi();
   if (typeof renderQuickBar === "function") try { renderQuickBar(); } catch (e) { /* not ready */ }

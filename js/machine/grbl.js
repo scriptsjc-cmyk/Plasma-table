@@ -13,7 +13,7 @@ export const RT = {
 const ALARMS = {
   1: "Hard limit hit. Check the limit switches, then unlock and re-home.",
   2: "Move would go past the machine's travel (soft limit).",
-  3: "Reset while moving - position may be lost. Unlock, then re-home or re-zero.",
+  3: "Reset while moving - position may be lost. Unlock, then set the start point again.",
   4: "Probe already triggered before touch-off. Check the floating head isn't stuck up and the sensor light is off.",
   5: "No sheet found: the torch went down as far as allowed without touching. Check the sheet and the sensor.",
   6: "Homing reset.", 7: "Homing: door opened.", 8: "Homing: couldn't clear the switch.", 9: "Homing: switch not found.",

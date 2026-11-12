@@ -9,6 +9,8 @@ export function isLaptopUi() {
   try { return !!(window.matchMedia && window.matchMedia(LAPTOP_MQ).matches); }
   catch (e) { return false; }
 }
+export function clickVerb() { return isLaptopUi() ? "Click" : "Tap"; }
+export function clickVerbLower() { return isLaptopUi() ? "click" : "tap"; }
 
 export function syncLaptopUi() {
   document.body.classList.toggle("laptop-ui", isLaptopUi());

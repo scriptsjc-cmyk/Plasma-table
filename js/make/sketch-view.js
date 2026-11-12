@@ -1,7 +1,8 @@
 // Sketch: the view (fit, zoom, pan) and drawing the canvas.
 import { bbox } from "../core/geom.js";
 import { def, r1, themeColor } from "./sketch-util.js";
-import { formatLen, getPrefs } from "../core/prefs.js";
+import { clickVerb, clickVerbLower } from "../ui/laptop.js";
+import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
 
 export class ViewMethods {
   fitView() {
@@ -92,6 +93,14 @@ export class ViewMethods {
     }
     ctx.fillStyle = C.label; ctx.font = "11px Barlow, system-ui";
     ctx.textAlign = "right"; ctx.fillText(`${prefs.grid ? "grid " + G + " mm" : "grid off"} · snap ${this.opts.snap ? this.opts.snap + " mm" : "off"}`, w - 8, h - 8); ctx.textAlign = "start";
+    if (!this.layout) {
+      const sh = drawingSheet();
+      const [sx0, sy0] = S(0, sh.h), [sx1, sy1] = S(sh.w, 0);
+      ctx.strokeStyle = C.gridMajor; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+      ctx.strokeRect(sx0, sy0, sx1 - sx0, sy1 - sy0);
+      ctx.fillStyle = C.label;
+      ctx.fillText(`${sh.w} × ${sh.h} mm`, sx0 + 6, sy1 - 8);
+    }
 
     // sheet layout (step 3): the sheet, the machine's work area, and which parts are too close / overlapping / off the sheet
     const LY = this.layout || null, LI = LY ? (this.layoutInfo = LY.analyze(this)) : null;
@@ -123,9 +132,25 @@ export class ViewMethods {
       ctx.strokeStyle = C.guide; ctx.lineWidth = 1; ctx.setLineDash([6, 4]); ctx.beginPath();
       for (const gd of this.guides) {
         if (gd.x !== undefined) { const X = S(gd.x, 0)[0]; ctx.moveTo(X, 0); ctx.lineTo(X, h); }
-        else { const Y = S(0, gd.y)[1]; ctx.moveTo(0, Y); ctx.lineTo(w, Y); }
+        else if (gd.y !== undefined) { const Y = S(0, gd.y)[1]; ctx.moveTo(0, Y); ctx.lineTo(w, Y); }
       }
       ctx.stroke(); ctx.setLineDash([]);
+      for (const gd of this.guides) {
+        const bet = gd.between; if (!bet) continue;
+        ctx.strokeStyle = C.guide; ctx.lineWidth = 1; ctx.setLineDash([2, 4]); ctx.beginPath();
+        if (bet.axis === "x") {
+          const A = S(bet.a, 0)[0], B = S(bet.b, 0)[0];
+          ctx.moveTo(A, 0); ctx.lineTo(A, h); ctx.moveTo(B, 0); ctx.lineTo(B, h);
+        } else {
+          const A = S(0, bet.a)[1], B = S(0, bet.b)[1];
+          ctx.moveTo(0, A); ctx.lineTo(w, A); ctx.moveTo(0, B); ctx.lineTo(w, B);
+        }
+        ctx.stroke(); ctx.setLineDash([]);
+        const mid = bet.axis === "x" ? S(bet.mid, 0) : S(0, bet.mid);
+        ctx.fillStyle = C.guide; ctx.font = "11px Barlow, system-ui"; ctx.textAlign = "center";
+        ctx.fillText("centre between", bet.axis === "x" ? mid[0] : w / 2, bet.axis === "x" ? 14 : mid[1] - 6);
+        ctx.textAlign = "start";
+      }
     }
 
     // selection: box, size, handles, hole dimensions
@@ -254,12 +279,12 @@ export class ViewMethods {
     if (this.items.length) {
       const b = this.allBox();
       ctx.fillStyle = C.label; ctx.font = "12px Barlow, system-ui";
-      const tool = this.tool === "draw" ? " · DRAW: tap points, then Close" : this.tool === "measure" ? " · MEASURE: tap two points" : "";
+      const tool = this.tool === "draw" ? " · DRAW: " + clickVerbLower() + " points, then Close" : this.tool === "measure" ? " · MEASURE: " + clickVerbLower() + " two points" : "";
       const np = this.partTotal();
       ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${formatLen(b[2] - b[0], 1)} × ${formatLen(b[3] - b[1], 1)}${tool}`, 8, h - 8);
     } else {
       ctx.fillStyle = C.label; ctx.font = "15px Barlow, system-ui"; ctx.textAlign = "center";
-      ctx.fillText(this.tool === "draw" ? "Tap to place the first point of the outline" : "Tap a shape to add it", w / 2, h / 2); ctx.textAlign = "start";
+      ctx.fillText(this.tool === "draw" ? (clickVerb() + " to place the first point of the outline") : (clickVerb() + " a shape to add it"), w / 2, h / 2); ctx.textAlign = "start";
     }
   }
   tag(ctx, text, x, y, bg) {

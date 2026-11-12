@@ -120,7 +120,8 @@ function selectedSheetHtml() {
   const b = sketch.boxOf(it);
   const params = (it.type === "custom" ? [] : (sh.params || [])).map(([k, label]) =>
     `<label>${label}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${it.p[k]}"></label>`).join("");
-  return `<div class="selhead"><b>${sh.name || it.type}</b></div>
+  const size = it.p && (it.p.w && it.p.h ? `${it.p.w} × ${it.p.h} mm` : it.p.d ? `Ø ${it.p.d} mm` : "");
+  return `<div class="selhead phonesheet-peek"><b>${sh.name || it.type}</b>${size ? `<span class="muted">${size}</span>` : ""}</div>
     <div class="grid2">${params}
       <label>Position X<input type="number" step="any" inputmode="decimal" data-pos="x" value="${Math.round(b[0] * 10) / 10}"></label>
       <label>Position Y<input type="number" step="any" inputmode="decimal" data-pos="y" value="${Math.round(b[1] * 10) / 10}"></label>
@@ -154,8 +155,11 @@ export function paintPhoneSheet() {
     if (!document.body.classList.contains("phone-more-open")) closePhoneSheet(true);
     return;
   }
+  const keepOpen = $("phoneSheet") && $("phoneSheet").classList.contains("is-expanded") && !$("phoneSheet").classList.contains("hidden");
   body.innerHTML = html;
   openPhoneSheet();
+  if (keepOpen || document.body.classList.contains("phone-more-open")) $("phoneSheet").classList.add("is-expanded");
+  else $("phoneSheet").classList.remove("is-expanded");
 }
 
 function onPhoneBar(e) {
@@ -235,12 +239,23 @@ export function bindPhoneSheet() {
   document.addEventListener("editor-mode", syncPhoneUi);
   if ($("phoneBar")) $("phoneBar").addEventListener("click", onPhoneBar);
   if ($("phoneSheetClose")) $("phoneSheetClose").addEventListener("click", () => {
-    document.body.classList.remove("phone-more-open");
-    closePhoneSheet();
+    if (document.body.classList.contains("phone-more-open")) {
+      document.body.classList.remove("phone-more-open");
+      paintPhoneSheet();
+      return;
+    }
+    const sheet = $("phoneSheet");
+    if (sheet) sheet.classList.toggle("is-expanded");
   });
   if ($("phoneSheet")) {
     $("phoneSheet").addEventListener("input", applySheetInput);
-    $("phoneSheet").addEventListener("click", onSheetClick);
+    $("phoneSheet").addEventListener("click", (e) => {
+      if (e.target.closest(".phonesheet-peek") && !$("phoneSheet").classList.contains("is-expanded")) {
+        $("phoneSheet").classList.add("is-expanded");
+        return;
+      }
+      onSheetClick(e);
+    });
   }
   if ($("drawSizeOk")) $("drawSizeOk").addEventListener("click", confirmDrawSize);
   if ($("drawSizeCancel")) $("drawSizeCancel").addEventListener("click", closeDrawSize);

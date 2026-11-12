@@ -16,7 +16,7 @@ import { fillSettingsFromText, setFirmwareText, filterConsoleCommand } from "./m
 import { FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps } from "./machine/fluidnc.js";
 import { convertGcode } from "./machine/dialect.js";
 import { initSettings, bindSettings, openSettings, closeSettings, currentSettings, matchPreset, refreshPublishedPresets } from "./machine/settings.js";
-import { getPrefs } from "./core/prefs.js";
+import { applyChrome, drawingSheet, getPrefs, savePrefs } from "./core/prefs.js";
 import { initYours, bindYours, paintYours } from "./ui/yours.js";
 import { bindScrollRows, refreshScrollRows } from "./ui/scrollrow.js";
 import { bindPreviewNav, previewCam, resetPreviewCam } from "./cut/previewnav.js";
@@ -58,6 +58,8 @@ import { bindShapeForm, paintGuide, renderShapeForm, renderShapeTiles } from "./
 import { bindConnection, connectWiFi, setConnected, wifiWatch } from "./machine/connection.js";
 import { bindQuickBar, renderQuickBar } from "./make/quickbar.js";
 import { bindCadUi } from "./make/cadui.js";
+import { bindHeader, setHeaderHidden } from "./ui/header.js";
+import { clickVerb, clickVerbLower } from "./ui/laptop.js";
 import { bindPhoneSheet } from "./make/phonesheet.js";
 import { bindDialogKeys } from "./ui/dialogs.js";
 import { bindRun } from "./cut/run.js";
@@ -78,6 +80,7 @@ function bind() {
   bindExport();
   bindQuickBar();
   bindCadUi();
+  bindHeader();
   bindPhoneSheet();
   bindGate();
   bindMachineControls();
@@ -214,7 +217,7 @@ async function init() {
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
 if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   setInspectorApi(makeInspector({
     sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),

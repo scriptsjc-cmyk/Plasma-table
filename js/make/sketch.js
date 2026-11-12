@@ -12,6 +12,7 @@ import { ViewMethods } from "./sketch-view.js";
 import { EdgeMethods } from "./sketch-edge.js";
 import { InputMethods } from "./sketch-input.js";
 import { installLayoutLock } from "./sketch-lock.js";
+import { clickVerb } from "../ui/laptop.js";
 export { LAYOUT_LOCK_MSG } from "./sketch-lock.js";
 
 export { shapeDef } from "./sketch-util.js";
@@ -137,7 +138,7 @@ export class Sketch {
     if (hole && !host) {                                                 // round 5 item 6: no part picked: use the only part, or (Beginner) ask which one
       const parts = this.items.filter((o) => !this.isHole(o));
       if (parts.length === 1) host = parts[0];
-      else if (parts.length > 1 && !this.opts.pro) { this.onMessage("Tap the part the hole should go in, then add the hole."); return; }
+      else if (parts.length > 1 && !this.opts.pro) { this.onMessage(clickVerb() + " the part the hole should go in, then add the hole."); return; }
     }
     this.remember();
     const it = this.newItem(type, overrides);
