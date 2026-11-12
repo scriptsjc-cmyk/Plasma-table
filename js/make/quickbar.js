@@ -182,8 +182,8 @@ export function quickAction(a) {
     case "join": sketch.join(); break;
     case "alignl": sketch.align("left"); break;
     case "alignb": sketch.align("bottom"); break;
-    case "edge": { const ep = $("edgePanel"); if (ep) { ep.classList.remove("hidden"); ep.scrollIntoView({ block: "nearest" }); } toast(clickVerb() + " an edge on the outline, then change its length, angle or curve."); break; }
-    case "fs": setShapeFs(!S.shapeFs); break;
+    case "edge": { const ep = $("edgePanel"); if (ep) { ep.classList.remove("hidden"); ep.hidden = false; ep.scrollIntoView({ block: "nearest" }); } toast(clickVerb() + " an edge on the outline, then change its length, angle or curve."); break; }
+    case "fs": setShapeFs(false); toast("The full-screen editor was removed. The tools stay in this header."); break;
     case "dims": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast(clickVerb() + " a blue size on the drawing, then type the new number."); break; }
     case "fillet":
       openCad("Fillet a corner", [{ id: "r", label: "Radius (mm)", value: 5 }], (v) => {
