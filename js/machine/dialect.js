@@ -45,7 +45,7 @@ export function convertGcode(text, dialect, { lineNumbers = false } = {}) {
   if (d === "mach3") {
     const out = [];
     out.push("%");
-    out.push("(Plasma Table - Mach3 dialect)");
+    out.push("(Porta Plazma CNC - Mach3 dialect)");
     out.push("(Torch on/off is M3/M5. Dwell G4 P is in seconds.)");
     out.push("G21 G90 G17 G40 G49 G80");
     for (const raw of lines) {
@@ -71,7 +71,7 @@ export function convertGcode(text, dialect, { lineNumbers = false } = {}) {
     out.push("%");
     lines = out;
   } else if (d === "fluidnc") {
-    const out = ["; Plasma Table - FluidNC dialect", "; Settings live in config.yaml, not $ numbers."];
+    const out = ["; Porta Plazma CNC — FluidNC dialect", "; Settings live in config.yaml, not $ numbers."];
     for (const raw of lines) {
       const line = raw.trim();
       if (!line) continue;

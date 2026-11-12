@@ -79,15 +79,15 @@ body.app-shell .banner { max-width: none; margin: 0; border-radius: 0; flex: non
 #formSignUp .signup-submit { position: static; margin-top: 14px; }
 /* ---- sign-in page: the account dialog, full-screen and not dismissable ---- */
 .loginbrand { display: none; text-align: center; margin: 4px 0 12px; }
-.loginbrand h1 { margin: 6px 0 2px; font-size: var(--fs-2xl); }
+.loginbrand .loginmark { display: block; height: 72px; width: auto; max-width: min(100%, 360px); margin: 0 auto; }
 #accountDlg.loginpage { top: 0; background: var(--bg); align-items: center; }
 #accountDlg.loginpage .acctcard { max-height: 100dvh; background: transparent; border: 0; box-shadow: none; padding-top: 0; }
 #accountDlg.loginpage .loginbrand { display: block; }
 #accountDlg.loginpage .shapelib-head { display: none; }
 @media (max-height: 540px) {
-  /* round 5 (look H4): phone on its side: the mark and the name share one row so Create an account / Reset fit on screen */
-  #accountDlg.loginpage .loginbrand { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 4px; }
-  #accountDlg.loginpage .loginbrand h1 { font-size: var(--fs-xl); margin: 0; }
+  /* phone on its side: a shorter wordmark so Create an account / Reset still fit */
+  #accountDlg.loginpage .loginbrand { margin: 0 0 4px; }
+  #accountDlg.loginpage .loginbrand .loginmark { height: 44px; }
   #accountDlg.loginpage #acctDemoTag2 { margin: 0 0 6px; font-size: 14px; line-height: 1.3; }
 }
 /* ---- main menu ---- */

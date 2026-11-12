@@ -4,7 +4,6 @@
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
 
-.arcmark.brand-mark { width: 56px; height: 56px; }
 canvas#preview.placing { touch-action: none; }
 .fit { margin-top: 8px; font-weight: 700; font-size: var(--fs-md); }
 .drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
@@ -513,10 +512,6 @@ body[data-screen="make"] #pickPane { display: none; }
 body[data-screen="cut"] #exportRow, body[data-screen="cut"] #showMachWrap.hidden { display: none; }
 body[data-screen="cut"][data-step="1"] .previewDock .stats { display: none; }
 .makebar .modesw-btn { min-height: 40px; min-width: 88px; font-weight: 700; }
-.loginbrand .arcmark { display: block; margin: 0 auto; }
-@media (max-height: 540px) {
-  #accountDlg.loginpage .loginbrand .arcmark { width: 36px; height: 36px; }
-}
 body[data-screen="cut"] .stepper li span { width: 30px; height: 30px; font-size: 15px; }
 body[data-screen="cut"] .drop { min-height: 0; padding: 18px 12px; }
 body[data-screen="cut"] .nav .next, body[data-screen="cut"] #btnStart { flex: 1 1 auto; max-width: none; min-height: 64px; font-size: 20px; font-weight: 800; background: var(--accent); border-color: var(--accent); color: var(--on-accent); border-radius: 12px; }

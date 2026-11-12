@@ -98,7 +98,7 @@ async function init() {
   M.on(onEvent);
   M.estopProvider = estopOn;
   M.startGuard = scoreMarkProblem;      // the machine refuses Start too, whatever the buttons say
-  document.title = machine.name;
+  document.title = "Porta Plazma CNC";
   initFeatures({
     S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, drawPreview, loadJob, goStep, showSource, setShapeFs, row,
     isPro: () => true, camHandles: () => screen() === "cut" && !!$("advCut").open, jobRunning: () => !!(M && M.jobRunning()), sketchActive: () => !!(sketch && sketch.active),
@@ -115,7 +115,7 @@ async function init() {
     S, sketch: () => sketch, toast, esc, refresh, loadJob, askSize: askSize, sizeCheckWanted: sizeCheckWanted, scaleContours: scaleContours, useShape, useShapeSoon, showSource, kerf: kerfNow, workArea: workAreaSheet,
     afterAdd: () => { if (screen() === "cut" && S.cur === 1) { useShape(); goStep(3); } },   // parts picked on step 1 land straight on the bed
   });
-  $("machineName").textContent = machine.name;
+  $("machineName").textContent = "Porta Plazma";
   try {
     const saved = JSON.parse(localStorage.getItem("plasma.material") || "null");
     if (saved) { S.material = saved.m; S.thickness = saved.t; }
