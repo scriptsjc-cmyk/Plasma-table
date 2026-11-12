@@ -75,6 +75,7 @@ const PRECACHE = [
   "js/cut/cutlist.js",
   "js/cut/cutlive.js",
   "js/cut/cutpanels.js",
+  "js/cut/cutstatus.js",
   "js/cut/export.js",
   "js/cut/job.js",
   "js/cut/material.js",
@@ -111,6 +112,7 @@ const PRECACHE = [
   "js/machine/wifi.js",
   "js/make/cad.js",
   "js/make/cadui.js",
+  "js/make/checkcut.js",
   "js/make/ctxmenu.js",
   "js/make/cutsummary.js",
   "js/make/dimedit.js",
@@ -120,6 +122,7 @@ const PRECACHE = [
   "js/make/editable.js",
   "js/make/files.js",
   "js/make/fontdata.js",
+  "js/make/headertools.js",
   "js/make/layers.js",
   "js/make/library.js",
   "js/make/maketools.js",
@@ -135,6 +138,7 @@ const PRECACHE = [
   "js/make/presets/hooks-hangers.js",
   "js/make/presets/index.js",
   "js/make/presets/plates-brackets.js",
+  "js/make/presets/r8-parts.js",
   "js/make/presets/signs-frames.js",
   "js/make/presets/tabs-slots.js",
   "js/make/protools.js",
@@ -170,6 +174,7 @@ const PRECACHE = [
   "js/ui/gate.js",
   "js/ui/header.js",
   "js/ui/host.js",
+  "js/ui/hovertip.js",
   "js/ui/howto.js",
   "js/ui/icons.js",
   "js/ui/inspector-api.js",
@@ -191,7 +196,7 @@ const PRECACHE = [
   "config/fluidnc-plasma.yaml",
   "config/grblhal_settings.txt",
   "config/machine.json",
-  /* precache:end */
+/* precache:end */
 ];
 const PREFIX = "plasma-cad-";
 const SLOW_MS = 6000;

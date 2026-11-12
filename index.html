@@ -148,7 +148,8 @@
 
 <nav class="tabs" aria-label="Cutting screen">
   <button class="tab sel" data-tab="cut">✂ Cut</button>
-  <button class="tab" data-tab="setup">⚙ Machine setup</button>
+  <button type="button" id="cutStatus" class="cutstatus is-ok" aria-haspopup="true" aria-expanded="false" aria-controls="cutStatusPop">Cut looks ready</button>
+  <div id="cutStatusPop" class="cutstatus-pop hidden" hidden role="status"></div>
   <!-- laptop cutting screen (js/cut/cutbar.js): the step bar is moved in here, after a divider; phones never show this -->
   <div id="cutBar" class="cutbar" role="group" aria-label="Steps and layout">
     <div id="cutBarSteps" class="cutbar-steps"></div>
@@ -213,6 +214,10 @@
         <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-folder"></use></svg>
         <b>Your parts</b><span>Open, change or cut a part you saved.</span>
       </button>
+      <button type="button" id="menuSetup" class="menubig">
+        <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zM12 3v2M12 19v2M4.9 6.5l1.4 1.4M17.7 16.1l1.4 1.4M3 12h2M19 12h2M4.9 17.5l1.4-1.4M17.7 7.9l1.4-1.4"/></svg>
+        <b>Machine setup</b><span>Edges, homing and the table — set up once.</span>
+      </button>
     </div>
     <div class="menustatus">
       <p id="menuMachine" class="muted small"></p>
@@ -227,6 +232,9 @@
   <div id="makeBar" class="makebar">
     <h1>Make a part</h1>
     <div id="qbPinned" class="qb-pinned" role="group" aria-label="Edit the drawing"></div>
+    <button type="button" id="btnSimpleSnap" class="small simplesnap" aria-pressed="false" title="Snap: shapes click neatly to the grid, edges and centres so they line up exactly">Snap</button>
+    <button type="button" id="btnDragPan" class="small dragpan" aria-pressed="false" title="When on, dragging empty canvas pans the view. When off, a drag on empty canvas draws a selection box. Space never pans — Space is STOP.">Box select</button>
+    <button type="button" id="btnMakeCheckCut" class="small makecheck" title="Check whether this drawing will cut cleanly" aria-label="Check cut">Check cut</button>
     <button type="button" id="btnViewParts" class="small viewparts">Parts</button>
     <div id="editorSwitch" class="editorsw" role="group" aria-label="Drawing tools">
       <button type="button" id="btnAdvancedTools" class="modesw-btn">Advanced tools</button>
@@ -329,11 +337,13 @@
         <div id="pickPane" class="pickpane">
           <h3>Choose the part</h3>
           <p id="bedStatus" class="bedstatus hidden"><span id="bedStatusText"></span> <button type="button" id="btnClearBed" class="small">Start over</button></p>
-          <label id="drop" class="drop">
+          <label id="drop" class="drop drop-slim">
             <input type="file" id="file" multiple accept=".dxf,.svg,.nc,.gcode,.ngc,.tap,.txt,.cnc,.g">
             <b id="dropTitle">Upload a file</b>
-            <span class="muted">or drag it here · several DXF or SVG files at once is fine</span>
-            <span class="muted small">DXF or SVG from your CAD · or ready-made G-code (.nc .gcode .tap)</span>
+            <span class="drop-detail">
+              <span class="muted">or drag it here · several DXF or SVG files at once is fine</span>
+              <span class="muted small">DXF or SVG from your CAD · or ready-made G-code (.nc .gcode .tap)</span>
+            </span>
           </label>
           <div class="row wrap pickrow">
             <button type="button" id="btnPickSaved" class="xl">📁 Saved parts &amp; folders</button>
@@ -406,9 +416,6 @@
 
         <div id="srcShape" class="hidden">
           <p class="muted small skhelp beginner-help">Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</p>
-          <div class="row wrap">
-            <button type="button" id="btnShapeFs" class="xl accent">Full-screen editor</button>
-          </div>
           <div class="sktools">
             <button id="skUndo" title="Undo (Ctrl+Z)">↶ Undo</button><button id="skRedo" title="Redo (Ctrl+Y)">↷ Redo</button>
             <button id="skAll" title="Pick every shape (Ctrl+A)">▣ Pick all</button><button id="skFit" title="Show everything (double-click empty space)">⤢ Fit</button>
@@ -1140,6 +1147,19 @@
   </div>
 </div>
 <!-- undo-save notice -->
+<div id="makeCheckDlg" class="acctdlg hidden" hidden role="dialog" aria-labelledby="makeCheckTitle">
+  <div class="acctcard">
+    <h2 id="makeCheckTitle">Check cut</h2>
+    <p id="makeCheckAsk" class="muted">Choose the material and thickness, then we'll check this drawing.</p>
+    <div id="makeCheckPick" class="makecheck-pick">
+      <label>Material <select id="makeCheckMat" aria-label="Material for the check"></select></label>
+      <label>Thickness <select id="makeCheckTh" aria-label="Thickness for the check"></select></label>
+      <button type="button" id="makeCheckGo" class="xl go">Check this drawing</button>
+    </div>
+    <div id="makeCheckOut" class="cutcheck"></div>
+    <div class="row"><button type="button" id="makeCheckClose" class="xl">Close</button></div>
+  </div>
+</div>
 <div id="undoSave" class="undosave hidden" role="status"><span id="undoText"></span> <button type="button" id="btnUndoSave" class="small">Undo</button> <button type="button" id="btnUndoX" class="small" aria-label="Dismiss">✕</button></div>
 
 <!-- save conflict -->
