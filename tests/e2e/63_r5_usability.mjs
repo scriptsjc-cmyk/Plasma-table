@@ -85,7 +85,7 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   await snap(page, "make-750x340");
   await page.context().close();
 }
-{ // laptop: the picture takes the free right side; drag the divider; arrows; remembered; fit; expand; scroll zoom
+{ // laptop: the picture takes the free right side; drag the divider; arrows; remembered; fit; expand; wheel pan / Ctrl+zoom
   const ctx = await br.newContext({ viewport: { width: 1366, height: 768 } }); const page = await ctx.newPage(); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
   await page.goto(s.base + "/?test=1&turn=0", { waitUntil: "load" }); await sleep(600); await makeBeginner(page);
   let g = await geom(page);
@@ -111,13 +111,16 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   await page.reload({ waitUntil: "load" }); await sleep(600); await makeBeginner(page);
   const g6 = await geom(page);
   ck("5 laptop: the divider position is remembered after a reload", Math.abs(g6.step.w - g5.step.w) <= 2, { saved: g5.step.w, now: g6.step.w });
-  // Zoom to fit after zooming in; scroll zooms
-  const s0 = await T(page, `window.plasmaTest.sketch.view.s`);
-  await page.mouse.move(g6.cv.l + g6.cv.w / 2, g6.cv.t + g6.cv.h / 2); await page.mouse.wheel(0, -400); await sleep(250);
+  // Two-finger trackpad / wheel pans; Ctrl+wheel zooms; Zoom to fit restores the view
+  const v0 = await T(page, `(() => { const v = window.plasmaTest.sketch.view; return { s: v.s, vx: v.vx, vy: v.vy }; })()`);
+  await page.mouse.move(g6.cv.l + g6.cv.w / 2, g6.cv.t + g6.cv.h / 2); await page.mouse.wheel(80, -400); await sleep(250);
+  const v1 = await T(page, `(() => { const v = window.plasmaTest.sketch.view; return { s: v.s, vx: v.vx, vy: v.vy }; })()`);
+  ck("5 laptop: scrolling over the picture pans the view and does not zoom", Math.abs(v1.s - v0.s) < 1e-6 && (Math.abs(v1.vx - v0.vx) > 0.01 || Math.abs(v1.vy - v0.vy) > 0.01), { v0, v1 });
+  await page.keyboard.down("Control"); await page.mouse.wheel(0, -400); await page.keyboard.up("Control"); await sleep(250);
   const s1 = await T(page, `window.plasmaTest.sketch.view.s`);
-  ck("5 laptop: scrolling over the picture zooms in", s1 > s0 * 1.05, { s0, s1 });
+  ck("5 laptop: Ctrl+scroll zooms in", s1 > v0.s * 1.05, { s0: v0.s, s1 });
   await page.click("#btnPicFit"); await sleep(200);
-  ck("5 laptop: Zoom to fit shows the whole part again", Math.abs(await T(page, `window.plasmaTest.sketch.view.s`) - s0) < s0 * 0.02);
+  ck("5 laptop: Zoom to fit shows the whole part again", Math.abs(await T(page, `window.plasmaTest.sketch.view.s`) - v0.s) < v0.s * 0.02);
   await page.click("#btnPicFs"); await sleep(400);
   const fs1 = await T(page, `({ fs: document.body.classList.contains("shape-fs"), cv: Math.round(document.getElementById("preview").getBoundingClientRect().width), done: !!document.getElementById("fsDone").offsetParent, expandShown: !!document.getElementById("btnPicFs").offsetParent })`);
   ck("5 laptop: Expand picture opens the big picture (with its Done button), and hides itself", fs1.fs && fs1.cv > g6.cv.w && fs1.done && !fs1.expandShown, fs1);
