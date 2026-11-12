@@ -115,6 +115,39 @@ const view = async (w, h, q = "?test=1&turn=0", mobile = w < 900) => {
   })()`);
   ck("parts list lists every shape and can hide one", layers.n >= 1 && layers.hidden && layers.lock, layers);
 
+  const holes = await T(page, `(() => {
+    const k = window.plasmaTest.sketch;
+    k.clear();
+    k.add("rect", true, { w: 100, h: 80 });
+    const plate = k.items[0];
+    plate.x = 30; plate.y = 20; k.commit();
+    k.pick([plate.id]); k.add("hole");
+    const hole = k.items.find((i) => k.isHole(i));
+    k.onSelect(); k.onChange && k.onChange(true);
+    const rows = [...document.querySelectorAll("#layersList .layer-row")];
+    const texts = rows.map((r) => (r.querySelector(".layer-pick") || r).textContent.trim());
+    const holeRow = rows.find((r) => r.classList.contains("is-hole"));
+    const hint = (document.getElementById("layersHint") || {}).textContent || "";
+    const cs = k.contours();
+    const hostCs = k.contoursOf(plate);
+    // still a hole of the plate (odd winding) — cutting must not treat it as a second outer part
+    return {
+      isHole: !!(hole && k.isHole(hole)),
+      host: !!(hole && k.hostPart(hole) === plate),
+      texts,
+      nested: !!(holeRow && /in /i.test((holeRow.querySelector(".layer-pick") || holeRow).textContent)),
+      notPeer: texts.every((s) => !/^Hole #\d+$/.test(s.trim())),
+      hint: /dashed/i.test(hint) && /holes cut in a part/i.test(hint),
+      hintText: hint,
+      n: rows.length,
+      contours: cs.length,
+      plateOuters: hostCs.length,
+    };
+  })()`);
+  ck("a hole in a part is still cut as a hole of that part (not a second outline)", holes.isHole && holes.host && holes.contours >= 2, holes);
+  ck("parts list nests the hole under its part, not as 'Hole #2'", holes.nested && holes.notPeer && holes.n >= 2, holes);
+  ck("parts list explains that dashed outlines are holes cut in a part", holes.hint, holes.hintText);
+
   const menu = await T(page, `(() => {
     const cv = document.getElementById("preview");
     const r = cv.getBoundingClientRect();

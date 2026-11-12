@@ -840,6 +840,10 @@ body.laptop-ui.pro-mode[data-screen="make"] #ptInspector {
 .layerspanel h3 { margin: 0; font-size: 15px; flex: 1; }
 #layersClose { display: none; min-width: 44px; min-height: 44px; }
 .layerslist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: min(420px, 45vh); overflow: auto; }
+.layer-hint { margin: 0 0 8px; }
+.layer-row.is-hole { padding-left: 16px; }
+.layer-row.is-hole .layer-pick { font-weight: 500; color: var(--muted-text, var(--muted)); }
+
 .layer-row { display: grid; grid-template-columns: minmax(0, 1fr) 36px 36px; gap: 4px; align-items: center; }
 .layer-row.on .layer-pick { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .layer-row.is-hidden .layer-pick { opacity: 0.55; }
