@@ -62,7 +62,7 @@ export function estopPress(source) {
     latched = true; paintEstop(); H.refresh && H.refresh();
     cancelConfirm();
     H.onEstop && H.onEstop(source);
-    if (fresh && H.toast) H.toast("E-STOP ON. Nothing will move or light. To reset it, press and hold the red button for 1.5 seconds.", true);
+    if (fresh && H.toast) H.toast("Stopped. To reset, hold the red button for 1.5 s.", true);   // short: the STOP button itself now reads E-STOP ON (r7 U29)
   }
 }
 export function estopReset() {

@@ -156,15 +156,24 @@ export function refresh() {
 
   // running / done panel
   if (S.job) {
-    const j = S.job, P = liveProgress();
+    const j = S.job, live = liveProgress();
+    // r7 U11: the link dropped while the job ran. The app can't know what the machine is doing, so the panel stops counting
+    // (frozen at the moment the link went), says so, and Pause is off (it can't reach the machine). The red banner says what to do.
+    const linkLost = j.running && !S.connected;
+    if (linkLost && !S.lostProgress) S.lostProgress = live;
+    if (!linkLost) S.lostProgress = null;
+    const P = S.lostProgress || live;
+    $("running").classList.toggle("linklost", linkLost);
     const finished = !j.running && S.status.state === "Idle";
     const pct = j.result === "done" ? 100 : P.pct;
     $("pct").textContent = Math.floor(pct) + "%";
     $("progBar").style.width = pct.toFixed(1) + "%";
-    $("timeLeft").textContent = j.running ? clock(P.left) : "0:00";
+    $("timeLeft").textContent = linkLost ? "–" : j.running ? clock(P.left) : "0:00";
     const pierces = S.prepared ? S.prepared.stats.pierces : 0;
-    $("runInfo").textContent = `${clock(P.elapsed)} so far` + (pierces ? ` · cut ${Math.min(pierces, (M.runFrom || 1) - 1 + Math.max(1, P.cut))} of ${pierces}` : "");
-    $("runTitle").textContent = S.status.state === "Hold" ? "Paused" : j.running ? "Cutting…" : "Finishing last moves…";
+    $("runInfo").textContent = linkLost ? `Link lost after ${clock(P.elapsed)}. Use the machine's own E-stop or power switch.`
+      : `${clock(P.elapsed)} so far` + (pierces ? ` · cut ${Math.min(pierces, (M.runFrom || 1) - 1 + Math.max(1, P.cut))} of ${pierces}` : "");
+    $("runTitle").textContent = linkLost ? "Link lost: job state unknown" : S.status.state === "Hold" ? "Paused" : j.running ? "Cutting…" : "Finishing last moves…";
+    $("btnPause").disabled = linkLost;
     const hold = S.status.state === "Hold";
     const pauseLabel = hold ? "Resume" : "Pause";
     if ($("btnPause").dataset.face !== pauseLabel) {

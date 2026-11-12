@@ -6,7 +6,7 @@ import * as Acc from "../account/account.js";
 import { noteJobEnded } from "../cut/restart.js";
 import { M, S, sketch } from "../core/state.js";
 import { trackProgress } from "../cut/progress.js";
-import { $, $$, toast, placeToast } from "../core/dom.js";
+import { $, $$, placeToast } from "../core/dom.js";
 import { renderPos } from "./jog.js";
 import { refresh } from "../ui/refresh.js";
 import { keepAwake, setConnected } from "./connection.js";
@@ -93,9 +93,10 @@ export function onEvent(kind, d) {
     if (d.state === "Disconnected") {
       setConnected(false);
       // a dropped link (Wi-Fi, USB pulled) cannot be told to switch the torch off: say so loudly
-      if (wasHot && $("lostBar")) { showLost(LOST_HOT); toast("Connection lost while running. The torch may still be ON.", true); }
+      // (no toast: it would only repeat the banner and cover the run numbers, r7 U29)
+      if (wasHot && $("lostBar")) showLost(LOST_HOT);
       // USB link gone while idle (unplugged, power off, no answers): still say so loudly, with the reason
-      else if (d.reason && wasLive && !S.userDisconnected && $("lostBar")) { showLost({ title: "Connection to the controller lost.", text: `${d.reason} Nothing will move until you reconnect. Check the cable, then press Connect again.` }); toast("Connection lost: " + d.reason, true); }
+      else if (d.reason && wasLive && !S.userDisconnected && $("lostBar")) showLost({ title: "Connection to the controller lost.", text: `${d.reason} Nothing will move until you reconnect. Check the cable, then press Connect again.` });
     }
   } else if (kind === "log") {
     log(d.text, d.level);

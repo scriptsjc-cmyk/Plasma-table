@@ -27,6 +27,9 @@ body.short-land .runnums { margin: 0 0 4px; gap: 8px; }
 body.short-land[data-screen="cut"] .step[data-step="4"] .runnums .bigpct, body.short-land .bigleft { font-size: 34px; }
 body.short-land .runnums span { font-size: 12px; }
 body.short-land .progress { height: 10px; }
+/* r7 U11: the link dropped mid-cut: the panel stops counting and says the job state is unknown */
+#running.linklost #runTitle, #running.linklost #runInfo { color: var(--alarm-text); font-weight: 700; }
+#running.linklost .progress > div { background: var(--muted); }
 .progress { height: 16px; background: var(--well); border-radius: 999px; overflow: hidden; border: 1px solid var(--line); }
 .wizard li.done > p > b:first-child::after { content: " ✓"; color: var(--ok-text); }
 /* round 5 look M15: each step's words first, then its buttons on their own row */
