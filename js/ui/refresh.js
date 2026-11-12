@@ -7,7 +7,7 @@ import { paintRestart } from "../cut/restart.js";
 import { updatePlayRow } from "../cut/playback.js";
 import * as Setup from "../cut/setup.js";
 import { M, S, sketch } from "../core/state.js";
-import { $, $$, clock, esc, fmtTime } from "../core/dom.js";
+import { $, $$, clock, esc, fmtTime, placeToast } from "../core/dom.js";
 import { blockers, overlayLive, paintZeroWarn } from "../cut/checklist.js";
 import { drawPreview, fit, wcoNow } from "../cut/preview.js";
 import { paintWhy } from "./gate.js";
@@ -106,6 +106,7 @@ export function refresh() {
   $("alarmBar").classList.toggle("hidden", !inAlarm);
   // FluidNC can start up in Alarm without an ALARM:n line, so the banner still has to say what to do
   if (inAlarm && !S.lastAlarm) $("alarmText").textContent = ALARM_DEFAULT;
+  try { placeToast(); } catch (e) { /* ignore */ }
 
   // running / done panel
   if (S.job) {

@@ -6,7 +6,7 @@ import * as Acc from "../account/account.js";
 import { noteJobEnded } from "../cut/restart.js";
 import { M, S, sketch } from "../core/state.js";
 import { trackProgress } from "../cut/progress.js";
-import { $, $$, toast } from "../core/dom.js";
+import { $, $$, toast, placeToast } from "../core/dom.js";
 import { renderPos } from "./jog.js";
 import { refresh } from "../ui/refresh.js";
 import { keepAwake, setConnected } from "./connection.js";
@@ -88,7 +88,7 @@ const LOST_HOT = { title: "Connection lost while the machine was running.", text
 function showLost({ title, text }) {
   if ($("lostTitle")) $("lostTitle").textContent = title;
   if ($("lostText")) $("lostText").textContent = text;
-  $("lostBar").classList.remove("hidden");
+  $("lostBar").classList.remove("hidden"); try { placeToast(); } catch (e) {}
 }
 export function onEvent(kind, d) {
   if (kind === "status") {
