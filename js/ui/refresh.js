@@ -16,6 +16,8 @@ import { paintGuide } from "../make/shapeform.js";
 import { lockText, machineAllowed } from "../machine/access.js";
 import { canGo } from "./nav.js";
 import { liveProgress } from "../cut/progress.js";
+import { ampsNow } from "../cut/material.js";
+import { matchPreset } from "../machine/settings.js";
 
 export function paintChrome() {
   const b = document.querySelector(".topbar");
@@ -70,6 +72,24 @@ export function paintChrome() {
     rezero.classList.toggle("hidden", !lost);
   }
 }
+// The laptop cutting screen's "Job and machine" card (#jobCard, shown by css/screen-cut.css on a wide screen with a mouse)
+function setText(id, text) { const el = $(id); if (el && el.textContent !== text) el.textContent = text; }
+function paintJobCard() {
+  if (!$("jobCard")) return;
+  const P = S.prepared, st = P && P.stats, sum = P && P.summary;
+  setText("jcFile", P ? S.fileName || "Untitled" : "No part yet");
+  setText("jcSize", !P ? "–" : sum ? `${formatLen(sum.width, 1)} × ${formatLen(sum.height, 1)}` : `${formatLen(st.width_mm, 1)} × ${formatLen(st.height_mm, 1)}`);
+  setText("jcCuts", !P ? "–" : `${st.pierces} ${st.pierces === 1 ? "cut" : "cuts"} · about ${fmtTime(st.estimated_seconds)}${P.dry_run ? " · practice run" : ""}`);
+  let mat = "–";
+  if (S.material && S.thickness != null) {
+    let amps = "";
+    try { amps = ` · ${ampsNow()} A ${matchPreset(S.material, S.thickness) ? "(your preset)" : "(cut chart)"}`; } catch (e) { /* no chart row yet */ }
+    mat = `${S.material} · ${S.thickness} mm${amps}`;
+  }
+  setText("jcMat", mat);
+  const t = S.cfg && S.cfg.travel_mm, conn = $("connPill").title || "Not connected", badge = $("stateBadge");
+  setText("jcMach", `${conn}${S.connected && badge && badge.textContent ? ` · ${badge.textContent}` : ""}${t ? ` · table ${Math.round(t.x)} × ${Math.round(t.y)} mm` : ""}`);
+}
 export function refresh() {
   paintChrome();
   setTimeout(paintWhy, 0);
@@ -91,7 +111,7 @@ export function refresh() {
       ${S.prepared.summary ? `<span>Parts <b>${(S.src !== "file" && sketch && sketch.items.length && Setup.partCount(sketch)) || S.prepared.summary.parts}</b> · holes <b>${S.prepared.summary.holes}</b></span>` : `<span>Cuts <b>${st.pierces}</b></span>`}<span>About <b>${fmtTime(st.estimated_seconds)}</b></span>${S.prepared.dry_run ? "<span><b>PRACTICE RUN</b></span>" : ""}`;
   } else $("jobStats").innerHTML = "";
   $("next1").disabled = !S.prepared;
-  updatePlayRow(); paintRestart(); paintDelay(); paintGuide();
+  updatePlayRow(); paintRestart(); paintDelay(); paintGuide(); paintJobCard();
   if ($("btnEditDrawing")) $("btnEditDrawing").classList.toggle("hidden", !(S.design && !S.design.straight && S.src === "file" && S.design.contours && S.design.contours.length));
   paintBedStatus();
   $$("#stepper li").forEach((li) => (li.style.opacity = canGo(Number(li.dataset.step)) ? 1 : 0.4));

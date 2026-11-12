@@ -787,3 +787,20 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.short-land[data-screen="cut"] #connPill.on::after { content: none; }
   body.short-land[data-screen="cut"] #connPill.on { width: 44px; max-width: 44px; padding: 0; }
 }
+
+/* ===================== Laptop cutting screen: a wide screen with a mouse (the media query below; no JS). The bed picture is big and in
+   the middle. Bed & start: the cut check, layout card and checklist on the left; the start-point card (connect, home, X / Y / Z, jog,
+   Start here) and Back / Start / Download on the right. Cut: the run panel (progress, X / Y / Z, TORCH, speed, Pause) on the right.
+   The job and machine card (#jobCard) sits under the picture. STOP stays in the header and is the biggest control. Phones and
+   tablets (touch, or under 1100 x 560) never see any of this. */
+.jobcard { display: none; }
+@media (min-width: 1100px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  /* the job and machine card, in place of the one-line stats under the picture */
+  body[data-screen="cut"][data-step="3"] #jobStats, body[data-screen="cut"][data-step="4"] #jobStats { display: none; }
+  body[data-screen="cut"][data-step="3"] #jobCard, body[data-screen="cut"][data-step="4"] #jobCard { display: block; flex: 1 1 100%; margin: 0; padding: 6px 10px;
+    background: var(--well); border: 1px solid var(--line); border-radius: var(--r); }
+  .jobcard dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 2px 16px; margin: 0; }
+  .jobcard dl > div { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
+  .jobcard dt { flex: none; width: 60px; font-size: 12px; font-weight: 700; color: var(--muted); }
+  .jobcard dd { margin: 0; min-width: 0; font-size: 13px; line-height: 1.35; font-weight: 650; color: var(--text); overflow-wrap: anywhere; }
+}

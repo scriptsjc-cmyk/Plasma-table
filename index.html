@@ -240,6 +240,16 @@
       <p id="qbWhy" class="qbwhy hidden" role="status" aria-live="polite"></p>
       <div id="fit" class="fit"></div>
       <div id="jobStats" class="stats"></div>
+      <!-- laptop cutting screen (css/screen-cut.css): the job and the machine at a glance, under the bed picture (in place of #jobStats); filled by refresh() -->
+      <section id="jobCard" class="jobcard" aria-label="Job and machine">
+        <dl>
+          <div><dt>File</dt><dd id="jcFile">–</dd></div>
+          <div><dt>Size</dt><dd id="jcSize">–</dd></div>
+          <div><dt>Cuts</dt><dd id="jcCuts">–</dd></div>
+          <div><dt>Material</dt><dd id="jcMat">–</dd></div>
+          <div><dt>Machine</dt><dd id="jcMach">–</dd></div>
+        </dl>
+      </section>
       <div id="playRow" class="playrow hidden">
         <button type="button" id="playBtn" class="small" aria-label="Play the cut preview">▶ Play</button>
         <input type="range" id="playSlider" min="0" max="1000" value="0" aria-label="Scrub through the cut preview">
