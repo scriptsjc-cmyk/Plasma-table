@@ -41,7 +41,7 @@ export function bindTopMenu() {
 // controls are MOVED (never copied: same elements, ids and handlers) into #cutSheet while it is open, then put back where they
 // were. The sheet sits over the bed picture only. Escape, the close button or leaving the step closes it; Tab stays inside it.
 const SHEET_ITEMS = {
-  3: ["#layoutCard .sheetrow", "#nestBox", "#originCard", "#btnExport3", "#showMachWrap"],   // r7 U8: sheet size, nest, saved start points
+  3: ["#btnExport3", "#showMachWrap", "#layoutCard .sheetrow", "#nestBox", "#originCard"],   // r7 U8: + sheet size, nest, saved start points
   4: ["#livePanel", "#lpNote", "#liveSpeedBox", "#runHelp"],
 };
 const PHONE_MQ = "(max-width: 899px), (orientation: landscape) and (max-height: 540px)";   // = the phone section of css/screen-cut.css
