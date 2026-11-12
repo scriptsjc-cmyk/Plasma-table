@@ -695,18 +695,100 @@ body[data-screen="cut"] #topModeSwitch { display: none !important; }
 .blocker-jump { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; text-decoration: underline; cursor: pointer; min-height: 44px; }
 
 
-/* ---- r7: header hide, 44px targets, sticky Next ---- */
-/* Hide the header cluster only. STOP is a sibling of .topbar-main and must not move, shrink, or hide. */
-body.header-hidden .topbar-main > :not(#btnShowHeader) { display: none !important; }
-body.header-hidden #btnShowHeader {
-  display: inline-flex !important;
-  align-items: center; justify-content: center;
-  min-width: 44px; min-height: 44px;
-  padding: 4px; border: 0; background: transparent;
+/* ---- r7 J8: hide the whole account bar. Content moves up; a faint logo restores it. ---- */
+/* Only on Make and Cut (the setting does not strip the bar from the menu or sign-in). */
+body.header-hidden[data-screen="make"] .topbar,
+body.header-hidden[data-screen="cut"] .topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 0; min-height: 0;
+  padding: 0; margin: 0; border: 0;
+  background: transparent;
+  overflow: visible;
+  pointer-events: none;
+  gap: 0;
+  z-index: 2147483001;          /* same as a connected Cut bar: STOP stays above overlays */
 }
-body.header-hidden .topbar {
-  gap: 8px;
-  align-items: center;
+body.header-hidden[data-screen="make"] .topbar-main,
+body.header-hidden[data-screen="cut"] .topbar-main {
+  display: block; height: 0; overflow: visible; flex: none; pointer-events: none;
+}
+body.header-hidden[data-screen="make"] .topbar-main > :not(#btnShowHeader),
+body.header-hidden[data-screen="cut"] .topbar-main > :not(#btnShowHeader) {
+  display: none !important;
+}
+body.header-hidden[data-screen="make"] #btnShowHeader,
+body.header-hidden[data-screen="cut"] #btnShowHeader {
+  display: inline-flex !important;
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  left: max(8px, env(safe-area-inset-left, 0px));
+  z-index: 2147483002;
+  width: 36px; height: 36px; min-width: 36px; min-height: 36px;
+  padding: 0; border: 0; background: transparent;
+  opacity: 0.4;
+  pointer-events: auto;
+  align-items: center; justify-content: center;
+}
+body.header-hidden[data-screen="make"] #btnShowHeader:hover,
+body.header-hidden[data-screen="make"] #btnShowHeader:focus,
+body.header-hidden[data-screen="make"] #btnShowHeader:focus-visible,
+body.header-hidden[data-screen="cut"] #btnShowHeader:hover,
+body.header-hidden[data-screen="cut"] #btnShowHeader:focus,
+body.header-hidden[data-screen="cut"] #btnShowHeader:focus-visible {
+  opacity: 1;
+}
+body.header-hidden[data-screen="make"] #btnShowHeader::after,
+body.header-hidden[data-screen="cut"] #btnShowHeader::after {
+  content: "Show account bar";
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--card);
+  font: 600 12px/1.2 var(--font);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s;
+}
+body.header-hidden[data-screen="make"] #btnShowHeader:hover::after,
+body.header-hidden[data-screen="make"] #btnShowHeader:focus::after,
+body.header-hidden[data-screen="make"] #btnShowHeader:focus-visible::after,
+body.header-hidden[data-screen="cut"] #btnShowHeader:hover::after,
+body.header-hidden[data-screen="cut"] #btnShowHeader:focus::after,
+body.header-hidden[data-screen="cut"] #btnShowHeader:focus-visible::after {
+  opacity: 1;
+}
+/* Cut: STOP stays a fixed floating control, same size, top-right, never covered.
+   Make: it floats too only when a machine is connected or a job is running (class set in js/ui/header.js). */
+body.header-hidden[data-screen="cut"] #btnStop,
+body.header-hidden.header-stop-float #btnStop {
+  position: fixed !important;
+  top: max(4px, env(safe-area-inset-top, 0px));
+  right: max(8px, env(safe-area-inset-right, 0px));
+  left: auto;
+  z-index: 2147483003;
+  pointer-events: auto;
+  display: flex !important;
+  margin: 0;
+}
+/* The corner logo and a floating STOP keep their size and place; content leaves a gap so they don't cover tools. */
+body.header-hidden[data-screen="make"] #makeBar,
+body.header-hidden[data-screen="cut"] .tabs {
+  padding-left: max(52px, env(safe-area-inset-left, 0px));
+}
+body.header-hidden[data-screen="cut"] .tabs,
+body.header-hidden.header-stop-float #makeBar {
+  padding-right: calc(var(--stop-float-w, 0px) + 16px + env(safe-area-inset-right, 0px));
+}
+body.header-hidden[data-screen="cut"] #demoAcctBar,
+body.header-hidden[data-screen="cut"] .banner {
+  margin-right: calc(var(--stop-float-w, 0px) + 16px + env(safe-area-inset-right, 0px));
 }
 #btnShowHeader.hidden, #btnHideHeader.hidden { display: none !important; }
 #btnHideHeader { flex: none; }

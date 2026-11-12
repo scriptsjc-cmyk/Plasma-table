@@ -3,7 +3,7 @@
 // 1440x900 (U3, U18), Show me links (U28), the Stopped chip (U7), STOP closes a confirm (U6), link lost (U11), Space in a number box
 // (U27), an h1 and announced banners (U22), practice runs without the homing question (U24); on a phone on its side one header row
 // signed in (U4) and a short Bed & start with sheet size in More (U8); upright, the turn cover leaves Menu and STOP clear (U2, U10).
-import { T } from "../lib/t.mjs"; import { startServer, launch, newPage, demoToShape, PROFILES } from "../lib/browser.mjs";
+import { T } from "../lib/t.mjs"; import { startServer, launch, newPage, demoToShape, PROFILES, shot } from "../lib/browser.mjs";
 import { devices } from "playwright";
 
 const t = new T("74_r7_cut"); const srv = await startServer(); const br = await launch();
@@ -144,8 +144,27 @@ for (const prof of ["d1440", "d1366", "phone844x390"]) {
   const page = await bedPage(prof);
   const stop0 = await ev(page, () => __box("#btnStop"));
   await ev(page, () => window.plasmaTest.setHeaderHidden(true)); await sleep(300);
-  l = await ev(page, () => ({ hidden: document.body.classList.contains("header-hidden"), stop: __box("#btnStop"), bigger: __stopBiggest(), scroll: __noPageScroll() }));
+  await page.mouse.move(600, 400);
+  l = await ev(page, () => {
+    const firstChrome = () => {
+      const tops = [];
+      const add = (el) => { if (!el) return; const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") return; const r = el.getBoundingClientRect(); if (r.height > 1) tops.push(r.top); };
+      add(document.querySelector(".tabs"));
+      add(document.getElementById("demoAcctBar"));
+      add(document.getElementById("appMain"));
+      return tops.length ? Math.min(...tops) : 99;
+    };
+    const bar = document.querySelector(".topbar").getBoundingClientRect();
+    const show = document.getElementById("btnShowHeader");
+    const cs = getComputedStyle(show);
+    return { hidden: document.body.classList.contains("header-hidden"), stop: __box("#btnStop"), bigger: __stopBiggest(), scroll: __noPageScroll(),
+      barH: bar.height, contentTop: firstChrome(), op: parseFloat(cs.opacity), label: show.getAttribute("aria-label") || show.title,
+      layoutHit: __overlap("#btnLayout", "#btnStop") };
+  });
   t.check(n("STOP is still there, the same size and the largest control; no page scroll"), l.hidden && l.stop && Math.round(l.stop.w * l.stop.h) >= Math.round(stop0.w * stop0.h) - 1 && !l.bigger.length && l.scroll, JSON.stringify([stop0, l]));
+  t.check(n("the whole account bar is gone and content moves up"), l.barH <= 2 && l.contentTop <= 4 && !l.layoutHit, JSON.stringify(l));
+  t.check(n("the restore logo is at 0.4 opacity and is labelled Show account bar"), Math.abs(l.op - 0.4) < 0.05 && /Show account bar/i.test(l.label), JSON.stringify(l));
+  if (prof !== "phone844x390") await shot(page, `74-header-hidden-${prof}`);
   if (prof !== "phone844x390") {
     const hits = await ev(page, (cs) => { const out = []; for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) if (__overlap(cs[i], cs[j])) out.push(cs[i] + " / " + cs[j]); return out; }, CARDS);
     const wraps = await ev(page, (s) => __wrapped(s), ONE_LINE);

@@ -95,7 +95,7 @@
 <!-- ============================================================ top bar -->
 <header class="topbar">
   <div class="topbar-main">
-  <button type="button" id="btnShowHeader" class="showheader hidden" title="Show header" aria-label="Show header" hidden>
+  <button type="button" id="btnShowHeader" class="showheader hidden" title="Show account bar" aria-label="Show account bar" hidden>
     <svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0B1F33"/><path fill="#F4F7FA" d="M8 6.2h9.1c3.55 0 5.85 2.05 5.85 5.05 0 2.95-2.3 5.05-5.85 5.05H8V6.2zm4.15 3.15v3.8h4.85c1.45 0 2.35-.75 2.35-1.9s-.9-1.9-2.35-1.9H12.15z"/><path fill="#F4F7FA" d="M8 17.55h4.15V25.8H8z"/><path d="M5 16h19.2" stroke="#00B4D8" stroke-width="2.15" stroke-linecap="butt"/><circle cx="25.1" cy="16" r="1.85" fill="#FF7A1A"/></svg>
   </button>
   <div class="brand"><svg width="32" height="32" viewBox="0 0 32 32" class="brand-mark" aria-hidden="true">
@@ -107,7 +107,7 @@
     <circle cx="25.1" cy="16" r="1.85" fill="#FF7A1A"/>
     <circle cx="25.1" cy="16" r="0.7" fill="#FFF3C4"/>
   </svg><span id="machineName">Porta Plazma</span></div>
-  <button type="button" id="btnHideHeader" class="pill iconbtn hideheader" title="Hide header" aria-label="Hide header">⌃</button>
+  <button type="button" id="btnHideHeader" class="pill iconbtn hideheader" title="Hide account bar" aria-label="Hide account bar">⌃</button>
   <button type="button" id="btnHome" class="pill iconbtn homebtn" title="Back to the main menu" aria-label="Back to the main menu"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Menu</span></button>
   <button type="button" id="btnTopMenu" class="pill iconbtn" aria-expanded="false" aria-controls="topMenu" aria-label="Menu">
     <svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1480,7 +1480,7 @@
             <option value="left">Left of the picture</option>
           </select>
         </label>
-        <label class="check"><input type="checkbox" id="yoursHideHeader"> Hide the header on Make and Cut (a small logo brings it back; STOP stays visible)</label>
+        <label class="check"><input type="checkbox" id="yoursHideHeader"> Hide the header on Make and Cut (a faint logo in the corner brings it back; STOP stays visible on Cut)</label>
         <label>Toolbar button size
           <select id="yoursButtons">
             <option value="compact">Compact</option>

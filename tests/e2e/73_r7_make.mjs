@@ -206,6 +206,57 @@ for (const [w, h, tag] of [[1440, 900, "1440x900"], [1366, 768, "1366x768"]]) {
   ck(`${tag}: How to use starts with a first practice cut`, ht.hasPractice, ht);
   await ev(page, `window.plasmaTest.closeHowto && window.plasmaTest.closeHowto()`);
 
+  // J8 on Make (no machine): the whole bar is gone, content moves up, faint logo restores it
+  const beforeMake = await ev(page, `(() => {
+    const bar = document.querySelector(".topbar").getBoundingClientRect();
+    return { barH: bar.height };
+  })()`);
+  await ev(page, `window.plasmaTest.setHeaderHidden(true)`);
+  await sleep(200);
+  await page.mouse.move(400, 300);
+  const makeHid = await ev(page, `(() => {
+    
+    const firstChrome = () => {
+      const tops = [];
+      const add = (el) => { if (!el) return; const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") return; const r = el.getBoundingClientRect(); if (r.height > 1) tops.push(r.top); };
+      add(document.querySelector(".tabs"));
+      add(document.getElementById("demoAcctBar"));
+      add(document.getElementById("appMain"));
+      return tops.length ? Math.min(...tops) : 99;
+    };
+
+    const bar = document.querySelector(".topbar").getBoundingClientRect();
+    const show = document.getElementById("btnShowHeader");
+    const cs = getComputedStyle(show);
+    const stop = document.getElementById("btnStop");
+    const sr = stop.getBoundingClientRect();
+    const stopShown = getComputedStyle(stop).display !== "none" && sr.width > 2 && sr.height > 2;
+    return {
+      headerHidden: document.body.classList.contains("header-hidden"),
+      barH: bar.height, contentTop: firstChrome(),
+      op: parseFloat(cs.opacity), label: show.getAttribute("aria-label") || show.title,
+      showVis: cs.display !== "none" && !show.hidden && show.getBoundingClientRect().width > 2,
+      stopShown,
+    };
+  })()`);
+  ck(`${tag}: Make, hidden: the account bar has no height and content moves up`, makeHid.headerHidden && makeHid.barH <= 2 && makeHid.contentTop <= 4, { beforeMake, makeHid });
+  ck(`${tag}: Make, hidden: the logo is at 0.4 opacity and is labelled Show account bar`, makeHid.showVis && Math.abs(makeHid.op - 0.4) < 0.05 && /Show account bar/i.test(makeHid.label), makeHid);
+  await ev(page, `(() => { const el = document.getElementById("btnShowHeader"); el.focus(); el.dispatchEvent(new Event("focus")); })()`);
+  // hover for opacity 1
+  const logo = await page.$("#btnShowHeader");
+  await logo.hover(); await sleep(150);
+  const hovered = await ev(page, `(() => {
+    const el = document.getElementById("btnShowHeader");
+    const cs = getComputedStyle(el);
+    const after = getComputedStyle(el, "::after");
+    return { op: parseFloat(cs.opacity), tip: (after && after.content) || "", label: el.getAttribute("aria-label") };
+  })()`);
+  ck(`${tag}: Make, hidden: the logo goes fully opaque on hover and shows the label`, hovered.op > 0.95 && /Show account bar/i.test(hovered.label + hovered.tip), hovered);
+  await shot(page, `73-header-hidden-make-${tag}`);
+  await page.mouse.move(400, 300);
+  await ev(page, `window.plasmaTest.setHeaderHidden(false)`);
+  await sleep(150);
+
   // J5 send-to-cutting lands on the Part step
   await ev(page, `window.plasmaTest.sendToCutting()`);
   await sleep(400);
@@ -221,7 +272,25 @@ for (const [w, h, tag] of [[1440, 900, "1440x900"], [1366, 768, "1366x768"]]) {
     const vis = (id) => { const el = document.getElementById(id); if (!el) return false; const cs = getComputedStyle(el); const b = el.getBoundingClientRect(); return cs.display !== "none" && cs.visibility !== "hidden" && !el.hidden && b.width > 2 && b.height > 2; };
     return { stop: { l: r.left, t: r.top, w: r.width, h: r.height }, show: vis("btnShowHeader"), hide: vis("btnHideHeader"), headerHidden: document.body.classList.contains("header-hidden") };
   })()`);
-  ck(`${tag}: hiding the header leaves STOP the same size and place`, beforeStop.shown && hidden.headerHidden && hidden.show && !hidden.hide && Math.abs(hidden.stop.w - beforeStop.w) < 2 && Math.abs(hidden.stop.h - beforeStop.h) < 2 && Math.abs(hidden.stop.l - beforeStop.l) < 8 && Math.abs(hidden.stop.t - beforeStop.t) < 8, { beforeStop, hidden });
+  await page.mouse.move(600, 400);
+  const cutHid = await ev(page, `(() => {
+    
+    const firstChrome = () => {
+      const tops = [];
+      const add = (el) => { if (!el) return; const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") return; const r = el.getBoundingClientRect(); if (r.height > 1) tops.push(r.top); };
+      add(document.querySelector(".tabs"));
+      add(document.getElementById("demoAcctBar"));
+      add(document.getElementById("appMain"));
+      return tops.length ? Math.min(...tops) : 99;
+    };
+
+    const bar = document.querySelector(".topbar").getBoundingClientRect();
+    const show = document.getElementById("btnShowHeader");
+    const cs = getComputedStyle(show);
+    return { barH: bar.height, contentTop: firstChrome(), op: parseFloat(cs.opacity), label: show.getAttribute("aria-label") || show.title };
+  })()`);
+  ck(`${tag}: hiding the header leaves STOP the same size and at the top right`, beforeStop.shown && hidden.headerHidden && hidden.show && !hidden.hide && Math.abs(hidden.stop.w - beforeStop.w) < 2 && Math.abs(hidden.stop.h - beforeStop.h) < 2 && Math.abs(hidden.stop.t - beforeStop.t) < 16, { beforeStop, hidden });
+  ck(`${tag}: Cut, hidden: no header height, content moves up, logo at 0.4, Show account bar`, cutHid.barH <= 2 && cutHid.contentTop <= 4 && Math.abs(cutHid.op - 0.4) < 0.05 && /Show account bar/i.test(cutHid.label), cutHid);
   await shot(page, `73-header-hidden-${tag}`);
   await ev(page, `window.plasmaTest.setHeaderHidden(false)`);
   await sleep(150);

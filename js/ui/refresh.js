@@ -13,6 +13,7 @@ import { $, $$, clock, esc, fmtTime, placeToast } from "../core/dom.js";
 import { formatLen } from "../core/prefs.js";
 import { blockers, overlayLive, paintZeroWarn } from "../cut/checklist.js";
 import { drawPreview, fit, wcoNow } from "../cut/preview.js";
+import { syncHeaderButtons } from "./header.js";
 import { paintConnectLock, paintWhy } from "./gate.js";
 import { paintGuide } from "../make/shapeform.js";
 import { machineAllowed } from "../machine/access.js";
@@ -33,6 +34,7 @@ function paintStateBadge() {
   badge.classList.toggle("hidden", !S.connected || !word);
 }
 export function paintChrome() {
+  try { syncHeaderButtons(); } catch (e) { /* ignore */ }
   const b = document.querySelector(".topbar");
   if (b) document.documentElement.style.setProperty("--topbar-h", Math.ceil(b.getBoundingClientRect().height) + "px");
   const torch = !!(S.status && S.status.torch);
