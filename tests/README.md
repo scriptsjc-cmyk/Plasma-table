@@ -51,6 +51,7 @@ Playwright `route` stubs for the Supabase host; the live project, its keys, SQL 
 | 58 text_trace_nest | Add text, Trace a picture, true-shape nesting (numeric no-overlap / min-distance checks), saved remnants |
 | 59 hardening_sw_csp | gating, CSP, service worker precache (every js and css file is listed), atomic install, offline reload |
 | 62 admin_security | console filter, restore validation, announcements XSS, STOP above admin dialogs, live-origin gating, job_events (cloud, mocked), phone edge edit |
+| 69 phone_cut | the phone cutting screen (844x390, 390x844, 320x568, 750x340): STOP the largest button by area, Pause / progress / X-Y / TORCH in view while cutting, the More sheet (dialog, focus, Escape, controls moved back), banners never covered, no page scroll; none of it on the laptop |
 
 Coverage note: three older suites that drove UI flows which no longer exist (the old recent-jobs list, the Move tab, the early demo button flow)
 were retired during the tidy-up; their still-relevant checks live in 52 and 55.

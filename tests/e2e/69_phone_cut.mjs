@@ -1,4 +1,4 @@
-// Phone cutting screen (844x390 on its side, 390x844 upright): STOP visible and the largest button by area, Pause / progress / X-Y
+// Phone cutting screen (844x390 on its side, 390x844 upright, plus 320x568 and 750x340 while cutting): STOP visible and the largest button by area, Pause / progress / X-Y
 // in view while cutting, the More sheet (dialog, focus kept inside, Escape, moved controls go back), safety banners never covered,
 // no page scroll; and the laptop (1366x768) has none of it.
 import { T } from "../lib/t.mjs"; import { startServer, launch, newPage, demoToShape, shot, PROFILES } from "../lib/browser.mjs";
@@ -113,6 +113,25 @@ for (const [name, prof] of [["844x390", "phone844x390"], ["390x844", "phone390x8
   await shot(page, `69-${name}-estop`);
   await ev(page, () => window.plasmaTest.S.demo.setEstop(false)); await sleep(300);
   t.check(n("no page errors"), page.errors.filter((e) => !/status of 404/.test(e)).length === 0, page.errors.join(" | ").slice(0, 300));
+  await page.ctx.close();
+}
+
+// ---- small phones: everything that matters while cutting is still in view and not covered
+PROFILES.phone320x568 ||= phone(320, 568); PROFILES.phone750x340 ||= phone(750, 340);
+for (const prof of ["phone320x568", "phone750x340"]) {
+  const page = await newPage(br, prof, { base: srv.base, consoleErrors: false }); await helpers(page);
+  await demoToShape(page, { stay: "cut" });
+  await page.waitForFunction(() => window.plasmaTest.getM().state() === "Idle", null, { timeout: 10000 }).catch(() => {});
+  await ev(page, () => document.getElementById("btnZero").click()); await sleep(300);
+  await ev(page, () => document.querySelectorAll("#checklist input").forEach((c) => { if (!c.checked) c.click(); }));
+  await page.waitForFunction(() => !document.getElementById("btnStart").disabled, null, { timeout: 5000 }).catch(() => {});
+  await ev(page, () => document.getElementById("btnStart").click());
+  await page.waitForFunction(() => window.plasmaTest.S.cur === 4, null, { timeout: 10000 }).catch(() => {}); await sleep(1200);
+  const sels = ["#btnStop", "#runTitle", "#pct", "#timeLeft", "#running .progress", "#running .runpos", "#torchBig", "#btnPause", "#btnMore4"];
+  const bad = await ev(page, (sels) => sels.filter((s) => !(window.__inView(s) && window.__onTop(s))), sels);
+  t.check(`${prof.slice(5)}: cutting: STOP, status, % done, time left, progress, X/Y, TORCH, Pause and More all in view and not covered`, !bad.length, bad.join(", "));
+  t.check(`${prof.slice(5)}: cutting: no page-level scroll`, await ev(page, () => window.__noPageScroll()));
+  await page.keyboard.press("Space"); await sleep(400);
   await page.ctx.close();
 }
 
