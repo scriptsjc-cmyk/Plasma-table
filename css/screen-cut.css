@@ -739,3 +739,19 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.app-shell:not(.short-land)[data-screen="cut"] .cutgrid.editing:not(.with-qb) {
     grid-template-areas: "preview" "step" !important; grid-template-rows: minmax(0, 0.85fr) minmax(0, 1.15fr) !important; }
 }
+@media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
+  /* Ready / Moving and TORCH sit in the middle of their pills and are never cut short */
+  body[data-screen="cut"] #stateBadge:not(.hidden), body[data-screen="cut"] #torchPill:not([hidden]) {
+    display: inline-flex; align-items: center; justify-content: center; flex: none; max-width: none; overflow: visible; white-space: nowrap; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  /* header upright: brand, Menu and the menu button on one row, Ready / Moving and TORCH under them, both rows beside the taller STOP */
+  body[data-screen="cut"] .topbar-main { row-gap: 4px; }
+  body[data-screen="cut"] #stateBadge:not(.hidden), body[data-screen="cut"] #torchPill:not([hidden]) { font-size: 13px; padding: 0 10px; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  /* phone on its side: once connected the connection pill keeps a short word next to its dot (colour alone isn't a label) */
+  body.short-land[data-screen="cut"] #connPill.on { width: auto; max-width: none; min-width: 44px; padding: 0 10px; gap: 4px; }
+  body.short-land[data-screen="cut"] #connPill.on::after { content: "Connected"; font-size: 13px; }
+  body.short-land.demo-on[data-screen="cut"] #connPill.on::after { content: "Practice"; }
+}
