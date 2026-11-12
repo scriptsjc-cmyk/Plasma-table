@@ -3,7 +3,7 @@
 // to resize; press Layout to move panels left or right (buttons, or drag one panel onto another), Reset layout to go back.
 // The bed picture always keeps at least BED_MIN of the window's width. STOP is in the header, outside all of this, and never moves.
 // Saved per user in this browser (saving it to the account needs a cloud column: listed for the app developer).
-import { $, $$ } from "../core/dom.js";
+import { $ } from "../core/dom.js";
 import { S } from "../core/state.js";
 import * as Acc from "../account/account.js";
 import { isLaptopCut, LAPTOP_CUT_MQ } from "./cutbar.js";
@@ -100,7 +100,8 @@ function move(p, dir) {
   const sk = stepKey(), o = L[sk].order, i = o.indexOf(p), j = i + dir;
   if (j < 0 || j >= o.length) return;
   [o[i], o[j]] = [o[j], o[i]]; apply(); save();
-  const btn = covers.find((c) => c.dataset.panel === p)?.querySelector(`[data-dir="${dir}"]:not([disabled])`) || covers.find((c) => c.dataset.panel === p)?.querySelector("button:not([disabled])");
+  const cover = covers.find((c) => c.dataset.panel === p);                 // keep the focus on the panel that moved
+  const btn = cover && (cover.querySelector(`[data-dir="${dir}"]:not([disabled])`) || cover.querySelector("button:not([disabled])"));
   if (btn) btn.focus();
 }
 function paintCovers() {
