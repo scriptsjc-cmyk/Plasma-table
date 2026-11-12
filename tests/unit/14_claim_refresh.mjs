@@ -103,6 +103,8 @@ try {
 
   ck("the claim hint says the serial box is optional and a mismatch looks unrecognised", /serial box is optional/i.test(home) && /unrecognised code/i.test(home));
   ck("a failed claim is also shown as an alert in the dialog", /claimError/.test(home) && /role="alert"/.test(fs.readFileSync(SITE + "index.html", "utf8")));
+  ck("spaces and missing dashes in a claim code are normalised to XXXX-XXXX", machines.machineSavedMessage("PT-TEST", "8b2p92jf") === "Machine saved: PT-TEST, code 8B2P-92JF" && machines.machineSavedMessage("PT-TEST", "8B2P 92JF") === "Machine saved: PT-TEST, code 8B2P-92JF");
+  ck("a claim reply with no error field is not labelled as an unrecognised code", /Couldn.t link right now/.test(mach));
 } finally {
   globalThis.fetch = realFetch;
   cloud.setSessionListener(null);

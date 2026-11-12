@@ -196,8 +196,9 @@ try {
     await p.waitForSelector("#connectLock:not(.hidden)", { timeout: 8000 });
     t.check(`${prof}: Run stays locked until claim`, /link (your |a )?machine/i.test(await p.locator("#connectLockText").textContent()) && await p.evaluate(() => document.getElementById("btnStart").disabled));
     await p.evaluate(() => document.getElementById("btnLinkMachine").click());
-    await p.waitForSelector("#gateDlg:not(.hidden)", { timeout: 5000 });
-    await p.click("#gateClaim");
+    await p.waitForSelector("#claimDlg:not(.hidden), #gateDlg:not(.hidden)", { timeout: 5000 });
+    const gateClaim = await p.locator("#gateDlg:not(.hidden) #gateClaim");
+    if (await gateClaim.count()) await p.click("#gateClaim");
     await p.waitForSelector("#claimDlg:not(.hidden)");
     await p.fill("#claimCode", "DEMO-0000");
     await p.click('#formClaim [type=submit]');

@@ -200,7 +200,7 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   await page.click("#cutSummary .cutsum-adv > summary"); await sleep(200);
   await page.click("#cutSummary [data-cutsum=change]"); await sleep(600);
   ck("9 Change opens the cutting screen's material step with More cut options open", await T(page, `window.plasmaTest.screen() === "cut" && document.getElementById("advCut").open && document.body.dataset.step === "1"`), await T(page, `[window.plasmaTest.screen(), document.body.dataset.step]`));
-  ck("9 the cutting screen has the header switch and no Beginner / Pro styling", await vis("#topModeSwitch") && await T(page, `!document.body.classList.contains("beginner") && !document.body.classList.contains("pro-mode")`));
+  ck("9 the cutting screen hides the header switch and has no Beginner / Pro styling", !(await vis("#topModeSwitch")) && await T(page, `!document.body.classList.contains("beginner") && !document.body.classList.contains("pro-mode")`));
   ck("9 no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await page.context().close();
 }
@@ -313,7 +313,9 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   await snap(page, "keep-drawing");
   await page.keyboard.press("Escape"); await sleep(200);
   ck("10 the question has no Close (it needs an answer) and Esc leaves it up", await prompt() && await T(page, `!document.querySelector("#migrateDlg .acct-close")`));
-  await page.click("#migrateNo"); await sleep(400);
+  await page.click("#migrateNo"); await sleep(200);
+  await page.locator("#safeDlgOk").click({ timeout: 3000 }).catch(() => {});
+  await sleep(400);
   const fresh = await ws();
   ck("10 Start fresh: no drawing, no undo back to it, no recent files, material back to the first one", fresh.items === 0 && fresh.undo === 0 && !fresh.recent && fresh.material === firstMat, fresh);
   // A works in Pro; B signs in on the same browser and keeps the drawing A left; A comes back in Pro

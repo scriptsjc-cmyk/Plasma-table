@@ -49,4 +49,18 @@ ck("applyChrome writes an inline accent (tokens.css is left alone)", !!document.
 ck("resolvedTheme honours an explicit choice", P.resolvedTheme("light") === "light" && P.resolvedTheme("dark") === "dark");
 ck("toolbar and button classes land on the body", document.body.classList.contains("yours-toolbar-top") && document.body.classList.contains("yours-btns-large"));
 
+
+ck("inherited Object keys are not accepted as an accent or canvas", P.sanitizePrefs({ accent: "constructor", canvas: "toString" }).accent === "blue" && P.sanitizePrefs({ accent: "constructor", canvas: "toString" }).canvas === "default");
+ck("wheelZoom defaults to off and is kept when set", P.defaultPrefs().wheelZoom === false && P.sanitizePrefs({ wheelZoom: true }).wheelZoom === true);
+
+localStorage.clear();
+P.savePrefs({ theme: "dark", mode: "pro" }, "");
+const fresh = P.loadPrefs("new-user");
+ck("a new signed-in account does not inherit the signed-out Make it yours choices", fresh.theme === "auto" && fresh.mode === "beginner");
+
+ck("formatLen uses millimetres by default", /mm$/.test(P.formatLen(100, 0)) && P.formatLen(100, 0).startsWith("100"));
+P.savePrefs({ units: "inch" }, "u-inch");
+ck("formatLen converts to inches when that display unit is chosen", P.formatLen(25.4, 0) === "1 in" || P.formatLen(25.4, 2).startsWith("1"), P.formatLen(25.4, 2));
+
 process.exit(t.done() ? 1 : 0);
+

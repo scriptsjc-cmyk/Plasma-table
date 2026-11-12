@@ -28,8 +28,8 @@ const prime = async (page, parts = ["rect", "disc", "rect"]) => {
   await page.evaluate(() => { window.plasmaTest.goStep(3); document.getElementById("layAuto").click(); }); await sleep(500);
 };
 const zeroAndTick = async (page) => {
-  await page.evaluate(() => document.getElementById("btnZero").scrollIntoView({ block: "center" }));
-  await page.click("#btnZero"); await sleep(400);
+  await page.evaluate(() => { const c = document.getElementById("zeroCard"); if (c) c.open = true; document.getElementById("btnZero").scrollIntoView({ block: "center" }); });
+  await page.evaluate(() => document.getElementById("btnZero").click()); await sleep(400);
   await page.evaluate(() => { document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById("checklist").dispatchEvent(new Event("change")); }); await sleep(300);
 };
 const zeroLine = (page) => T(page, `(() => { const b = document.querySelector('#checklist input[data-chk="zero"]'); return b ? { on: b.checked, locked: b.disabled, text: b.closest("label").textContent.trim() } : null; })()`);

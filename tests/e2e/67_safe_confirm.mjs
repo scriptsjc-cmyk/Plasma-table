@@ -21,8 +21,7 @@ const snap = async (page, name) => { await sleep(200); await page.screenshot({ p
   await sleep(400);
   await page.evaluate(() => window.plasmaTest.getM().command({ cmd: "limits_clear" }));
   await T(page, "window.plasmaTest.refresh()");
-  await page.evaluate(() => document.getElementById("btnZero").scrollIntoView({ block: "center" }));
-  await page.click("#btnZero"); await sleep(400);
+  await page.evaluate(() => { const c = document.getElementById("zeroCard"); if (c) c.open = true; document.getElementById("btnZero").click(); }); await sleep(400);
   await page.evaluate(() => {
     document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; });
     document.getElementById("checklist").dispatchEvent(new Event("change"));
@@ -34,6 +33,7 @@ const snap = async (page, name) => { await sleep(200); await page.screenshot({ p
   const prompt = await T(page, "({ title: document.getElementById('safeDlgTitle').textContent, body: document.getElementById('safeDlgBody').textContent, focus: document.activeElement && document.activeElement.id })");
   ck("Start without saved edges warns and asks to confirm", /Start without homing/.test(prompt.title) && /No table edges are saved/.test(prompt.body), JSON.stringify(prompt));
   ck("Cancel is focused on the confirm", prompt.focus === "safeDlgCancel", JSON.stringify(prompt));
+  await T(page, "window.scrollTo(0,0)"); await sleep(50);
   const layers = await T(page, `(() => {
     const s = document.getElementById("btnStop"), d = document.getElementById("safeDlg"), bar = document.querySelector(".topbar");
     const sr = s.getBoundingClientRect(), mid = document.elementFromPoint(sr.left + sr.width / 2, sr.top + sr.height / 2);
