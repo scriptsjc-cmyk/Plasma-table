@@ -34,7 +34,7 @@ for (const prof of profiles) {
   // ---- the cutting screen: identical whatever the mode
   const sigs = {};
   for (const mode of ["beginner", "pro"]) {
-    await page.evaluate((mode) => { const T = window.plasmaTest; T.showScreen("make"); T.setAppMode(mode, { persist: false, autoFs: false }); T.setShapeFs(false); T.sendToCutting(); }, mode);
+    await page.evaluate((mode) => { const T = window.plasmaTest; T.showScreen("make"); T.setAppMode(mode, { persist: false, autoFs: false }); T.setShapeFs(false); T.sendToCutting(); T.goStep(3); }, mode);
     await sleep(250);
     const cls = await page.evaluate(() => ({ b: document.body.classList.contains("beginner"), p: document.body.classList.contains("pro-mode"), screen: document.body.dataset.screen, sw: !!(document.getElementById("editorSwitch") && document.getElementById("editorSwitch").offsetParent) }));
     t.check(P(`cutting screen after ${mode}: no beginner/pro class and no Simple / Advanced buttons`), cls.screen === "cut" && !cls.b && !cls.p && !cls.sw, JSON.stringify(cls));

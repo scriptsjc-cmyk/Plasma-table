@@ -68,7 +68,7 @@ const refresh = (page) => page.evaluate(() => window.plasmaTest.refreshGate());
 async function jobToStop(view) {
   const page = await open(br, view, s.base, "?test=1&turn=0");
   await demoToShape(page, { stay: "cut" });
-  await page.evaluate(() => { const t = window.plasmaTest, sk = t.sketch; t.showScreen("make"); t.setShapeFs(false); sk.clear(); sk.add("rect"); sk.add("disc"); sk.add("rect"); t.sendToCutting(); });
+  await page.evaluate(() => { const t = window.plasmaTest, sk = t.sketch; t.showScreen("make"); t.setShapeFs(false); sk.clear(); sk.add("rect"); sk.add("disc"); sk.add("rect"); t.sendToCutting(); t.goStep(3); });
   await sleep(300);
   await page.evaluate(() => window.plasmaTest.demoEdges()); await sleep(6000);
   await page.evaluate(() => { window.plasmaTest.goStep(3); document.getElementById("layAuto").click(); }); await sleep(500);
@@ -112,7 +112,7 @@ async function jobToStop(view) {
 {
   const page = await open(br, "laptop", s.base, "?test=1&turn=0");
   await demoToShape(page, { stay: "cut" });
-  await page.evaluate(() => { const t = window.plasmaTest, sk = t.sketch; t.showScreen("make"); t.setShapeFs(false); sk.clear(); sk.add("rect"); sk.add("disc"); sk.add("rect"); t.sendToCutting(); });
+  await page.evaluate(() => { const t = window.plasmaTest, sk = t.sketch; t.showScreen("make"); t.setShapeFs(false); sk.clear(); sk.add("rect"); sk.add("disc"); sk.add("rect"); t.sendToCutting(); t.goStep(3); });
   await sleep(500);
   await page.evaluate(() => { window.plasmaTest.goStep(3); }); await sleep(500);
   const cont = async (setup) => {

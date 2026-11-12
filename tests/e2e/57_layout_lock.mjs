@@ -23,7 +23,7 @@ const SCENE = () => {
 async function toLayout(page, mode = "pro") {
   await page.evaluate((m) => { const T = window.plasmaTest; T.showScreen("make"); T.setAppMode(m, { persist: false, autoFs: false }); T.setShapeFs(false); }, mode);
   await page.evaluate(SCENE);
-  await page.evaluate(() => window.plasmaTest.sendToCutting());
+  await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await sleep(500);
   await page.evaluate(() => { const d = document.getElementById("demoAcctBar"); if (d) d.remove(); });
@@ -39,7 +39,7 @@ const dragWorld = async (page, from, to) => { const [a, b] = await scr(page, ...
     ck("Make a part: setWidth still changes a part (positive control)", r.w0 === 100 && r.w1 === 130 && !r.layout, r);
     await page.evaluate(() => { const sk = window.plasmaTest.sketch; sk.setWidth(100); });
   }
-  await page.evaluate(() => window.plasmaTest.sendToCutting());
+  await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await sleep(500); await page.evaluate(() => { const d = document.getElementById("demoAcctBar"); if (d) d.remove(); });
   ck("layout: the sketch is in layout mode on Bed & start (step 2 of 3)", await page.evaluate(() => !!window.plasmaTest.sketch.layout && window.plasmaTest.sketch.active));
@@ -171,7 +171,7 @@ const dragWorld = async (page, from, to) => { const [a, b] = await scr(page, ...
     ck("Edit in Make a part: opens Make a part with the same part picked, and the layout lock is off there", r.scr === "make" && !r.layout && r.picked, r);
     const w = await page.evaluate(() => { const sk = window.plasmaTest.sketch; sk.setWidth(77); const b = sk.boxOf(sk.selected()); return Math.round(b[2] - b[0]); });
     ck("Edit in Make a part: the part can be resized there (positive control)", w === 77, w);
-    await page.evaluate(() => window.plasmaTest.sendToCutting()); await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
+    await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); }); await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
     await sleep(400);
     ck("Back on the cutting screen the layout lock is on again", await page.evaluate(() => !!window.plasmaTest.sketch.layout));
     await page.evaluate(() => { const d = document.getElementById("demoAcctBar"); if (d) d.remove(); const sk = window.plasmaTest.sketch; sk.pick([sk.items[0].id]); sk.draw(); });
@@ -189,7 +189,7 @@ const dragWorld = async (page, from, to) => { const [a, b] = await scr(page, ...
 {
   // a hole drawn inside a part belongs to that part: moving, turning, copying and deleting take it along; it can't be moved on its own
   const page = await open(br, "laptop", s.base);
-  await page.evaluate(() => { const T = window.plasmaTest, sk = T.sketch; T.showScreen("make"); T.setAppMode("pro", { persist: false, autoFs: false }); T.setShapeFs(false); sk.clear(); sk.add("rect", true); sk.items[0].p.w = 100; sk.items[0].p.h = 60; sk.pick([sk.items[0].id]); sk.add("hole", true); const h = sk.items[1]; h.x += 17; h.y -= 6; sk.add("disc", true); sk.items[2].x = 500; sk.items[2].y = 300; sk.commit(); T.sendToCutting(); });
+  await page.evaluate(() => { const T = window.plasmaTest, sk = T.sketch; T.showScreen("make"); T.setAppMode("pro", { persist: false, autoFs: false }); T.setShapeFs(false); sk.clear(); sk.add("rect", true); sk.items[0].p.w = 100; sk.items[0].p.h = 60; sk.pick([sk.items[0].id]); sk.add("hole", true); const h = sk.items[1]; h.x += 17; h.y -= 6; sk.add("disc", true); sk.items[2].x = 500; sk.items[2].y = 300; sk.commit(); T.sendToCutting(); T.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await sleep(500); await page.evaluate(() => { const d = document.getElementById("demoAcctBar"); if (d) d.remove(); });
   // the hole in the host's own frame: its centre relative to the host's centre, rotated back by the host's turn (should be one fixed vector up to the turn we applied)

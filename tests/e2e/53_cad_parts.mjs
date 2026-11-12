@@ -188,7 +188,7 @@ for (const mode of ["beginner", "pro"]) {
   ck(`[${mode}] ... and no markers on the drawing`, await page.evaluate(() => window.plasmaTest.sketch.marks.length === 0));
   ck(`[${mode}] ... but the design really is flagged when checked (it has small holes)`, await page.evaluate(() => (window.plasmaTest.S.check && window.plasmaTest.S.check.groups.length) > 0));
   if (mode === "beginner") await snap(page, "no-warning-while-designing-beginner");
-  await page.evaluate(() => window.plasmaTest.sendToCutting());
+  await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); });
   await sleep(900);
   const txt = await page.evaluate(() => document.getElementById("cutCheck3").innerText);
   ck(`[${mode}] sent to cutting: the check runs and shows the small-hole warning on the cutting screen`, /small|hole|metal/i.test(txt), txt.slice(0, 120));
@@ -216,6 +216,9 @@ for (const mode of ["beginner", "pro"]) {
   await page.evaluate(() => document.getElementById("bgMore").click()); await sleep(500);
   const cats = await page.evaluate(() => [...document.querySelectorAll("#libCats button")].map((b) => b.textContent));
   ck("library has the new categories", ["Flanges & washers", "Duct & rolled"].every((c) => cats.includes(c)), cats);
+  await page.evaluate(() => { [...document.querySelectorAll("#libCats button")].find((b) => b.textContent === "Basic").click(); }); await sleep(300);
+  const basic = await page.evaluate(() => [...document.querySelectorAll("#libGrid button")].map((b) => b.textContent));
+  ck("Basic shapes include oval, crescent, parallelogram and trapezoid", ["Oval", "Crescent", "Parallelogram", "Trapezoid"].every((n) => basic.some((x) => x.includes(n))), basic);
   await page.evaluate(() => { [...document.querySelectorAll("#libCats button")].find((b) => b.textContent === "Flanges & washers").click(); }); await sleep(300);
   const tiles = await page.evaluate(() => [...document.querySelectorAll("#libGrid button")].map((b) => b.textContent));
   ck("Flanges category shows 4, 6, 8, 10, 12-hole flanges", [4, 6, 8, 10, 12].every((n) => tiles.some((t) => t.includes(`Flange – ${n} holes`))), tiles);

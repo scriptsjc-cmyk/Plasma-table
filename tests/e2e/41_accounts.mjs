@@ -44,7 +44,7 @@ try {
     const p = await newPage(K.browser, "desktop", { base: srv.base });
     t.check("demo banner is visible when config is empty", await p.locator("#demoAcctBar:not(.hidden)").count() === 1);
     // r4: Connect lives on the cutting screen's bed step (reached after a part is on the bed)
-    await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); });
+    await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(3); });
     await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3);
     t.check("Connect starts locked", await p.locator("#btnConnect.locked").count() === 1);
     t.check("lock prompt shown on the connect card", /link (your |a )?machine to run jobs/i.test(await p.locator("#connectLock").textContent()));

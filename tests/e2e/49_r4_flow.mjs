@@ -171,7 +171,7 @@ for (const prof of ["desktop", "iphone14", "iphone14land"]) {
   await p.evaluate(() => { window.plasmaTest.showScreen("make"); const s = window.plasmaTest.sketch; s.clear(); s.add("rect"); s.add("disc"); });
   await p.evaluate(() => window.plasmaTest.sendToCutting()); await sleep(600);
   const m = await p.evaluate(() => ({ screen: window.plasmaTest.screen(), cur: window.plasmaTest.S.cur, n: window.plasmaTest.sketch.items.length }));
-  t.check("MAKE→CUT: 'Cut this part' sends the drawing to the cutting screen's bed", m.screen === "cut" && m.cur === 3 && m.n === 2, JSON.stringify(m));
+  t.check("MAKE→CUT: 'Cut this part' sends the drawing to the cutting screen on the Part step", m.screen === "cut" && m.cur === 1 && m.n === 2, JSON.stringify(m));
   await p.close(); await p.ctx.close();
 }
 // ======================================================================== 4. CANNOT LEAVE DURING A JOB

@@ -33,7 +33,7 @@ const cutFile = async (page, file) => {
   await T(page, "window.plasmaTest.setAppMode && window.plasmaTest.setAppMode('pro')"); await sleep(300);
   await T(page, "(() => { const k = window.plasmaTest.sketch; k.pick([k.items[0].id]); k.onSelect(); const j = document.getElementById('ptInspJob'); if (j) j.scrollIntoView({ block: 'center' }); })()"); await sleep(500);
   await snap(page, "inspector-job-wide-laptop");
-  await T(page, "window.plasmaTest.setShapeFs(false); window.plasmaTest.sendToCutting()"); await sleep(800);
+  await T(page, "window.plasmaTest.setShapeFs(false); window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3)"); await sleep(800);
   await page.context().close();
 }
 
@@ -46,12 +46,12 @@ const cutFile = async (page, file) => {
   const m1 = await read(); agree("Make: a plate with a hole", m1);
   ck("21 the hole is not counted as a part on Make", m1.partCount === 1 && /Parts 1 · holes 1/.test(m1.js), m1.js);
   ck("21 the layout is named by parts, not shapes", /Layout \(1 part\)/.test(m1.name) && !/shapes/.test(m1.name), m1.name);
-  await T(page, "window.plasmaTest.sendToCutting()"); await sleep(900);
+  await T(page, "window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3)"); await sleep(900);
   const c1 = await read(); agree("bed: same plate", c1);
   ck("21 Make and the bed agree", m1.partCount === c1.partCount);
   await T(page, "(() => { const t = window.plasmaTest; t.showScreen('make'); t.setShapeFs(false); t.sketch.clear(); t.sketch.add('rect'); t.sketch.add('disc'); t.sketch.add('hole'); })()"); await sleep(600);
   const m2 = await read(); agree("Make: plate + disc + hole", m2);
-  await T(page, "window.plasmaTest.sendToCutting()"); await sleep(900);
+  await T(page, "window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3)"); await sleep(900);
   const c2 = await read(); agree("bed: plate + disc + hole", c2); ck("21 Make and the bed agree (2 parts)", m2.partCount === 2 && c2.partCount === 2);
   const cap = await T(page, "window.plasmaTest.sketch.partTotal()");
   ck("21 the preview caption counts parts", cap === 2);

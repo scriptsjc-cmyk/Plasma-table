@@ -35,13 +35,13 @@ const view = async (w, h, q = "?test=1&turn=0", mobile = w < 900) => {
       fs: document.body.classList.contains("shape-fs"),
       qb: shown(qb), step: shown(step), form: shown(form), layers: shown(layers),
       qbW: Math.round(qr.width), stepW: Math.round(sr.width), cvW: Math.round(cr.width),
-      order: qr.left < cr.left && cr.left < sr.left,
+      order: qr.top >= cr.bottom - 6 && sr.left >= cr.right - 8,
       hint: !!(qb && qb.innerHTML.includes("Ctrl+Z") && qb.innerHTML.includes(">R<") || (qb && /<kbd>R<\\/kbd>/.test(qb.innerHTML))),
       rawHint: qb ? qb.innerHTML.includes("<kbd>") : false,
     };
   })()`);
   ck("laptop Advanced: body has laptop-ui and is not full screen", lay.laptop && !lay.fs, lay);
-  ck("laptop Advanced: slim left tool bar, canvas, roomy right properties", lay.qb && lay.step && lay.form && lay.order && lay.qbW >= 60 && lay.qbW <= 110 && lay.stepW >= 280 && lay.cvW >= 400, lay);
+  ck("laptop Advanced: tools wrap under the picture, canvas, roomy right properties", lay.qb && lay.step && lay.form && lay.order && lay.qbW >= 400 && lay.stepW >= 280 && lay.cvW >= 400, lay);
   ck("laptop Advanced: parts list is visible", lay.layers, lay);
   ck("tool buttons show keyboard hints", lay.rawHint, lay);
 

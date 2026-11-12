@@ -348,7 +348,7 @@ for (const [view, mode] of [["laptop", "pro"], ["laptop", "beginner"], ["phone",
   await page.click("#mtAdd"); await sleep(900);
   ck("tiny text: no warning panel, no markers while designing", !(await vis(page, "#cutCheck")) && !(await vis(page, "#warnings")) && await page.evaluate(() => window.plasmaTest.sketch.marks.length === 0));
   ck("tiny text: the design really is flagged when checked", await page.evaluate(() => (window.plasmaTest.S.check && window.plasmaTest.S.check.groups.length) > 0));
-  await page.evaluate(() => window.plasmaTest.sendToCutting()); await sleep(900);
+  await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); }); await sleep(900);
   const t = await page.evaluate(() => document.getElementById("cutCheck3").innerText);
   ck("tiny text: on the cutting screen the cut check names the small features", /small|thin|narrow|close/i.test(t), t.slice(0, 160));
   await snap(page, "text-small-warning-at-cut");
@@ -373,7 +373,7 @@ const SCENE = () => {
   const page = await open(br, "laptop", s.base);
   await page.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.setAppMode("pro", { persist: false, autoFs: false }); T.setShapeFs(false); });
   await page.evaluate(SCENE);
-  await page.evaluate(() => window.plasmaTest.sendToCutting());
+  await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await sleep(500);
   await page.evaluate(() => { const d = document.getElementById("demoAcctBar"); if (d) d.remove(); });
@@ -466,7 +466,7 @@ const SCENE = () => {
   await page.reload(); await page.waitForFunction(() => window.plasmaTest, null, { timeout: 15000 });
   ck("remnant: still saved after the page is reloaded", (await page.evaluate(() => JSON.parse(localStorage.getItem("plasma.remnants") || "[]").length)) === rem1.length);
   await page.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.setAppMode("pro", { persist: false, autoFs: false }); T.setShapeFs(false); });
-  await page.evaluate(() => { const T = window.plasmaTest, sk = T.sketch; sk.clear(); for (let i = 0; i < 6; i++) { sk.add("rect", true); const it = sk.items[sk.items.length - 1]; it.p.w = 50 + i * 4; it.p.h = 35; } for (let i = 0; i < 4; i++) { sk.add("disc", true); sk.items[sk.items.length - 1].p.d = 30 + i * 4; } sk.commit(); T.sendToCutting(); });
+  await page.evaluate(() => { const T = window.plasmaTest, sk = T.sketch; sk.clear(); for (let i = 0; i < 6; i++) { sk.add("rect", true); const it = sk.items[sk.items.length - 1]; it.p.w = 50 + i * 4; it.p.h = 35; } for (let i = 0; i < 4; i++) { sk.add("disc", true); sk.items[sk.items.length - 1].p.d = 30 + i * 4; } sk.commit(); T.sendToCutting(); T.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await sleep(500); await page.evaluate(() => { const d = document.getElementById("demoAcctBar"); if (d) d.remove(); document.getElementById("nestBox").open = true; });
   const opts = await page.evaluate(() => [...document.querySelectorAll("#remPick option")].map((o) => o.textContent));
@@ -495,7 +495,7 @@ const SCENE = () => {
   // survive reload: the remnant stays the active sheet
   await page.reload(); await page.waitForFunction(() => window.plasmaTest, null, { timeout: 15000 });
   ck("remnant: the remnant stays the chosen sheet after a reload", await page.evaluate(() => !!window.plasmaTest.Setup.sheet.remnant && window.plasmaTest.Setup.sheet.w > 0));
-  await page.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); const sk = T.sketch; if (!sk.items.length) { sk.add("rect"); } T.sendToCutting(); });
+  await page.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); const sk = T.sketch; if (!sk.items.length) { sk.add("rect"); } T.sendToCutting(); T.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await sleep(500); await page.evaluate(() => { document.getElementById("nestBox").open = true; });
   await page.selectOption("#remPick", ""); await sleep(400);
@@ -512,7 +512,7 @@ const SCENE = () => {
   const page = await open(br, "phone", s.base);
   await page.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.setAppMode("beginner", { persist: false, autoFs: false }); T.setShapeFs(false); });
   await page.evaluate(SCENE);
-  await page.evaluate(() => window.plasmaTest.sendToCutting());
+  await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await sleep(600); await page.evaluate(() => { const d = document.getElementById("demoAcctBar"); if (d) d.remove(); document.getElementById("nestBox").open = true; document.getElementById("nestBox").scrollIntoView(); });
   await sleep(400);

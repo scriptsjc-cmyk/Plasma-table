@@ -27,7 +27,7 @@ const T = (page, js) => page.evaluate(js);
   ck("Fit resets the bed picture to the fitted view", fitted.x === 0 && fitted.y === 0 && fitted.s === 1, fitted);
   // new part resets cam
   await T(page, `(() => { const c = window.plasmaTest.previewCam(); c.x = 80; c.y = 80; c.s = 2; })()`);
-  await T(page, `(() => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("disc"); T.sendToCutting(); })()`);
+  await T(page, `(() => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("disc"); T.sendToCutting(); T.goStep(3); })()`);
   await sleep(400);
   const after = await T(page, `(() => { const c = window.plasmaTest.previewCam(); return { x: c.x, y: c.y, s: c.s }; })()`);
   ck("sending a new part resets the bed picture", after.x === 0 && after.y === 0 && after.s === 1, after);

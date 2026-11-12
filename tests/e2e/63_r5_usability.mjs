@@ -196,7 +196,7 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   await page.click("#shapeForm .bgparts li:nth-child(2) button"); await sleep(300);
   ck("9 tapping a part in the list picks it", await T(page, `(() => { const k = window.plasmaTest.sketch, p = k.picked(); return p.length === 1 && p[0].type === "disc"; })()`));
   await snap(page, "mode-beginner-parts");
-  await T(page, `window.plasmaTest.sendToCutting()`); await sleep(600);
+  await T(page, `window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3)`); await sleep(600);
   ck("9 sending the part opens the cutting screen, which hides Simple / Advanced", await T(page, `window.plasmaTest.screen() === "cut"`), await T(page, `window.plasmaTest.screen()`));
   ck("9 the cutting screen hides Simple / Advanced and has no Beginner / Pro styling", !(await vis("#editorSwitch")) && !(await vis("#topModeSwitch")) && await T(page, `!document.body.classList.contains("beginner") && !document.body.classList.contains("pro-mode")`));
   ck("9 no page errors", noErrors(page).length === 0, noErrors(page).join("|"));

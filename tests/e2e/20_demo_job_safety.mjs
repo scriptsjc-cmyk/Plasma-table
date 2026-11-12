@@ -13,7 +13,7 @@ async function session(name, fn, prof = "desktop") {
   finally { K.kill(); }
 }
 async function toStart(page) {   // r4: Make a part -> "Send to cutting" lands on the bed screen; set the start point, tick the checklist
-  await page.evaluate(() => window.plasmaTest.sendToCutting()); await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3);
+  await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); }); await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3);
   await page.click("#btnZero"); await sleep(300);
   for (const cb of await page.locator("#checklist input").all()) await cb.check();
   await page.waitForFunction(() => !document.getElementById("btnStart").disabled, null, { timeout: 5000 });

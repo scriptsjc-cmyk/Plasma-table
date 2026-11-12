@@ -108,7 +108,7 @@ for (const prof of profiles) {
     const pill = document.getElementById("torchPill");
     pill.hidden = false; pill.textContent = "TORCH ON"; pill.classList.add("on"); pill.classList.remove("off");
   });
-  t.check(P("TORCH ON pill is in the header"), (await page.locator("#torchPill").innerText()).includes("TORCH ON"));
+  t.check(P("TORCH ON pill is in the header"), (await page.locator("#torchPill").evaluate((el) => el.textContent || "")).includes("TORCH ON"));
   await snap(page, `ux2-torch-${tag[prof]}`);
   await page.evaluate(() => { const pill = document.getElementById("torchPill"); pill.textContent = "TORCH OFF"; pill.classList.remove("on"); });
 
@@ -122,14 +122,14 @@ for (const prof of profiles) {
 
   // Mach3 export
   await page.evaluate(() => { window.plasmaTest.goStep(1); });
-  if (await page.locator("#btnExportMenu").count()) {
-    await page.click("#btnExportMenu");
+  if (await page.locator("#btnExport").count()) {
+    await page.evaluate(() => document.getElementById("btnExport").click());
     await page.waitForSelector("#exportPop:not(.hidden)");
     await page.selectOption("#exportDialect", "mach3");
     t.check(P("Mach3 dialect is offered"), (await page.locator("#exportDialect").inputValue()) === "mach3");
     await snap(page, `ux2-mach3-${tag[prof]}`);
     const downloaded = page.waitForEvent("download", { timeout: 5000 }).catch(() => null);
-    await page.click("#btnExport");
+    await page.evaluate(() => document.getElementById("exportGo").click());
     const dl = await downloaded;
     if (dl) {
       t.check(P("Mach3 download uses .tap"), /\.tap$/i.test(dl.suggestedFilename()), dl.suggestedFilename());

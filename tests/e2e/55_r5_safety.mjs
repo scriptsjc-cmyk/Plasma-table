@@ -22,7 +22,7 @@ const holdBtn = async (page, ms) => { const b = await page.locator("#btnStop").b
 const throws = (page, js) => T(page, `(() => { try { ${js}; return null; } catch (e) { return String(e.message || e); } })()`);
 const prime = async (page, parts = ["rect", "disc", "rect"]) => {
   await demoToShape(page, { stay: "cut" });
-  await page.evaluate((parts) => { const t = window.plasmaTest, sk = t.sketch; t.showScreen("make"); t.setShapeFs(false); sk.clear(); for (const p of parts) sk.add(p); t.sendToCutting(); }, parts);
+  await page.evaluate((parts) => { const t = window.plasmaTest, sk = t.sketch; t.showScreen("make"); t.setShapeFs(false); sk.clear(); for (const p of parts) sk.add(p); t.sendToCutting(); t.goStep(3); }, parts);
   await sleep(300);
   await page.evaluate(() => window.plasmaTest.demoEdges()); await sleep(6000);
   await page.evaluate(() => { window.plasmaTest.goStep(3); document.getElementById("layAuto").click(); }); await sleep(500);
@@ -322,10 +322,12 @@ for (const view of ["laptop", "phone"]) {
   await setOp("mark"); await T(page, "window.plasmaTest.exportGcode()"); await sleep(500);
   ck("8 Mark is refused the same way", downloads.length === 0 && /Not downloaded/.test(await T(page, "document.getElementById('toast').textContent")));
   await T(page, "window.ptInspector.setLayerHidden('mark', true)"); await sleep(300);
-  await T(page, "document.getElementById('btnExport').click()"); await sleep(1200);
+  await T(page, "document.getElementById('btnExport').click()"); await sleep(200);
+  await T(page, "document.getElementById('exportGo').click()"); await sleep(1200);
   ck("8 with the Score/Mark layer hidden the download goes ahead", downloads.length === 1, JSON.stringify(downloads));
   await T(page, "window.ptInspector.setLayerHidden('mark', false)"); await sleep(300);
-  await setOp("cut"); await T(page, "document.getElementById('btnExport').click()"); await sleep(1200);
+  await setOp("cut"); await T(page, "document.getElementById('btnExport').click()"); await sleep(200);
+  await T(page, "document.getElementById('exportGo').click()"); await sleep(1200);
   ck("8 back to Cut: the download goes ahead", downloads.length === 2, JSON.stringify(downloads));
   await page.context().close();
 }

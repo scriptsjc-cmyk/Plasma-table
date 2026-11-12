@@ -147,7 +147,7 @@ for (const [w, h] of [[390, 664], [844, 390], [1366, 768]]) {
   // phone on its side, connected: the connection pill is only its dot, so the name and STOP fit
   const page = await view(844, 390, "?test=1&demo=1&turn=0");
   await T(page, `(async () => { const T = window.plasmaTest; await T.account.signUp({ email: "look-hdr@example.com", pin: "letmein1", display_name: "Josh Tester", mode: "beginner" });
-    document.querySelectorAll(".acctdlg:not(.hidden)").forEach((d) => d.classList.add("hidden")); T.showScreen("make", { force: true }); T.sketch.clear(); T.sketch.add("plate", true); T.sendToCutting(); })()`); await sleep(900);
+    document.querySelectorAll(".acctdlg:not(.hidden)").forEach((d) => d.classList.add("hidden")); T.showScreen("make", { force: true }); T.sketch.clear(); T.sketch.add("plate", true); T.sendToCutting(); T.goStep(3); })()`); await sleep(900);
   await T(page, `(() => { window.plasmaTest.goStep(3); document.getElementById("btnDemo").click(); })()`); await sleep(2500);
   const hd = await T(page, `(() => { const a = document.getElementById("acctPill"), c = document.getElementById("connPill"), s = document.getElementById("btnStop").getBoundingClientRect(); return { name: a.scrollWidth <= a.clientWidth + 1, conn: Math.round(c.getBoundingClientRect().width), connText: c.textContent.trim(), connWord: getComputedStyle(c, "::after").content, stop: s.right <= innerWidth + 1 && s.width >= 44 }; })()`);
   ck("C 844x390 cutting: the account name is shown in full", hd.name, hd);

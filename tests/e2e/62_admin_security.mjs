@@ -154,7 +154,7 @@ try {
     await p.evaluate(async () => { const A = window.plasmaTest.account; await A.signUp({ email: "josh2@example.com", pin: "letmein1", mode: "beginner" }); await A.grantDemoAdmin(); await A.claimMachine({ serial: "DEMO-0001", code: "DEMO-0000" }).catch(() => {}); });
     await p.evaluate(() => { document.querySelectorAll(".acctdlg").forEach((e) => e.classList.add("hidden")); const s = window.plasmaTest.sketch; s.clear(); s.add("plate", true); const it = s.items[0]; Object.assign(it.p, { w: 40, h: 30, r: 3, hole: 6, inset: 8 }); s.pick([it.id]); s.commit(); s.onSelect(); });
     await hookTx(p);
-    await p.evaluate(() => window.plasmaTest.sendToCutting()); await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3); await p.click("#btnZero"); await sleep(300);
+    await p.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); }); await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3); await p.click("#btnZero"); await sleep(300);
     for (const cb of await p.locator("#checklist input").all()) await cb.check();
     await realRun(p, how === "button" ? true : undefined);
     await p.waitForFunction(() => !document.getElementById("btnStart").disabled, null, { timeout: 8000 }).catch(() => {});
@@ -180,7 +180,7 @@ try {
     await p.evaluate(async () => { const A = window.plasmaTest.account; await A.signUp({ email: "josh3@example.com", pin: "letmein1", mode: "beginner" }); await A.grantDemoAdmin(); await A.claimMachine({ serial: "DEMO-0001", code: "DEMO-0000" }).catch(() => {}); });
     await p.evaluate(() => { document.querySelectorAll(".acctdlg").forEach((e) => e.classList.add("hidden")); const s = window.plasmaTest.sketch; s.clear(); s.add("plate", true); const it = s.items[0]; Object.assign(it.p, { w: 40, h: 30, r: 3, hole: 6, inset: 8 }); s.pick([it.id]); s.commit(); s.onSelect(); });
     await hookTx(p);
-    await p.evaluate(() => window.plasmaTest.sendToCutting()); await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3); await p.click("#btnZero"); await sleep(300);
+    await p.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); }); await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3); await p.click("#btnZero"); await sleep(300);
     for (const cb of await p.locator("#checklist input").all()) await cb.check();
     await realRun(p);
     await p.waitForFunction(() => !document.getElementById("btnStart").disabled, null, { timeout: 8000 }).catch(() => {});
@@ -205,7 +205,7 @@ try {
     await p.evaluate(async () => { const A = window.plasmaTest.account; await A.signUp({ email: "josh4@example.com", pin: "letmein1", mode: "beginner" }); await A.grantDemoAdmin(); await A.claimMachine({ serial: "DEMO-0001", code: "DEMO-0000" }).catch(() => {}); });
     await p.evaluate(() => { document.querySelectorAll(".acctdlg").forEach((e) => e.classList.add("hidden")); const s = window.plasmaTest.sketch; s.clear(); s.add("plate", true); const it = s.items[0]; Object.assign(it.p, { w: 40, h: 30, r: 3, hole: 6, inset: 8 }); s.pick([it.id]); s.commit(); s.onSelect(); });
     await hookTx(p);
-    await p.evaluate(() => window.plasmaTest.sendToCutting()); await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3); await p.click("#btnZero"); await sleep(300);
+    await p.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); }); await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3); await p.click("#btnZero"); await sleep(300);
     for (const cb of await p.locator("#checklist input").all()) await cb.check();
     await realRun(p);
     await p.waitForFunction(() => !document.getElementById("btnStart").disabled, null, { timeout: 8000 }).catch(() => {});
@@ -368,7 +368,7 @@ try {
     t.check(`${prof}: edge edit on Make a part: no STOP button on this screen (by design: STOP is only on the cutting screen)`, r.screen === "make" && r.stopDisplay === "none", JSON.stringify(r), "STOP-PLACEMENT");
     await p.evaluate(() => document.getElementById("edgePanel").scrollIntoView());
     await p.screenshot({ path: SHOTDIR + `edit-edge-${prof}-fixed.png` });
-    await p.evaluate(() => window.plasmaTest.sendToCutting()); await sleep(500);
+    await p.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); }); await sleep(500);
     t.check(`${prof}: after Send to cutting the STOP is on the cutting screen, on screen and clickable`, await p.evaluate(() => { const b = document.getElementById("btnStop").getBoundingClientRect(); const el = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); return document.body.dataset.screen === "cut" && !!el && !!el.closest("#btnStop") && b.right <= innerWidth + 1 && b.left >= 0; }), "", "PHONE-STOP");
     await p.context().close();
   }

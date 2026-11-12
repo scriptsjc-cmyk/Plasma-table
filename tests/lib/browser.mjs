@@ -68,7 +68,7 @@ export async function newPage(browser, profileName, { base, query = "?test=1&tur
 // Round 4: the old "Practice connect, then pick a source" opening. Now: draw a rectangle on Make a part, send it to cutting,
 // connect Practice on the bed screen, then come back to Make a part (the connection and the part stay).
 export async function demoToShape(page, { stay = "make" } = {}) {
-  await page.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); });
+  await page.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await page.evaluate(() => document.getElementById("btnDemo").click());   // JS click: the portrait overlay may be up
   await page.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 10000 });
@@ -94,7 +94,7 @@ export async function launchKillable() {
 
 // Round-4 UI: menu -> make -> cut. Draw a plate, send it to the cutting screen and connect the practice (demo) controller.
 export async function enterDemo(page, { plate = true } = {}) {
-  await page.evaluate((plate) => { const T = window.plasmaTest; T.showScreen("make", { force: true }); if (plate) { const s = T.sketch; s.clear(); s.add("plate", true); s.commit(); T.sendToCutting(); } else T.showScreen("cut", { force: true }); }, plate);
+  await page.evaluate((plate) => { const T = window.plasmaTest; T.showScreen("make", { force: true }); if (plate) { const s = T.sketch; s.clear(); s.add("plate", true); s.commit(); T.sendToCutting(); T.goStep(3); } else T.showScreen("cut", { force: true }); }, plate);
   await page.waitForSelector("#btnDemo", { state: "attached", timeout: 10000 });
   await page.evaluate(() => document.getElementById("btnDemo").click()); await page.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 10000 });
 }

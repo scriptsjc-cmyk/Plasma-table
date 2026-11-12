@@ -74,35 +74,72 @@ for (const [w, h, label, mobile] of [[1366, 768, "laptop", false]]) {
       return overlap > 40;
     };
     const overflow = qb.scrollWidth - qb.clientWidth;
+    const overflowY = qb.scrollHeight - qb.clientHeight;
     return {
       visible: !!qb.offsetParent,
-      row: cs.flexDirection === "row" && cs.flexWrap === "nowrap",
+      dir: cs.flexDirection,
+      wrap: cs.flexWrap,
+      rowWrap: cs.flexDirection === "row" && (cs.flexWrap === "wrap" || cs.flexWrap === "wrap-reverse"),
       overflowX: cs.overflowX === "auto" || cs.overflowX === "scroll",
       oneRow: tops.size === 1 && btns.length >= 4,
       below: q.top >= c.bottom - 2,
+      leftOfCanvas: q.right <= c.left + 4 && q.bottom > c.top + 20,
       rightOfCanvas: s ? q.right <= s.left + 2 || q.top >= c.bottom - 2 : true,
       coversSave: covers(save),
       coversStart: covers(start),
       btnH,
       overflow,
+      overflowY,
+      btnCount: btns.length,
       hasWrap: !!(wrap && wrap.contains(qb)),
       fadeEnd: wrap && wrap.classList.contains("fade-end"),
       fadeStart: wrap && wrap.classList.contains("fade-start"),
       hasOverflowClass: wrap && wrap.classList.contains("has-overflow"),
+      bodyLeft: document.body.classList.contains("yours-toolbar-left"),
+      bodyBottom: document.body.classList.contains("yours-toolbar-bottom"),
     };
   })()`);
   if (label === "laptop") {
-    ck("laptop: the tools are a slim vertical rail on the left of the picture", g.visible && !g.row && g.hasWrap, g);
+    ck("laptop: default (bottom) toolbar wraps under the picture, all tools visible", g.visible && g.rowWrap && g.below && g.hasWrap && !g.leftOfCanvas && g.bodyBottom && g.overflow <= 2, g);
   } else {
-    ck(`${label}: the tools are one sideways-scrolling row under the picture`, g.visible && g.row && g.overflowX && g.oneRow && g.below, g);
+    ck(`${label}: the tools wrap under the picture so every tool is visible`, g.visible && g.below, g);
   }
   ck(`${label}: the toolbar does not cover Start or Save`, !g.coversSave && !g.coversStart, g);
   if (label === "laptop") {
-    ck("laptop: tool buttons stay usable (at least 44 px tall) with a key hint", g.btnH >= 44, g);
+    ck("laptop: compact tools on a fine pointer stay at least 36 px tall and do not overflow sideways", g.btnH >= 35 && g.overflow <= 2, g);
   } else {
     ck(`${label}: tools stay at least 44 px tall on a touch screen`, g.btnH >= 43.5, g);
   }
   ck(`${label}: no page errors`, noErrors(page).length === 0, noErrors(page).join("|"));
+  await page.context().close();
+}
+
+// Laptop: Left toolbar is a multi-column rail that fits without a sideways-only scroll
+{
+  const page = await view(1366, 768, "?test=1&turn=0", false);
+  await openPro(page);
+  await T(page, `(() => { const el = document.getElementById("yoursToolbar"); if (el) { el.value = "left"; el.dispatchEvent(new Event("change", { bubbles: true })); } else { window.plasmaTest.savePrefs({ toolbar: "left" }); window.plasmaTest.applyChrome(); } })()`);
+  await sleep(300);
+  const g = await T(page, `(() => {
+    const qb = document.getElementById("quickBar");
+    const cv = document.getElementById("preview");
+    const q = qb.getBoundingClientRect(), c = cv.getBoundingClientRect();
+    const cs = getComputedStyle(qb);
+    const btns = [...qb.querySelectorAll("button")].filter((b) => b.offsetParent);
+    const tops = new Set(btns.map((b) => Math.round(b.getBoundingClientRect().top)));
+    return {
+      leftClass: document.body.classList.contains("yours-toolbar-left"),
+      leftOfCanvas: q.right <= c.left + 8,
+      wrap: cs.flexWrap,
+      dir: cs.flexDirection,
+      sideOverflow: qb.scrollWidth - qb.clientWidth,
+      rows: tops.size,
+      btnCount: btns.length,
+      visible: !!qb.offsetParent,
+    };
+  })()`);
+  ck("laptop left toolbar sits beside the picture as a wrapping rail", g.visible && g.leftClass && g.leftOfCanvas && g.rows >= 2 && g.sideOverflow <= 16, g);
+  ck("laptop left toolbar: no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await page.context().close();
 }
 

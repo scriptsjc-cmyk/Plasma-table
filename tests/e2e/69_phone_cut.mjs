@@ -138,7 +138,7 @@ for (const prof of ["phone320x568", "phone750x340"]) {
 // ---- upright, before connecting: the optional "turn sideways" cover still works the same
 {
   const page = await newPage(br, "phone390x844", { base: srv.base, query: "?test=1&turn=1", consoleErrors: false });
-  await ev(page, () => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); });
+  await ev(page, () => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(3); });
   await page.waitForFunction(() => window.plasmaTest.S.cur === 3, null, { timeout: 10000 }).catch(() => {}); await sleep(300);
   t.check("390x844: the turn-sideways cover still shows on Bed & start", await ev(page, () => getComputedStyle(document.querySelector(".turnoverlay")).display === "flex"));
   await page.ctx.close();
