@@ -1,6 +1,6 @@
-// Talking to grblHAL over USB from the browser (Web Serial API, Chrome/Edge desktop).
-// Same protocol handling as plasma/grbl.py: character-counting streaming,
-// status polling, real-time commands.
+// The GRBL text protocol (FluidNC / grblHAL) for every link: character-counting streaming, status polling + watchdog,
+// the connect handshake, real-time commands, status parsing; and the Pi Wi-Fi bridge transport. USB itself is usbserial.js.
+// Same protocol handling as plasma/grbl.py.
 
 export const RT = {
   STATUS: "?", HOLD: "!", RESUME: "~", RESET: "\x18",
@@ -24,122 +24,6 @@ const ERRORS = {
   15: "Jog would go past travel limits.", 20: "Unsupported G-code.", 22: "Feed rate not set.",
   24: "Two G-codes from the same group on one line.", 33: "Invalid move target.", 79: "Command not allowed in this state.",
 };
-
-// ------------------------------------------------------------------ transport
-// FluidNC and grblHAL both talk 115200 8N1 with no flow control. Hardware flow control must stay off: on Windows Chrome then
-// drives RTS itself, and on an ESP32 DevKitC (CP2102 auto-reset circuit) RTS is wired to EN, so it can hold the chip in reset.
-export const SERIAL_OPTIONS = { baudRate: 115200, dataBits: 8, stopBits: 1, parity: "none", flowControl: "none", bufferSize: 4096 };
-
-export class WebSerialTransport {
-  constructor(serial = typeof navigator !== "undefined" ? navigator.serial : null) {
-    this.serial = serial;
-    this.onLine = null; this.onClose = null; this.port = null; this.buf = ""; this.label = "USB"; this.kind = "usb";
-    this.needsHandshake = true;   // "connected" only after the controller answers (GrblLink.handshake)
-    this.handshakeMs = 6000;      // an ESP32 that was reset by the port opening needs ~1-2 s to boot and print its banner
-    this.watchdogMs = 3000;       // no answer to '?' for this long = the link is lost (GrblLink)
-    this.gone = false;
-    this._onDisconnect = (e) => { if (!e || !e.target || e.target === this.port || e.port === this.port) this._lost("The USB cable was unplugged (or the controller lost power)."); };
-  }
-  static supported() { return typeof navigator !== "undefined" && "serial" in navigator; }
-
-  async open(baud = 115200, reuse = true) {
-    let port = null;
-    if (reuse) {
-      const known = await this.serial.getPorts();
-      if (known.length === 1) port = known[0];
-    }
-    if (!port) port = await this.serial.requestPort();  // shows Chrome's port picker
-    await port.open({ ...SERIAL_OPTIONS, baudRate: Number(baud) || SERIAL_OPTIONS.baudRate });
-    this.port = port;
-    const info = port.getInfo ? port.getInfo() : {};
-    this.info = info;
-    this.label = info.usbVendorId ? `USB ${info.usbVendorId.toString(16)}:${(info.usbProductId || 0).toString(16)}` : "USB";
-    // unplug: Chrome fires 'disconnect' on navigator.serial and on the port itself (a pending read usually fails too)
-    this.serial.addEventListener?.("disconnect", this._onDisconnect);
-    port.addEventListener?.("disconnect", this._onDisconnect);
-    this.writer = port.writable.getWriter();
-    this.enc = new TextEncoder();
-    this.readLoop();
-  }
-
-  // when the board never answered: was this even the ESP32's USB chip? (Windows laptops often list Bluetooth COM ports too)
-  portHint() {
-    const info = this.info || {};
-    if (!info.usbVendorId) return " The port you picked isn't a USB device (it may be a Bluetooth COM port). Pick the 'CP210x' / 'Silicon Labs' one.";
-    if (info.usbVendorId !== 0x10c4) return ` The port you picked is ${this.label}; an ESP32 DevKitC's CP2102 shows as USB 10c4:ea60.`;
-    return "";
-  }
-
-  // ESP32 auto-reset lines: with DTR and RTS both released the chip runs normally. Only used when the board stays silent.
-  async releaseResetLines() {
-    try { await this.port?.setSignals?.({ dataTerminalReady: false, requestToSend: false }); return true; } catch (e) { return false; }
-  }
-
-  async readLoop() {
-    const dec = new TextDecoder();
-    let why = "The USB port closed.";
-    while (this.port && this.port.readable && !this.gone) {
-      const reader = this.port.readable.getReader();
-      this.reader = reader;
-      try {
-        for (;;) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          this.buf += dec.decode(value, { stream: true });
-          if (this.buf.length > 65536 && !this.buf.includes("\n")) this.buf = "";   // noise at the wrong baud must not grow memory
-          let i;
-          while ((i = this.buf.indexOf("\n")) >= 0) {
-            const line = this.buf.slice(0, i).replace(/\r$/, "").trim();
-            this.buf = this.buf.slice(i + 1);
-            if (line && this.onLine) this.onLine(line);
-          }
-        }
-      } catch (e) {
-        why = "USB connection lost" + (e && e.message ? ": " + e.message : ".");
-        break; // unplugged or closed
-      } finally {
-        try { reader.releaseLock(); } catch (e) { /* ignore */ }
-      }
-      if (this.closing) break;
-    }
-    if (this.closing) this._closed(null);
-    else this._lost(why);
-  }
-
-  write(data) {
-    if (this.gone || !this.writer) return Promise.resolve();
-    const bytes = typeof data === "string" ? this.enc.encode(data) : data;
-    return this.writer.write(bytes).catch((e) => { if (!this.closing) this._lost("Couldn't write to the USB port" + (e && e.message ? ": " + e.message : ".")); });
-  }
-
-  // the link went away without the operator asking: tell GrblLink once, then let go of the port so Connect works again
-  _lost(reason) {
-    if (this.closing || this.gone) return;
-    this._closed(reason);
-    this._release();
-  }
-  _closed(reason) {
-    if (this.gone) return;
-    this.gone = true;
-    this.serial?.removeEventListener?.("disconnect", this._onDisconnect);
-    this.port?.removeEventListener?.("disconnect", this._onDisconnect);
-    if (this.onClose) this.onClose(reason);
-  }
-  async _release() {
-    const port = this.port;
-    try { await this.reader?.cancel(); } catch (e) { /* ignore */ }
-    try { this.writer?.releaseLock(); } catch (e) { /* ignore */ }
-    try { await port?.close(); } catch (e) { /* ignore */ }
-    if (this.port === port) this.port = null;
-  }
-
-  async close() {
-    if (this.closing) return;
-    this.closing = true;
-    await this._release();
-    this._closed(null);
-  }
-}
 
 // ------------------------------------------------------------------ status parsing
 // grblHAL's plasma plugin appends "|THC:<arc voltage>,<flag letters>" to the real-time report (Plugin_plasma thc.c onRealtimeReport).

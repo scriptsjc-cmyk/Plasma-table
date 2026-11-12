@@ -4,7 +4,8 @@
 import { demoEdges } from "./ui/demo.js";
 import { provide } from "./core/hooks.js";
 import { Machine } from "./machine/machine.js";
-import { WebSerialTransport, WiFiTransport } from "./machine/grbl.js";
+import { WiFiTransport } from "./machine/grbl.js";
+import { WebSerialTransport } from "./machine/usbserial.js";
 import { Sketch } from "./make/sketch.js";
 import { evalExpr } from "./core/expr.js";
 import * as Acc from "./account/account.js";

@@ -1,5 +1,6 @@
 // Connect / disconnect (USB, Wi-Fi, FluidNC, demo), keep-awake, and the unload safety stop.
-import { RT, WebSerialTransport, WiFiTransport } from "./grbl.js";
+import { RT, WiFiTransport } from "./grbl.js";
+import { WebSerialTransport } from "./usbserial.js";
 import { FluidNCTransport, fluidncBlockedByHttps, fluidncMixedContentMessage, fluidncUrlProblem, fluidncWsUrl } from "./fluidnc.js";
 import { SimTransport } from "./sim.js";
 import * as Acc from "../account/account.js";

@@ -4,7 +4,7 @@ import { mod, SITE } from "../lib/site.mjs";
 import { T } from "../lib/t.mjs";
 import { installMockSerial } from "../lib/mock-serial.mjs";
 const t = new T("10_usb_link");
-const G = await mod("grbl"), Mm = await mod("machine");
+const G = await mod("usbserial"), Mm = await mod("machine");
 const cfg = JSON.parse(fs.readFileSync(SITE + "config/machine.json", "utf8"));
 const chart = JSON.parse(fs.readFileSync(SITE + "config/cut_chart.json", "utf8"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

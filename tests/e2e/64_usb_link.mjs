@@ -14,7 +14,7 @@ async function usbConnect(page, opts) {
   return page.evaluate(async ({ src, opts }) => {
     const install = new Function(`return (${src})`)();
     install(window, opts);
-    const G = await import(window.__J.grbl), C = await import(window.__J.connection);
+    const G = await import(window.__J.usbserial), C = await import(window.__J.connection);
     const T = window.plasmaTest, M = T.getM();
     const tr = new G.WebSerialTransport(window.mockSerial);
     await tr.open(115200);
@@ -36,7 +36,7 @@ for (const prof of ["d1366", "iphone14land"]) {
   await page.evaluate(() => document.getElementById("btnDisconnect").click()); await sleep(600);
   const silent = await page.evaluate(async (src) => {
     const install = new Function(`return (${src})`)(); install(window, { answer: false });
-    const G = await import(window.__J.grbl); const M = window.plasmaTest.getM();
+    const G = await import(window.__J.usbserial); const M = window.plasmaTest.getM();
     const tr = new G.WebSerialTransport(window.mockSerial); tr.handshakeMs = 600; await tr.open(115200);
     try { await M.connect(tr); return "connected?!"; } catch (e) { return e.message; }
   }, installMockSerial.toString());
