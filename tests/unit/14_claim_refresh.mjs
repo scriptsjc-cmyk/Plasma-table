@@ -89,6 +89,12 @@ try {
   const zm = css.match(/\.toast\s*\{[^}]*z-index:\s*(\d+)/);
   const z = zm ? Number(zm[1]) : 0;
   ck("toasts sit above claim/account dialogs (z-index 120)", z > 120, "z-index=" + z);
+
+  const mach = readJs("machines");
+  ck("cloud claim sends a normalised serial (same upper/trim as admin add)", /const ser = normCode\(serial\);\s*if \(ser\) body\.p_serial = ser;/.test(mach), "");
+  ck("admin add treats a 200 {ok:false} response as a failure, not a save", /admin_add_machine[\s\S]*?if \(r && r\.ok === false\) throw/.test(mach));
+  const view = readJs("adminview");
+  ck("the admin success toast includes the saved serial and comes after adminAddMachine", /Machine saved: /.test(view) && view.indexOf("adminAddMachine") < view.indexOf("Machine saved"));
 } finally {
   globalThis.fetch = realFetch;
   cloud.setSessionListener(null);

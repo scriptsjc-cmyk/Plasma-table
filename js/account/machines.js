@@ -29,7 +29,8 @@ export async function claimMachine(code, serial) {
     if (demoMsg) throw new Error(demoMsg);
     await refreshIfNeeded();
     const body = { p_code: c };
-    if (serial) body.p_serial = serial;
+    const ser = normCode(serial);
+    if (ser) body.p_serial = ser;
     const r = await authFetch("/rest/v1/rpc/claim_machine", { method: "POST", body: JSON.stringify(body) });
     // The server answers wrong codes with {ok:false,error} (so the attempt is logged and counted).
     if (!r || r.ok !== true) throw new Error((r && r.error) || "That code is not recognised.");
@@ -102,6 +103,7 @@ export async function adminAddMachine(serial, code, notes) {
   if (cloudOn()) {
     await refreshIfNeeded();
     const r = await authFetch("/rest/v1/rpc/admin_add_machine", { method: "POST", body: JSON.stringify({ p_serial: ser, p_code: c, p_notes: notes || "" }) });
+    if (r && r.ok === false) throw new Error((r && r.error) || "The machine was not saved.");
     notify();
     return r;
   }

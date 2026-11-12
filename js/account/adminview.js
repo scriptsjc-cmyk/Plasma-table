@@ -164,9 +164,10 @@ export function bindAdmin() {
   $("formAddMachine").addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
-      await A.adminAddMachine($("admSerial").value, $("admCode").value, $("admNotes").value);
+      const r = await A.adminAddMachine($("admSerial").value, $("admCode").value, $("admNotes").value);
+      const saved = (r && r.serial) || $("admSerial").value;
       $("admSerial").value = ""; $("admCode").value = ""; $("admNotes").value = "";
-      toast("Machine saved");
+      toast("Machine saved: " + saved);
       await refreshAdmin();
     } catch (err) { toast(err.message, true); }
   });
