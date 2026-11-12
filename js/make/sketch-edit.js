@@ -1,6 +1,6 @@
 // Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...).
 import { MIN, clone, def, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
-import { bbox, differenceOutlines, offsetPolygon, pointInPoly, selfIntersects, signedArea, unionOutlines } from "../core/geom.js";
+import { bbox, bulgeMidpoint, differenceOutlines, offsetPolygon, pointInPoly, selfIntersects, signedArea, unionOutlines } from "../core/geom.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
 
@@ -391,26 +391,66 @@ export class EditMethods {
     const msg = sheetW ? `Arranged on a ${sheetW} × ${sheetH || "–"} mm sheet.` : `Packed in a ${r1(usedW)} × ${r1(usedH)} mm block, ${gap} mm gaps.`;
     this.onMessage(msg);
   }
+
+  // 90° bulge (DXF tan(sweep/4)); sign is chosen so the arc sits outside the points already placed.
+  defaultDrawBulge(pts) {
+    const MAG = Math.tan(Math.PI / 8);
+    if (!pts || pts.length < 2) return MAG;
+    const prev = pts.slice(0, -1);
+    if (prev.length < 2) return MAG;
+    let cx = 0, cy = 0;
+    for (const q of prev) { cx += q[0]; cy += q[1]; }
+    cx /= prev.length; cy /= prev.length;
+    const a = pts[pts.length - 2], b = pts[pts.length - 1];
+    const midP = bulgeMidpoint(a, b, MAG), midN = bulgeMidpoint(a, b, -MAG);
+    const dP = (midP[0] - cx) ** 2 + (midP[1] - cy) ** 2;
+    const dN = (midN[0] - cx) ** 2 + (midN[1] - cy) ** 2;
+    return dP >= dN ? MAG : -MAG;
+  }
+  pushDrawPoint(px, py) {
+    this.drawPts = this.drawPts || [];
+    this.drawBulges = this.drawBulges || [];
+    while (this.drawBulges.length < this.drawPts.length) this.drawBulges.push(0);
+    this.drawPts.push([px, py]);
+    this.drawBulges.push(0);
+    if (this.drawPts.length >= 2 && this.drawArc) this.drawBulges[this.drawPts.length - 2] = this.defaultDrawBulge(this.drawPts);
+  }
+  popDrawPoint() {
+    if (!this.drawPts || !this.drawPts.length) return;
+    this.drawPts.pop();
+    if (this.drawBulges && this.drawBulges.length) this.drawBulges.pop();
+    else if (this.drawBulges) this.drawBulges.length = this.drawPts.length;
+  }
+
   finishDraw() {
     if (this.drawPts.length < 3) { this.onMessage(clickVerb() + " at least three points, then Close."); return; }
     const pts = this.drawPts.map((p) => [r1(p[0]), r1(p[1])]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
-    const uniq = [];
-    for (const p of pts) if (!uniq.length || Math.hypot(p[0] - uniq[uniq.length - 1][0], p[1] - uniq[uniq.length - 1][1]) > 0.05) uniq.push(p);
-    if (uniq.length >= 2 && Math.hypot(uniq[0][0] - uniq[uniq.length - 1][0], uniq[0][1] - uniq[uniq.length - 1][1]) < 0.05) uniq.pop();
-    if (uniq.length < 3) { this.onMessage("That outline is too small or isn't a closed shape."); this.drawPts = []; this.tool = null; this.draw(); return; }
+    const srcB = (this.drawBulges || []).slice();
+    const uniq = [], ub = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const bulge = Number(srcB[i]) || 0;
+      if (!uniq.length || Math.hypot(p[0] - uniq[uniq.length - 1][0], p[1] - uniq[uniq.length - 1][1]) > 0.05) { uniq.push(p); ub.push(bulge); }
+    }
+    if (uniq.length >= 2 && Math.hypot(uniq[0][0] - uniq[uniq.length - 1][0], uniq[0][1] - uniq[uniq.length - 1][1]) < 0.05) { uniq.pop(); ub.pop(); }
+    if (uniq.length < 3) { this.onMessage("That outline is too small or isn't a closed shape."); this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.tool = null; this.draw(); return; }
     if (uniq.some((p) => Math.abs(p[0]) > this.maxMm || Math.abs(p[1]) > this.maxMm)) { this.onMessage("That outline goes further than the table."); return; }
+    // Closing edge: if Arc is still on, curve the last-to-first segment (unless that edge already has a bulge).
+    if (this.drawArc && uniq.length && Math.abs(ub[ub.length - 1] || 0) < 1e-9) ub[ub.length - 1] = this.defaultDrawBulge([...uniq, uniq[0]]);
+    while (ub.length < uniq.length) ub.push(0);
     const crossed = selfIntersects(uniq);
     const area = Math.abs(signedArea(uniq));
-    if (!crossed && !(area > 0.05)) { this.onMessage("That outline has no area – add more points, or draw a closed shape."); this.drawPts = []; this.tool = null; this.draw(); return; }
+    if (!crossed && !(area > 0.05)) { this.onMessage("That outline has no area – add more points, or draw a closed shape."); this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.tool = null; this.draw(); return; }
     if (crossed) this.onMessage("That outline crosses itself – the cut check will flag it. Redraw it so the path doesn't cross.");
     const b = bbox([{ pts: uniq }]);
     this.remember();
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
-      shape: { cs: [{ pts: uniq.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true, bulges: uniq.map(() => 0) }] } };
+      shape: { cs: [{ pts: uniq.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true, bulges: ub.slice(0, uniq.length) }] } };
     this.items.push(it);
-    this.pick([it.id]); this.tool = null; this.drawPts = [];
+    this.pick([it.id]); this.tool = null; this.drawPts = []; this.drawBulges = []; this.drawArc = false;
     this.commit(); this.onSelect();
     this.onMessage("Outline closed. Drag a corner to move it, or click an edge to type its length.");
+    if (this.onDrawFinished) this.onDrawFinished();
   }
   setParam(k, v) {
     const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v)) return;

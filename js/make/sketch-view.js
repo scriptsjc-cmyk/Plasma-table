@@ -1,5 +1,5 @@
 // Sketch: the view (fit, zoom, pan) and drawing the canvas.
-import { bbox } from "../core/geom.js";
+import { bbox, expandContour } from "../core/geom.js";
 import { def, r1, themeColor } from "./sketch-util.js";
 import { clickVerb, clickVerbLower } from "../ui/laptop.js";
 import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
@@ -244,14 +244,22 @@ export class ViewMethods {
 
     if (this.tool === "draw" && this.drawPts.length) {
       ctx.strokeStyle = C.sel; ctx.fillStyle = C.sel; ctx.lineWidth = 2;
-      ctx.beginPath();
-      this.drawPts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+      const dPts = this.drawPts.map((p) => [p[0], p[1]]);
+      const dB = (this.drawBulges || []).slice();
+      while (dB.length < dPts.length) dB.push(0);
       if (this.drawDraft && this.drawDraft.kind === "line") {
-        const [X, Y] = S(this.drawDraft.x, this.drawDraft.y); ctx.lineTo(X, Y);
-        ctx.stroke();
+        dPts.push([this.drawDraft.x, this.drawDraft.y]); dB.push(0);
+        if (this.drawArc && dPts.length >= 2) dB[dPts.length - 2] = this.defaultDrawBulge ? this.defaultDrawBulge(dPts) : dB[dPts.length - 2];
+      }
+      const exp = expandContour({ pts: dPts, closed: false, bulges: dB });
+      ctx.beginPath();
+      (exp.pts || dPts).forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
+      ctx.stroke();
+      if (this.drawDraft && this.drawDraft.kind === "line") {
+        const [X, Y] = S(this.drawDraft.x, this.drawDraft.y);
         const lab = `${r1(this.drawDraft.len)} mm  ${r1(this.drawDraft.ang)}°`;
         this.tag(ctx, lab, X, Y - 18, C.sel);
-      } else ctx.stroke();
+      }
       this.drawPts.forEach((p, i) => {
         const [X, Y] = S(p[0], p[1]);
         ctx.beginPath(); ctx.arc(X, Y, i === 0 ? 8 : 5, 0, 7);

@@ -42,7 +42,9 @@ export function applyHudPoint() {
     if (!(len >= 0.5)) return false;
     const x = a[0] + len * Math.cos(ang), y = a[1] + len * Math.sin(ang);
     if (Math.abs(x) > sketch.maxMm || Math.abs(y) > sketch.maxMm) { sketch.onMessage("That point is off the table."); return false; }
-    sketch.drawPts.push([Math.round(x * 10) / 10, Math.round(y * 10) / 10]);
+    const nx = Math.round(x * 10) / 10, ny = Math.round(y * 10) / 10;
+    if (sketch.pushDrawPoint) sketch.pushDrawPoint(nx, ny);
+    else sketch.drawPts.push([nx, ny]);
     sketch.draw();
     paintDrawHud();
     return true;
@@ -205,4 +207,5 @@ export function bindDrawHud() {
   el.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === "Escape" || e.key === "Tab") e.stopPropagation();
   });
+  if (sketch && !sketch.onDrawFinished) sketch.onDrawFinished = () => closeDrawHud();
 }

@@ -138,6 +138,24 @@ for (const prof of ["d1440", "d1366"]) {
   t.check(n("item 17: Backspace removes the last point while drawing"), draw.afterPop === draw.before - 1, JSON.stringify(draw));
   t.check(n("item 17: Enter closes a 3-point outline"), draw.items >= 1 && draw.tool !== "draw", JSON.stringify(draw));
 
+  const arc = await ev(page, () => {
+    const s = window.plasmaTest.sketch;
+    s.clear();
+    s.setTool("draw");
+    s.pushDrawPoint(0, 0);
+    s.pushDrawPoint(120, 0);
+    s.drawArc = true;
+    s.pushDrawPoint(120, 120);
+    s.pushDrawPoint(0, 120);
+    s.finishDraw();
+    const hud = document.getElementById("drawHud");
+    const hudHidden = !hud || hud.classList.contains("hidden") || hud.hidden || !hud.offsetParent;
+    const b = (s.items[0] && s.items[0].shape && s.items[0].shape.cs[0].bulges) || [];
+    return { items: s.items.length, bulges: b, curved: b.some((x) => Math.abs(x) > 0.05), hudHidden, tool: s.tool };
+  });
+  t.check(n("item 17: pressing A keeps a curved edge when the outline is closed"), arc.curved, JSON.stringify(arc));
+  t.check(n("item 17: closing the outline hides the length/angle bar"), arc.hudHidden, JSON.stringify(arc));
+
   // item 18: Shapes vs presets
   const lib = await ev(page, () => {
     const T = window.plasmaTest;

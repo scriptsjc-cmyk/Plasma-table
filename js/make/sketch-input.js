@@ -179,9 +179,11 @@ export class InputMethods {
         const first = this.drawPts[0];
         if (first && this.drawPts.length >= 2 && Math.hypot(px - first[0], py - first[1]) <= 8) {
           this.finishDraw && this.finishDraw();
+          closeDrawHud();
           this.draw(); return;
         }
-        this.drawPts.push([px, py]);
+        if (this.pushDrawPoint) this.pushDrawPoint(px, py);
+        else this.drawPts.push([px, py]);
         afterDrawPoint();
         this.draw(); return;
       }
@@ -422,6 +424,7 @@ export class InputMethods {
       if (this.tool === "draw" && this.drawPts && this.drawPts.length >= 3) {
         e.preventDefault();
         this.finishDraw && this.finishDraw();
+        closeDrawHud();
         return;
       }
       const [sx, sy] = pos(e);
@@ -458,8 +461,8 @@ export class InputMethods {
       const isArrow = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown"].includes(e.key);
       // drawing shortcuts: never steal Space (pan on Make, STOP on Cut). Ignore when typing (checked above).
       if (this.tool === "draw" && this.drawPts && this.drawPts.length) {
-        if (e.key === "Backspace") { stop(); this.drawPts.pop(); afterDrawPoint(); this.draw(); return; }
-        if (e.key === "Enter" && this.drawPts.length >= 3) { stop(); this.finishDraw && this.finishDraw(); return; }
+        if (e.key === "Backspace") { stop(); (this.popDrawPoint ? this.popDrawPoint() : this.drawPts.pop()); afterDrawPoint(); this.draw(); return; }
+        if (e.key === "Enter" && this.drawPts.length >= 3) { stop(); this.finishDraw && this.finishDraw(); closeDrawHud(); return; }
         if (k === "a") { stop(); this.drawArc = !this.drawArc; this.onMessage(this.drawArc ? "Next segment will be a curve. Press A again for a straight line." : "Next segment will be a straight line."); return; }
       }
       if (!ctrl && !this.layout) {

@@ -24,7 +24,7 @@ export class Sketch {
     this.view = null; this.active = false;
     this.past = []; this.future = []; this.clip = null;
     this.drag = null; this.pointers = new Map(); this.label = null; this.guides = []; this.marks = [];
-    this.dimHits = []; this.tool = null; this.drawPts = []; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null;
+    this.dimHits = []; this.tool = null; this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null;
     this.opts = { snap: 1, guides: true, pro: false, pointSnap: true };
     this.maxMm = 2600; // 2× typical table travel; app may tighten from machine.json
     try {
@@ -210,7 +210,7 @@ export class Sketch {
   setPointSnap(on) { this.opts.pointSnap = !!on; this.saveOpts(); }
   setTool(name) {
     this.tool = this.tool === name ? null : (name || null);
-    this.drawPts = []; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null;
+    this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null;
     this.cv.style.cursor = this.tool ? "crosshair" : "";
     this.draw();
   }

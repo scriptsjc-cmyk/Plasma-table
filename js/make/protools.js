@@ -3,6 +3,7 @@ import { S, sketch } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { drawPreview } from "../cut/preview.js";
 import { goStep, renderQuickBar, runPro, showSource } from "../core/hooks.js";
+import { closeDrawHud, cancelDrawHud } from "./drawhud.js";
 
 // ---- full-screen "Make a shape" editor
 // r8 item 10: the full-screen editor is gone. Callers still exist; keep a no-op that always turns it off.
@@ -31,6 +32,6 @@ export function bindProTools() {
   $("proTools").addEventListener("click", (e) => {
     const b = e.target.closest("[data-pro]"); if (b) runPro(b.dataset.pro);
   });
-  $("toolFinish").onclick = () => { sketch.finishDraw(); renderProTools(); };
-  $("toolCancel").onclick = () => { sketch.setTool(null); renderProTools(); };
+  $("toolFinish").onclick = () => { sketch.finishDraw(); closeDrawHud(); renderProTools(); };
+  $("toolCancel").onclick = () => { sketch.setTool(null); cancelDrawHud(); renderProTools(); };
 }

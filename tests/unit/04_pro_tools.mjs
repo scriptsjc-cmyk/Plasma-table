@@ -144,6 +144,23 @@ for (const [type, d] of [["rect", 5], ["rect", -5], ["plate", 3], ["plate", -3],
   const huge = mkDraw([[0, 0], [1e9, 0], [1e9, 1e9]]); t.check("draw points 1e9 mm away: rejected/clamped", huge.items.length === 0 || Math.max(...huge.contours().flatMap((c) => c.pts.map((p) => p[0]))) < 1e5, `items=${huge.items.length}`, "DRAW-HUGE");
   const nan = mkDraw([[0, 0], [NaN, 5], [10, 10]]); t.check("draw NaN point: rejected", nan.items.length === 0 || allFinite(nan), `items=${nan.items.length}`, "GCODE-NAN");
   const neg = mkDraw([[-50, -50], [-10, -50], [-30, -10]]); t.check("draw in negative space: gcode shifted to >= 0", (() => { const c = A.designToGcode(neg.contours(), {}); return !/X-|Y-/.test(c.gcode); })());
+  const arc = mk([]);
+  arc.setTool("draw");
+  arc.pushDrawPoint(0, 0);
+  arc.pushDrawPoint(120, 0);
+  arc.drawArc = true;
+  arc.pushDrawPoint(120, 120);
+  arc.pushDrawPoint(0, 120);
+  arc.finishDraw();
+  const ab = (arc.items[0] && arc.items[0].shape && arc.items[0].shape.cs[0].bulges) || [];
+  t.check("draw with Arc on: the curved segment is kept on the closed outline", ab.some((b) => Math.abs(b) > 0.05), `bulges=${JSON.stringify(ab.map((x) => +Number(x).toFixed(3)))}`);
+  verifyDesign(A, t, "drawn outline with an arc segment", arc.contours());
+  const straight = mk([]);
+  straight.setTool("draw");
+  straight.pushDrawPoint(0, 0); straight.pushDrawPoint(80, 0); straight.pushDrawPoint(80, 50); straight.pushDrawPoint(0, 50);
+  straight.finishDraw();
+  const sb = (straight.items[0] && straight.items[0].shape && straight.items[0].shape.cs[0].bulges) || [];
+  t.check("draw with Arc off: every edge stays straight", sb.every((b) => Math.abs(b || 0) < 1e-9), `bulges=${JSON.stringify(sb)}`);
 }
 // ---------- nest / auto-arrange
 {
