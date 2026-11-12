@@ -10,6 +10,23 @@ function updateFades(wrap, row) {
   wrap.classList.toggle("has-overflow", more);
   wrap.classList.toggle("fade-start", more && row.scrollLeft > 2);
   wrap.classList.toggle("fade-end", more && row.scrollLeft < max - 2);
+  let btn = wrap.querySelector(".scrollrow-more");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "scrollrow-more";
+    btn.setAttribute("aria-label", "More tools");
+    btn.title = "More tools";
+    btn.textContent = "›";
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      row.scrollBy({ left: Math.max(160, row.clientWidth * 0.75), behavior: "smooth" });
+    });
+    wrap.appendChild(btn);
+  }
+  const show = more && row.scrollLeft < max - 2;
+  btn.hidden = !show;
+  btn.setAttribute("aria-hidden", show ? "false" : "true");
 }
 
 function ensureWrap(row) {

@@ -6,7 +6,7 @@
 body, body.yours-btns-compact { --tool-h: 36px; --tool-minw: 56px; --tool-fs: 11px; --tool-icon: 16px; --tool-pad: 2px 6px; }
 body.yours-btns-normal { --tool-h: 44px; --tool-minw: 64px; --tool-fs: 12px; --tool-icon: 18px; --tool-pad: 4px 8px; }
 body.yours-btns-large { --tool-h: 52px; --tool-minw: 72px; --tool-fs: 13px; --tool-icon: 20px; --tool-pad: 6px 10px; }
-@media (pointer: coarse) {
+@media (pointer: coarse), (any-pointer: coarse) {
   body, body.yours-btns-compact { --tool-h: 44px; --tool-minw: 64px; }
 }
 
@@ -82,8 +82,8 @@ body.app-shell .cutgrid.with-qb #quickBar button {
   }
   body.app-shell.pro-mode .cutgrid.with-qb #quickBarWrap,
   body.app-shell.pro-mode .cutgrid.with-qb #quickBar { grid-area: tools; height: auto !important; max-height: none !important; }
-  body.app-shell.pro-mode .cutgrid.with-qb .previewPane { grid-area: preview !important; grid-column: auto !important; grid-row: auto !important; }
-  body.app-shell.pro-mode .cutgrid.with-qb .stepPane { grid-area: step !important; grid-column: auto !important; grid-row: auto !important; }
+  body.app-shell.pro-mode .cutgrid.with-qb .previewPane { grid-area: preview !important; }
+  body.app-shell.pro-mode .cutgrid.with-qb .stepPane { grid-area: step !important; }
 }
 
 /* short landscape phone: drop the side rail so the picture is wider; toolbar is a single bottom (or top) row */
@@ -124,9 +124,9 @@ body.yours-toolbar-top.shape-fs.pro-mode .cutgrid.with-qb,
 body.yours-toolbar-top.shape-fs .cutgrid.with-qb {
   grid-template-areas: "tools" "preview" !important;
 }
-body.shape-fs .cutgrid.with-qb .previewPane { grid-area: preview !important; grid-column: auto !important; grid-row: auto !important; }
+body.shape-fs .cutgrid.with-qb .previewPane { grid-area: preview !important; }
 body.shape-fs .cutgrid.with-qb #quickBarWrap,
-body.shape-fs .cutgrid.with-qb #quickBar { grid-area: tools; grid-column: auto !important; grid-row: auto !important; }
+body.shape-fs .cutgrid.with-qb #quickBar { grid-area: tools; }
 
 
 /* short landscape + expanded editor: keep a visible sliding row (never a collapsed 0-height rail) */
@@ -137,10 +137,10 @@ body.shape-fs .cutgrid.with-qb #quickBar { grid-area: tools; grid-column: auto !
     grid-template-rows: minmax(0, 1fr) auto !important;
     grid-template-areas: "preview" "tools" !important;
   }
-  body.shape-fs.short-land .cutgrid.with-qb .previewPane { grid-area: preview !important; grid-column: auto !important; grid-row: auto !important; }
+  body.shape-fs.short-land .cutgrid.with-qb .previewPane { grid-area: preview !important; }
   body.shape-fs.short-land .cutgrid.with-qb #quickBarWrap,
   body.shape-fs.short-land .cutgrid.with-qb #quickBar {
-    grid-area: tools !important; grid-column: auto !important; grid-row: auto !important; order: unset;
+    grid-area: tools !important; order: unset;
     display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
     overflow-x: auto !important; overflow-y: hidden !important;
     height: auto !important; max-height: none !important; min-height: calc(var(--tool-h, 36px) + 8px);
@@ -155,23 +155,35 @@ html, body.app-shell { overscroll-behavior-x: none; }
 .yourspane .yours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 16px; }
 .yourspane label { display: flex; flex-direction: column; gap: 4px; font-weight: 650; }
 .yourspane .check { flex-direction: row; align-items: center; gap: 8px; font-weight: 650; }
-.yours-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
-.yours-swatches input { position: absolute; opacity: 0; pointer-events: none; }
-.yours-swatches label { width: 36px; height: 36px; min-height: 36px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; }
-.yours-swatches input:checked + label, .yours-swatches label:has(input:checked) { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); }
-.yours-swatch { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; display: inline-block; }
-.yours-swatch input { appearance: none; width: 100%; height: 100%; border-radius: 50%; margin: 0; cursor: pointer; background: transparent; }
-.yours-swatch[data-accent="blue"] { background: #005A9E; }
-.yours-swatch[data-accent="teal"] { background: #0B6E6E; }
-.yours-swatch[data-accent="green"] { background: #0A6A32; }
-.yours-swatch[data-accent="purple"] { background: #6B21A8; }
-.yours-swatch[data-accent="navy"] { background: #0B1F33; }
-.yours-swatch[data-accent="rust"] { background: #9A3412; }
-[data-theme="dark"] .yours-swatch[data-accent="blue"] { background: #4f9cf0; }
-[data-theme="dark"] .yours-swatch[data-accent="teal"] { background: #2EC4C4; }
-[data-theme="dark"] .yours-swatch[data-accent="green"] { background: #3DCF7A; }
-[data-theme="dark"] .yours-swatch[data-accent="purple"] { background: #C084FC; }
-[data-theme="dark"] .yours-swatch[data-accent="navy"] { background: #8FB3D4; }
-[data-theme="dark"] .yours-swatch[data-accent="rust"] { background: #FB923C; }
 
 .yourspane .yours-actions { margin-top: 12px; }
+
+
+/* Pinned Undo / Redo / Fit / Delete, compact search, and a visible More control */
+#quickBarWrap { display: flex; align-items: stretch; min-width: 0; }
+#qbPinned { display: flex; flex: 0 0 auto; align-items: stretch; gap: 2px; padding: 2px 4px; border-right: 1px solid var(--line); }
+#qbPinned button { min-width: var(--tool-minw, 56px); }
+#quickBarWrap .scrollrow-more {
+  flex: 0 0 36px; width: 36px; min-height: var(--tap); border: 0; border-left: 1px solid var(--line);
+  background: var(--well); color: var(--text); font-size: 22px; font-weight: 700; cursor: pointer;
+}
+#quickBarWrap .scrollrow-more[hidden] { display: none; }
+.cutgrid.with-qb #quickBar .qb-search { display: flex; align-items: stretch; align-self: stretch; gap: 4px; width: auto; max-width: 42px; overflow: hidden; }
+.cutgrid.with-qb #quickBar .qb-search input { width: 0; min-width: 0; opacity: 0; pointer-events: none; border: 0; padding: 0; }
+#quickBarWrap.search-open .qb-search, .cutgrid.with-qb #quickBar .qb-search:focus-within { max-width: 180px; }
+#quickBarWrap.search-open .qb-search input, .cutgrid.with-qb #quickBar .qb-search:focus-within input { width: 120px; min-width: 80px; opacity: 1; pointer-events: auto; padding: 4px 8px; border: 1px solid var(--line); }
+.qb-search-btn { min-width: 36px !important; width: 36px; min-height: 100%; height: auto; border: 0; background: transparent; cursor: pointer; font-size: 16px; align-self: stretch; display: flex; align-items: center; justify-content: center; }
+
+/* Portrait Pro: pin the toolbar under the picture so the canvas can grow; hide empty inspector gap */
+@media (max-width: 699px) and (orientation: portrait) {
+  body.app-shell.pro-mode:not(.short-land) .cutgrid.with-qb {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) auto auto !important;
+    grid-template-areas: "preview" "tools" "step" !important;
+  }
+  body.yours-toolbar-top.app-shell.pro-mode:not(.short-land) .cutgrid.with-qb {
+    grid-template-areas: "tools" "preview" "step" !important;
+  }
+  body.app-shell.pro-mode:not(.short-land) .cutgrid.with-qb .stepPane:empty,
+  body.app-shell.pro-mode:not(.short-land) .cutgrid.with-qb .stepPane:not(:has(*:not(.hidden))) { min-height: 0; }
+}

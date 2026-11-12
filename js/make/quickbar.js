@@ -25,8 +25,8 @@ const PALETTE = [
   { g: "Draw", items: [["draw", "✎", "Draw outline"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"]] },
   { g: "Combine", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"]] },
   { g: "Arrange", items: [["rot", "⟳", "Turn 90°"], ["mir", "⇋", "Mirror"], ["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["alignl", "⇤", "Align left"], ["alignb", "⤓", "Align bottom"], ["nest", "⊞", "Auto-arrange"]] },
-  { g: "Edit", items: [["size", "↔", "Size"], ["resize", "⤡", "Width × height"], ["dims", "↔ mm", "Dimensions"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"], ["del", "🗑", "Delete"], ["undo", "↶", "Undo"], ["redo", "↷", "Redo"]] },
-  { g: "View", items: [["fit", "⤢", "Zoom to fit"], ["snap", "⌗", "Snap"], ["fs", "⛶", "Full screen"]] },
+  { g: "Edit", items: [["size", "↔", "Size"], ["resize", "⤡", "Width × height"], ["dims", "↔ mm", "Dimensions"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"]] },
+  { g: "View", items: [["snap", "⌗", "Snap"], ["fs", "⛶", "Full screen"]] },
 ];
 let paletteQ = "";
 export function renderQuickBar() {
@@ -66,8 +66,23 @@ export function renderQuickBar() {
     const why = dis[id] ? ` \u2013 ${whyOff(id)}` : "";
     return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" ? " danger" : ""}" ${dis[id] ? 'aria-disabled="true"' : ""} data-why="${esc(dis[id] ? whyOff(id) : "")}" data-label="${esc(label)}" title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
   };
+  if (wrap) {
+    let pin = document.getElementById("qbPinned");
+    if (!pin) {
+      pin = document.createElement("div");
+      pin.id = "qbPinned";
+      pin.className = "qb-pinned";
+      pin.setAttribute("role", "group");
+      pin.setAttribute("aria-label", "Common tools");
+      wrap.insertBefore(pin, qb);
+    }
+    pin.innerHTML = B("undo", "↶", "Undo") + B("redo", "↷", "Redo") + B("fit", "⤢", "Zoom to fit") + B("del", "🗑", "Delete");
+    pin.querySelectorAll("[data-qb]").forEach((btn) => {
+      btn.onclick = () => { if (Date.now() < (S.uiBlockUntil || 0)) return; if (btn.getAttribute("aria-disabled") !== "true") quickAction(btn.dataset.qb); };
+    });
+  }
   const q = paletteQ;
-  const parts = [`<div class="qb-search"><input id="qbSearch" type="search" placeholder="Search tools" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`];
+  const parts = [`<div class="qb-search"><button type="button" id="qbSearchBtn" class="qb-search-btn" aria-label="Search tools" title="Search tools">🔍</button><input id="qbSearch" type="search" placeholder="Search" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`];
   for (const grp of PALETTE) {
     const items = grp.items.filter(([id, , lab]) => !q || matchesQuery(lab + " " + id + " " + grp.g, q));
     if (!items.length) continue;
@@ -80,7 +95,41 @@ export function renderQuickBar() {
   if (hadFocus) { const s = $("qbSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
   mountScrollRow(qb);
   refreshScrollRows();
+  syncQbRoving();
 }
+function qbToolButtons() {
+  const wrap = document.getElementById("quickBarWrap") || ($("quickBar") && $("quickBar").closest(".scrollrow-wrap"));
+  if (!wrap) return [];
+  return [...wrap.querySelectorAll("button[data-qb], #qbSearchBtn")];
+}
+function syncQbRoving() {
+  const btns = qbToolButtons();
+  if (!btns.length) return;
+  const focused = btns.indexOf(document.activeElement);
+  const cur = focused >= 0 ? focused : 0;
+  btns.forEach((b, i) => { b.tabIndex = i === cur ? 0 : -1; });
+}
+function bindQbRoving() {
+  const wrap = document.getElementById("quickBarWrap") || ($("quickBar") && $("quickBar").closest(".scrollrow-wrap"));
+  if (!wrap || wrap.dataset.roving === "1") return;
+  wrap.dataset.roving = "1";
+  wrap.addEventListener("keydown", (e) => {
+    if (e.target && e.target.id === "qbSearch") return;
+    const btns = qbToolButtons();
+    if (!btns.length) return;
+    const i = Math.max(0, btns.indexOf(document.activeElement));
+    let n = i;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") n = (i + 1) % btns.length;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") n = (i - 1 + btns.length) % btns.length;
+    else if (e.key === "Home") n = 0;
+    else if (e.key === "End") n = btns.length - 1;
+    else return;
+    e.preventDefault();
+    btns.forEach((b, k) => { b.tabIndex = k === n ? 0 : -1; });
+    btns[n].focus();
+  });
+}
+
 function quickAction(a) {
   switch (a) {
     case "rect": case "disc": case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
@@ -127,6 +176,15 @@ export function bindQuickBar() {
     $("quickBar").addEventListener("input", (e) => {
       if (e.target && e.target.id === "qbSearch") { paletteQ = e.target.value; renderQuickBar(); }
     });
+    $("quickBar").addEventListener("click", (e) => {
+      const s = e.target.closest && e.target.closest("#qbSearchBtn");
+      if (!s) return;
+      e.preventDefault();
+      const wrap = $("quickBarWrap") || $("quickBar").closest(".scrollrow-wrap");
+      if (wrap) wrap.classList.toggle("search-open");
+      const inp = $("qbSearch"); if (inp && wrap && wrap.classList.contains("search-open")) inp.focus();
+    });
   }
   $("quickBar").addEventListener("click", (e) => { if (Date.now() < (S.uiBlockUntil || 0)) return; const b = e.target.closest("[data-qb]"); if (b && !b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(b.dataset.qb); });
+  bindQbRoving();
 }
