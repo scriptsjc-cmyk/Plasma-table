@@ -667,3 +667,123 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 }
 /* Make it yours: choices apply live, so the sticky Save row is hidden by JS; keep the pane reachable on short screens */
 [data-setpane="yours"] { padding-bottom: 12px; }
+
+/* ===================== Phone cutting screen: a narrow screen, or a phone on its side (same test as PHONE_MQ in js/ui/menu.js).
+   STOP stays in the header and is the biggest control; the step's main buttons (Back / Start, or Pause) sit in the sticky bar with a
+   More button; secondary controls move into the More sheet (#cutSheet) over the bed picture. The laptop layout never sees any of this. */
+.cutmore-btn, .runpos, .cutsheet { display: none; }
+@media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
+  body[data-screen="cut"] .cutmore-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: none;
+    min-width: 64px; min-height: 52px; padding: 4px 10px; font-size: 15px; font-weight: 700; }
+  .cutmore-btn .ico { width: 22px; height: 22px; }
+  .cutmore-btn[aria-expanded="true"] { background: var(--accent-weak); border-color: var(--accent); }
+  body[data-screen="cut"] .previewPane { position: relative; }
+  body[data-screen="cut"] .cutsheet:not(.hidden) { display: flex; flex-direction: column; position: absolute; inset: 0; z-index: 9;
+    background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+  .cutsheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 2px 2px 2px 12px; border-bottom: 1px solid var(--line); }
+  .cutsheet-head h2 { margin: 0; font-size: 16px; }
+  #cutSheetClose { min-width: 44px; min-height: 44px; font-size: 18px; }
+  .cutsheet-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 8px 10px 10px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+  .cutsheet-body > * { margin: 0; }
+  .cutsheet-body > button { align-self: flex-start; min-height: 48px; }
+  .cutsheet-body #showMachWrap { position: static; display: flex; align-self: flex-start; }
+  .cutsheet-body .livespeed .row { gap: 6px; }
+  /* Bed & start: Back / Start / More in the sticky bar; Download G-code is in More */
+  body[data-screen="cut"] .step[data-step="3"] > .nav #btnExport3 { display: none; }
+  body[data-screen="cut"] .step[data-step="3"] > .nav { flex-wrap: wrap; align-items: stretch; }
+  body[data-screen="cut"] .step[data-step="3"] > .nav .cutmore-btn { order: 2; }
+}
+@media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
+  /* a phone on its side: the bed picture and the step share the row in fixed proportions (the step pane used to take the width of
+     its widest content, so moving controls into More shifted the picture) */
+  body.short-land[data-screen="cut"] .cutgrid:not(.with-qb) { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr); }
+  body.short-land[data-screen="cut"] .cutgrid:not(.with-qb) .previewPane { grid-column: 1; }
+  body.short-land[data-screen="cut"] .cutgrid:not(.with-qb) .stepPane { grid-column: 2; }
+  /* Cut (running): progress, the live X / Y / Z and TORCH stay in view; Pause and More in the sticky bar; speed, pierce delay and the
+     arc readings are in More. The tabs and the picture's caption step aside (you can't leave this screen mid-cut anyway). */
+  body.running-job[data-screen="cut"] .tabs, body.running-job[data-screen="cut"] #stepper,
+  body.running-job[data-screen="cut"] .previewDock { display: none; }
+  #running > #livePanel, #running > #lpNote, #running > #liveSpeedBox, #running > #runHelp { display: none; }
+  body[data-screen="cut"] #running .runpos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 6px 0; }
+  #running .runpos div { padding: 2px 8px; display: flex; align-items: center; gap: 6px; }
+  #running .runpos span { display: inline; font-size: 13px; }
+  #running .runpos b { font-size: 22px; }
+  #running .torchbig { margin: 6px 0; padding: 6px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  #running #runInfo { margin: 4px 0 0; font-size: 14px; }
+  body.running-job .runctl { padding: 6px 0 2px; align-items: stretch; }
+  .runctl #btnPause { flex: 1 1 auto; max-width: 160px; min-height: 56px; }
+  .runctl .cutmore-btn { min-height: 56px; }
+  /* not on its side: the run pane takes the height it needs and the picture gets the rest, so nothing slides under the Pause bar */
+  body.app-shell.running-job:not(.short-land)[data-screen="cut"] .cutgrid {
+    grid-template-rows: minmax(72px, 1fr) minmax(0, max-content) !important; grid-template-areas: "preview" "step" !important; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  /* on its side the position and TORCH share a row, so the whole run pane fits a 340px-high phone */
+  body.short-land[data-screen="cut"] #running { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr); column-gap: 6px; }
+  body.short-land[data-screen="cut"] #running > * { grid-column: 1 / -1; }
+  body.short-land[data-screen="cut"] #running > .runpos { grid-column: 1; }
+  body.short-land[data-screen="cut"] #running > .torchbig { grid-column: 2; }
+  body.short-land[data-screen="cut"] #running > .runpos b { font-size: 18px; }
+}
+@media (orientation: landscape) and (max-height: 360px), (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
+  /* small phones: tighter numbers, every line still there */
+  body[data-screen="cut"] #running #runTitle { font-size: 15px; margin: 0; }
+  body[data-screen="cut"] #running .runnums { margin: 0 0 4px; }
+  body[data-screen="cut"] #running .runnums .bigpct, body[data-screen="cut"] #running .bigleft { font-size: 32px; }
+  body[data-screen="cut"] #running .progress { height: 10px; }
+  body[data-screen="cut"] #running #runInfo { font-size: 12px; margin: 2px 0 0; }
+  body[data-screen="cut"] #running .runpos { margin: 4px 0; }
+  body[data-screen="cut"] #running .runpos b { font-size: 18px; }
+  body[data-screen="cut"] #running .torchbig { margin: 4px 0; min-height: 40px; padding: 4px; font-size: 16px; }
+  body.running-job[data-screen="cut"] .runctl { padding-top: 4px; }
+  body[data-screen="cut"] .runctl #btnPause, body[data-screen="cut"] .runctl .cutmore-btn { min-height: 52px; }
+}
+@media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
+  /* STOP is the biggest control by area, not just the tallest: a bigger E-stop on a phone (128x84 on its side, 112x104 upright), and
+     no other button on the cutting screen wider than 176px or, for the big ones, taller than about 60px (long labels go to 14px so
+     they wrap to at most three short lines). Link-style sentences (.blocker-jump) and form fields are not buttons. */
+  body.short-land[data-screen="cut"] #btnStop.estop { min-width: 128px; min-height: 84px; }
+  body.short-land[data-screen="cut"] #btnStop.estop .estop-svg { width: 68px; height: 68px; }
+  body[data-screen="cut"]:not(.short-land) #btnStop.estop { width: 112px; min-width: 112px; min-height: 104px; }
+  body[data-screen="cut"]:not(.short-land) #btnStop.estop .estop-svg { width: 80px; height: 80px; }
+  body[data-screen="cut"] #cutView button:not(.blocker-jump) { max-width: 176px; line-height: 1.2; }
+  body[data-screen="cut"] #cutView .step[data-step="3"] > .nav #btnStart { max-width: 176px; }
+  body[data-screen="cut"] #cutView .stepPane button.xl, body[data-screen="cut"] #cutView .stepPane .nav button,
+  body[data-screen="cut"] #cutView #btnZero, body[data-screen="cut"] #cutView #materials button, body[data-screen="cut"] #cutView #thicknesses button,
+  body[data-screen="cut"] #cutView .laybtns button, body[data-screen="cut"] #cutView .pickrow button {
+    min-height: 52px; padding: 4px 10px; font-size: 16px; }
+  body[data-screen="cut"] #cutView #btnTrace, body[data-screen="cut"] #cutView .pickrow button, body[data-screen="cut"] #cutView #camReset,
+  body[data-screen="cut"] #cutView .nestbox button, body[data-screen="cut"] #cutView .woform button, body[data-screen="cut"] #cutView #btnChangeMat,
+  body[data-screen="cut"] #cutView #done button { font-size: 14px; padding: 4px 8px; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  /* Bed & start upright: the layout canvas marks the grid "editing", which picked up Make's three-row picture / tools / step grid
+     and left an empty 140px band where Make's tool bar would be. The cutting screen has no tool bar: picture and step share the height. */
+  body.app-shell:not(.short-land)[data-screen="cut"] .cutgrid.editing:not(.with-qb) {
+    grid-template-areas: "preview" "step" !important; grid-template-rows: minmax(0, 0.85fr) minmax(0, 1.15fr) !important; }
+}
+@media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
+  /* Ready / Moving and TORCH sit in the middle of their pills and are never cut short */
+  body[data-screen="cut"] #stateBadge:not(.hidden), body[data-screen="cut"] #torchPill:not([hidden]) {
+    display: inline-flex; align-items: center; justify-content: center; flex: none; max-width: none; overflow: visible; white-space: nowrap; }
+}
+@media (max-width: 899px) and (orientation: portrait) {
+  /* header upright: brand, Menu and the menu button on one row, Ready / Moving and TORCH under them, both rows beside the taller STOP */
+  body[data-screen="cut"] .topbar-main { row-gap: 4px; }
+  body[data-screen="cut"] #stateBadge:not(.hidden), body[data-screen="cut"] #torchPill:not([hidden]) { font-size: 13px; padding: 0 10px; }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  /* phone on its side: once connected the connection pill keeps a short word next to its dot (colour alone isn't a label) */
+  body.short-land[data-screen="cut"] #connPill.on { width: auto; max-width: none; min-width: 44px; padding: 0 10px; gap: 4px; }
+  body.short-land[data-screen="cut"] #connPill.on::after { content: "Connected"; font-size: 13px; }
+  body.short-land.demo-on[data-screen="cut"] #connPill.on::after { content: "Practice"; }
+  /* (layout.css forces these to inline-block on its side; centre the word as upright) */
+  body.short-land[data-screen="cut"] #stateBadge:not(.hidden), body.short-land[data-screen="cut"] #torchPill:not([hidden]) { display: inline-flex !important; }
+}
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 700px) {
+  /* smaller phones on their side: the pill goes back to its dot so Ready and TORCH keep the one header row beside STOP */
+  body.short-land[data-screen="cut"] #connPill.on::after { content: none; }
+  body.short-land[data-screen="cut"] #connPill.on { width: 44px; max-width: 44px; padding: 0; }
+}

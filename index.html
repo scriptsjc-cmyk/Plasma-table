@@ -263,6 +263,15 @@
         </div>
       </div>
       </div>
+      <!-- phone "More" sheet (js/ui/menu.js): the step's secondary controls are moved in while it is open and put back when it closes.
+           It lives over the bed picture, so it never covers the header, STOP, the safety banners or the Start / Pause bar. -->
+      <div id="cutSheet" class="cutsheet hidden" role="dialog" aria-modal="true" aria-labelledby="cutSheetTitle" hidden>
+        <div class="cutsheet-head">
+          <h2 id="cutSheetTitle">More</h2>
+          <button type="button" id="cutSheetClose" class="iconbtn" aria-label="Close More">✕</button>
+        </div>
+        <div id="cutSheetBody" class="cutsheet-body"></div>
+      </div>
     </div>
 
     <div id="makeSplit" class="makesplit" role="separator" aria-orientation="vertical" aria-label="Drag to make the picture bigger or smaller" aria-valuemin="0" aria-valuemax="100" aria-valuenow="34" tabindex="0"></div>
@@ -592,7 +601,7 @@
         </div>
           <div id="blockers" class="blockers"></div>
         </details>
-        <div class="nav"><button class="back" data-go="1">← Back</button><button id="btnStart" class="xl go" disabled aria-describedby="startWhy">▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><p id="startWhy" class="startwhy hidden" role="status"></p></div>
+        <div class="nav"><button class="back" data-go="1">← Back</button><button id="btnStart" class="xl go" disabled aria-describedby="startWhy">▶ Start cutting</button><button type="button" id="btnExport3" class="xl" title="Save the G-code for this layout as a file">⬇ Download G-code</button><button type="button" id="btnMore3" class="cutmore-btn" aria-haspopup="dialog" aria-controls="cutSheet" aria-expanded="false"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-more"></use></svg><span>More</span></button><p id="startWhy" class="startwhy hidden" role="status"></p></div>
       </div>
 
       <!-- step 4: running / done -->
@@ -609,6 +618,7 @@
           </div>
           <div class="progress"><div id="progBar"></div></div>
           <p class="muted" id="runInfo"></p>
+          <div class="pos small-pos runpos" role="group" aria-label="Torch position from the start point (mm)"></div>
           <div id="livePanel" class="livepanel" role="group" aria-label="Live torch and arc readings">
             <div class="lp" id="lpArc"><span>Arc OK</span><b>not connected</b></div>
             <div class="lp" id="lpVolts"><span>Arc volts</span><b>not connected</b></div>
@@ -617,7 +627,7 @@
           </div>
           <p id="lpNote" class="muted small lpnote"></p>
           <div class="torchbig" id="torchBig">TORCH OFF</div>
-          <div class="livespeed">
+          <div id="liveSpeedBox" class="livespeed">
             <div>Speed <b id="liveSpeed">–</b></div>
             <div class="row">
               <button id="lsDown" class="xl grow">− Slower</button>
@@ -636,8 +646,9 @@
           </div>
           <div class="row runctl">
             <button id="btnPause" class="xl">⏸ Pause</button>
+            <button type="button" id="btnMore4" class="cutmore-btn" aria-haspopup="dialog" aria-controls="cutSheet" aria-expanded="false"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-more"></use></svg><span>More</span></button>
           </div>
-          <p class="muted small">Pause stops the machine and the torch. Press the red E-STOP (or the space bar) to cancel the job.
+          <p id="runHelp" class="muted small">Pause stops the machine and the torch. Press the red E-STOP (or the space bar) to cancel the job.
             Keep this tab open and the computer awake. You can't leave this screen while it is cutting.</p>
         </div>
         <div id="done" class="hidden">
