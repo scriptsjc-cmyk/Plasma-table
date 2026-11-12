@@ -351,9 +351,11 @@ body[data-step="3"] #exportRow { display: none; }
   #btnHome.homebtn { min-width: 44px; padding-left: 10px; padding-right: 10px; }
   #connPill, body.demo-on #connPill { max-width: 10em; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
-.startwhy { flex: 1 1 100%; order: 9; margin: 2px 0 0; font-size: 13px; line-height: 1.3; font-weight: 650; color: var(--warn-text); overflow-wrap: anywhere; }
+.startwhy { flex: 1 1 100%; order: 9; margin: 2px 0 0; font-size: 14px; line-height: 1.3; font-weight: 650; color: var(--warn-text); overflow-wrap: anywhere; }
 body.short-land .startwhy { font-size: 12px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .startwhy.hidden { display: none; }
+/* round 5 item 15: on a phone the Start row wraps, so the reason goes straight under Start and Download G-code moves below it */
+@media (max-width: 560px) { .step[data-step="3"] > .nav #btnExport3 { order: 10; } }
 body.short-land .step[data-step="3"] > .nav button { min-height: 44px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
 body.short-land .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; min-height: 48px; }   /* round 5 (look H2): a slim row leaves the height to "Start here" and the checklist */
 @media (max-width: 899px) and (orientation: portrait) {

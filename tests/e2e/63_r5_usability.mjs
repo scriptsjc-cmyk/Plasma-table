@@ -6,6 +6,7 @@
 //  W  Put the table on your Wi-Fi: FluidNC value encoding, the scan list, the $ lines sent, the password never logged / kept / shown
 //  10 a different account signing in gets "Keep this drawing?" once; Start fresh clears drawing, undo, recent files and material; the mode follows the account
 //  8  Pro on a phone: the inspector is a bottom sheet, the tool list one row, the status under the picture
+// 15  the first reason Start is greyed shows right under the button
 //  9  mode switch in the header on every screen but Make; one Cut settings summary in both modes; Beginner parts list and Unlock
 //  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Zoom to fit, Expand picture, scroll zoom
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
@@ -146,6 +147,16 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   const o = await T(page, `(() => { const b = document.getElementById("ptInspector").getBoundingClientRect(); return { h: Math.round(b.height), b: Math.round(b.bottom), vh: innerHeight, expanded: document.getElementById("ptInspToggle").getAttribute("aria-expanded"), arrow: [...document.querySelectorAll("#ptInspToggle use")].pop().getAttribute("href") }; })()`);
   ck("8 phone Pro: tapping the bar opens the sheet (at most 55% of the screen, arrow down to close)", o.expanded === "true" && o.h > 56 && o.h <= 0.56 * o.vh && o.b >= o.vh - 1 && o.arrow === "#i-arrow-down", o);
   await snap(page, "pro-phone-sheet");
+  await page.context().close();
+}
+// ================================================================== 15: why Start is greyed, under the button
+for (const [w, h] of [[390, 664], [1366, 768]]) {
+  const page = await phone(w, h);
+  await demoToShape(page, { stay: "cut" }); await sleep(400);
+  await T(page, "window.plasmaTest.goStep(3)"); await sleep(500);
+  const g = await T(page, `(() => { const b = document.getElementById("btnStart"), y = document.getElementById("startWhy"), r = b.getBoundingClientRect(), q = y.getBoundingClientRect();
+    return { disabled: b.disabled, shown: !y.classList.contains("hidden") && q.height > 0, gap: Math.round(q.top - r.bottom), overlapX: q.left < r.right && q.right > r.left || q.width > r.width, text: y.textContent }; })()`);
+  ck(`15 ${w}x${h}: Start greyed shows its first reason just under the button`, g.disabled && g.shown && g.gap >= -1 && g.gap <= 24 && /^Can't start yet: /.test(g.text), g);
   await page.context().close();
 }
 // ================================================================== 9: mode everywhere, cut settings, parts list, no hidden locks
