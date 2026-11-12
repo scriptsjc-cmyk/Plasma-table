@@ -76,6 +76,9 @@ export function loadJob() {
       else S.prepared.shift = null;
     }
     if (cam) { Object.assign(S.prepared, { outline: cam.outline, summary: cam.summary, shift: cam.shift, cutInfo: cam.cutInfo, allCuts: cam.allCuts, autoOrder: cam.autoOrder }); }
+    // r7 J15: the job start is the first pierce, in sheet millimetres. It follows the parts when the job is rebuilt; no machine command is sent.
+    const pierce = S.prepared && S.prepared.cutInfo && S.prepared.cutInfo.find((ci) => ci.start);
+    if (S.prepared) S.prepared.jobStart = pierce ? pierce.start.slice() : null;
     S.check = S.design ? runCheck(S.design.contours) : null;
     if (S.check && cam) S.prepared.marks = S.check.issues.map((m) => ({ ...m, at: [m.at[0] + cam.shift[0], m.at[1] + cam.shift[1]] }));
     // the "left of zero" warning doesn't apply to parts we laid out ourselves
