@@ -83,7 +83,7 @@ export function firmwareDenied() {
 
 export function bindMode() {
   const adv = $("btnAdvancedTools");
-  if (adv) adv.addEventListener("click", (e) => { e.preventDefault(); setAppMode("advanced"); });
+  if (adv) adv.addEventListener("click", (e) => { e.preventDefault(); setAppMode("advanced", { autoFs: false }); });
   const simp = $("btnSimpleView");
   if (simp) simp.addEventListener("click", (e) => { e.preventDefault(); setAppMode("simple"); });
   syncModeSwitch();

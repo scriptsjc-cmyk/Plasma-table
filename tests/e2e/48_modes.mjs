@@ -25,10 +25,10 @@ for (const prof of profiles) {
   await snap(page, `r4-make-beginner-${tag[prof]}`);
   await page.evaluate(() => document.getElementById("btnAdvancedTools").click()); await sleep(250);
   t.check(P("Advanced tools turns on the full editor"), await page.evaluate(() => document.body.classList.contains("pro-mode") && window.plasmaTest.isProMode() && !!document.getElementById("btnSimpleView").offsetParent));
-  t.check(P("Advanced tools hides the simple help and opens the full-screen editor"), await page.evaluate(() => { const h = document.querySelector(".skhelp, .beginner-help"); return (!h || getComputedStyle(h).display === "none") && document.body.classList.contains("shape-fs"); }));
+  t.check(P("Advanced tools hides the simple help and does not go full screen on its own"), await page.evaluate(() => { const h = document.querySelector(".skhelp, .beginner-help"); return (!h || getComputedStyle(h).display === "none") && !document.body.classList.contains("shape-fs"); }));
   await snap(page, `r4-make-pro-${tag[prof]}`);
   // round 5 item 12: going to the menu from the full-screen editor closes the editor chrome (no Done / Save bar over the menu)
-  await page.evaluate(() => document.getElementById("btnHome").click()); await sleep(300);
+  await page.evaluate(() => { window.plasmaTest.setShapeFs(true); document.getElementById("btnHome").click(); }); await sleep(300);
   t.check(P("item 12: Menu from the full-screen editor closes it (no editor bar over the menu)"), await page.evaluate(() => document.body.dataset.screen === "menu" && !document.body.classList.contains("shape-fs") && [...document.querySelectorAll("#fsBar, .fsbar, #toolBar")].every((e) => !e.offsetParent)));
   await page.evaluate(() => window.plasmaTest.showScreen("make")); await sleep(200);
   // ---- the cutting screen: identical whatever the mode
