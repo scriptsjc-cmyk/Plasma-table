@@ -6,6 +6,7 @@ import { metaCache, refreshPartsList, setPartsRows } from "./partslist.js";
 import { paintAnnouncements } from "./announceui.js";
 import { renderAdvancedMachine } from "../machine/admin-machine.js";
 import * as A from "./account.js";
+import { askConfirm } from "../core/safeprompt.js";
 
 function fillSignedIn() {
   const u = A.currentUser();
@@ -58,8 +59,9 @@ export function openClaim() {
 }
 export function openGate(why) {
   const signed = A.isSignedIn();
-  $("gateWhy").textContent = why || (signed ? "Locked: link a machine to run jobs. You are signed in." : "Locked: sign in, then link a machine to run jobs.");
-  $("gateSignIn").classList.toggle("hidden", signed);       // no "Sign in" offer to someone who already is
+  if (signed) { openClaim(); return; }
+  $("gateWhy").textContent = why || "Locked: sign in, then link a machine to run jobs.";
+  $("gateSignIn").classList.toggle("hidden", signed);
   openDlg("gateDlg");
 }
 // Says whether Pro / firmware limits are backed by the server (supabase/b5-gating.sql has been run) or only by this browser.
@@ -188,5 +190,11 @@ export function bindHome() {
       openAccount();
     } catch (err) { toast(err.message, true); }
   };
-  $("migrateNo").onclick = () => { keepAnswered(); if (host && host.startFresh) host.startFresh(); };
+  $("migrateNo").onclick = async () => {
+    if (!(await askConfirm({ title: "Start fresh?", body: "This clears the drawing on this device, its undo history, Recent parts and the material choice. This can't be undone.", ok: "Start fresh", cancel: "Cancel", danger: true }))) return;
+    keepAnswered();
+    if (host && host.startFresh) host.startFresh();
+  };
+  if ($("migrateLater")) $("migrateLater").onclick = () => keepAnswered();
 }
+

@@ -38,11 +38,15 @@ const padUnavailable = (el) => !!(el.matches && el.matches(".j[data-axis], .step
 export const paintWhy = () => syncWhy(whyOff, padUnavailable);
 export function refreshGate() {
   const needLink = !Acc.hasLinkedMachine();
-  $("btnConnect").classList.toggle("locked", needLink);
+  const practicing = !!S.demo;
+  $("btnConnect").classList.toggle("locked", needLink && !practicing);
   $("connectLock").classList.toggle("hidden", !needLink);
-  const runLocked = needLink && !S.demo;
+  const runLocked = needLink && !practicing;
   $("btnStart").classList.toggle("locked", runLocked);
-  $("connectLockText").textContent = "🔒 " + lockText();      // round 5: the one lock note, next to Connect (Start says why under the button)
+  $("connectLockText").textContent = (needLink && practicing)
+    ? "Practice works without a machine. Link one to cut for real."
+    : "🔒 " + lockText();
+  $("connectLock").classList.toggle("practice-ok", !!(needLink && practicing));
   const send = $("btnConsoleSend");
   if (send) send.classList.toggle("locked", runLocked);
   document.body.classList.toggle("run-locked", runLocked);

@@ -5,6 +5,8 @@ import { row } from "../cut/material.js";
 import { showScreen } from "../ui/flow.js";
 import { goStep, useShape } from "../core/hooks.js";
 import { $, esc } from "../core/dom.js";
+import { formatLen } from "../core/prefs.js";
+import * as Acc from "../account/account.js";
 import { S, sketch } from "../core/state.js";
 
 const num = (id) => { const el = $(id), v = el ? el.value.trim() : ""; return v !== "" && Number.isFinite(Number(v)) ? Number(v) : null; };
@@ -12,12 +14,14 @@ export function cutSettings() {
   const r = row();
   return [
     ["Material", S.material || "–"],
-    ["Thickness", `${S.thickness} mm`],
-    ["Cut width (kerf)", `${kerfNow()} mm`],
+    ["Thickness", formatLen(S.thickness, 2)],
+    ["Cut width (kerf)", formatLen(kerfNow(), 2)],
     ["Pierce delay", `${num("ovDelay") ?? r.pierce_delay_s} s`],
     ["Cut speed", S.speed ? `${S.speed} mm/min` : "–"],
-    ["Lead-in", `${leadNow()} mm`],
-    ["Practice run", $("dryRun") && $("dryRun").checked ? "On – torch stays off" : "Off"],
+    ["Lead-in", formatLen(leadNow(), 2)],
+    ["Practice run", ($("dryRun") && $("dryRun").checked) || (Acc && Acc.hasLinkedMachine && !Acc.hasLinkedMachine())
+      ? (Acc && Acc.hasLinkedMachine && !Acc.hasLinkedMachine() ? "On (no machine linked)" : "On – torch stays off")
+      : "Off"],
   ];
 }
 // painted in two places from the same values: under the size boxes (Beginner) and at the foot of the Pro inspector

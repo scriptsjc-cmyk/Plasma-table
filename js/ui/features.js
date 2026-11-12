@@ -4,7 +4,7 @@ import { bindVersion, paintVersionLines, startVersionWatch } from "./about.js";
 import { bindCam } from "../cut/camedit.js";
 import { bindCutList } from "../cut/cutlist.js";
 import { bindDelay } from "../cut/pierce.js";
-import { bindDemo, bindDemoFit, bindPierceJump } from "./demo.js";
+import { bindDemo, bindPierceJump } from "./demo.js";
 import { bindFnScroll, bindTopMenu } from "./menu.js";
 import { bindPlay } from "../cut/playback.js";
 import { bindRestart } from "../cut/restart.js";
@@ -17,7 +17,7 @@ import { installLabelGuard } from "./labels.js";
 export function initFeatures(host) {
   setHost(host);
   startVersionWatch();
-  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindWhy(); bindDemoFit(); bindTopMenu(); bindPierceJump(); installLabelGuard(); installIcons();
+  bindVersion(); bindPlay(); bindCam(); bindCutList(); bindSize(); bindStraight(); bindRestart(); bindDelay(); bindDemo(); bindWhy(); bindTopMenu(); bindPierceJump(); installLabelGuard(); installIcons();
   paintVersionLines();
   bindFnScroll();
 }

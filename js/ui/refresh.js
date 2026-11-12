@@ -8,6 +8,7 @@ import { updatePlayRow } from "../cut/playback.js";
 import * as Setup from "../cut/setup.js";
 import { M, S, sketch } from "../core/state.js";
 import { $, $$, clock, esc, fmtTime, placeToast } from "../core/dom.js";
+import { formatLen } from "../core/prefs.js";
 import { blockers, overlayLive, paintZeroWarn } from "../cut/checklist.js";
 import { drawPreview, fit, wcoNow } from "../cut/preview.js";
 import { paintWhy } from "./gate.js";
@@ -72,7 +73,12 @@ export function paintChrome() {
 export function refresh() {
   paintChrome();
   setTimeout(paintWhy, 0);
-  try { const lt = "🔒 " + lockText(); if ($("connectLockText").textContent !== lt) $("connectLockText").textContent = lt; } catch (e) { /* ignore */ }
+  try {
+    const practicing = !!S.demo && !Acc.hasLinkedMachine();
+    const lt = practicing ? "Practice works without a machine. Link one to cut for real." : "🔒 " + lockText();
+    if ($("connectLockText").textContent !== lt) $("connectLockText").textContent = lt;
+    $("connectLock").classList.toggle("practice-ok", practicing);
+  } catch (e) { /* ignore */ }
   // stats + fit (preview pane)
   const f = fit();
   $("fit").className = "fit " + f.cls;
@@ -81,7 +87,7 @@ export function refresh() {
   $("fit").title = f.cls === "unknown" ? "Open Machine setup" : "";
   if (S.prepared) {
     const st = S.prepared.stats;
-    $("jobStats").innerHTML = `<span><b>${esc(S.fileName)}</b></span><span>Size <b>${S.prepared.summary ? `${S.prepared.summary.width} × ${S.prepared.summary.height}` : `${st.width_mm} × ${st.height_mm}`} mm</b></span>
+    $("jobStats").innerHTML = `<span><b>${esc(S.fileName)}</b></span><span>Size <b>${S.prepared.summary ? `${formatLen(S.prepared.summary.width, 1)} × ${formatLen(S.prepared.summary.height, 1)}` : `${formatLen(st.width_mm, 1)} × ${formatLen(st.height_mm, 1)}`}</b></span>
       ${S.prepared.summary ? `<span>Parts <b>${(S.src !== "file" && sketch && sketch.items.length && Setup.partCount(sketch)) || S.prepared.summary.parts}</b> · holes <b>${S.prepared.summary.holes}</b></span>` : `<span>Cuts <b>${st.pierces}</b></span>`}<span>About <b>${fmtTime(st.estimated_seconds)}</b></span>${S.prepared.dry_run ? "<span><b>PRACTICE RUN</b></span>" : ""}`;
   } else $("jobStats").innerHTML = "";
   $("next1").disabled = !S.prepared;
@@ -92,10 +98,15 @@ export function refresh() {
 
   // start button + reasons
   const b = blockers();
+  if (!machineAllowed() && !S.demo) {
+    const linkWhy = Acc.hasLinkedMachine() ? "Demo accounts can't control a real machine. Use Practice (no machine)." : "Link a machine to run jobs.";
+    if (!b.includes(linkWhy)) b.unshift(linkWhy);
+  }
   paintZeroWarn();
   $("btnStart").disabled = b.length > 0 || !machineAllowed();
   paintStartWhy(b);
-  $("blockers").innerHTML = b.length && S.cur === 3 ? `Can't start yet:<ul>${b.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  $("blockers").innerHTML = b.length && S.cur === 3 ? `Can't start yet:<ul>${b.map((x) => `<li><button type="button" class="blocker-jump" data-jump="${esc(jumpFor(x))}">${esc(x)}</button></li>`).join("")}</ul>` : "";
+  paintSetupCards();
 
 
   // banners
@@ -158,13 +169,12 @@ export function refresh() {
 // B5 18: the reasons Start is greyed, as visible text next to the button (the full list is still under "Check, then cut")
 function paintStartWhy(blocked) {
   const el = $("startWhy"); if (!el) return;
-  // round 5: when the machine is locked, that reason shows here (under Start), not as a second lock note
-  const b = machineAllowed() ? blocked : [Acc.hasLinkedMachine() ? "Demo accounts can't control a real machine. Use Practice (no machine)." : "Link a machine to run jobs (Link a machine, above).", ...blocked];
+  const b = blocked;
   const off = $("btnStart").disabled && b.length > 0;
   el.classList.toggle("hidden", !off);
   if (!off) { el.textContent = ""; return; }
   const first = String(b[0]).replace(/\s+/g, " ");
-  el.textContent = "Can't start yet: " + first + (b.length > 1 ? ` (+${b.length - 1} more below)` : "");
+  el.textContent = "Can't start yet: " + first + (b.length > 1 ? ` (+${b.length - 1} more in the list)` : "");
 }
 function paintBedStatus() {
   const box = $("bedStatus"); if (!box) return;
@@ -173,3 +183,37 @@ function paintBedStatus() {
   box.classList.toggle("hidden", !what || screen() !== "cut");
   if (what) $("bedStatusText").textContent = "On the bed now: " + what + ".";
 }
+
+function jumpFor(text) {
+  const t = String(text || "");
+  if (/link a machine|Practice \(no machine\)/i.test(t)) return "connectLock";
+  if (/Not connected/i.test(t)) return "btnConnect";
+  if (/Start point|Start here/i.test(t)) return "btnZero";
+  if (/alarm|Unlock/i.test(t)) return "btnUnlock";
+  if (/homing|press Home/i.test(t)) return "zeroCard";
+  if (/doesn't fit|sheet/i.test(t)) return "layoutCard";
+  if (/Tick every box/i.test(t)) return "checklist";
+  if (/No part|step 1/i.test(t)) return "step1Title";
+  if (/E-STOP/i.test(t)) return "btnStop";
+  return "checkCard";
+}
+function paintSetupCards() {
+  const boxes = $$("#checklist input:not([disabled])");
+  const checkOk = boxes.length > 0 && boxes.every((x) => x.checked);
+  const apply = (id, done) => {
+    const el = $(id); if (!el || el.tagName !== "DETAILS") return;
+    if (!done) { el.open = true; el.dataset.wasDone = ""; return; }
+    if (el.dataset.wasDone !== "1") { el.open = false; el.dataset.wasDone = "1"; }
+  };
+  // layout and start-point cards stay open: those actions are used again after the first time
+  apply("checkCard", checkOk);
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest(".blocker-jump");
+  if (!b) return;
+  const el = document.getElementById(b.dataset.jump);
+  if (!el) return;
+  const card = el.closest("details"); if (card) card.open = true;
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  try { el.focus(); } catch (err) { /* ignore */ }
+});

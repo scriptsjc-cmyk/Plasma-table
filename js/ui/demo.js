@@ -39,25 +39,6 @@ export async function demoEdges() {
   } catch (e) { H.toast(e.message, true); }
   finally { if (btn) btn.disabled = false; }
 }
-// The demo fit line is plain text rewritten by refresh(). Turn that one sentence into a real button.
-let fitDressing = false;
-function dressDemoFit() {
-  const el = $("fit"); if (!el || fitDressing) return;
-  if (el.querySelector(".fit-demo-btn")) return;
-  const raw = (el.textContent || "").replace(/\s+/g, " ").trim();
-  if (!/edges are set up for you/i.test(raw)) return;
-  fitDressing = true;
-  el.textContent = "";
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "secondary fit-demo-btn";
-  b.id = "btnFitDemoEdges";
-  b.textContent = "Set up the edges for me";
-  b.title = "Demo: nothing real moves";
-  b.setAttribute("aria-label", "Set up the edges for me. Demo only, nothing real moves.");
-  el.appendChild(b);
-  fitDressing = false;
-}
 export function bindPierceJump() {
   const toTorch = $("btnPierceJump");
   if (toTorch) toTorch.onclick = () => {
@@ -76,9 +57,4 @@ export function bindPierceJump() {
     const el = $("spSlider");
     if (el) setTimeout(() => { el.scrollIntoView({ block: "center" }); el.focus(); }, 60);
   };
-}
-export function bindDemoFit() {
-  const el = $("fit"); if (!el) return;
-  new MutationObserver(() => dressDemoFit()).observe(el, { childList: true, attributes: true, attributeFilter: ["class"] });
-  dressDemoFit();
 }
