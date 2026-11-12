@@ -13,6 +13,10 @@ export { JobError, SafetyError };
 // allowed are the ones that make the machine safer or let a person recover (stop, reset, hold, unlock, jog cancel, speed down).
 const LATCH_MSG = "E-STOP is ON. Press and hold the red button to reset it first.";
 const LATCH_BLOCKED = new Set(["resume", "jog", "jog_dir", "home", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test", "zero_xy", "set_origin"]);
+// FluidNC/grbl refuse every move in Alarm (error:9). Say so up front instead of sending a jog that is silently rejected.
+export const ALARM_DEFAULT = "The controller is locked (Alarm) and won't move. Check the torch is clear, then press Unlock (or Home).";
+const ALARM_MSG = "The controller is in Alarm, so it won't move. Press Unlock at the top of the screen first (or Home).";
+const ALARM_BLOCKED = new Set(["jog", "jog_dir", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test"]);
 const NO_ZERO_MSG = "Work zero isn't confirmed. Move the torch over the start of the work and press Start here first.";
 
 export class Machine {
@@ -153,6 +157,7 @@ export class Machine {
       }
     }
     if (this.jobRunning()) throw new JobError("A job is running. Pause or stop it first.");
+    if (ALARM_BLOCKED.has(cmd) && this.state() === "Alarm") throw new JobError(ALARM_MSG);
 
     switch (cmd) {
       case "jog": {
@@ -292,6 +297,7 @@ export class Machine {
     if (!this.grbl) throw new JobError("Not connected. Press Connect.");
     if (!this.prepared) throw new JobError("Load a job first.");
     if (this.estopLatched()) throw new JobError(LATCH_MSG);
+    if (this.state() === "Alarm") throw new JobError(ALARM_MSG);
     if (this.state() !== "Idle") throw new JobError(`Machine must be Idle to start (it is ${this.state()}).`);
     if (!this.zeroConfirmed) throw new JobError(NO_ZERO_MSG);
     if (this.startGuard) { const why = this.startGuard(); if (why) throw new JobError(why); }

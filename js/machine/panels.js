@@ -122,11 +122,14 @@ export function addTestPattern(kind) {
   }
   useShape(); goStep(3);
 }
+const UNLOCK_CONFIRM = "Unlock the controller ($X)?\n\nIt will accept moves again, but it may not know where the torch is. Check the torch is clear and nothing is in the way. Home or set the start point again before cutting.";
 export function bindMachineControls() {
-  $("btnUnlock").onclick = () => cmd("unlock");
+  // Unlock ($X) only after the operator confirms: it clears the alarm without the machine knowing where it is
+  const unlock = () => { if (confirm(UNLOCK_CONFIRM)) cmd("unlock"); };
+  $("btnUnlock").onclick = unlock;
   $("btnUnlock2").onclick = () => {
     if (S.status.inputs && S.status.inputs.estop) { toast("Release the e-stop first (twist it), then press Unlock.", true); return; }
-    cmd("unlock");
+    unlock();
   };
   $("btnDemoEstop").onclick = () => { if (S.demo) S.demo.setEstop(!S.demo.estop); };
   $$(".do-home").forEach((b) => (b.onclick = () => cmd("home")));
