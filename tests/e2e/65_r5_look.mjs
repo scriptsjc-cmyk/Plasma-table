@@ -149,9 +149,9 @@ for (const [w, h] of [[390, 664], [844, 390], [1366, 768]]) {
   await T(page, `(async () => { const T = window.plasmaTest; await T.account.signUp({ email: "look-hdr@example.com", pin: "letmein1", display_name: "Josh Tester", mode: "beginner" });
     document.querySelectorAll(".acctdlg:not(.hidden)").forEach((d) => d.classList.add("hidden")); T.showScreen("make", { force: true }); T.sketch.clear(); T.sketch.add("plate", true); T.sendToCutting(); })()`); await sleep(900);
   await T(page, `(() => { window.plasmaTest.goStep(3); document.getElementById("btnDemo").click(); })()`); await sleep(2500);
-  const hd = await T(page, `(() => { const a = document.getElementById("acctPill"), c = document.getElementById("connPill"), s = document.getElementById("btnStop").getBoundingClientRect(); return { name: a.scrollWidth <= a.clientWidth + 1, conn: Math.round(c.getBoundingClientRect().width), connText: c.textContent.trim(), stop: s.right <= innerWidth + 1 && s.width >= 44 }; })()`);
+  const hd = await T(page, `(() => { const a = document.getElementById("acctPill"), c = document.getElementById("connPill"), s = document.getElementById("btnStop").getBoundingClientRect(); return { name: a.scrollWidth <= a.clientWidth + 1, conn: Math.round(c.getBoundingClientRect().width), connText: c.textContent.trim(), connWord: getComputedStyle(c, "::after").content, stop: s.right <= innerWidth + 1 && s.width >= 44 }; })()`);
   ck("C 844x390 cutting: the account name is shown in full", hd.name, hd);
-  ck("C 844x390 cutting: once connected the connection pill is just its dot (its words stay for screen readers)", hd.conn <= 46 && /Practice/.test(hd.connText), hd);
+  ck("C 844x390 cutting: once connected the connection pill is its dot and one short word, not colour alone (the full words stay for screen readers)", hd.conn <= 130 && hd.connWord === '"Practice"' && /Practice/.test(hd.connText), hd);
   ck("C 844x390 cutting: STOP stays fully on screen", hd.stop, hd);
   await snap(page, "land-cut-header");
   ck("C 844x390: no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
