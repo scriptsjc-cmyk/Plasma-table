@@ -175,6 +175,13 @@ function renderShapeFormCore() {
     return;
   }
   const moved = Object.keys(it.holes || {}).length;
+  const host = sketch.hostPart(it);
+  const hb = host ? sketch.boxOf(host) : null;
+  // A hole in a part is positioned from that part's bottom-left, not from the sheet origin.
+  const posX = Math.round(((hb ? b[0] - hb[0] : b[0]) * 10)) / 10;
+  const posY = Math.round(((hb ? b[1] - hb[1] : b[1]) * 10)) / 10;
+  const posXLab = host ? "Position X (from the part's left edge)" : "Position X (left edge)";
+  const posYLab = host ? "Position Y (from the part's bottom edge)" : "Position Y (bottom edge)";
   const curKey = sketch.currentVariantKey();
   const vars = variantsFor(it.type).map((v) => {
     const d = shapeDef(v.id); const label = v.label || (d ? d.name : v.id);
@@ -196,8 +203,8 @@ function renderShapeFormCore() {
     ${customSizeHtml(it, b)}
     <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
       `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}
-      <label>Position X (left edge)<input type="number" step="any" inputmode="decimal" data-pos="x" value="${Math.round(b[0] * 10) / 10}"></label>
-      <label>Position Y (bottom edge)<input type="number" step="any" inputmode="decimal" data-pos="y" value="${Math.round(b[1] * 10) / 10}"></label>
+      <label>${esc(posXLab)}<input type="number" step="any" inputmode="decimal" data-pos="x" value="${posX}"></label>
+      <label>${esc(posYLab)}<input type="number" step="any" inputmode="decimal" data-pos="y" value="${posY}"></label>
       <label>Angle °<input type="number" step="any" inputmode="decimal" data-angle="1" value="${Math.round((it.rot || 0) * 10) / 10}"></label>
       ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
     </div>
@@ -234,9 +241,11 @@ export function bindShapeForm() {
       if (v > (sketch.maxMm || 2600) * 4) return;
       it.p[k] = v;
     }
-    else if (i.dataset.pos) {                // position = bottom-left corner of the shape
+    else if (i.dataset.pos) {                // position = bottom-left of the shape; for a hole in a part, from the part's bottom-left
       const b = sketch.boxOf(it);
-      if (i.dataset.pos === "x") it.x += v - b[0]; else it.y += v - b[1];
+      const host = sketch.hostPart && sketch.hostPart(it);
+      const origin = host ? sketch.boxOf(host) : [0, 0];
+      if (i.dataset.pos === "x") it.x += (origin[0] + v) - b[0]; else it.y += (origin[1] + v) - b[1];
     }
     sketch.save(); sketch.draw(); useShapeSoon();
   });

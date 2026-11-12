@@ -305,6 +305,40 @@ for (const mode of ["beginner", "pro"]) {
   ck("Pro form: hole shows 'Where it sits in the part' fields", await page.evaluate(() => !!document.querySelector('#shapeForm [data-hrel="x"]') && !!document.querySelector('#shapeForm [data-hrel="y"]')));
   await page.fill('#shapeForm [data-hrel="x"]', "50"); await page.press('#shapeForm [data-hrel="x"]', "Tab"); await sleep(500);
   ck("Pro form: typing the hole's distance from the left edge moves it", await page.evaluate(() => { const k = window.plasmaTest.sketch, h = k.items.find((i) => i.type === "cornerholes"), p = k.items[0], a = k.boxOf(h), b = k.boxOf(p); return Math.abs((a[0] + a[2]) / 2 - b[0] - 50) < 0.3; }));
+  // Position X/Y for a hole in a part are relative to that part, not the sheet
+  await page.evaluate(() => {
+    const k = window.plasmaTest.sketch;
+    k.clear();
+    k.add("rect", true, { w: 200, h: 120 });
+    const plate = k.items[0];
+    plate.x = 80; plate.y = 40; k.commit();
+    k.pick([plate.id]); k.add("slothole"); k.onSelect();
+  });
+  await sleep(400);
+  const pos = await page.evaluate(() => {
+    const form = document.getElementById("shapeForm");
+    const k = window.plasmaTest.sketch, hole = k.items.find((i) => k.isHole(i)), plate = k.items.find((i) => !k.isHole(i));
+    const hb = k.boxOf(plate), b = k.boxOf(hole);
+    const xLab = (form.querySelector('[data-pos="x"]') || {}).closest("label");
+    const yLab = (form.querySelector('[data-pos="y"]') || {}).closest("label");
+    return {
+      xLabel: xLab ? xLab.textContent : "",
+      yLabel: yLab ? yLab.textContent : "",
+      xVal: Number(form.querySelector('[data-pos="x"]') && form.querySelector('[data-pos="x"]').value),
+      yVal: Number(form.querySelector('[data-pos="y"]') && form.querySelector('[data-pos="y"]').value),
+      relX: +(b[0] - hb[0]).toFixed(1), relY: +(b[1] - hb[1]).toFixed(1),
+      sheetX: +b[0].toFixed(1), sheetY: +b[1].toFixed(1),
+    };
+  });
+  ck("Pro form: hole Position X/Y labels say they are from the part's edges", /from the part's left edge/i.test(pos.xLabel) && /from the part's bottom edge/i.test(pos.yLabel), JSON.stringify(pos));
+  ck("Pro form: hole Position X/Y values are relative to the part, not the sheet origin", Math.abs(pos.xVal - pos.relX) < 0.2 && Math.abs(pos.yVal - pos.relY) < 0.2 && Math.abs(pos.yVal - pos.sheetY) > 1, JSON.stringify(pos));
+  await page.fill('#shapeForm [data-pos="y"]', "18"); await page.press('#shapeForm [data-pos="y"]', "Tab"); await sleep(500);
+  const moved = await page.evaluate(() => {
+    const k = window.plasmaTest.sketch, hole = k.items.find((i) => k.isHole(i)), plate = k.items.find((i) => !k.isHole(i));
+    const hb = k.boxOf(plate), b = k.boxOf(hole);
+    return { partY: hb[1], holeY: b[1], rel: +(b[1] - hb[1]).toFixed(2), sheetWouldBe18: Math.abs(b[1] - 18) < 0.3 };
+  });
+  ck("Pro form: setting a hole's Position Y to 18 places it 18 mm up from the part, not at sheet Y=18", Math.abs(moved.rel - 18) < 0.3 && !moved.sheetWouldBe18, JSON.stringify(moved));
   await snap(page, "holes-pro");
   // the lot of them: each new part, default, added in Pro, and the cut check says it's cuttable on the cutting screen
   for (const id of ["banjo", "wgusset", "baseplate", "slot2", "sqwasher", "lug", "strap", "frame", "tplate", "tube", "cone", "s2r"]) {
