@@ -4,7 +4,7 @@ import { syncWhy } from "./whyoff.js";
 import { openGate } from "../account/accounthome.js";
 import * as Acc from "../account/account.js";
 import { S } from "../core/state.js";
-import { lockText, machineAllowed } from "../machine/access.js";
+import { machineAllowed } from "../machine/access.js";
 import { blockers } from "../cut/checklist.js";
 import { $, $$ } from "../core/dom.js";
 import { paintMenu } from "./nav.js";
@@ -36,6 +36,15 @@ function whyOff(el) {
 }
 const padUnavailable = (el) => !!(el.matches && el.matches(".j[data-axis], .steps button")) && (!S.connected || !!(S.job && S.job.running));
 export const paintWhy = () => syncWhy(whyOff, padUnavailable);
+// The connect card's line under the buttons (r7 U12): Practice always works, so it never says "Locked" next to a working Practice button.
+export function paintConnectLock() {
+  const el = $("connectLockText"); if (!el) return;
+  const practicing = !!S.demo;
+  const text = practicing ? "Practice table connected. Link a machine to cut for real."
+    : Acc.isSignedIn() ? "Try it with Practice (no machine), or link a machine to cut for real."
+    : "Try it with Practice (no machine), or sign in and link a machine to cut for real.";
+  if (el.textContent !== text) el.textContent = text;
+}
 export function refreshGate() {
   const needLink = !Acc.hasLinkedMachine();
   const practicing = !!S.demo;
@@ -43,10 +52,7 @@ export function refreshGate() {
   $("connectLock").classList.toggle("hidden", !needLink);
   const runLocked = needLink && !practicing;
   $("btnStart").classList.toggle("locked", runLocked);
-  $("connectLockText").textContent = (needLink && practicing)
-    ? "Practice works without a machine. Link one to cut for real."
-    : "🔒 " + lockText();
-  $("connectLock").classList.toggle("practice-ok", !!(needLink && practicing));
+  paintConnectLock();
   const send = $("btnConsoleSend");
   if (send) send.classList.toggle("locked", runLocked);
   document.body.classList.toggle("run-locked", runLocked);

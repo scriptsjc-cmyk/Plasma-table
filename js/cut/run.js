@@ -25,7 +25,8 @@ export function bindRun() {
       const fromCut = startCut();
       if (fromCut > 1 && !(await askConfirm({ title: "Continue from cut " + fromCut + "?", body: "Cuts 1 to " + (fromCut - 1) + " are NOT cut again. The torch lifts, moves to the start of cut " + fromCut + " with the arc off, then pierces there. Work zero is kept as it is now. Is the sheet still exactly where it was?", ok: "Continue", cancel: "Cancel" }))) return;
       const edges = M.safety && M.safety.limits;
-      if (!edges) {
+      // (the practice table is simulated, so there is nothing to crash: no homing question on every practice run, r7 U24)
+      if (!edges && !S.demo) {
         const ok = await askConfirm({ title: "Start without homing?", body: "No table edges are saved yet, so the app cannot check this job against the bed. Check the torch is clear and you are happy to start without homing.", ok: "Start anyway", cancel: "Cancel" });
         if (!ok) return;
       }

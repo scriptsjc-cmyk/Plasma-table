@@ -25,7 +25,7 @@ export function paintMenu() {
   const u = Acc.currentUser();
   const nm = u && (u.display_name || (u.email || "").split("@")[0]);
   $("menuHello").textContent = nm ? `Hi ${nm}. What do you want to do?` : "What do you want to do?";
-  $("menuMachine").textContent = Acc.hasLinkedMachine() ? "Your machine is linked." : (Acc.isSignedIn() ? "No machine linked yet. You can make parts now; linking a machine is needed to cut." : "");
+  $("menuMachine").textContent = Acc.hasLinkedMachine() ? "Your machine is linked." : (Acc.isSignedIn() ? "No machine linked yet. You can make parts and practise now; link a machine to cut for real." : "");
   paintMenuRecent();
 }
 // round 5 item 27: the menu's status row also offers the last few saved parts, one tap from opening in Make a part

@@ -47,7 +47,7 @@ try {
     await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(3); });
     await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3);
     t.check("Connect starts locked", await p.locator("#btnConnect.locked").count() === 1);
-    t.check("lock prompt shown on the connect card", /link (your |a )?machine to run jobs/i.test(await p.locator("#connectLock").textContent()));
+    t.check("lock prompt shown on the connect card", /link (your |a )?machine to (run jobs|cut for real)/i.test(await p.locator("#connectLock").textContent()));
     await p.evaluate(() => document.getElementById("btnConnect").click());
     await p.waitForSelector("#gateDlg:not(.hidden)", { timeout: 5000 });
     t.check("tapping Connect without a linked machine opens the lock prompt", /link (your |a )?machine to run jobs/i.test(await p.locator("#gateWhy").textContent()));
