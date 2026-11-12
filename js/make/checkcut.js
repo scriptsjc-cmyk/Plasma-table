@@ -1,5 +1,8 @@
 // r8 item 13: Check cut on the Make header. Asks material and thickness, then runs the
 // same cuttability check used on the cutting screen (holes too small, parts too close, etc.).
+// Thickness and material are clickable chips (same idea as the Cut screen), not a <select>:
+// a closed dropdown listed every size in the dialog's text, so clicking "3 mm" did nothing
+// and the check ran at the first size (1 mm).
 import { $ } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
 import { checkDesign, machineLimits } from "../cut/check.js";
@@ -11,17 +14,53 @@ function contours() {
   return [];
 }
 
+function pickedMat() {
+  const on = $("makeCheckMat") && $("makeCheckMat").querySelector("[data-mat].sel");
+  return (on && on.dataset.mat) || S.material || "";
+}
+function pickedTh() {
+  const on = $("makeCheckTh") && $("makeCheckTh").querySelector("[data-th].sel");
+  if (on) return Number(on.dataset.th);
+  return S.thickness != null ? Number(S.thickness) : NaN;
+}
+
 function fillPick() {
   const mat = $("makeCheckMat"), th = $("makeCheckTh");
   if (!mat || !th || !S.chart) return;
   const materials = S.chart.materials || [];
-  mat.innerHTML = materials.map((m) => `<option value="${m.name}"${m.name === S.material ? " selected" : ""}>${m.name}</option>`).join("");
-  const fillTh = () => {
-    const m = materials.find((x) => x.name === mat.value) || materials[0];
+  const curMat = materials.some((m) => m.name === S.material) ? S.material : (materials[0] && materials[0].name);
+  mat.innerHTML = materials.map((m) =>
+    `<button type="button" role="option" data-mat="${m.name}" class="${m.name === curMat ? "sel" : ""}" aria-selected="${m.name === curMat ? "true" : "false"}">${m.name}</button>`).join("");
+  const fillTh = (keep) => {
+    const name = pickedMat();
+    const m = materials.find((x) => x.name === name) || materials[0];
     const rows = (m && m.rows) || [];
-    th.innerHTML = rows.map((r) => `<option value="${r.thickness_mm}"${Number(r.thickness_mm) === Number(S.thickness) ? " selected" : ""}>${r.thickness_mm} mm</option>`).join("");
+    const want = keep != null && Number.isFinite(Number(keep)) ? Number(keep)
+      : (S.thickness != null ? Number(S.thickness) : NaN);
+    const picked = rows.some((r) => Number(r.thickness_mm) === want) ? want
+      : (rows[0] ? Number(rows[0].thickness_mm) : NaN);
+    th.innerHTML = rows.map((r) => {
+      const on = Number(r.thickness_mm) === picked;
+      return `<button type="button" role="option" data-th="${r.thickness_mm}" class="${on ? "sel" : ""}" aria-selected="${on ? "true" : "false"}">${r.thickness_mm} mm</button>`;
+    }).join("");
   };
-  mat.onchange = fillTh;
+  mat.onclick = (e) => {
+    const b = e.target.closest("[data-mat]"); if (!b) return;
+    mat.querySelectorAll("[data-mat]").forEach((x) => {
+      const on = x === b;
+      x.classList.toggle("sel", on);
+      x.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    fillTh(pickedTh());
+  };
+  th.onclick = (e) => {
+    const b = e.target.closest("[data-th]"); if (!b) return;
+    th.querySelectorAll("[data-th]").forEach((x) => {
+      const on = x === b;
+      x.classList.toggle("sel", on);
+      x.setAttribute("aria-selected", on ? "true" : "false");
+    });
+  };
   fillTh();
 }
 
@@ -33,7 +72,11 @@ function runCheck() {
     out.innerHTML = `<p class="warntext">There's no drawing to check yet. Add a shape first.</p>`;
     return;
   }
-  const mat = $("makeCheckMat").value, th = Number($("makeCheckTh").value);
+  const mat = pickedMat(), th = pickedTh();
+  if (!mat || !Number.isFinite(th)) {
+    out.innerHTML = `<p class="warntext">Pick a material and a thickness, then check the drawing.</p>`;
+    return;
+  }
   S.material = mat; S.thickness = th;
   const t = S.cfg.travel_mm, L = S.safety && S.safety.limits;
   const table = L ? [Math.round(L.x[1] - L.x[0]), Math.round(L.y[1] - L.y[0])] : [t.x, t.y];

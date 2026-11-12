@@ -79,13 +79,32 @@ for (const prof of ["d1440", "d1366"]) {
   await sleep(200);
   const dlg = await ev(page, () => {
     const d = document.getElementById("makeCheckDlg");
-    return { show: d && !d.hidden && !d.classList.contains("hidden"), mats: (document.getElementById("makeCheckMat") || {}).options.length, ths: (document.getElementById("makeCheckTh") || {}).options.length };
+    return {
+      show: d && !d.hidden && !d.classList.contains("hidden"),
+      mats: document.querySelectorAll("#makeCheckMat [data-mat]").length,
+      ths: document.querySelectorAll("#makeCheckTh [data-th]").length,
+      thsAreButtons: [...document.querySelectorAll("#makeCheckTh [data-th]")].every((b) => b.tagName === "BUTTON"),
+    };
   });
-  t.check(n("item 13: Check cut asks for material and thickness"), dlg.show && dlg.mats > 0 && dlg.ths > 0, JSON.stringify(dlg));
+  t.check(n("item 13: Check cut asks for material and thickness"), dlg.show && dlg.mats > 0 && dlg.ths > 0 && dlg.thsAreButtons, JSON.stringify(dlg));
+  const three = await ev(page, () => {
+    const b = document.querySelector('#makeCheckTh [data-th="3"]');
+    if (b) b.click();
+    return { clicked: !!(b && b.classList.contains("sel")), val: b && b.dataset.th };
+  });
+  t.check(n("item 13: clicking 3 mm selects that thickness"), three.clicked && three.val === "3", JSON.stringify(three));
   await ev(page, () => document.getElementById("makeCheckGo").click());
   await sleep(200);
   const out = await ev(page, () => (document.getElementById("makeCheckOut") || {}).textContent || "");
   t.check(n("item 13: Check cut reports on the current drawing"), /cuttable|too small|thin|close|hole|check/i.test(out), out.slice(0, 300));
+  t.check(n("item 13: the result uses the 3 mm you clicked, not the first size"), /\b3 mm\b/.test(out) && !/Cut check · .* 1 mm/.test(out), out.slice(0, 300));
+  const five = await ev(page, () => {
+    const b = document.querySelector('#makeCheckTh [data-th="5"]');
+    if (b) b.click();
+    document.getElementById("makeCheckGo").click();
+    return { clicked: !!(b && b.classList.contains("sel")), out: (document.getElementById("makeCheckOut") || {}).textContent || "" };
+  });
+  t.check(n("item 13: clicking another thickness (5 mm) sticks too"), five.clicked && /\b5 mm\b/.test(five.out), five.out.slice(0, 300));
   await ev(page, () => document.getElementById("makeCheckClose").click());
 
   // item 15: Space does not pan; default empty drag is box select

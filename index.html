@@ -1152,8 +1152,14 @@
     <h2 id="makeCheckTitle">Check cut</h2>
     <p id="makeCheckAsk" class="muted">Choose the material and thickness, then we'll check this drawing.</p>
     <div id="makeCheckPick" class="makecheck-pick">
-      <label>Material <select id="makeCheckMat" aria-label="Material for the check"></select></label>
-      <label>Thickness <select id="makeCheckTh" aria-label="Thickness for the check"></select></label>
+      <div class="makecheck-field">
+        <span class="makecheck-lab" id="makeCheckMatLab">Material</span>
+        <div id="makeCheckMat" class="chips makecheck-chips" role="listbox" aria-labelledby="makeCheckMatLab"></div>
+      </div>
+      <div class="makecheck-field">
+        <span class="makecheck-lab" id="makeCheckThLab">Thickness</span>
+        <div id="makeCheckTh" class="chips makecheck-chips" role="listbox" aria-labelledby="makeCheckThLab"></div>
+      </div>
       <button type="button" id="makeCheckGo" class="xl go">Check this drawing</button>
     </div>
     <div id="makeCheckOut" class="cutcheck"></div>
