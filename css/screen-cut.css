@@ -953,8 +953,11 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   #running > #liveSpeedBox { grid-area: speed; margin: 0; }
   #running > #liveSpeedBox .row { flex-wrap: nowrap; gap: 8px; }
   #running > #liveSpeedBox .row button { flex: 1 1 0; min-width: 0; min-height: 44px; }
+  #running > #liveSpeedBox #delayRow .row { flex-wrap: wrap; }
+  #running > #liveSpeedBox #delayRow .row #delSave { flex: 1 0 100%; white-space: nowrap; }    /* its own row under − / +, never squeezed */
   #running > #liveSpeedBox p { margin: 4px 0 0; }
-  #running > #livePanel { grid-area: live; margin: 0; }
+  #running > #livePanel { grid-area: live; margin: 0; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }   /* each reading on one line */
+  #running > #livePanel .lp b { white-space: nowrap; }
   #running > #lpNote { grid-area: note; margin: 0; }
   #running > #lpNote:empty { display: none; }
   #running > .runctl { grid-area: ctl; position: sticky; bottom: 0; z-index: 2; margin: 0; padding: 4px 0; background: var(--card); }
