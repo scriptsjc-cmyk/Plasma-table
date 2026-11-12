@@ -1,6 +1,8 @@
 // Round 5 stage 3 (LOOK AND POLISH) tests. Takes the r5-look-*.png screenshots.
 //  A  wording: "Beginner" in full (no "Bgn"), one line on the sign-in page, "Save" in the editor bar, How to use keeps its title
 //     (a picker on a phone), Settings wording follows the mode, "start point" (not "work zero"), no "Step 1 of 5" flash, no demo note on Make
+//  B  colour and icons: accent and go pass AA, header icons come from the sprite, Pro Make has no second tile grid (text/trace in the
+//     quick bar), "not set yet" reads as a to-do, start point only drawn once set, wizard words above its buttons
 import { serve, launch } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
@@ -58,6 +60,27 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   } else ck(`A ${w}x${h}: a laptop keeps the section list beside the text`, !ht.pick && ht.steps >= 5, ht);
   await T(page, `window.plasmaTest.closeHowto()`);
   ck(`A ${w}x${h}: no page errors`, noErrors(page).length === 0, noErrors(page).join("|"));
+  await page.context().close();
+}
+
+// ================================================================== B: colour, icons, quieter states
+{
+  const lum = (hex) => { const c = hex.replace("#", "").match(/../g).map((x) => parseInt(x, 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const tok = fs.readFileSync(new URL("../../css/tokens.css", import.meta.url), "utf8");
+  const v = (n) => (tok.match(new RegExp(`--${n}:\\s*(#[0-9A-Fa-f]{6})`)) || [])[1];
+  for (const n of ["accent", "go"]) ck(`B white text on --${n} passes AA (4.5:1)`, v(n) && ratio(v(n), "#FFFFFF") >= 4.5, `${v(n)} ${v(n) && ratio(v(n), "#FFFFFF").toFixed(2)}`);
+  ck("B --accent-text on --accent-weak passes AA", ratio(v("accent-text"), v("accent-weak")) >= 4.5, `${v("accent-text")} on ${v("accent-weak")}`);
+  const page = await view(1366, 768);
+  ck("B the header Help and Settings buttons use the drawn icons (one style)", await T(page, `["btnHowto", "btnSettings"].every((id) => !!document.querySelector("#" + id + " svg use"))`));
+  ck("B 'Home not set yet' reads as a to-do, not an alarm", (await T(page, `document.getElementById("refState").className`)) === "todo");
+  await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("pro", { persist: false, autoFs: false }); T.showScreen("make", { force: true }); T.setShapeFs(false); })()`); await sleep(400);
+  ck("B Pro Make shows one set of add buttons (no tile grid under the quick bar)", await T(page, `[...document.querySelectorAll("#srcShape > .addtiles")].every((e) => !e.offsetParent)`));
+  const qb = await T(page, `[...document.querySelectorAll("[data-qb]")].map((b) => b.dataset.qb)`);
+  ck("B the Pro quick bar has Add text and Trace a picture", qb.includes("text") && qb.includes("trace"), qb);
+  const wz = await T(page, `[...document.querySelectorAll("#wizard > li")].map((li) => li.firstElementChild.tagName + ">" + (li.querySelector(".wzbtns") ? li.querySelector(".wzbtns").querySelectorAll("button").length : 0))`);
+  ck("B every setup step has its words first, then its buttons on their own row", wz.length === 4 && wz.every((x) => /^P>[12]$/.test(x)), wz);
+  ck("B no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await page.context().close();
 }
 
