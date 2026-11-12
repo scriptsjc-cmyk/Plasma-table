@@ -835,6 +835,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .cutbar-start[data-state="unset"] { color: var(--warn-text); background: var(--warn-bg); border-color: var(--warn); }
   .cutbar-key { flex: 0 1 auto; min-width: 0; margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cutbar-layout { flex: none; min-height: 32px; padding: 2px 12px; }
+  body.cut-arrange .cutbar-key { display: none; }
   .cutbar-layout[aria-pressed="true"] { background: var(--accent-weak); border-color: var(--accent); }
 
   /* the job and machine card, in place of the one-line stats under the picture */
@@ -846,26 +847,40 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .jobcard dt { flex: none; width: 60px; font-size: 12px; font-weight: 700; color: var(--muted); }
   .jobcard dd { margin: 0; min-width: 0; font-size: 13px; line-height: 1.35; font-weight: 650; color: var(--text); overflow-wrap: anywhere; }
 
+  /* r7 J14: column dividers and Layout mode (js/cut/cutpanels.js); the columns come from --s3-* / --s4-* on the grid */
+  body[data-screen="cut"] .cutgrid { position: relative; }
+  .coldivider { position: absolute; top: 8px; bottom: 8px; width: 12px; margin-left: -6px; z-index: 3; cursor: col-resize; touch-action: none; border-radius: 6px; }
+  .coldivider::after { content: ""; position: absolute; left: 5px; top: 50%; width: 2px; height: 48px; margin-top: -24px; border-radius: 1px; background: var(--line-strong); opacity: 0; transition: opacity .15s; }
+  .coldivider:hover::after, .coldivider:focus-visible::after, .coldivider.dragging::after, body.cut-arrange .coldivider::after { opacity: 1; }
+  .coldivider:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .arrcover { position: absolute; top: 8px; bottom: 8px; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    padding: 12px; border: 2px dashed var(--accent); border-radius: var(--r); background: color-mix(in srgb, var(--card) 88%, transparent); cursor: grab; text-align: center; }
+  .arrcover[hidden], .coldivider[hidden] { display: none; }
+  .arrcover .row { gap: 8px; flex-wrap: nowrap; }
+  .arrcover .row button { white-space: nowrap; }
+  .arrcover .arrname { font-size: 16px; white-space: nowrap; }
+  .arrcover.dragging { opacity: .5; }
+  .arrcover.dropon { background: color-mix(in srgb, var(--accent) 16%, var(--card)); }
   /* Bed & start:   cut check   |                 | start point: connect, home, X / Y / Z, jog, Start here
                     layout card | the bed picture |
                     checklist   |                 | Back / Start / Download
      The picture spans every row and each side card spans the rows it shares, so no card leaves a gap. */
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid {
-    grid-template-columns: minmax(290px, 22vw) minmax(0, 1fr) minmax(340px, 27vw) !important;
+    grid-template-columns: var(--s3-cols, minmax(290px, 22vw) minmax(0, 1fr) minmax(340px, 27vw)) !important;
     grid-template-rows: auto auto minmax(0, 1fr) auto !important; grid-template-areas: none !important; }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .stepPane,
   body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) { display: contents !important; }
-  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane { grid-column: 2; grid-row: 1 / 5; order: 0; }
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane { grid-column: var(--s3-bed, 2); grid-row: 1 / 5; order: 0; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > * { min-width: 0; margin: 0; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .setupcard { min-height: 0; overflow: auto; overscroll-behavior: contain; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 { grid-column: 1; grid-row: 1; max-height: 22dvh; overflow: auto; padding: 8px 12px; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 { grid-column: var(--s3-side, 1); grid-row: 1; max-height: 22dvh; overflow: auto; padding: 8px 12px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 .cchead { font-size: 15px; margin-bottom: 4px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3:empty { display: none; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #layoutCard { grid-column: 1; grid-row: 2; max-height: 26dvh; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard { grid-column: 1; grid-row: 3 / 5; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #layoutCard { grid-column: var(--s3-side, 1); grid-row: 2; max-height: 26dvh; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard { grid-column: var(--s3-side, 1); grid-row: 3 / 5; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard:not([open]) { align-self: start; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #zeroCard { grid-column: 3; grid-row: 1 / 4; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav { grid-column: 3; grid-row: 4; padding: 0; position: static;
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #zeroCard { grid-column: var(--s3-main, 3); grid-row: 1 / 4; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav { grid-column: var(--s3-main, 3); grid-row: 4; padding: 0; position: static;
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnStart { grid-column: 1 / -1; grid-row: 1; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy { grid-column: 1 / -1; margin: 0; font-size: 13px; }
@@ -913,9 +928,9 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 
   /* Cut: the picture | the run panel */
   body.app-shell[data-screen="cut"][data-step="4"] .cutgrid {
-    grid-template-columns: minmax(0, 1fr) minmax(480px, 40vw) !important; grid-template-rows: minmax(0, 1fr) !important; grid-template-areas: none !important; }
-  body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .previewPane { grid-column: 1; grid-row: 1; order: 0; max-height: none; }
-  body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .stepPane { grid-column: 2; grid-row: 1; order: 0; min-height: 0; overflow: auto; }
+    grid-template-columns: var(--s4-cols, minmax(0, 1fr) minmax(480px, 40vw)) !important; grid-template-rows: minmax(0, 1fr) !important; grid-template-areas: none !important; }
+  body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .previewPane { grid-column: var(--s4-bed, 1); grid-row: 1; order: 0; max-height: none; }
+  body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .stepPane { grid-column: var(--s4-run, 2); grid-row: 1; order: 0; min-height: 0; overflow: auto; }
   body[data-screen="cut"] #running:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 16px; align-content: start;
     grid-template-areas: "title speed" "nums speed" "prog speed" "info speed" "pos speed" "torch speed" "live live" "note note" "ctl ctl" "help help"; }
   #running > #runTitle { grid-area: title; margin: 0; }

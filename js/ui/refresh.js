@@ -6,6 +6,7 @@ import { paintDelay } from "../cut/pierce.js";
 import { paintRestart } from "../cut/restart.js";
 import { updatePlayRow } from "../cut/playback.js";
 import { paintCutBar } from "../cut/cutbar.js";
+import { paintCutPanels } from "../cut/cutpanels.js";
 import * as Setup from "../cut/setup.js";
 import { M, S, sketch } from "../core/state.js";
 import { $, $$, clock, esc, fmtTime, placeToast } from "../core/dom.js";
@@ -124,7 +125,7 @@ export function refresh() {
       ${S.prepared.summary ? `<span>Parts <b>${(S.src !== "file" && sketch && sketch.items.length && Setup.partCount(sketch)) || S.prepared.summary.parts}</b> · holes <b>${S.prepared.summary.holes}</b></span>` : `<span>Cuts <b>${st.pierces}</b></span>`}<span>About <b>${fmtTime(st.estimated_seconds)}</b></span>${S.prepared.dry_run ? "<span><b>PRACTICE RUN</b></span>" : ""}`;
   } else $("jobStats").innerHTML = "";
   $("next1").disabled = !S.prepared;
-  updatePlayRow(); paintRestart(); paintDelay(); paintGuide(); paintJobCard(); paintCutBar();
+  updatePlayRow(); paintRestart(); paintDelay(); paintGuide(); paintJobCard(); paintCutBar(); paintCutPanels();
   if ($("btnEditDrawing")) $("btnEditDrawing").classList.toggle("hidden", !(S.design && !S.design.straight && S.src === "file" && S.design.contours && S.design.contours.length));
   paintBedStatus();
   $$("#stepper li").forEach((li) => (li.style.opacity = canGo(Number(li.dataset.step)) ? 1 : 0.4));

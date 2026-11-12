@@ -65,6 +65,7 @@ import { bindDialogKeys } from "./ui/dialogs.js";
 import { bindRun } from "./cut/run.js";
 import { bindTurnCover } from "./cut/turncover.js";
 import { bindCutBar } from "./cut/cutbar.js";
+import { bindCutPanels } from "./cut/cutpanels.js";
 import { bindViewport } from "./ui/viewport.js";
 import { bindPicture } from "./make/picture.js";
 import { bindWifiSetup } from "./ui/wifisetup.js";
@@ -96,6 +97,7 @@ function bind() {
   bindRun();
   bindTurnCover();
   bindCutBar();
+  bindCutPanels();
   bindJog();
   bindViewport();
   bindPicture();
