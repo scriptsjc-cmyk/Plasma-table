@@ -800,6 +800,9 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"] #btnStop.estop .estop-svg { width: 76px; height: 76px; }
   body[data-screen="cut"] #btnStop.estop .estop-label { font-size: 24px; margin: 0; padding: 6px 12px; border-radius: 8px; }
   body[data-screen="cut"] #btnStop.pressed .estop-label { font-size: 17px; line-height: 1.1; padding: 4px 8px; white-space: normal; text-align: center; }
+  /* a slimmer step bar, so the picture keeps the height */
+  body.app-shell[data-screen="cut"][data-step="3"] .stepper li, body.app-shell[data-screen="cut"][data-step="4"] .stepper li { min-height: 34px; padding-top: 2px; padding-bottom: 4px; }
+
   /* the job and machine card, in place of the one-line stats under the picture */
   body[data-screen="cut"][data-step="3"] #jobStats, body[data-screen="cut"][data-step="4"] #jobStats { display: none; }
   body[data-screen="cut"][data-step="3"] #jobCard, body[data-screen="cut"][data-step="4"] #jobCard { display: block; flex: 1 1 100%; margin: 0; padding: 6px 10px;
@@ -808,6 +811,59 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .jobcard dl > div { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
   .jobcard dt { flex: none; width: 60px; font-size: 12px; font-weight: 700; color: var(--muted); }
   .jobcard dd { margin: 0; min-width: 0; font-size: 13px; line-height: 1.35; font-weight: 650; color: var(--text); overflow-wrap: anywhere; }
+
+  /* Bed & start:   cut check   |                 | start point: connect, home, X / Y / Z, jog, Start here
+                    layout card | the bed picture |
+                    checklist   |                 | Back / Start / Download
+     The picture spans every row and each side card spans the rows it shares, so no card leaves a gap. */
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid {
+    grid-template-columns: minmax(290px, 22vw) minmax(0, 1fr) minmax(340px, 27vw) !important;
+    grid-template-rows: auto auto minmax(0, 1fr) auto !important; grid-template-areas: none !important; }
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .stepPane,
+  body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) { display: contents !important; }
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane { grid-column: 2; grid-row: 1 / 5; order: 0; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > * { min-width: 0; margin: 0; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .setupcard { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 { grid-column: 1; grid-row: 1; max-height: 22dvh; overflow: auto; padding: 8px 12px; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 .cchead { font-size: 15px; margin-bottom: 4px; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3:empty { display: none; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #layoutCard { grid-column: 1; grid-row: 2; max-height: 26dvh; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard { grid-column: 1; grid-row: 3 / 5; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard:not([open]) { align-self: start; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #zeroCard { grid-column: 3; grid-row: 1 / 4; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav { grid-column: 3; grid-row: 4; padding: 0; position: static;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnStart { grid-column: 1 / -1; grid-row: 1; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy { grid-column: 1 / -1; margin: 0; font-size: 13px; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav button:not(#btnStart) { min-height: 44px; font-size: 15px; white-space: nowrap; }
+  /* the layout card: compact fields and buttons */
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow { gap: 8px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label { font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow input { min-height: 34px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns button { min-height: 40px; font-size: 14px; }
+  /* the start-point card: compact, and Start here stays in view at the bottom of the card while you scroll it (a review found it
+     about 900px down) */
+  body[data-screen="cut"][data-step="3"] .zerobody { display: flex; flex-direction: column; gap: 8px; }
+  body[data-screen="cut"][data-step="3"] .zerobody > * { margin: 0; }
+  body[data-screen="cut"][data-step="3"] .zerobody > #btnZero { position: sticky; bottom: 0; z-index: 2;
+    box-shadow: 0 0 0 8px var(--card), 40px 0 0 8px var(--card), -40px 0 0 8px var(--card); }
+  body[data-screen="cut"][data-step="3"] .zerobody .connectcard { padding: 8px 10px; }
+  body[data-screen="cut"][data-step="3"] .zerobody .connectcard .xl, body[data-screen="cut"][data-step="3"] .homerow button { min-height: 44px; font-size: 15px; }
+  body[data-screen="cut"][data-step="3"] #connectLock { margin-top: 8px; flex-wrap: nowrap; }
+  body[data-screen="cut"][data-step="3"] #connectLock .locknote { flex: 1 1 auto; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #connectLock .xl { flex: none; }
+  body[data-screen="cut"][data-step="3"] .homerow { gap: 6px; }
+  body[data-screen="cut"][data-step="3"] .homerow button { padding: 4px 10px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos div { padding: 4px 10px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: 22px; }
+  body[data-screen="cut"][data-step="3"] .jog .j { min-height: 44px; font-size: 18px; }
+  /* the checklist fits a mouse: 24px boxes, slim rows */
+  body[data-screen="cut"][data-step="3"] #checkCard > summary { padding-top: 0; }
+  body[data-screen="cut"][data-step="3"] .checkmat { flex-wrap: nowrap; justify-content: space-between; }
+  body[data-screen="cut"][data-step="3"] .checkmat button { min-height: 32px; font-size: 13px; padding: 2px 8px; }
+  body[data-screen="cut"][data-step="3"] .checklist { gap: 4px; }
+  body[data-screen="cut"][data-step="3"] .checklist label { min-height: 36px; padding: 4px 8px; gap: 10px; font-size: 15px; }
+  body[data-screen="cut"][data-step="3"] .checklist input { width: 24px; height: 24px; min-width: 24px; min-height: 24px; }
 
   /* STOP stays the biggest: no other cutting-screen button is wider than 300px or taller than 56px */
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button:not(.blocker-jump),
