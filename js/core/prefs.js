@@ -45,6 +45,7 @@ export function defaultPrefs() {
     gridSize: 0,
     snap: true,
     canvas: "default",
+    wheelZoom: false,
   };
 }
 
@@ -53,7 +54,7 @@ const isObj = (o) => o && typeof o === "object" && !Array.isArray(o);
 export function sanitizePrefs(raw) {
   const d = defaultPrefs(), src = isObj(raw) ? raw : {}, out = defaultPrefs();
   if (THEMES.includes(src.theme)) out.theme = src.theme;
-  if (ACCENTS[src.accent]) out.accent = src.accent;
+  if (Object.hasOwn(ACCENTS, src.accent)) out.accent = src.accent;
   if (TOOLBARS.includes(src.toolbar)) out.toolbar = src.toolbar;
   if (BUTTONS.includes(src.buttons)) out.buttons = src.buttons;
   if (src.units === "mm" || src.units === "inch") out.units = src.units;
@@ -61,7 +62,8 @@ export function sanitizePrefs(raw) {
   if (typeof src.grid === "boolean") out.grid = src.grid;
   if (GRID_SIZES.includes(Number(src.gridSize))) out.gridSize = Number(src.gridSize);
   if (typeof src.snap === "boolean") out.snap = src.snap;
-  if (CANVAS_BG[src.canvas] !== undefined) out.canvas = src.canvas;
+  if (Object.hasOwn(CANVAS_BG, src.canvas)) out.canvas = src.canvas;
+  if (typeof src.wheelZoom === "boolean") out.wheelZoom = src.wheelZoom;
   return out;
 }
 
@@ -79,10 +81,7 @@ export function loadPrefs(userId) {
   currentKey = prefsKey(userId);
   try {
     const raw = JSON.parse(localStorage.getItem(currentKey) || "null");
-    if (!raw && userId) {
-      const fallback = JSON.parse(localStorage.getItem(PREFS_KEY) || "null");
-      current = sanitizePrefs(fallback);
-    } else current = sanitizePrefs(raw);
+    current = sanitizePrefs(raw);
   } catch (e) { current = defaultPrefs(); }
   return getPrefs();
 }
@@ -130,6 +129,11 @@ export function applyChrome(p = current) {
   else root.style.removeProperty("--cad-canvas");
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", theme === "dark" ? "#18202a" : "#E8EAED");
+  try {
+    document.querySelectorAll("img.loginmark, img.aboutmark").forEach((img) => {
+      img.src = theme === "dark" ? "logo-dark.svg" : "logo.svg";
+    });
+  } catch (e) { /* tests / early boot */ }
   const body = document.body;
   if (body) {
     body.classList.toggle("yours-toolbar-top", prefs.toolbar === "top");
@@ -146,4 +150,19 @@ export function bindThemeMedia() {
   const on = () => { if (current.theme === "auto") applyChrome(current); };
   if (mq.addEventListener) mq.addEventListener("change", on);
   else if (mq.addListener) mq.addListener(on);
+}
+
+// Display-only units (Make it yours). Machine and G-code stay in millimetres.
+export function formatLen(mm, digits) {
+  const n = Number(mm);
+  if (!Number.isFinite(n)) return "";
+  if (current.units === "inch") {
+    const d = digits == null ? 2 : digits;
+    const v = n / 25.4;
+    const s = d === 0 ? String(Math.round(v)) : v.toFixed(d);
+    return s + " in";
+  }
+  const d = digits == null ? (Math.abs(n) >= 10 ? 0 : 1) : digits;
+  const s = d === 0 ? String(Math.round(n)) : n.toFixed(d);
+  return s + " mm";
 }

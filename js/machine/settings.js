@@ -3,7 +3,6 @@
 // tools (steps/mm, $ editor) behind a warning and an automatic $$ backup.
 
 import * as Acc from "../account/account.js";
-import { savePrefs } from "../core/prefs.js";
 import { filterConsoleCommand, renderAdvancedMachine } from "./admin-machine.js";
 import { fluidncMixedContentMessage } from "./fluidnc.js";
 import { DIALECTS } from "./dialect.js";
@@ -197,8 +196,17 @@ export function closeSettings() {
 }
 
 function showTab(id) {
-  $$(".settab").forEach((b) => b.classList.toggle("sel", b.dataset.settab === id));
+  $$(".settab").forEach((b) => {
+    const on = b.dataset.settab === id;
+    b.classList.toggle("sel", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+    b.tabIndex = on ? 0 : -1;
+  });
   $$(".setpane").forEach((p) => p.classList.toggle("hidden", p.dataset.setpane !== id));
+  const save = $("btnSaveSettings"), row = save && save.closest(".setsave");
+  const live = id === "yours";
+  if (save) save.classList.toggle("hidden", live);
+  if (row) row.classList.toggle("hidden", live);
   if (id === "firmware") mountFirmware();
   if (id === "materials") paintMaterials();
   if (id === "io") paintIo();
@@ -219,6 +227,7 @@ export function paintSettings() {
     if (!t.beginner && !pro && t.id !== "io") continue;
     const b = document.createElement("button");
     b.type = "button"; b.className = "settab"; b.dataset.settab = t.id; b.textContent = t.name;
+    b.setAttribute("role", "tab"); b.setAttribute("aria-selected", "false"); b.tabIndex = -1;
     b.onclick = () => showTab(t.id);
     box.appendChild(b);
   }
@@ -246,7 +255,6 @@ function fillBasics() {
   set("setThcV", s.torch.thcVoltage);
   if ($("setThcOn")) $("setThcOn").checked = !!s.torch.thcOn;
   if ($("setUnits")) $("setUnits").value = s.units || "mm";
-  if ($("yoursUnits")) $("yoursUnits").value = s.units || "mm";
   if ($("setDialect")) $("setDialect").value = s.dialect || "grbl";
   if ($("setLineNo")) $("setLineNo").checked = !!s.lineNumbers;
   if ($("setSizeCheck")) $("setSizeCheck").checked = s.sizeCheck !== false;
@@ -287,10 +295,6 @@ function readFormIntoState() {
   r.settings.fluidnc = { ...state.fluidnc };
   state = r.settings;
   saveSettings(state);
-  if (state.units === "mm" || state.units === "inch") {
-    try { savePrefs({ units: state.units }); } catch (e) { /* ignore */ }
-    if ($("yoursUnits")) $("yoursUnits").value = state.units;
-  }
   if (host && host.onChange) host.onChange(state);
   return state;
 }

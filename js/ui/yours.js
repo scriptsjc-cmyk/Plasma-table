@@ -1,11 +1,10 @@
 // Settings → Make it yours: the per-user appearance and canvas preferences, applied live.
 // Saved in this browser (per signed-in account id). Not uploaded — the database has no prefs column.
 import { applyChrome, bindThemeMedia, getPrefs, loadPrefs, prefsKey, resetPrefs, savePrefs } from "../core/prefs.js";
-import { applyUnits } from "../machine/settings.js";
 import { setAppMode } from "./mode.js";
 import * as Acc from "../account/account.js";
 import { sketch } from "../core/state.js";
-import { $ } from "../core/dom.js";
+import { $, toast } from "../core/dom.js";
 import { refreshScrollRows } from "./scrollrow.js";
 
 function userId() {
@@ -23,7 +22,7 @@ function applyAll(p, { mode = true } = {}) {
   applyChrome(p);
   snapOn(p.snap);
   if (mode && (p.mode === "pro" || p.mode === "beginner")) {
-    try { setAppMode(p.mode, { persist: false, autoFs: false }); } catch (e) { /* not ready */ }
+    try { setAppMode(p.mode, { persist: !!(Acc.isSignedIn && Acc.isSignedIn()), autoFs: false }); } catch (e) { /* not ready */ }
   }
   try { if (sketch && sketch.draw) sketch.draw(); } catch (e) { /* ignore */ }
   refreshScrollRows();
@@ -41,6 +40,7 @@ function fillForm(p) {
   set("yoursGridSize", p.gridSize);
   set("yoursSnap", p.snap);
   set("yoursCanvas", p.canvas);
+  set("yoursWheelZoom", p.wheelZoom);
 }
 
 function readForm() {
@@ -57,13 +57,25 @@ function readForm() {
     gridSize: Number(val("yoursGridSize")),
     snap: chk("yoursSnap"),
     canvas: val("yoursCanvas"),
+    wheelZoom: chk("yoursWheelZoom"),
   };
 }
 
-function onChange() {
-  const next = savePrefs(readForm(), userId());
-  try { applyUnits(next.units); } catch (e) { /* settings not ready */ }
-  applyAll(next);
+function onChange(e) {
+  const field = e && e.target && e.target.id;
+  const draft = readForm();
+  if (field === "yoursMode" && draft.mode === "pro") {
+    try {
+      if (Acc.isSignedIn && Acc.isSignedIn() && typeof Acc.canPro === "function" && !Acc.canPro()) {
+        draft.mode = "beginner";
+        const el = $("yoursMode"); if (el) el.value = "beginner";
+        toast("Pro isn't available on this account, so Default mode stays Beginner.", true);
+      }
+    } catch (err) { /* ignore */ }
+  }
+  const next = savePrefs(draft, userId());
+  // Display units only — do not rewrite machine Settings units.
+  applyAll(next, { mode: field === "yoursMode" });
 }
 
 export function paintYours() { fillForm(getPrefs()); }
@@ -98,7 +110,6 @@ export function bindYours() {
   if ($("yoursReset")) $("yoursReset").onclick = () => {
     const p = resetPrefs(userId());
     fillForm(p);
-    try { applyUnits(p.units); } catch (e) { /* ignore */ }
-    applyAll(p);
+    applyAll(p, { mode: true });
   };
 }
