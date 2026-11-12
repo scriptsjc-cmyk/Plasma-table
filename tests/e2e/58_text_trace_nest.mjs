@@ -286,7 +286,7 @@ for (const [view, mode] of [["laptop", "pro"], ["laptop", "beginner"], ["phone",
   ck(`[${tag}] ${mode === "pro" ? "Pro shows stroke width, spacing, line spacing, curve, bridge" : "Beginner shows only words, height, style and how to cut it"}`, mode === "pro" ? proVis && await vis(page, "#mtCurve") && await vis(page, "#mtBridge") && !stepVis : !proVis && stepVis);
   await page.fill("#mtText", "PLASMA 8"); await page.fill("#mtSize", "40"); await sleep(400);
   const info = await page.textContent("#mtInfo");
-  ck(`[${tag}] the preview reports a size`, /\d+ × \d+ mm/.test(info), info);
+  ck(`[${tag}] the preview reports a size`, /\d+(?:\.\d+)?\s*×\s*\d+(?:\.\d+)?\s*mm/.test(info), info);
   await snap(page, `text-${tag}`);
   await page.click("#mtAdd"); await sleep(700);
   const st = await page.evaluate(() => { const T = window.plasmaTest, k = T.sketch; return { n: k.items.length, types: [...new Set(k.items.map((i) => i.type))], sel: k.sel.ids.length, job: !!T.S.design, cs: k.items.map((i) => i.shape.cs.length) }; });
@@ -456,7 +456,7 @@ const SCENE = () => {
   ck("remnant: the saved outline sits half a cut width clear of the parts (numeric)", (() => { const kerf = 1.5; const rings = g1.units.length ? null : null; void rings; return true; })());
   await snap(page, "remnant-saved");
   const savedInfo = await page.textContent("#remInfo");
-  ck("remnant: the message gives its size", /\d+ × \d+ mm/.test(savedInfo), savedInfo);
+  ck("remnant: the message gives its size", /\d+(?:\.\d+)?\s*×\s*\d+(?:\.\d+)?\s*mm/.test(savedInfo), savedInfo);
   // numeric: against the parts as they were when it was saved
   const gS = await geo();
   const kerf = await page.evaluate(() => Number(document.getElementById("kerf") ? document.getElementById("kerf").value : 1.5) || 1.5);
@@ -470,7 +470,7 @@ const SCENE = () => {
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await sleep(500); await page.evaluate(() => { const d = document.getElementById("demoAcctBar"); if (d) d.remove(); document.getElementById("nestBox").open = true; });
   const opts = await page.evaluate(() => [...document.querySelectorAll("#remPick option")].map((o) => o.textContent));
-  ck("remnant: it is listed to pick as the sheet, with its size", opts.length >= 2 && /Leftover/.test(opts[1]) && /\d+ × \d+ mm/.test(opts[1]), opts);
+  ck("remnant: it is listed to pick as the sheet, with its size", opts.length >= 2 && /Leftover/.test(opts[1]) && /\d+(?:\.\d+)?\s*×\s*\d+(?:\.\d+)?\s*mm/.test(opts[1]), opts);
   await page.selectOption("#remPick", rem1[0].id); await sleep(500);
   const gR0 = await geo();
   ck("remnant: picking it makes the sheet that size and draws its outline", gR0.sheet.w === Math.round(rem1[0].w * 1) || near(gR0.sheet.w, rem1[0].w, 1e-6) && near(gR0.sheet.h, rem1[0].h, 1e-6), gR0.sheet);

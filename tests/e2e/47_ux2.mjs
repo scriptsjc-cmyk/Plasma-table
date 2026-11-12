@@ -61,13 +61,11 @@ for (const prof of profiles) {
     }
   }
 
-  // full-screen editor
+  // r8 item 10: the full-screen editor is gone
   await page.evaluate(() => window.plasmaTest.setShapeFs(true));
   await sleep(200);
-  t.check(P("full-screen editor is on"), await page.evaluate(() => document.body.classList.contains("shape-fs")));
-  t.check(P("Done button is visible"), await page.locator("#fsDone:not(.hidden)").count() === 1);
+  t.check(P("full-screen editor stays off (the mode was removed)"), await page.evaluate(() => !document.body.classList.contains("shape-fs") && !document.getElementById("btnShapeFs")));
   await snap(page, `ux2-editor-${tag[prof]}`);
-  await page.evaluate(() => window.plasmaTest.setShapeFs(false));
 
   // dimension typing
   await page.evaluate(() => {

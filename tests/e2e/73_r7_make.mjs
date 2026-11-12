@@ -164,7 +164,17 @@ for (const [w, h, tag] of [[1440, 900, "1440x900"], [1366, 768, "1366x768"]]) {
     const keyed = Math.abs(afterKey.vx - v1.vx) > 0.01 || Math.abs(afterKey.vy - v1.vy) > 0.01;
     return { dragged, keyed, v0, afterDrag, afterKey, active: sk.active, focus: document.activeElement && document.activeElement.id };
   })()`);
-  ck(`${tag}: dragging empty canvas pans the view`, pan.dragged, pan);
+  ck(`${tag}: dragging empty canvas does not pan by default (r8 item 15: box select)`, !pan.dragged && pan.keyed, pan);
+  await ev(page, () => { window.plasmaTest.savePrefs({ emptyDragPan: true }); });
+  const pan2 = await ev(page, `(() => {
+    const sk = window.plasmaTest.sketch, cv = document.getElementById("preview");
+    const v0 = { vx: sk.view.vx, vy: sk.view.vy };
+    const r = cv.getBoundingClientRect();
+    const fire = (type, x, y, btn=0) => cv.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: r.left+x, clientY: r.top+y, button: btn, buttons: type==="pointerup"?0:1, pointerId: 1, pointerType: "mouse" }));
+    fire("pointerdown", 20, 20); fire("pointermove", 180, 80); fire("pointerup", 180, 80);
+    return { moved: Math.abs(sk.view.vx-v0.vx)>0.01 || Math.abs(sk.view.vy-v0.vy)>0.01, v0, v1: { vx: sk.view.vx, vy: sk.view.vy } };
+  })()`);
+  ck(`${tag}: the pan-view toggle makes empty-canvas drag pan again`, pan2.moved, pan2);
   ck(`${tag}: arrow keys pan when nothing is selected`, pan.keyed, pan);
 
   // U1 preset browser starts below the header; STOP stays visible

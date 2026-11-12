@@ -49,7 +49,7 @@ const T = (page, js) => page.evaluate(js);
     const ids = pin ? [...pin.querySelectorAll("[data-qb]")].map((b) => b.dataset.qb) : [];
     return { barTop: bar.top, cvBottom: cv.bottom, ids, fs: document.body.classList.contains("shape-fs") };
   })()`);
-  ck("in the full-screen editor the bottom toolbar sits under the picture", pos.fs && pos.barTop >= pos.cvBottom - 6, pos);
+  ck("the bottom toolbar sits under the picture (full-screen editor removed)", !pos.fs && pos.barTop >= pos.cvBottom - 6, pos);
   ck("Undo, Redo, Fit and Delete are pinned outside the slider", ["undo", "redo", "fit", "del"].every((id) => pos.ids.includes(id)), pos.ids);
   await T(page, `window.plasmaTest.setShapeFs(false)`);
   await T(page, `window.plasmaTest.openSettings("yours")`);

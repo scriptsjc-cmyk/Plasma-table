@@ -209,9 +209,9 @@ for (const prof of ["d1440", "d1366", "phone844x390"]) {
   await ev(page, () => window.plasmaTest.account.signUp({ email: "r7cut@example.com", pin: "letmein1", display_name: "Josh Tester", mode: "beginner" }));
   await demoToShape(page, { stay: "cut" }); await ev(page, () => window.plasmaTest.goStep(3)); await sleep(500);
   await ev(page, () => document.getElementById("practiceChip").classList.remove("hidden"));     // the busiest header: a practice run on a real machine
-  l = await ev(page, () => { const ids = ["btnHome", "connPill", "stateBadge", "torchPill", "btnStop"].map((id) => __box("#" + id)).filter(Boolean);
-    const mids = ids.map((b) => b.t + b.h / 2); return { spread: Math.round(Math.max(...mids) - Math.min(...mids)), n: ids.length, pill: !!__box("#acctPill") }; });
-  t.check("U4: phone on its side, signed in: one header row – Back, connection, state, TORCH and STOP side by side (account pill in the menu)", l.n === 5 && l.spread <= 12 && !l.pill, JSON.stringify(l));
+  l = await ev(page, () => { const ids = ["btnHome", "stateBadge", "torchPill", "btnStop"].map((id) => __box("#" + id)).filter(Boolean);
+    const mids = ids.map((b) => b.t + b.h / 2); return { spread: Math.round(Math.max(...mids) - Math.min(...mids)), n: ids.length, pill: !!__box("#acctPill"), conn: !!__box("#connPill") }; });
+  t.check("U4: phone on its side, signed in: one header row – Back, state, TORCH and STOP side by side (connection is the one USB control, account pill in the menu)", l.n === 4 && l.spread <= 12 && !l.pill && !l.conn, JSON.stringify(l));
   t.check("U4: STOP is the largest control", !(await ev(page, () => __stopBiggest())).length);
   l = await ev(page, () => ({ sheet: !!__box("#layoutCard .sheetrow"), nest: !!__box("#nestBox"), origin: !!__box("#originCard") }));
   t.check("U8: sheet size, nest and saved start points are not in the Bed & start scroll", !l.sheet && !l.nest && !l.origin, JSON.stringify(l));

@@ -188,8 +188,8 @@ for (const prof of ["desktop", "iphone14", "iphone14land"]) {
   await p.evaluate(() => { history.back(); }); await sleep(400);
   t.check("LOCK: the browser Back button cannot leave the cutting screen", (await scr(p)) === "cut");
   t.check("LOCK: closing / reloading the tab shows the browser's leave-page warning", await p.evaluate(() => { const e = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; }));
-  await p.evaluate(() => document.querySelector('.tab[data-tab="setup"]').click()); await sleep(200);
-  t.check("LOCK: the Machine setup tab is also locked", await p.evaluate(() => window.plasmaTest.S.tab !== "setup" && window.plasmaTest.screen() === "cut"));
+  await p.evaluate(() => { const tab = document.querySelector('.tab[data-tab="setup"]'); if (tab) tab.click(); else { const T = window.plasmaTest; if (T.showTab) T.showTab("setup"); } }); await sleep(200);
+  t.check("LOCK: Machine setup cannot be opened while a job is running", await p.evaluate(() => window.plasmaTest.S.tab !== "setup" && window.plasmaTest.screen() === "cut"));
   // pause keeps it locked
   await p.evaluate(() => document.getElementById("btnPause").click()); await sleep(1500);
   t.check("LOCK: still locked while paused", await p.evaluate(() => window.plasmaTest.navLocked()));

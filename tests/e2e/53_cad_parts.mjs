@@ -215,18 +215,20 @@ for (const mode of ["beginner", "pro"]) {
   await sleep(400);
   await page.evaluate(() => document.getElementById("bgMore").click()); await sleep(500);
   const cats = await page.evaluate(() => [...document.querySelectorAll("#libCats button")].map((b) => b.textContent));
-  ck("library has the new categories", ["Flanges & washers", "Duct & rolled"].every((c) => cats.includes(c)), cats);
+  ck("Shapes library holds only plain shapes and basic holes (r8 item 18)", ["All", "Basic", "Holes"].every((c) => cats.includes(c)) && !cats.some((c) => /flange|duct|plasma/i.test(c)), cats);
   await page.evaluate(() => { [...document.querySelectorAll("#libCats button")].find((b) => b.textContent === "Basic").click(); }); await sleep(300);
   const basic = await page.evaluate(() => [...document.querySelectorAll("#libGrid button")].map((b) => b.textContent));
   ck("Basic shapes include oval, crescent, parallelogram and trapezoid", ["Oval", "Crescent", "Parallelogram", "Trapezoid"].every((n) => basic.some((x) => x.includes(n))), basic);
-  await page.evaluate(() => { [...document.querySelectorAll("#libCats button")].find((b) => b.textContent === "Flanges & washers").click(); }); await sleep(300);
-  const tiles = await page.evaluate(() => [...document.querySelectorAll("#libGrid button")].map((b) => b.textContent));
-  ck("Flanges category shows 4, 6, 8, 10, 12-hole flanges", [4, 6, 8, 10, 12].every((n) => tiles.some((t) => t.includes(`Flange – ${n} holes`))), tiles);
+  await page.evaluate(() => { const b = document.getElementById("libClose"); if (b) b.click(); const p = document.getElementById("btnPresetParts"); if (p) p.click(); }); await sleep(500);
+  const pcats = await page.evaluate(() => [...document.querySelectorAll("#pbCats button")].map((b) => b.textContent));
+  ck("Preset parts holds flanges, duct and workshop parts", pcats.some((c) => /flange/i.test(c)) && (pcats.some((c) => /sheet|duct|workshop|more workshop/i.test(c))), pcats);
+  await page.evaluate(() => { const b = [...document.querySelectorAll("#pbCats button")].find((x) => /workshop/i.test(x.textContent)); if (b) b.click(); }); await sleep(300);
+  await page.fill("#pbSearch", "flange"); await sleep(200);
+  const tiles = await page.evaluate(() => [...document.querySelectorAll("#pbGrid button")].map((b) => b.textContent));
+  ck("Workshop / search shows 4, 6, 8, 10, 12-hole flanges", [4, 6, 8, 10, 12].every((n) => tiles.some((t) => t.includes(String(n)))), tiles);
   await snap(page, "library-flanges");
-  await page.evaluate(() => { [...document.querySelectorAll("#libCats button")].find((b) => b.textContent === "Plasma / fab").click(); }); await sleep(300);
-  await snap(page, "library-fab");
-  await page.evaluate(() => { [...document.querySelectorAll("#libCats button")].find((b) => b.textContent === "Duct & rolled").click(); }); await sleep(300);
-  await snap(page, "library-duct");
+  await page.evaluate(() => { const b = document.getElementById("pbClose"); if (b) b.click(); }); await sleep(300);
+  await page.evaluate(() => document.getElementById("bgMore").click()); await sleep(400);
   await page.fill("#libSearch", "banjo"); await sleep(300);
   ck("library search finds the banjo guard", (await page.evaluate(() => document.getElementById("libGrid").innerText)).includes("Banjo"));
   await page.fill("#libSearch", "square to round"); await sleep(300);
@@ -234,9 +236,11 @@ for (const mode of ["beginner", "pro"]) {
   await page.fill("#libSearch", "washer"); await sleep(300);
   ck("library search 'washer' finds washers and spacers", (await page.evaluate(() => document.getElementById("libGrid").innerText)).includes("washer"));
   await page.fill("#libSearch", "");
-  // pick a 12-hole flange from the library in Beginner
-  await page.evaluate(() => { [...document.querySelectorAll("#libCats button")].find((b) => b.textContent === "Flanges & washers").click(); }); await sleep(200);
-  await page.evaluate(() => [...document.querySelectorAll("#libGrid button")].find((b) => b.textContent.includes("12 holes")).click()); await sleep(900);
+  // pick a 12-hole flange from Preset parts in Beginner (r8 item 18: flanges live there)
+  await page.evaluate(() => { const b = document.getElementById("libClose"); if (b) b.click(); }); await sleep(200);
+  await page.evaluate(() => { const p = document.getElementById("btnPresetParts"); if (p) p.click(); }); await sleep(400);
+  await page.fill("#pbSearch", "12"); await sleep(200);
+  await page.evaluate(() => { const b = [...document.querySelectorAll("#pbGrid button")].find((x) => /12/.test(x.textContent) && /flange/i.test(x.textContent)); if (b) b.click(); }); await sleep(900);
   const f12 = await page.evaluate(() => { const k = window.plasmaTest.sketch; return { n: k.items.length, p: k.items[0].p, holes: k.contoursOf(k.items[0]).length - 2 }; });
   ck("Beginner: tapping 'Flange – 12 holes' adds a flange with 12 bolt holes", f12.n === 1 && f12.holes === 12 && f12.p.n === 12, f12);
   const labels = await page.evaluate(() => [...document.querySelectorAll("#shapeForm .grid2 label")].map((l) => l.firstChild.textContent.trim()));
@@ -246,11 +250,11 @@ for (const mode of ["beginner", "pro"]) {
   await page.fill('#shapeForm [data-p="hole"]', "20"); await page.keyboard.press("Tab"); await sleep(500); await page.fill('#shapeForm [data-p="pcd"]', "200"); await sleep(600);
   const f12b = await page.evaluate(() => { const k = window.plasmaTest.sketch, cs = k.contoursOf(k.items[0]); return [cs[2].circle.r * 2, Math.hypot(cs[2].circle.cx - cs[0].circle.cx, cs[2].circle.cy - cs[0].circle.cy) * 2]; });
   ck("typing a new bolt hole Ø and PCD changes the flange", near(f12b[0], 20, 0.01) && near(f12b[1], 200, 0.01), f12b);
-  // square to round in beginner
-  await page.evaluate(() => document.getElementById("bgChange").click()); await sleep(300);
-  await page.evaluate(() => document.getElementById("bgMore").click()); await sleep(400);
-  await page.evaluate(() => { [...document.querySelectorAll("#libCats button")].find((b) => b.textContent === "Duct & rolled").click(); }); await sleep(200);
-  await page.evaluate(() => [...document.querySelectorAll("#libGrid button")].find((b) => b.textContent.includes("Square to round")).click()); await sleep(1000);
+  // square to round in beginner (r8: this lives in Preset parts). Item 12 adds rather than replaces, so start from a clear drawing.
+  await page.evaluate(() => { window.plasmaTest.sketch.clear(); const b = document.getElementById("bgChange"); if (b) b.click(); }); await sleep(300);
+  await page.evaluate(() => { const p = document.getElementById("btnPresetParts"); if (p) p.click(); }); await sleep(400);
+  await page.fill("#pbSearch", "square to round"); await sleep(200);
+  await page.evaluate(() => { const b = [...document.querySelectorAll("#pbGrid button")].find((x) => /square to round/i.test(x.textContent)); if (b) b.click(); }); await sleep(1000);
   const lab2 = await page.evaluate(() => [...document.querySelectorAll("#shapeForm .grid2 label")].map((l) => l.firstChild.textContent.trim()));
   ck("Beginner: square to round form asks for A, B, round Ø, height, flange lip", lab2.length >= 5 && /Width A/.test(lab2[0]) && /Depth B/.test(lab2[1]) && /Round diameter/.test(lab2[2]) && /Height/.test(lab2[3]) && /lip/i.test(lab2[4]), lab2);
   await snap(page, "s2r-beginner");
