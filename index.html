@@ -152,12 +152,12 @@
 </nav>
 
 <!-- ============================================================ banners -->
-<div id="estopBar" class="banner red big hidden">
+<div id="estopBar" class="banner red big hidden" role="alert">
   <div><b>E-STOP PRESSED</b><br>Everything is stopped. Fix the problem, twist the e-stop to release it, then press Unlock.</div>
   <button id="btnUnlock2" aria-describedby="btnUnlock2Why">Unlock</button>
   <span id="btnUnlock2Why" class="unlockwhy">Unlock is off while E-STOP is on: hold STOP 1.5 s first</span>
 </div>
-<div id="alarmBar" class="banner red hidden">
+<div id="alarmBar" class="banner red hidden" role="alert">
   <div><b id="alarmTitle">Alarm</b><br><span id="alarmText"></span></div>
   <button id="btnUnlock" aria-describedby="btnUnlockWhy">Unlock</button>
   <span id="btnUnlockWhy" class="unlockwhy">Unlock is off while E-STOP is on: hold STOP 1.5 s first</span>
@@ -215,6 +215,7 @@
 
 <!-- ============================================================ CUT -->
 <section id="cutView" class="view hidden">
+  <h1 id="cutH1" class="sr-only">Cut a part</h1>
   <div id="makeBar" class="makebar">
     <h1>Make a part</h1>
     <div id="qbPinned" class="qb-pinned" role="group" aria-label="Edit the drawing"></div>
@@ -823,7 +824,7 @@
     </div>
   </div>
 </div>
-<div id="toast" class="toast hidden"></div>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 <div id="whyTip" class="whytip hidden" role="status" aria-live="polite"></div>
 
 <!-- shape library (Make) -->

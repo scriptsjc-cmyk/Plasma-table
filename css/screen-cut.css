@@ -523,7 +523,8 @@ body[data-screen="cut"] #btnStop { display: flex; }
 #btnHome:disabled { opacity: .45; }
 body.nav-locked #btnHome { cursor: not-allowed; }
 #btnHome span { font-weight: 700; }
-/* what each screen shows inside the shared view */
+/* what each screen shows inside the shared view (the cutting screen's h1 is for screen readers; Make a part shows its own) */
+body:not([data-screen="cut"]) #cutH1 { display: none; }
 body[data-screen="make"] #pickPane { display: none; }
 body[data-screen="cut"] #exportRow, body[data-screen="cut"] #showMachWrap.hidden { display: none; }
 body[data-screen="cut"][data-step="1"] .previewDock .stats { display: none; }
