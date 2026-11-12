@@ -149,6 +149,13 @@
 <nav class="tabs" aria-label="Cutting screen">
   <button class="tab sel" data-tab="cut">✂ Cut</button>
   <button class="tab" data-tab="setup">⚙ Machine setup</button>
+  <!-- laptop cutting screen (js/cut/cutbar.js): the step bar is moved in here, after a divider; phones never show this -->
+  <div id="cutBar" class="cutbar" role="group" aria-label="Steps and layout">
+    <div id="cutBarSteps" class="cutbar-steps"></div>
+    <span id="cutBarStart" class="cutbar-start" role="status"></span>
+    <span class="cutbar-key">Space = STOP (except while typing text)</span>
+    <button type="button" id="btnLayout" class="small cutbar-layout" aria-pressed="false" title="Move and resize the panels">Layout</button>
+  </div>
 </nav>
 
 <!-- ============================================================ banners -->
