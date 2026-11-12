@@ -11,7 +11,10 @@ const d = P.defaultPrefs();
 ck("defaults are a complete, safe set", d.theme === "auto" && d.accent === "blue" && d.toolbar === "bottom" && d.buttons === "compact" && d.units === "mm" && d.mode === "simple" && d.grid === true && d.gridSize === 0 && d.snap === true && d.canvas === "default");
 ck("every accent has light and dark palettes", Object.values(P.ACCENTS).every((a) => a.light && a.dark && a.light.accent && a.dark.accent));
 
-ck("junk input falls back to defaults", P.sanitizePrefs(null).theme === "auto" && P.sanitizePrefs("x").accent === "blue" && P.sanitizePrefs({ theme: "neon", accent: "pink", toolbar: "left", buttons: "tiny", units: "cm", mode: "admin", gridSize: 7, canvas: "neon" }).toolbar === "bottom");
+ck("a saved rust accent becomes navy", P.sanitizePrefs({ accent: "rust" }).accent === "navy");
+ck("toolbar left is a valid position", P.sanitizePrefs({ toolbar: "left" }).toolbar === "left");
+ck("hideHeader and sheet size are kept", P.sanitizePrefs({ hideHeader: true, sheetW: 1200, sheetH: 800 }).hideHeader === true && P.sanitizePrefs({ hideHeader: true, sheetW: 1200, sheetH: 800 }).sheetW === 1200);
+ck("junk input falls back to defaults", P.sanitizePrefs(null).theme === "auto" && P.sanitizePrefs("x").accent === "blue" && P.sanitizePrefs({ theme: "neon", accent: "pink", toolbar: "sideways", buttons: "tiny", units: "cm", mode: "admin", gridSize: 7, canvas: "neon" }).toolbar === "bottom");
 const ok = P.sanitizePrefs({ theme: "dark", accent: "teal", toolbar: "top", buttons: "large", units: "inch", mode: "pro", grid: false, gridSize: 10, snap: false, canvas: "paper", extra: "nope" });
 ck("accepted values are kept and extras are dropped", ok.theme === "dark" && ok.accent === "teal" && ok.toolbar === "top" && ok.buttons === "large" && ok.units === "inch" && ok.mode === "advanced" && ok.grid === false && ok.gridSize === 10 && ok.snap === false && ok.canvas === "paper" && !("extra" in ok));
 
@@ -19,12 +22,12 @@ ck("prefsKey is the device key when no user is signed in", P.prefsKey("") === P.
 ck("prefsKey is per-user when an id is given", P.prefsKey("abc") === P.PREFS_KEY + ".abc" && P.prefsKey("abc") !== P.prefsKey("def"));
 
 localStorage.clear();
-const a = P.savePrefs({ theme: "dark", accent: "rust" }, "u1");
-ck("savePrefs keeps a valid theme and accent", a.theme === "dark" && a.accent === "rust");
+const a = P.savePrefs({ theme: "dark", accent: "navy" }, "u1");
+ck("savePrefs keeps a valid theme and accent", a.theme === "dark" && a.accent === "navy");
 const b = P.loadPrefs("u2");
 ck("a second user starts from defaults when they have no saved key", b.theme === "auto" && b.accent === "blue");
 P.savePrefs({ theme: "light", accent: "green" }, "u2");
-ck("users do not overwrite each other", P.loadPrefs("u1").accent === "rust" && P.loadPrefs("u2").accent === "green");
+ck("users do not overwrite each other", P.loadPrefs("u1").accent === "navy" && P.loadPrefs("u2").accent === "green");
 const r = P.resetPrefs("u1");
 ck("reset-to-defaults restores the built-in set for that user", r.theme === "auto" && r.accent === "blue" && r.toolbar === "bottom" && P.loadPrefs("u2").accent === "green");
 
@@ -73,8 +76,3 @@ ck("junk tools fall back to unset", P.sanitizePrefs({ tools: "all" }).tools === 
 ck("resetting tools returns to unset", P.sanitizePrefs({ ...P.defaultPrefs(), tools: ["rect"] }).tools[0] === "rect" && P.sanitizePrefs({ tools: null }).tools === null);
 
 process.exit(t.done() ? 1 : 0);
-
-ck("tools defaults to unset (the default toolbar)", P.defaultPrefs().tools === null);
-ck("a tools list is kept unique and trimmed", JSON.stringify(P.sanitizePrefs({ tools: ["rect", "rect", "nope-id-is-ok-as-string", "disc"] }).tools) === JSON.stringify(["rect", "nope-id-is-ok-as-string", "disc"]));
-ck("junk tools fall back to unset", P.sanitizePrefs({ tools: "all" }).tools === null && P.sanitizePrefs({ tools: null }).tools === null);
-ck("resetting tools returns to unset", P.sanitizePrefs({ ...P.defaultPrefs(), tools: ["rect"] }).tools[0] === "rect" && P.sanitizePrefs({ tools: null }).tools === null);

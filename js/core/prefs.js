@@ -15,8 +15,6 @@ export const ACCENTS = {
             dark:  { accent: "#C084FC", weak: "#3B1D5C", on: "#1A0B2B", text: "#E9D5FF", sel: "#D8B4FE" } },
   navy:   { light: { accent: "#0B1F33", weak: "#E6EEF5", on: "#FFFFFF", text: "#0B1F33", sel: "#1A3A5C" },
             dark:  { accent: "#8FB3D4", weak: "#1A2838", on: "#0B1220", text: "#C5D8EA", sel: "#A8C6E3" } },
-  rust:   { light: { accent: "#9A3412", weak: "#FDE8DC", on: "#FFFFFF", text: "#7C2A0E", sel: "#C2410C" },
-            dark:  { accent: "#FB923C", weak: "#4A2A10", on: "#1A0C04", text: "#FED7AA", sel: "#FDBA74" } },
 };
 
 export const CANVAS_BG = {
@@ -28,7 +26,7 @@ export const CANVAS_BG = {
 };
 
 const THEMES = ["auto", "light", "dark"];
-const TOOLBARS = ["bottom", "top"];
+const TOOLBARS = ["bottom", "top", "left"];
 const BUTTONS = ["compact", "normal", "large"];
 const MODES = ["simple", "advanced"];
 const MODE_ALIASES = { beginner: "simple", pro: "advanced", simple: "simple", advanced: "advanced" };
@@ -49,6 +47,9 @@ export function defaultPrefs() {
     canvas: "default",
     wheelZoom: false,
     dismissSideways: false,
+    hideHeader: false,
+    sheetW: 0,
+    sheetH: 0,
     tools: null,
   };
 }
@@ -58,7 +59,8 @@ const isObj = (o) => o && typeof o === "object" && !Array.isArray(o);
 export function sanitizePrefs(raw) {
   const d = defaultPrefs(), src = isObj(raw) ? raw : {}, out = defaultPrefs();
   if (THEMES.includes(src.theme)) out.theme = src.theme;
-  if (Object.hasOwn(ACCENTS, src.accent)) out.accent = src.accent;
+  if (src.accent === "rust") out.accent = "navy";
+  else if (Object.hasOwn(ACCENTS, src.accent)) out.accent = src.accent;
   if (TOOLBARS.includes(src.toolbar)) out.toolbar = src.toolbar;
   if (BUTTONS.includes(src.buttons)) out.buttons = src.buttons;
   if (src.units === "mm" || src.units === "inch") out.units = src.units;
@@ -69,6 +71,13 @@ export function sanitizePrefs(raw) {
   if (Object.hasOwn(CANVAS_BG, src.canvas)) out.canvas = src.canvas;
   if (typeof src.wheelZoom === "boolean") out.wheelZoom = src.wheelZoom;
   if (typeof src.dismissSideways === "boolean") out.dismissSideways = src.dismissSideways;
+  if (typeof src.hideHeader === "boolean") out.hideHeader = src.hideHeader;
+  const sheet = (k, cap) => {
+    const n = Number(src[k]);
+    return Number.isFinite(n) && n >= 50 && n <= cap ? Math.round(n * 100) / 100 : 0;
+  };
+  out.sheetW = sheet("sheetW", 20000);
+  out.sheetH = sheet("sheetH", 20000);
   if ("tools" in src) {
     if (src.tools === null) out.tools = null;
     else if (Array.isArray(src.tools)) {
@@ -154,6 +163,9 @@ export function applyChrome(p = current) {
   const body = document.body;
   if (body) {
     body.classList.toggle("yours-toolbar-top", prefs.toolbar === "top");
+    body.classList.toggle("yours-toolbar-left", prefs.toolbar === "left");
+    body.classList.toggle("yours-toolbar-bottom", prefs.toolbar === "bottom");
+    body.classList.toggle("header-hidden", !!prefs.hideHeader);
     body.classList.remove("yours-btns-compact", "yours-btns-normal", "yours-btns-large");
     body.classList.add("yours-btns-" + prefs.buttons);
   }
@@ -182,4 +194,14 @@ export function formatLen(mm, digits) {
   const d = digits == null ? (Math.abs(n) >= 10 ? 0 : 1) : digits;
   const s = d === 0 ? String(Math.round(n)) : n.toFixed(d);
   return s + " mm";
+}
+
+// Drawing sheet size on Make (0 = use the machine travel, usually 1300 × 800 mm).
+export function drawingSheet(travel) {
+  const t = travel || { x: 1300, y: 800 };
+  const p = current;
+  return {
+    w: (p.sheetW > 0 ? p.sheetW : (t.x || 1300)),
+    h: (p.sheetH > 0 ? p.sheetH : (t.y || 800)),
+  };
 }

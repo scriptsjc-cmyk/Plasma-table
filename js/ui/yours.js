@@ -6,6 +6,7 @@ import * as Acc from "../account/account.js";
 import { sketch } from "../core/state.js";
 import { $, toast } from "../core/dom.js";
 import { refreshScrollRows } from "./scrollrow.js";
+import { syncHeaderButtons } from "./header.js";
 
 function userId() {
   try { const u = Acc.currentUser && Acc.currentUser(); return u && (u.id || u.email) || ""; }
@@ -26,6 +27,7 @@ function applyAll(p, { mode = true } = {}) {
   }
   try { if (sketch && sketch.draw) sketch.draw(); } catch (e) { /* ignore */ }
   refreshScrollRows();
+  try { syncHeaderButtons(); } catch (e) { /* ignore */ }
 }
 
 function fillForm(p) {
@@ -40,6 +42,7 @@ function fillForm(p) {
   set("yoursSnap", p.snap);
   set("yoursCanvas", p.canvas);
   set("yoursWheelZoom", p.wheelZoom);
+  set("yoursHideHeader", p.hideHeader);
 }
 
 function readForm() {
@@ -57,6 +60,7 @@ function readForm() {
     snap: chk("yoursSnap"),
     canvas: val("yoursCanvas"),
     wheelZoom: chk("yoursWheelZoom"),
+    hideHeader: chk("yoursHideHeader"),
   };
 }
 
