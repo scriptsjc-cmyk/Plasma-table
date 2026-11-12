@@ -695,3 +695,23 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"] .step[data-step="3"] > .nav { flex-wrap: wrap; align-items: stretch; }
   body[data-screen="cut"] .step[data-step="3"] > .nav .cutmore-btn { order: 2; }
 }
+@media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
+  /* a phone on its side: the bed picture and the step share the row in fixed proportions (the step pane used to take the width of
+     its widest content, so moving controls into More shifted the picture) */
+  body.short-land[data-screen="cut"] .cutgrid:not(.with-qb) { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1fr); }
+  body.short-land[data-screen="cut"] .cutgrid:not(.with-qb) .previewPane { grid-column: 1; }
+  body.short-land[data-screen="cut"] .cutgrid:not(.with-qb) .stepPane { grid-column: 2; }
+  /* Cut (running): progress, the live X / Y / Z and TORCH stay in view; Pause and More in the sticky bar; speed, pierce delay and the
+     arc readings are in More. The tabs and the picture's caption step aside (you can't leave this screen mid-cut anyway). */
+  body.running-job[data-screen="cut"] .tabs, body.running-job[data-screen="cut"] .previewDock { display: none; }
+  #running > #livePanel, #running > #lpNote, #running > #liveSpeedBox, #running > #runHelp { display: none; }
+  body[data-screen="cut"] #running .runpos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 6px 0; }
+  #running .runpos div { padding: 2px 8px; display: flex; align-items: baseline; gap: 6px; }
+  #running .runpos span { display: inline; font-size: 13px; }
+  #running .runpos b { font-size: 22px; }
+  #running .torchbig { margin: 6px 0; padding: 6px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  #running #runInfo { margin: 4px 0 0; font-size: 14px; }
+  body.running-job .runctl { padding: 6px 0 2px; align-items: stretch; }
+  .runctl #btnPause { flex: 1 1 auto; max-width: 160px; min-height: 56px; }
+  .runctl .cutmore-btn { min-height: 56px; }
+}
