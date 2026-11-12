@@ -45,7 +45,7 @@ async function connectUSB() {
     S.demo = null; S.userDisconnected = false;
     setConnected(true, "the table");
   } catch (e) {
-    toast(e.message, true);      // e.g. no reply: wrong port / baud / firmware
+    toast(e.message + (t.portHint ? t.portHint() : ""), true);      // e.g. no reply: wrong port / baud / firmware
   } finally { S.usbBusy = false; }
 }
 // ---- Wi-Fi (page served by the Pi at the table)

@@ -35,6 +35,7 @@ export class WebSerialTransport {
     this.serial = serial;
     this.onLine = null; this.onClose = null; this.port = null; this.buf = ""; this.label = "USB"; this.kind = "usb";
     this.needsHandshake = true;   // "connected" only after the controller answers (GrblLink.handshake)
+    this.handshakeMs = 6000;      // an ESP32 that was reset by the port opening needs ~1-2 s to boot and print its banner
     this.watchdogMs = 3000;       // no answer to '?' for this long = the link is lost (GrblLink)
     this.gone = false;
     this._onDisconnect = (e) => { if (!e || !e.target || e.target === this.port || e.port === this.port) this._lost("The USB cable was unplugged (or the controller lost power)."); };
@@ -51,6 +52,7 @@ export class WebSerialTransport {
     await port.open({ ...SERIAL_OPTIONS, baudRate: Number(baud) || SERIAL_OPTIONS.baudRate });
     this.port = port;
     const info = port.getInfo ? port.getInfo() : {};
+    this.info = info;
     this.label = info.usbVendorId ? `USB ${info.usbVendorId.toString(16)}:${(info.usbProductId || 0).toString(16)}` : "USB";
     // unplug: Chrome fires 'disconnect' on navigator.serial and on the port itself (a pending read usually fails too)
     this.serial.addEventListener?.("disconnect", this._onDisconnect);
@@ -58,6 +60,14 @@ export class WebSerialTransport {
     this.writer = port.writable.getWriter();
     this.enc = new TextEncoder();
     this.readLoop();
+  }
+
+  // when the board never answered: was this even the ESP32's USB chip? (Windows laptops often list Bluetooth COM ports too)
+  portHint() {
+    const info = this.info || {};
+    if (!info.usbVendorId) return " The port you picked isn't a USB device (it may be a Bluetooth COM port). Pick the 'CP210x' / 'Silicon Labs' one.";
+    if (info.usbVendorId !== 0x10c4) return ` The port you picked is ${this.label}; an ESP32 DevKitC's CP2102 shows as USB 10c4:ea60.`;
+    return "";
   }
 
   // ESP32 auto-reset lines: with DTR and RTS both released the chip runs normally. Only used when the board stays silent.
