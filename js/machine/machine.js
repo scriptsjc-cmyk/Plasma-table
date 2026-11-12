@@ -46,6 +46,9 @@ export class Machine {
     this.safety.clearReference();
     this.emit("safety", this.safety.state());
     this.grbl = new GrblLink(transport, this.cfg.rx_buffer_size || 127, (k, d) => this.onGrbl(k, d));
+    if (transport.needsHandshake) {       // USB: an open port is not a connection; wait for the controller to answer
+      try { await this.grbl.handshake(); } catch (e) { await this.disconnect(false); throw e; }
+    }
     if (transport.kept && transport.kept.ref) {
       this.safety.setReference(transport.kept.ref, transport.kept.refMode || "kept");
       this.emit("safety", this.safety.state());
