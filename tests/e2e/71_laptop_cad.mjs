@@ -4,7 +4,7 @@ import { serve, launch } from "../lib/r2compat.mjs";
 import { T as Rec } from "../lib/t.mjs";
 
 const s = await serve(), br = await launch();
-const rec = new Rec("70_laptop_cad");
+const rec = new Rec("71_laptop_cad");
 const ck = (n, ok, i = "") => rec.check(n, ok, typeof i === "string" ? i : JSON.stringify(i));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const T = (page, js) => page.evaluate(js);
