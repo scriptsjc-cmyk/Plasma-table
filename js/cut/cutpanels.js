@@ -2,10 +2,11 @@
 // bed picture, the start-point card); Cut has two (the picture and the run panel). Drag a divider (or focus it and use the arrows)
 // to resize; press Layout to move panels left or right (buttons, or drag one panel onto another), Reset layout to go back.
 // The bed picture always keeps at least BED_MIN of the window's width. STOP is in the header, outside all of this, and never moves.
-// Saved per user in this browser (saving it to the account needs a cloud column: listed for the app developer).
+// Saved on the same per-account prefs path as Customise toolbar (plasma.yours.v1, keyed by user id).
 import { $ } from "../core/dom.js";
 import { S } from "../core/state.js";
 import * as Acc from "../account/account.js";
+import { getPrefs, loadPrefs, savePrefs } from "../core/prefs.js";
 import { isLaptopCut, LAPTOP_CUT_MQ } from "./cutbar.js";
 
 const BED_MIN = 0.36;
@@ -16,17 +17,25 @@ const PANELS = {
   bed: { name: "Bed picture", def: "minmax(0, 1fr)" },
 };
 const DEFAULT = () => ({ s3: { order: ["side", "bed", "main"], w: {} }, s4: { order: ["bed", "run"], w: {} } });
-const key = () => "plasma.cutLayout.v1." + ((Acc.currentUser() || {}).id || "guest");
+const userId = () => (Acc.currentUser() || {}).id || "";
+const legacyKey = () => "plasma.cutLayout.v1." + (userId() || "guest");
 let L = DEFAULT(), grid = null, dividers = [], covers = [];
 
-function load() {
-  try {
-    const j = JSON.parse(localStorage.getItem(key()) || "null"), d = DEFAULT();
-    const ok = (o, want) => o && Array.isArray(o.order) && o.order.length === want.length && want.every((p) => o.order.includes(p));
-    L = { s3: ok(j && j.s3, d.s3.order) ? { order: j.s3.order, w: j.s3.w || {} } : d.s3, s4: ok(j && j.s4, d.s4.order) ? { order: j.s4.order, w: j.s4.w || {} } : d.s4 };
-  } catch (e) { L = DEFAULT(); }
+function fromStore(j) {
+  const d = DEFAULT();
+  const ok = (o, want) => o && Array.isArray(o.order) && o.order.length === want.length && want.every((p) => o.order.includes(p));
+  return { s3: ok(j && j.s3, d.s3.order) ? { order: j.s3.order, w: j.s3.w || {} } : d.s3, s4: ok(j && j.s4, d.s4.order) ? { order: j.s4.order, w: j.s4.w || {} } : d.s4 };
 }
-const save = () => { try { localStorage.setItem(key(), JSON.stringify(L)); } catch (e) { /* storage full or off: the layout just isn't kept */ } };
+function load() {
+  loadPrefs(userId());
+  let j = getPrefs().cutLayout;
+  if (!j) {
+    try { j = JSON.parse(localStorage.getItem(legacyKey()) || "null"); } catch (e) { j = null; }
+    if (j) { savePrefs({ cutLayout: j }, userId()); try { localStorage.removeItem(legacyKey()); } catch (e) { /* ignore */ } j = getPrefs().cutLayout; }
+  }
+  L = fromStore(j);
+}
+const save = () => { savePrefs({ cutLayout: L }, userId()); };
 const stepKey = () => (S.cur === 4 ? "s4" : S.cur === 3 ? "s3" : null);
 const active = () => !!grid && isLaptopCut() && document.body.dataset.screen === "cut" && !!stepKey();
 const liveJob = () => !!(S.job && S.job.running);
@@ -139,7 +148,7 @@ export function setArrange(on) {
   const r = $("btnLayoutReset"); if (r) r.classList.toggle("hidden", !on);
   paintCovers();
 }
-export function resetLayout() { L = DEFAULT(); try { localStorage.removeItem(key()); } catch (e) { /* ignore */ } apply(); }
+export function resetLayout() { L = DEFAULT(); savePrefs({ cutLayout: null }, userId()); try { localStorage.removeItem(legacyKey()); } catch (e) { /* ignore */ } apply(); }
 
 // every refresh: no Layout while a job is live (and leave it if one starts), dividers follow the step
 export function paintCutPanels() {

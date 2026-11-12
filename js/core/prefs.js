@@ -51,6 +51,7 @@ export function defaultPrefs() {
     sheetW: 0,
     sheetH: 0,
     tools: null,
+    cutLayout: null,
   };
 }
 
@@ -89,6 +90,30 @@ export function sanitizePrefs(raw) {
       }
       out.tools = ids;
     }
+  }
+  out.cutLayout = sanitizeCutLayout(src.cutLayout);
+  return out;
+}
+
+// r7 J14: laptop Cut panel order and widths, same per-account local store as Customise toolbar
+const CUT_ORDERS = { s3: ["side", "bed", "main"], s4: ["bed", "run"] };
+function sanitizeCutLayout(raw) {
+  if (raw == null) return null;
+  if (!isObj(raw)) return null;
+  const ok = (o, want) => o && Array.isArray(o.order) && o.order.length === want.length && want.every((p) => o.order.includes(p));
+  const widths = (o) => {
+    const w = {};
+    if (isObj(o) && isObj(o.w)) {
+      for (const [k, v] of Object.entries(o.w)) {
+        const n = Number(v);
+        if (Number.isFinite(n) && n >= 0 && n <= 4000) w[k] = Math.round(n);
+      }
+    }
+    return w;
+  };
+  const out = {};
+  for (const [sk, want] of Object.entries(CUT_ORDERS)) {
+    out[sk] = ok(raw[sk], want) ? { order: [...raw[sk].order], w: widths(raw[sk]) } : { order: [...want], w: {} };
   }
   return out;
 }

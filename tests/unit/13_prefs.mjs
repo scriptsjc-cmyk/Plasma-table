@@ -75,4 +75,10 @@ ck("a tools list is kept unique and trimmed", JSON.stringify(P.sanitizePrefs({ t
 ck("junk tools fall back to unset", P.sanitizePrefs({ tools: "all" }).tools === null && P.sanitizePrefs({ tools: null }).tools === null);
 ck("resetting tools returns to unset", P.sanitizePrefs({ ...P.defaultPrefs(), tools: ["rect"] }).tools[0] === "rect" && P.sanitizePrefs({ tools: null }).tools === null);
 
+const lay = { s3: { order: ["main", "bed", "side"], w: { main: 360 } }, s4: { order: ["run", "bed"], w: {} } };
+ck("cutLayout is kept (same path as the toolbar)", JSON.stringify(P.sanitizePrefs({ cutLayout: lay }).cutLayout.s3.order) === JSON.stringify(["main", "bed", "side"]) && P.sanitizePrefs({ cutLayout: lay }).cutLayout.s3.w.main === 360);
+ck("junk cutLayout falls back to unset", P.sanitizePrefs({ cutLayout: "wide" }).cutLayout === null && P.defaultPrefs().cutLayout === null);
+P.savePrefs({ cutLayout: lay }, "u-lay");
+ck("cutLayout is stored per account in plasma.yours.v1", JSON.stringify(P.loadPrefs("u-lay").cutLayout.s3.order) === JSON.stringify(["main", "bed", "side"]) && P.loadPrefs("u2").cutLayout === null);
+
 process.exit(t.done() ? 1 : 0);
