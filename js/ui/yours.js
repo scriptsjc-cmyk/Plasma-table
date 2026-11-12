@@ -1,5 +1,5 @@
 // Settings → Make it yours: the per-user appearance and canvas preferences, applied live.
-// Saved in this browser (per signed-in account id). Not uploaded — the database has no prefs column.
+// Saved in this browser (per signed-in account id) and, once supabase/user-prefs.sql is applied, on the account.
 import { applyChrome, bindThemeMedia, getPrefs, loadPrefs, prefsKey, resetPrefs, savePrefs } from "../core/prefs.js";
 import { setAppMode } from "./mode.js";
 import * as Acc from "../account/account.js";

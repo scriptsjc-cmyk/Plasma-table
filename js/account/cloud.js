@@ -43,6 +43,8 @@ let inflightRefresh = null;
 let sessionListener = null;
 export function setSessionListener(fn) { sessionListener = typeof fn === "function" ? fn : null; }
 function tellSessionListeners() { if (sessionListener) try { sessionListener(); } catch (e) { /* ignore */ } }
+let profileRowHook = null;
+export function setProfileRowHook(fn) { profileRowHook = typeof fn === "function" ? fn : null; }
 export async function refreshIfNeeded({ force = false } = {}) {
   const sess = cloudSess();
   if (!sess || !sess.refresh) return sess;
@@ -94,6 +96,7 @@ export async function loadCloudProfile() {
   const rows = await authFetch("/rest/v1/profiles?id=eq." + encodeURIComponent(sess.user.id) + "&select=*");
   const p = Array.isArray(rows) ? rows[0] : rows;
   sess.profile = p ? { id: p.id, email: sess.user.email, display_name: p.display_name || "", mode: p.mode === "pro" ? "pro" : "beginner", role: p.role === "admin" ? "admin" : "user" } : null;
+  if (p && profileRowHook) try { profileRowHook(p, sess.user.id); } catch (e) { /* prefs stay local */ }
   // The server's own answer wins over anything stored in this browser (supabase/b5-gating.sql). Until that SQL has been run the call
   // fails and we keep the old behaviour, remembered as "client-only" so the Admin panel can say so.
   sess.ent = null;

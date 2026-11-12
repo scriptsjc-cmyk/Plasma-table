@@ -1,6 +1,7 @@
-// Per-user "Make it yours" preferences: theme, accent, toolbar, buttons, grid, snap, canvas.
-// Stored in localStorage only (the profiles table has no prefs column, so these are not synced to the cloud).
-// Keyed by signed-in user id when one is known, so two accounts on this browser keep their own choices.
+// Per-user "Make it yours" preferences: theme, accent, toolbar, buttons, grid, snap, canvas, Cut layout.
+// Kept in localStorage (keyed by signed-in user id) as the offline cache. When supabase/user-prefs.sql
+// has been applied, js/account/userprefs.js also stores them on the account so they follow the user
+// across devices. Until then everything stays in this browser.
 
 export const PREFS_KEY = "plasma.yours.v1";
 
@@ -52,6 +53,7 @@ export function defaultPrefs() {
     sheetH: 0,
     tools: null,
     cutLayout: null,
+    updatedAt: 0,
   };
 }
 
@@ -92,6 +94,8 @@ export function sanitizePrefs(raw) {
     }
   }
   out.cutLayout = sanitizeCutLayout(src.cutLayout);
+  const at = Number(src.updatedAt);
+  out.updatedAt = Number.isFinite(at) && at > 0 && at < 1e15 ? Math.round(at) : 0;
   return out;
 }
 
@@ -125,6 +129,17 @@ export function prefsKey(userId) {
 
 let current = defaultPrefs();
 let currentKey = PREFS_KEY;
+let savedHook = null;
+export function setPrefsSavedHook(fn) { savedHook = typeof fn === "function" ? fn : null; }
+function idFromKey(key) {
+  return key && key.startsWith(PREFS_KEY + ".") ? key.slice(PREFS_KEY.length + 1) : "";
+}
+function persist(userId) {
+  try { localStorage.setItem(currentKey, JSON.stringify(current)); } catch (e) { /* ignore */ }
+  if (savedHook) {
+    try { savedHook(getPrefs(), userId !== undefined ? userId : idFromKey(currentKey)); } catch (e) { /* ignore */ }
+  }
+}
 
 export function getPrefs() { return { ...current }; }
 
@@ -139,15 +154,15 @@ export function loadPrefs(userId) {
 
 export function savePrefs(partial, userId) {
   if (userId !== undefined) currentKey = prefsKey(userId);
-  current = sanitizePrefs({ ...current, ...(isObj(partial) ? partial : {}) });
-  try { localStorage.setItem(currentKey, JSON.stringify(current)); } catch (e) { /* ignore */ }
+  current = sanitizePrefs({ ...current, ...(isObj(partial) ? partial : {}), updatedAt: Date.now() });
+  persist(userId);
   return getPrefs();
 }
 
 export function resetPrefs(userId) {
-  current = defaultPrefs();
   if (userId !== undefined) currentKey = prefsKey(userId);
-  try { localStorage.setItem(currentKey, JSON.stringify(current)); } catch (e) { /* ignore */ }
+  current = sanitizePrefs({ ...defaultPrefs(), updatedAt: Date.now() });
+  persist(userId);
   return getPrefs();
 }
 

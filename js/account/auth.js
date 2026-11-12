@@ -3,9 +3,11 @@ import { CONFIG } from "./config.js";
 import { F_PASS, META_KEY, SESS_KEY, cloudOn, normEmail, nowIso, okEmail, uid } from "./acctbase.js";
 import { accountMode, canGrantDemoAdmin, currentUser, notify, snapshot } from "./acctstate.js";
 import { api, authFetch, cloudSess, fromAuthPayload, loadCloudProfile, parseHashSession, readySession, refreshIfNeeded, saveCloudSess, setSessionListener } from "./cloud.js";
+import { bindUserPrefs } from "./userprefs.js";
 import { demoSession, demoState, hashPin, readJson, saveDemo, seedDemo, writeJson } from "./demostore.js";
 
 export async function initAccount() {
+  bindUserPrefs();
   if (cloudOn()) {
     api.demo = false;
     setSessionListener(() => notify());

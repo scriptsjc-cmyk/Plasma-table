@@ -56,6 +56,7 @@ const PRECACHE = [
   "js/account/partslist.js",
   "js/account/savepart.js",
   "js/account/uibase.js",
+  "js/account/userprefs.js",
   "js/app.js",
   "js/core/dom.js",
   "js/core/expr.js",

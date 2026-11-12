@@ -81,4 +81,9 @@ ck("junk cutLayout falls back to unset", P.sanitizePrefs({ cutLayout: "wide" }).
 P.savePrefs({ cutLayout: lay }, "u-lay");
 ck("cutLayout is stored per account in plasma.yours.v1", JSON.stringify(P.loadPrefs("u-lay").cutLayout.s3.order) === JSON.stringify(["main", "bed", "side"]) && P.loadPrefs("u2").cutLayout === null);
 
+ck("updatedAt is dropped when junk, kept when it is a time", P.sanitizePrefs({ updatedAt: "nope" }).updatedAt === 0 && P.sanitizePrefs({ updatedAt: 1_700_000_000_000 }).updatedAt === 1_700_000_000_000);
+const before = Date.now();
+const saved = P.savePrefs({ theme: "dark" }, "u-time");
+ck("savePrefs stamps updatedAt", saved.updatedAt >= before && saved.updatedAt <= Date.now() && P.loadPrefs("u-time").updatedAt === saved.updatedAt);
+
 process.exit(t.done() ? 1 : 0);
