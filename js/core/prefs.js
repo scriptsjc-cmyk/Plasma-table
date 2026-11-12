@@ -49,6 +49,7 @@ export function defaultPrefs() {
     wheelZoom: false,
     dismissSideways: false,
     hideHeader: false,
+    emptyDragPan: false,
     sheetW: 0,
     sheetH: 0,
     tools: null,
@@ -75,6 +76,7 @@ export function sanitizePrefs(raw) {
   if (typeof src.wheelZoom === "boolean") out.wheelZoom = src.wheelZoom;
   if (typeof src.dismissSideways === "boolean") out.dismissSideways = src.dismissSideways;
   if (typeof src.hideHeader === "boolean") out.hideHeader = src.hideHeader;
+  if (typeof src.emptyDragPan === "boolean") out.emptyDragPan = src.emptyDragPan;
   const sheet = (k, cap) => {
     const n = Number(src[k]);
     return Number.isFinite(n) && n >= 50 && n <= cap ? Math.round(n * 100) / 100 : 0;

@@ -104,7 +104,7 @@ export function paintDrawHud() {
     const ang = draft && draft.ang != null ? draft.ang : 0;
     el.innerHTML = `<span class="drawhud-lab">Length</span><input id="drawHudLen" type="text" inputmode="decimal" value="${len}" aria-label="Length in millimetres">
       <span class="drawhud-lab">Angle</span><input id="drawHudAng" type="text" inputmode="decimal" value="${ang}" aria-label="Angle in degrees">
-      <span class="muted small">Enter adds the point · Esc cancels</span>`;
+      <span class="muted small">Enter adds a point, or closes if the box is empty · Esc cancels</span>`;
     el.classList.remove("hidden"); el.hidden = false;
     fields = ["drawHudLen", "drawHudAng"];
   } else if (tool === "rect" && sketch.drawDraft) {
@@ -154,7 +154,14 @@ function onHudInput() {
 }
 
 function onHudKey(e) {
-  if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); applyHudPoint(); return; }
+  if (e.key === "Enter") {
+    e.preventDefault(); e.stopPropagation();
+    // Empty length box + at least 3 points: close the outline (item 17). A typed length still adds a point.
+    if (sketch && sketch.tool === "draw" && sketch.drawPts && sketch.drawPts.length >= 3 && !(num($("drawHudLen"), 0) >= 0.5)) {
+      sketch.finishDraw(); closeDrawHud(); return;
+    }
+    applyHudPoint(); return;
+  }
   if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cancelDrawHud(); return; }
   if (e.key === "Tab" && fields.length > 1) {
     e.preventDefault(); e.stopPropagation();

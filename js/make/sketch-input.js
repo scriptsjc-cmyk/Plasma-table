@@ -143,7 +143,7 @@ export class InputMethods {
       }
       if (this.pointers.size > 2) return;
       const touch = e.pointerType === "touch";
-      const panBtn = e.button === 1 || this.spaceDown;
+      const panBtn = e.button === 1;
       if (e.button === 2 && !this.spaceDown) {
         this.drag = { kind: "ctx", sx, sy, wx, wy, moved: false };
         return;
@@ -176,6 +176,11 @@ export class InputMethods {
           const tags = constraintOf(this, last, [px, py]);
           if (tags) { const c = applyConstraints(last, [px, py], tags); px = c[0]; py = c[1]; this.constraintHint = tags; }
         }
+        const first = this.drawPts[0];
+        if (first && this.drawPts.length >= 2 && Math.hypot(px - first[0], py - first[1]) <= 8) {
+          this.finishDraw && this.finishDraw();
+          this.draw(); return;
+        }
         this.drawPts.push([px, py]);
         afterDrawPoint();
         this.draw(); return;
@@ -189,9 +194,10 @@ export class InputMethods {
       if (dim) { this.drag = { kind: "dim", dim, sx, sy, moved: false }; return; }
       const h = panBtn ? null : this.hit(sx, sy, touch);
       if (!h) {
-        const boxSel = e.shiftKey || e.ctrlKey || e.metaKey;
-        if (touch || panBtn || !boxSel) this.drag = { kind: "pan", sx, sy, vx: this.view.vx, vy: this.view.vy, moved: false };
-        else this.drag = { kind: "box", sx, sy, cx: sx, cy: sy, add: true, moved: false };
+        const dragPans = !!(getPrefs().emptyDragPan);
+        const add = e.shiftKey || e.ctrlKey || e.metaKey;
+        if (panBtn || dragPans) this.drag = { kind: "pan", sx, sy, vx: this.view.vx, vy: this.view.vy, moved: false };
+        else this.drag = { kind: "box", sx, sy, cx: sx, cy: sy, add, moved: false };
         return;
       }
       const before = this.snapshot(), it = h.it;
@@ -227,18 +233,28 @@ export class InputMethods {
       const d = this.drag;
       if (!d) {                                                 // hover cursor
         const h = this.spaceDown ? null : this.hit(sx, sy, false);
-        cv.style.cursor = this.spaceDown || !h ? "grab" : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
+        cv.style.cursor = !h ? (getPrefs().emptyDragPan ? "grab" : "crosshair") : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
         const [mwx, mwy] = this.toWorld(sx, sy);
         const sn = snapWorld(this, mwx, mwy);
         this.snapMark = sn;
         if (this.tool === "draw" && this.drawPts.length) {
           let to = sn ? [sn.x, sn.y] : [mwx, mwy];
           const last = this.drawPts[this.drawPts.length - 1];
-          const tags = constraintOf(this, last, to);
-          if (tags) { to = applyConstraints(last, to, tags); this.constraintHint = tags; } else this.constraintHint = null;
+          if (e.shiftKey) {
+            const ang = Math.atan2(to[1] - last[1], to[0] - last[0]);
+            const snapped = Math.round(ang / (Math.PI / 4)) * (Math.PI / 4);
+            const len = Math.hypot(to[0] - last[0], to[1] - last[1]);
+            to = [last[0] + len * Math.cos(snapped), last[1] + len * Math.sin(snapped)];
+            this.constraintHint = ["0/45/90"];
+          } else {
+            const tags = constraintOf(this, last, to);
+            if (tags) { to = applyConstraints(last, to, tags); this.constraintHint = tags; } else this.constraintHint = null;
+          }
           const len = Math.hypot(to[0] - last[0], to[1] - last[1]);
           const ang = Math.atan2(to[1] - last[1], to[0] - last[0]) * 180 / Math.PI;
           this.drawDraft = { kind: "line", x: to[0], y: to[1], len, ang };
+          const first = this.drawPts[0];
+          this.closeToStart = !!(first && this.drawPts.length >= 2 && Math.hypot(to[0] - first[0], to[1] - first[1]) <= 8);
         } else if (this.tool === "rect" && this.drawDraft && this.drawDraft.kind === "rect") {
           const d = this.drawDraft;
           const x = sn ? sn.x : mwx, y = sn ? sn.y : mwy;
@@ -343,7 +359,15 @@ export class InputMethods {
         if (!d.moved) { if (this.sel.ids.length) { this.pick([]); this.onSelect(); } this.draw(); return; }
         const [ax, ay] = this.toWorld(Math.min(d.sx, d.cx), Math.max(d.sy, d.cy)), [bx, by] = this.toWorld(Math.max(d.sx, d.cx), Math.min(d.sy, d.cy));
         const box = [ax, ay, bx, by];
-        const ids = this.items.filter((i) => boxOverlap(this.boxOf(i), box)).map((i) => i.id);
+        const leftToRight = d.cx >= d.sx;
+        const hit = (i) => {
+          const b = this.boxOf(i);
+          if (!b) return false;
+          if (!leftToRight) return boxOverlap(b, box);
+          const pad = 0.2;
+          return b[0] >= box[0] - pad && b[1] >= box[1] - pad && b[2] <= box[2] + pad && b[3] <= box[3] + pad;
+        };
+        const ids = this.items.filter(hit).map((i) => i.id);
         this.pick(d.add ? [...new Set([...this.sel.ids, ...ids])] : ids);
         this.onSelect(); this.draw(); return;
       }
@@ -395,6 +419,11 @@ export class InputMethods {
     }
     cv.addEventListener("dblclick", (e) => {
       if (!this.active) return;
+      if (this.tool === "draw" && this.drawPts && this.drawPts.length >= 3) {
+        e.preventDefault();
+        this.finishDraw && this.finishDraw();
+        return;
+      }
       const [sx, sy] = pos(e);
       const h = this.hit(sx, sy, e.pointerType === "touch");
       if (this.layout) { if (!h) this.fitView(); return; }       // the sheet layout: double-click never edits a part
@@ -418,7 +447,7 @@ export class InputMethods {
       if (document.activeElement.getAttribute("role") === "separator") return;      // the focused picture divider owns its arrow keys
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
-      if (e.key === " ") { this.spaceDown = true; stop(); return; }
+      if (e.key === " ") { this.spaceDown = false; return; } // Space is STOP, never pan
       if (ctrl && k === "z") { stop(); e.shiftKey ? this.redo() : this.undo(); return; }
       if (ctrl && k === "y") { stop(); this.redo(); return; }
       if (ctrl && k === "a") { stop(); this.pickAll(); return; }
@@ -428,6 +457,11 @@ export class InputMethods {
       if (ctrl && k === "j") { stop(); this.join(); return; }          // (join is refused in the sheet layout)
       const isArrow = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "PageUp", "PageDown"].includes(e.key);
       // drawing shortcuts: never steal Space (pan on Make, STOP on Cut). Ignore when typing (checked above).
+      if (this.tool === "draw" && this.drawPts && this.drawPts.length) {
+        if (e.key === "Backspace") { stop(); this.drawPts.pop(); afterDrawPoint(); this.draw(); return; }
+        if (e.key === "Enter" && this.drawPts.length >= 3) { stop(); this.finishDraw && this.finishDraw(); return; }
+        if (k === "a") { stop(); this.drawArc = !this.drawArc; this.onMessage(this.drawArc ? "Next segment will be a curve. Press A again for a straight line." : "Next segment will be a straight line."); return; }
+      }
       if (!ctrl && !this.layout) {
         if (k === "l") { stop(); this.setTool("draw"); afterDrawPoint(); if (this.onSelect) this.onSelect(); return; }
         if (k === "r") { stop(); this.setTool("rect"); if (this.onSelect) this.onSelect(); return; }

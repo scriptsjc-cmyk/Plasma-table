@@ -1,5 +1,5 @@
 // The shape library, the shape-versions pop-up and the Add text / Trace tool launchers.
-import { LIBRARY_SHAPE_GROUPS, presetOrShape, shapeThumb } from "./shapes.js";
+import { LIBRARY_SHAPE_GROUPS, PRESET_GROUPS, WORKSHOP_PRESET_GROUP, presetOrShape, shapeThumb } from "./shapes.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { shapeDef } from "./sketch.js";
 import { initMakeTools } from "./maketools.js";
@@ -40,7 +40,11 @@ function renderLibrary() {
   const cats = [{ id: "all", name: "All" }, ...LIBRARY_SHAPE_GROUPS];
   $("libCats").innerHTML = cats.map((c) => `<button type="button" data-cat="${esc(c.id)}" class="${c.id === libCat ? "on" : ""}">${esc(c.name)}</button>`).join("");
   let ids;
-  if (libCat === "all" || q) { const seen = new Set(); ids = LIBRARY_SHAPE_GROUPS.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id)); }
+  const seen = new Set();
+  const from = (groups) => groups.flatMap((g) => g.ids || []).filter((id) => id && !seen.has(id) && seen.add(id));
+  // A search looks in Preset parts too, so "L-bracket" or "banjo" still come up after those moved out of Shapes.
+  if (q) ids = from([...LIBRARY_SHAPE_GROUPS, ...(PRESET_GROUPS || []), WORKSHOP_PRESET_GROUP].filter(Boolean));
+  else if (libCat === "all") ids = from(LIBRARY_SHAPE_GROUPS);
   else ids = (LIBRARY_SHAPE_GROUPS.find((g) => g.id === libCat) || { ids: [] }).ids;
   const list = ids.map((id) => presetOrShape(id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));

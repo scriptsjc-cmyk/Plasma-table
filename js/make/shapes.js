@@ -3,7 +3,7 @@ import { arcPoints, circleContour, signedArea } from "../core/geom.js";
 import { roundedRect, chamferRect, slot, roundCorners, dedupe } from "./shape-helpers.js";
 import { FAB_SHAPES } from "./shapes-fab.js";
 import { PRESET_SHAPES, PRESET_GROUPS } from "./presets/index.js";
-export { PRESET_SHAPES, PRESET_GROUPS, PRESET_IDS } from "./presets/index.js";
+export { PRESET_SHAPES, PRESET_GROUPS, PRESET_IDS, R8_PRESETS, WORKSHOP_IDS } from "./presets/index.js";
 
 const MIN = 2;
 const SIZE_KEYS = new Set(["w", "h", "d", "a", "b", "len", "wid", "s"]);
@@ -648,12 +648,15 @@ export const BASIC_SHAPE_GROUPS = [
   { id: "basic", name: "Basic", ids: ["square", "rect", "roundrect", "chamfer", "disc", "ellipse", "oval", "eqtriangle", "rtriangle", "triangle", "polygon", "hexagon", "octagon", "star", "slot", "sector", "ring", "parallelogram", "trapezoid", "crescent", "plus", "arrow", "heart"] },
   { id: "holes", name: "Holes", ids: ["hole", "slothole", "boltcircle", "cornerholes", "holerow", "holegrid"] },
 ];
+/* r8 item 18: More shapes holds only plain shapes and shapes with basic holes.
+   Flanges, square-to-round, brackets and the rest live in Preset parts. */
 export const LIBRARY_SHAPE_GROUPS = [
   ...BASIC_SHAPE_GROUPS,
-  { id: "plasma", name: "Plasma / fab", ids: ["plate", "slotted", "slot2", "baseplate", "tab", "lbracket", "bracket", "tplate", "strap", "gusset", "wgusset", "shelf", "lug", "banjo", "keyhole", "dshape", "link", "sign", "hook"] },
-  { id: "flanges", name: "Flanges & washers", ids: ["flange4", "flange6", "flange8", "flange10", "flange12", "flangeblind", "flange", "ring", "sqwasher", "frame"] },
-  { id: "duct", name: "Duct & rolled", ids: ["s2r", "cone", "tube"] },
 ];
+export const WORKSHOP_PRESET_GROUP = {
+  id: "workshop", name: "Workshop parts",
+  ids: ["plate", "slotted", "slot2", "baseplate", "tab", "lbracket", "bracket", "tplate", "strap", "gusset", "wgusset", "shelf", "lug", "banjo", "keyhole", "dshape", "link", "sign", "hook", "flange4", "flange6", "flange8", "flange10", "flange12", "flangeblind", "flange", "sqwasher", "frame", "s2r", "cone", "tube"],
+};
 export const SHAPE_GROUPS = [
   ...LIBRARY_SHAPE_GROUPS,
 ].concat(PRESET_GROUPS);

@@ -1098,3 +1098,28 @@ body[data-screen="make"] .exportpop-actions { gap: 8px; margin-top: 8px; justify
 #makeBar .modesw-btn, .editorsw .modesw-btn, #editorSwitch .modesw-btn {
   min-height: 44px;
 }
+
+/* r8 item 8: 'Make a part' is already in the header next to Undo — don't repeat it above Set the size / Pick a template. */
+body.beginner[data-screen="make"] .guidehead #ghStep { display: none !important; }
+
+/* r8: Simple-only Snap, box-select/pan toggle, hover tips, check-cut dialog */
+body:not(.beginner) #btnSimpleSnap { display: none; }
+#btnSimpleSnap.on, #btnDragPan.on { outline: 2px solid var(--accent, #2a6); }
+.hovertip { position: fixed; z-index: 9999; max-width: 280px; padding: 6px 10px; background: #1a1a1a; color: #fff; font-size: 13px; line-height: 1.35; border-radius: 6px; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.makecheck-pick { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 8px 0; }
+#makeCheckDlg .cutcheck { margin-top: 8px; }
+#btnSimpleSnap, #btnDragPan, #btnMakeCheckCut { flex: none; }
+
+/* r8: extra header tools must not wrap into a second row and steal canvas height on a phone. */
+@media (max-width: 900px) {
+  #btnDragPan, #btnSimpleSnap, #btnMakeCheckCut { display: none; } /* Check cut, Snap and pan stay on laptop; they must not steal a second header row on a phone */
+  #makeBar.makebar, .makebar { flex-wrap: nowrap; overflow: hidden; }
+  #makeBar h1 { font-size: 16px; white-space: nowrap; }
+}
+
+/* r8: on the narrowest phones the Make header wraps Advanced / Preset rather than pushing them off the right edge. */
+@media (max-width: 400px) {
+  #makeBar.makebar, .makebar { flex-wrap: wrap; overflow: hidden; }
+  #editorSwitch { flex: 1 1 100%; min-width: 0; }
+  #btnAdvancedTools, #btnPresetParts, #btnSimpleView { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+}

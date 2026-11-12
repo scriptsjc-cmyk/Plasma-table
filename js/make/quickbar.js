@@ -40,7 +40,7 @@ function paintPinnedTools(B, wrap, qb) {
   if (show && S.shapeFs && wrap) {
     if (pin.parentElement !== wrap) wrap.insertBefore(pin, qb || wrap.firstChild);
   } else if (bar) {
-    const slot = $("btnViewParts") || $("editorSwitch");
+    const slot = $("btnSimpleSnap") || $("btnDragPan") || $("btnMakeCheckCut") || $("btnViewParts") || $("editorSwitch");
     if (pin.parentElement !== bar) bar.insertBefore(pin, slot || null);
   }
   if (!show) { pin.innerHTML = ""; return; }

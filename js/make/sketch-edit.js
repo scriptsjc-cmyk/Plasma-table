@@ -410,6 +410,7 @@ export class EditMethods {
     this.items.push(it);
     this.pick([it.id]); this.tool = null; this.drawPts = [];
     this.commit(); this.onSelect();
+    this.onMessage("Outline closed. Drag a corner to move it, or click an edge to type its length.");
   }
   setParam(k, v) {
     const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v)) return;

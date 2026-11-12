@@ -49,7 +49,7 @@ export function beginnerPick(id) {
   if (S.job && S.job.running) return;
   S.bgChoosing = false;
   if (S.src !== "shape") showSource("shape");
-  if (sketch.items.length && !sketch.items.some((i) => i.lock)) sketch.clear();     // Beginner: tapping another shape swaps it (Undo brings it back)
+  // r8 item 12: tapping another template ADDS it, so you can combine a plate and holes.
   addShapeId(id);
   sketch.fitView();
   useShape();      // build the job now, not 250 ms later: a shape that is picked must enable Next straight away

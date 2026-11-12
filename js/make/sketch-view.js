@@ -248,9 +248,16 @@ export class ViewMethods {
       this.drawPts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); });
       if (this.drawDraft && this.drawDraft.kind === "line") {
         const [X, Y] = S(this.drawDraft.x, this.drawDraft.y); ctx.lineTo(X, Y);
-      }
-      ctx.stroke();
-      for (const p of this.drawPts) { const [X, Y] = S(p[0], p[1]); ctx.beginPath(); ctx.arc(X, Y, 5, 0, 7); ctx.fill(); }
+        ctx.stroke();
+        const lab = `${r1(this.drawDraft.len)} mm  ${r1(this.drawDraft.ang)}°`;
+        this.tag(ctx, lab, X, Y - 18, C.sel);
+      } else ctx.stroke();
+      this.drawPts.forEach((p, i) => {
+        const [X, Y] = S(p[0], p[1]);
+        ctx.beginPath(); ctx.arc(X, Y, i === 0 ? 8 : 5, 0, 7);
+        ctx.fillStyle = (i === 0 && this.closeToStart) ? C.go || "#1B7A3D" : C.sel;
+        ctx.fill();
+      });
     }
     if (this.drawDraft && this.drawDraft.kind === "rect") {
       const d = this.drawDraft;
@@ -299,7 +306,11 @@ export class ViewMethods {
       if (!hideFoot) ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${formatLen(b[2] - b[0], 1)} × ${formatLen(b[3] - b[1], 1)}${tool}`, 8, h - 8);
     } else {
       ctx.fillStyle = C.label; ctx.font = "15px Barlow, system-ui"; ctx.textAlign = "center";
-      ctx.fillText(this.tool === "draw" ? (clickVerb() + " to place the first point of the outline") : (clickVerb() + " a shape to add it"), w / 2, h / 2); ctx.textAlign = "start";
+      const drawHint = this.tool === "draw"
+        ? (this.drawPts.length ? (this.closeToStart ? "Click the first point to close the outline" : clickVerb() + " to add a corner · Enter or double-click closes · Backspace undoes the last point")
+          : "Click to place the first corner")
+        : (clickVerb() + " a shape to add it");
+      ctx.fillText(drawHint, w / 2, h / 2); ctx.textAlign = "start";
     }
   }
   tag(ctx, text, x, y, bg) {

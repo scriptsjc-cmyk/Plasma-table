@@ -5,24 +5,12 @@ import { drawPreview } from "../cut/preview.js";
 import { goStep, renderQuickBar, runPro, showSource } from "../core/hooks.js";
 
 // ---- full-screen "Make a shape" editor
-export function setShapeFs(on) {
-  on = !!on;
-  if (S.shapeFs === on && document.body.classList.contains("shape-fs") === on) {
-    if (on && S.src !== "shape") showSource("shape");
-    if (on && S.cur !== 1) goStep(1);
-    renderQuickBar();
-    return;
-  }
-  S.shapeFs = on;
-  // the full-screen editor starts with nothing picked when the pick was only made to show the Beginner size boxes (so one Esc leaves it)
-  if (on && sketch.autoPick != null && sketch.sel.ids.length === 1 && sketch.sel.ids[0] === sketch.autoPick) { sketch.pick([]); sketch.autoPick = null; }
-  if (on && S.src !== "shape") { showSource("shape"); }
-  if (on && S.cur !== 1) goStep(1);
-  document.body.classList.toggle("shape-fs", on);
-  const bar = $("fsBar"); if (bar) { bar.classList.toggle("hidden", !on); bar.hidden = !on; }
-  if (on && !sketch.opts.pro) { /* every tool is in the palette; Pro only adds the side panel */ }
+// r8 item 10: the full-screen editor is gone. Callers still exist; keep a no-op that always turns it off.
+export function setShapeFs(_on) {
+  S.shapeFs = false;
+  document.body.classList.remove("shape-fs");
+  const bar = $("fsBar"); if (bar) { bar.classList.add("hidden"); bar.hidden = true; }
   renderQuickBar();
-  setTimeout(() => { try { sketch.resize && sketch.resize(); } catch (e) { /* ignore */ } sketch.fitView(); drawPreview(); }, 30);
 }
 export function renderProTools() {
   const box = $("proTools");
