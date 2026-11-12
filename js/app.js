@@ -45,7 +45,7 @@ import { bindNav, goStep, onScreen, routeAuth, sendToCutting, testBypass } from 
 import { bindSketchBar, showSource, syncShapeForm, useCoupon, useShape, useShapeSoon, useStraight } from "./make/useshape.js";
 import { bindProTools, renderProTools, setShapeFs } from "./make/protools.js";
 import { applyMatchingPreset, applyPresetRow, bindMaterial, defaultSpeed, renderMaterials, row, saveSpeed, setSpeed } from "./cut/material.js";
-import { bindJog, mountJogPads } from "./machine/jog.js";
+import { bindJog, bindJogKeys, mountJogPads } from "./machine/jog.js";
 import { bindGate, paintWhy, refreshGate } from "./ui/gate.js";
 import { addPartsFlow, bindFiles, clearRecent, editDrawing, handleFiles, openEditor, renderRecent, startOver } from "./make/files.js";
 import { bindLibrary, openMakeTool } from "./make/library.js";
@@ -192,6 +192,7 @@ async function init() {
   applyMatchingPreset();
   renderMaterials();
   renderRecent();
+  bindJogKeys();                                  // before the editor: on the cutting screen the arrows jog the torch (r7 J4)
   setSketch(new Sketch($("preview"), {
     onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } Setup.paint(!done); if (done && inspectorApi) inspectorApi.emit(); },
     onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); Setup.paint(true); if (inspectorApi) inspectorApi.emit(); },

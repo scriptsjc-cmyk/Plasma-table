@@ -76,26 +76,28 @@ function arrowsTaken(el) {
   if (el.tagName === "INPUT") return !["checkbox", "button", "submit", "reset"].includes((el.getAttribute("type") || "text").toLowerCase());
   return !!el.closest(ARROW_ROLES);
 }
-export function bindJog() {
-  // keyboard + on-screen pad: tap = one step, hold = glide until released (diagonals too).
-  // Arrows = X/Y, Page Up/Down = Z, hold Shift for slow.
-  const KEYS = { ArrowLeft: ["X", -1], ArrowRight: ["X", 1], ArrowUp: ["Y", 1], ArrowDown: ["Y", -1], PageUp: ["Z", 1], PageDown: ["Z", -1] };
-  document.addEventListener("keydown", (e) => {
+const KEYS = { ArrowLeft: ["X", -1], ArrowRight: ["X", 1], ArrowUp: ["Y", 1], ArrowDown: ["Y", -1], PageUp: ["Z", 1], PageDown: ["Z", -1] };
+const dialogOpen = () => [...document.querySelectorAll("[role=dialog], [aria-modal=true]")].some((d) => !d.hidden && !d.classList.contains("hidden") && d.getClientRects().length);
+// Keyboard: arrows = X/Y, Page Up/Down = Z, hold Shift for slow; tap = one step, hold = glide (diagonals too). Bound on the window in
+// the capture phase BEFORE the bed picture's editor is made (js/app.js), so on the cutting screen the arrows reach the torch first.
+export function bindJogKeys() {
+  window.addEventListener("keydown", (e) => {
     if (arrowsTaken(document.activeElement)) return;
     if (e.key === "Shift") { J.slow = true; return; }                     // (the space bar is the E-stop: see flow.js)
-    if (!S.connected || screen() !== "cut" || document.body.classList.contains("cut-arrange")) return;
-    if (S.job && S.job.running) return;
     const k = KEYS[e.key];
-    if (!k) return;
-    e.preventDefault();
+    if (!k || !S.connected || screen() !== "cut" || (S.job && S.job.running) || dialogOpen() || document.body.classList.contains("cut-arrange")) return;
+    e.preventDefault(); e.stopImmediatePropagation();
     if (e.repeat) return;
     J.slow = e.shiftKey;
     jogPress("key:" + e.key, k[0], k[1]);
-  });
-  document.addEventListener("keyup", (e) => {
+  }, true);
+  window.addEventListener("keyup", (e) => {
     if (e.key === "Shift") J.slow = false;
     if (KEYS[e.key]) jogRelease("key:" + e.key);
-  });
+  }, true);
+}
+// the on-screen pad: press and hold
+export function bindJog() {
   document.addEventListener("pointerdown", (e) => {
     const b = e.target.closest(".j[data-axis]");
     if (!b || !S.connected || b.disabled || (S.job && S.job.running)) return;
