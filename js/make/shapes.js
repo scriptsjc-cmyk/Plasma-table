@@ -2,6 +2,8 @@
 import { arcPoints, circleContour, signedArea } from "../core/geom.js";
 import { roundedRect, chamferRect, slot, roundCorners, dedupe } from "./shape-helpers.js";
 import { FAB_SHAPES } from "./shapes-fab.js";
+import { PRESET_SHAPES, PRESET_GROUPS } from "./presets/index.js";
+export { PRESET_SHAPES, PRESET_GROUPS, PRESET_IDS } from "./presets/index.js";
 
 const MIN = 2;
 const SIZE_KEYS = new Set(["w", "h", "d", "a", "b", "len", "wid", "s"]);
@@ -538,7 +540,7 @@ export const SHAPES = [
       return out;
     },
   },
-].concat(FAB_SHAPES);
+].concat(FAB_SHAPES, PRESET_SHAPES);
 
 // several copies in a grid
 export function copies(contours, cols, rows, gap) {
@@ -584,7 +586,7 @@ export const SHAPE_GROUPS = [
   { id: "flanges", name: "Flanges & washers", ids: ["flange4", "flange6", "flange8", "flange10", "flange12", "flangeblind", "flange", "ring", "sqwasher", "frame"] },
   { id: "duct", name: "Duct & rolled", ids: ["s2r", "cone", "tube"] },
   { id: "holes", name: "Holes", ids: ["hole", "slothole", "boltcircle", "cornerholes", "holerow", "holegrid"] },
-];
+].concat(PRESET_GROUPS)
 
 // Library tiles that are a shape with some sizes already set (so "Flange – 6 holes" is one tap). id -> { base shape, sizes }.
 // Bolt holes start half a step round from the top so they straddle the centre lines, as on a standard flange.
