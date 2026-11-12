@@ -3,7 +3,7 @@
 // Dashed outlines on the drawing are those holes; they are still cut in the part.
 import { sketch } from "../core/state.js";
 import { $ } from "../core/dom.js";
-import { shapeDef } from "./sketch.js";
+import { shapeDef } from "./sketch-util.js";
 
 export function isItemHidden(sk, it) {
   return !!(it && (it.hide || (sk.hiddenLayers && sk.hiddenLayers.has(it.op || "cut"))));
