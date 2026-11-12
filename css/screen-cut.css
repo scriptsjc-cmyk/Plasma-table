@@ -225,7 +225,7 @@ body.beginner #zeroState { font-size: 14px; }
 @media (min-width: 900px) {
   body.beginner .zerobody { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-content: start; gap: 8px 14px; }
   body.beginner .zerobody .jogmount { grid-column: 1; grid-row: 1 / span 3; }
-  body.beginner .zerobody > :not(.jogmount) { grid-column: 2; }
+  body.beginner .zerobody > :not(.zeroscroll), body.beginner .zeroscroll > :not(.jogmount) { grid-column: 2; }
 }
 @media (max-height: 800px) {
   body.beginner .checklist label { min-height: 44px; padding: 6px; font-size: 16px; }
@@ -248,6 +248,7 @@ body.pro-mode .speedrow { gap: 8px; }
 .partrow .row { flex-wrap: wrap; gap: 6px; }
 .custsize .wide2 { grid-column: 1 / -1; }
 /* ---- ROUND 2: step 3 "Get set up" (sheet layout + start point + checks) */
+.zeroscroll { display: contents; }     /* the start-point card's scrolling part on a laptop (below); elsewhere its children lay out as before */
 .setupcard { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 6px 10px; background: var(--card); }
 .setupcard > summary { cursor: pointer; padding: 6px 0; min-height: 44px; font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; list-style: none; }
 .setupcard > summary::-webkit-details-marker { display: none; }
@@ -259,6 +260,7 @@ body.pro-mode .speedrow { gap: 8px; }
 .sheetrow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 4px 0; }
 .sheetrow label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .sheetrow input { width: 86px; padding: 8px; font-size: 16px; }
+.sheetrow .unitin { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .laybtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
 .laybtns button { flex: 1 1 140px; min-height: 52px; font-size: 16px; }
 .layoutsel { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px; }
@@ -281,7 +283,7 @@ body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
 @media (min-width: 1100px) {
   body.pro-mode .zerobody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 12px; }
   body.pro-mode .zerobody .jogmount { grid-row: 1 / span 3; }
-  body.pro-mode .zerobody > :not(.jogmount) { grid-column: 2; }
+  body.pro-mode .zerobody > :not(.zeroscroll), body.pro-mode .zeroscroll > :not(.jogmount) { grid-column: 2; }
 }
 body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
 body[data-step="3"] #exportRow { display: none; }
@@ -597,6 +599,8 @@ body[data-screen="make"].beginner #btnSavePartQuick, body[data-screen="make"].be
 body.short-land .tabs .tab { min-height: 44px; padding-top: 2px; padding-bottom: 2px; font-size: 14px; }
 body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .holeadd button { min-height: 44px; }
+/* r7 U12: the connect card's link line is a suggestion (Practice always works), not a warning */
+#connectLock .locknote { color: var(--text); font-weight: 600; }
 /* r7 U6: the banner's Unlock is disabled while the E-stop is latched, and says why beside it */
 .unlockwhy { display: none; }
 body.estop-latched .unlockwhy { display: block; flex: 0 1 220px; font-size: 13px; font-weight: 600; line-height: 1.25; }
@@ -867,29 +871,38 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy { grid-column: 1 / -1; margin: 0; font-size: 13px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav button:not(#btnStart) { min-height: 44px; font-size: 15px; white-space: nowrap; }
   /* the layout card: compact fields and buttons */
-  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow { gap: 8px; }
-  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label { font-size: 13px; }
-  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow input { min-height: 34px; }
-  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns button { min-height: 40px; font-size: 14px; }
-  /* the start-point card: compact, and Start here stays in view at the bottom of the card while you scroll it (a review found it
-     about 900px down) */
-  body[data-screen="cut"][data-step="3"] .zerobody { display: flex; flex-direction: column; gap: 8px; }
-  body[data-screen="cut"][data-step="3"] .zerobody > * { margin: 0; }
-  body[data-screen="cut"][data-step="3"] .zerobody > #btnZero { position: sticky; bottom: 0; z-index: 2;
-    box-shadow: 0 0 0 8px var(--card), 60px 0 0 8px var(--card), 120px 0 0 8px var(--card), 180px 0 0 8px var(--card), -60px 0 0 8px var(--card); }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label { flex-direction: column; align-items: stretch; gap: 2px; font-size: 13px; white-space: nowrap; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow .unit { display: none; }   /* sizes are in mm; the bed's corner label says so */
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow input { flex: 1 1 auto; width: 100%; min-width: 0; min-height: 34px; padding: 4px 6px; font-size: 14px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns button { flex: 1 1 auto; min-height: 40px; padding: 4px 8px; font-size: 14px; white-space: nowrap; }
+  /* the start-point card: compact. Its controls scroll inside it and Start here sits in its own row at the bottom, so it is always in
+     view and never covers Link a machine or Go to start point (r7 U3) */
+  body[data-screen="cut"][data-step="3"] #zeroCard[open] { display: flex; flex-direction: column; overflow: hidden; }
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary { flex: none; }
+  body[data-screen="cut"][data-step="3"] #zeroCard::details-content { display: contents; }
+  body[data-screen="cut"][data-step="3"] .zerobody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding-bottom: 6px; }
+  body[data-screen="cut"][data-step="3"] .zeroscroll { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow: auto; overscroll-behavior: contain;
+    padding-bottom: 14px; mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); }   /* soft edge where more is below */
+  body[data-screen="cut"][data-step="3"] .zerobody > :not(.zeroscroll), body[data-screen="cut"][data-step="3"] .zeroscroll > * { margin: 0; flex: none; }
   body[data-screen="cut"][data-step="3"] .zerobody .connectcard { padding: 8px 10px; }
-  body[data-screen="cut"][data-step="3"] .zerobody .connectcard .xl, body[data-screen="cut"][data-step="3"] .homerow button { min-height: 44px; font-size: 15px; }
+  body[data-screen="cut"][data-step="3"] .zerobody .connectcard .xl { min-height: 44px; font-size: 15px; }
   body[data-screen="cut"][data-step="3"] #connectLock { margin-top: 8px; flex-wrap: nowrap; }
   body[data-screen="cut"][data-step="3"] #connectLock .locknote { flex: 1 1 auto; font-size: 13px; }
   body[data-screen="cut"][data-step="3"] #connectLock .xl { flex: none; }
-  body[data-screen="cut"][data-step="3"] .homerow { gap: 6px; }
-  body[data-screen="cut"][data-step="3"] .homerow button { padding: 4px 10px; }
+  body[data-screen="cut"][data-step="3"] .homerow { gap: 6px; flex-wrap: nowrap; }
+  body[data-screen="cut"][data-step="3"] .homerow button { min-height: 38px; padding: 4px 8px; font-size: 13px; white-space: nowrap; }
+  /* a clean cut check is one line: the head and the tick side by side */
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3:has(> p.ok) { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+  body[data-screen="cut"][data-step="3"] #cutCheck3 .cchead { margin: 0; }
+  body[data-screen="cut"][data-step="3"] #cutCheck3 p.ok { margin: 0; }
+  body[data-screen="cut"][data-step="3"] #cutCheck3:has(> p.ok) .cchead span, body[data-screen="cut"][data-step="3"] #cutCheck3 .okmore { display: none; }
   body[data-screen="cut"][data-step="3"] .jogwrap .pos div { padding: 4px 10px; }
   body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: 22px; }
   body[data-screen="cut"][data-step="3"] .jog .j { min-height: 44px; font-size: 18px; }
   /* the checklist fits a mouse: 24px boxes, slim rows */
   body[data-screen="cut"][data-step="3"] #checkCard > summary { padding-top: 0; }
-  body[data-screen="cut"][data-step="3"] .checkmat { flex-wrap: nowrap; justify-content: space-between; }
+  body[data-screen="cut"][data-step="3"] .checkmat { flex-wrap: nowrap; justify-content: space-between; white-space: nowrap; }
   body[data-screen="cut"][data-step="3"] .checkmat button { min-height: 32px; font-size: 13px; padding: 2px 8px; }
   body[data-screen="cut"][data-step="3"] .checklist { gap: 4px; }
   body[data-screen="cut"][data-step="3"] .checklist label { min-height: 36px; padding: 4px 8px; gap: 10px; font-size: 15px; }

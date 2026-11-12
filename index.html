@@ -530,9 +530,9 @@
         <details class="setupcard" id="layoutCard" open>
           <summary><b>Parts on the bed</b> <span id="layoutState" class="layoutstate"></span></summary>
           <div class="sheetrow">
-            <label>Sheet width <input id="sheetW" type="number" min="50" step="any" inputmode="decimal"> mm</label>
-            <label>Height <input id="sheetH" type="number" min="50" step="any" inputmode="decimal"> mm</label>
-            <label>Clearance <input id="sheetClr" type="number" min="0" step="0.5" inputmode="decimal" value="2"> mm</label>
+            <label>Sheet width <span class="unitin"><input id="sheetW" type="number" min="50" step="any" inputmode="decimal"> <span class="unit">mm</span></span></label>
+            <label>Height <span class="unitin"><input id="sheetH" type="number" min="50" step="any" inputmode="decimal"> <span class="unit">mm</span></span></label>
+            <label>Clearance <span class="unitin"><input id="sheetClr" type="number" min="0" step="0.5" inputmode="decimal" value="2"> <span class="unit">mm</span></span></label>
           </div>
           <p class="muted small" id="sheetNote"></p>
           <div class="skbtns bigbtns laybtns">
@@ -585,49 +585,51 @@
         <details class="setupcard" id="zeroCard" open>
           <summary><b>Connect and set the start point</b> <span id="zeroState" class="layoutstate muted small">Not set yet.</span></summary>
           <div class="zerobody">
-          <div id="connectCard" class="connectcard">
-            <div class="row wrap">
-              <button id="btnConnect" class="xl go">Connect with USB</button>
-              <button id="btnDemo" class="xl">Practice (no machine)</button>
-              <button type="button" id="btnDisconnect" class="xl hidden">Disconnect</button>
-            </div>
-            <div id="connectLock" class="lockcard hidden">
-              <p id="connectLockText" class="locknote">🔒 Locked: sign in, then link a machine to run jobs.</p>
-              <button type="button" id="btnLinkMachine" class="xl go">Link a machine</button>
-            </div>
-            <details id="fnBox" class="fnbox">
-              <summary>FluidNC (Wi-Fi)</summary>
-              <p class="muted small">ESP32 running FluidNC on the same Wi-Fi. Default socket is <code>ws://&lt;ip&gt;:81</code>.</p>
-              <div class="grid2">
-                <label>IP or hostname<input id="fnHost" type="text" placeholder="192.168.1.50 or fluidnc.local" autocomplete="off" autocorrect="off" spellcheck="false"></label>
-                <label>WebSocket port<input id="fnPort" type="number" value="81" min="1" max="65535" inputmode="numeric"></label>
+          <div class="zeroscroll">
+            <div id="connectCard" class="connectcard">
+              <div class="row wrap">
+                <button id="btnConnect" class="xl go">Connect with USB</button>
+                <button id="btnDemo" class="xl">Practice (no machine)</button>
+                <button type="button" id="btnDisconnect" class="xl hidden">Disconnect</button>
               </div>
-              <button type="button" id="btnFluidNC" class="xl">Connect to FluidNC</button>
-              <p id="fnMixed" class="warntext hidden"></p>
-              <button type="button" id="btnWifiSetup">Put the table on your Wi-Fi…</button>
+              <div id="connectLock" class="lockcard hidden">
+                <p id="connectLockText" class="locknote">Or, to cut for real:</p>
+                <button type="button" id="btnLinkMachine" class="xl go">Link a machine</button>
+              </div>
+              <details id="fnBox" class="fnbox">
+                <summary>FluidNC (Wi-Fi)</summary>
+                <p class="muted small">ESP32 running FluidNC on the same Wi-Fi. Default socket is <code>ws://&lt;ip&gt;:81</code>.</p>
+                <div class="grid2">
+                  <label>IP or hostname<input id="fnHost" type="text" placeholder="192.168.1.50 or fluidnc.local" autocomplete="off" autocorrect="off" spellcheck="false"></label>
+                  <label>WebSocket port<input id="fnPort" type="number" value="81" min="1" max="65535" inputmode="numeric"></label>
+                </div>
+                <button type="button" id="btnFluidNC" class="xl">Connect to FluidNC</button>
+                <p id="fnMixed" class="warntext hidden"></p>
+                <button type="button" id="btnWifiSetup">Put the table on your Wi-Fi…</button>
+              </details>
+              <p id="connectHelp" class="muted small">USB works in Chrome or Edge on a computer. Close Mach3 or any other program using the port first. Got the Wi-Fi Pi fitted? Open <b>http://plasma.local</b> instead. FluidNC from the live https site is blocked by the browser — serve a local http copy, or use USB.</p>
+            </div>
+            <div class="row wrap homerow">
+              <button class="do-home">⌂ Home</button>
+              <button class="do-raise">⤒ Raise torch</button>
+              <button id="btnGoStart">Go to start point</button>
+            </div>
+            <p class="muted small">Put the sheet on the table. Move the torch over the sheet's <b>bottom-left corner</b> and press <b>Start here</b>. That corner is where the sheet picture's 0, 0 is.</p>
+            <div class="jogmount"></div>
+            <p class="muted small keyhint">Keyboard: arrows move, Page Up / Page Down raise and lower. Tap for one step, hold to glide. Two arrows go diagonal, add Shift to go slow.</p>
+            <details id="originCard" class="originbox">
+              <summary>Job origin &amp; saved start points</summary>
+              <p class="muted small"><span id="originNow"></span> Pick a different spot to measure from:</p>
+              <div id="origin9" class="grid9" role="group" aria-label="Which part of the job goes at the start point"></div>
+              <button type="button" id="originDefault" class="small hidden">Back to default</button>
+              <div class="row wrap woform"><input id="woName" type="text" maxlength="40" placeholder="Name this start point (e.g. left clamp)" aria-label="Name for the saved start point" autocomplete="off"><button type="button" id="woSave" class="small">Save the current start point</button></div>
+              <p id="woNeed" class="muted small">Connect and Home to use saved start points.</p>
+              <ul id="woList" class="wolist"></ul>
             </details>
-            <p id="connectHelp" class="muted small">USB works in Chrome or Edge on a computer. Close Mach3 or any other program using the port first. Got the Wi-Fi Pi fitted? Open <b>http://plasma.local</b> instead. FluidNC from the live https site is blocked by the browser — serve a local http copy, or use USB.</p>
+            <p id="originHelp" class="muted small hidden"></p>
           </div>
-          <div class="row wrap homerow">
-            <button class="do-home">⌂ Home</button>
-            <button class="do-raise">⤒ Raise torch</button>
-            <button id="btnGoStart">Go to start point</button>
-          </div>
-          <p class="muted small">Put the sheet on the table. Move the torch over the sheet's <b>bottom-left corner</b> and press <b>Start here</b>. That corner is where the sheet picture's 0, 0 is.</p>
-          <div class="jogmount"></div>
-          <p class="muted small keyhint">Keyboard: arrows move, Page Up / Page Down raise and lower. Tap for one step, hold to glide. Two arrows go diagonal, add Shift to go slow.</p>
-          <details id="originCard" class="originbox">
-            <summary>Job origin &amp; saved start points</summary>
-            <p class="muted small"><span id="originNow"></span> Pick a different spot to measure from:</p>
-            <div id="origin9" class="grid9" role="group" aria-label="Which part of the job goes at the start point"></div>
-            <button type="button" id="originDefault" class="small hidden">Back to default</button>
-            <div class="row wrap woform"><input id="woName" type="text" maxlength="40" placeholder="Name this start point (e.g. left clamp)" aria-label="Name for the saved start point" autocomplete="off"><button type="button" id="woSave" class="small">Save the current start point</button></div>
-            <p id="woNeed" class="muted small">Connect and Home to use saved start points.</p>
-            <ul id="woList" class="wolist"></ul>
-          </details>
-          <p id="originHelp" class="muted small hidden"></p>
           <button id="btnZero" class="xl accent wide">📍 Start here</button>
-          <button id="btnTrace" class="wide">Trace the outline (torch off) to check it's on the sheet</button>
+          <button id="btnTrace" class="wide" title="Walk the outline with the torch off, to check the part is on the sheet">Trace the outline (torch off)</button>
           </div>
         </details>
 

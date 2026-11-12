@@ -47,7 +47,7 @@ try {
     await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(3); });
     await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3);
     t.check("Connect starts locked", await p.locator("#btnConnect.locked").count() === 1);
-    t.check("lock prompt shown on the connect card", /link (your |a )?machine to (run jobs|cut for real)/i.test(await p.locator("#connectLock").textContent()));
+    t.check("lock prompt shown on the connect card", /cut for real/i.test(await p.locator("#connectLock").textContent()));
     await p.evaluate(() => document.getElementById("btnConnect").click());
     await p.waitForSelector("#gateDlg:not(.hidden)", { timeout: 5000 });
     t.check("tapping Connect without a linked machine opens the lock prompt", /link (your |a )?machine to run jobs/i.test(await p.locator("#gateWhy").textContent()));
@@ -56,7 +56,7 @@ try {
     t.check("Make a part (free) works without connecting", await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("menu"); T.showScreen("make"); return T.screen() === "make" && !T.S.connected; }));
     await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("cut"); T.goStep(3); T.refreshGate(); });
     await sleep(300);
-    const lockUi = await p.evaluate(() => ({ notes: [...document.querySelectorAll(".locknote")].filter((e) => e.offsetParent && /Locked/.test(e.textContent)).length, why: document.getElementById("startWhy").textContent, startOff: document.getElementById("btnStart").disabled, linkGo: document.getElementById("btnLinkMachine").classList.contains("go") && !!document.getElementById("btnLinkMachine").offsetParent, connectGreen: getComputedStyle(document.getElementById("btnConnect")).backgroundColor }));
+    const lockUi = await p.evaluate(() => ({ notes: [...document.querySelectorAll(".locknote")].filter((e) => e.offsetParent && /cut for real/.test(e.textContent)).length, why: document.getElementById("startWhy").textContent, startOff: document.getElementById("btnStart").disabled, linkGo: document.getElementById("btnLinkMachine").classList.contains("go") && !!document.getElementById("btnLinkMachine").offsetParent, connectGreen: getComputedStyle(document.getElementById("btnConnect")).backgroundColor }));
     t.check("item 11: one lock note on the bed screen (not repeated by Start)", lockUi.notes === 1, JSON.stringify(lockUi));
     t.check("item 11: Start is off and says why right under it (link a machine)", lockUi.startOff && /link a machine/i.test(lockUi.why), JSON.stringify(lockUi));
     t.check("item 11: 'Link a machine' is the green primary button; Connect steps back", lockUi.linkGo && lockUi.connectGreen !== "rgb(15, 123, 58)", JSON.stringify(lockUi));

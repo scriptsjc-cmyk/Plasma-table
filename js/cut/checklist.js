@@ -19,9 +19,10 @@ function zeroLineText() {
 // A practice run (torch off) says so as a line of text, not as a box to tick (r7 U24).
 export function checkItems() {
   const dry = S.prepared && S.prepared.dry_run;
-  return dry ? ["the material (if any) is flat on the slats", "the area is clear and hands are away from the gantry", "the e-stop is within reach"]
-    : [...(row().check ? [row().check] : []), `the plasma is ON and set to ${ampsNow()} A`, `the air is on, ${row().air_bar ?? S.chart.air_bar} bar at the plasma gauge`,
-      "the material is clamped flat on the slats", "the earth clamp is on the sheet", "the area is clear, hands away, e-stop within reach"];
+  // Short lines, so each fits on one line in the laptop's narrow left column
+  return dry ? ["the material is flat on the slats", "the area is clear, hands away", "the e-stop is within reach"]
+    : [...(row().check ? [row().check] : []), `the plasma is ON, set to ${ampsNow()} A`, `the air is on, ${row().air_bar ?? S.chart.air_bar} bar`,
+      "the material is clamped flat", "the earth clamp is on the sheet", "the area is clear, hands away", "the e-stop is within reach"];
 }
 export function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;

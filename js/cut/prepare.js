@@ -29,7 +29,7 @@ export function renderCutCheck() {
   const html = !chk ? "" : `
     <div class="cchead">Cut check <span>· ${esc(mat)}</span></div>
     ${chk.groups.length ? `<ol>${chk.groups.map((g) => `<li class="${g.level}"><b>${g.n}</b><span>${g.spots.length > 1 ? `<i>${g.spots.length} places:</i> ` : ""}${esc(g.text)}</span></li>`).join("")}</ol>`
-      : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${esc(mat)}.</p>`}`;
+      : `<p class="ok">✓ Looks cuttable<span class="okmore"> – nothing too small, thin or close for ${esc(mat)}</span>.</p>`}`;
   const tabBtn = chk && !S.cam.tabs && chk.groups.some((g) => /slats|tip/i.test(g.text))
     ? `<div class="row"><button type="button" class="small" data-r2act="tabs">Add 2 hold-down tabs per part</button></div>` : "";
   // Round 5: the cut check is for cutting, not for designing. While you make a part nothing is flagged (no panel, no marks on the

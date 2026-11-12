@@ -39,10 +39,8 @@ export const paintWhy = () => syncWhy(whyOff, padUnavailable);
 // The connect card's line under the buttons (r7 U12): Practice always works, so it never says "Locked" next to a working Practice button.
 export function paintConnectLock() {
   const el = $("connectLockText"); if (!el) return;
-  const practicing = !!S.demo;
-  const text = practicing ? "Practice table connected. Link a machine to cut for real."
-    : Acc.isSignedIn() ? "Try it with Practice (no machine), or link a machine to cut for real."
-    : "Try it with Practice (no machine), or sign in and link a machine to cut for real.";
+  // r7 U12: a short lead-in to the Link a machine button beside it; Practice (just above) always works, so this is not a lock
+  const text = S.demo ? "To cut for real:" : "Or, to cut for real:";
   if (el.textContent !== text) el.textContent = text;
 }
 export function refreshGate() {
