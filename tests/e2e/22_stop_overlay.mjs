@@ -92,7 +92,7 @@ async function jobToStop(view) {
   console.log("INFO zero before continue =", zeroBefore, "; after =", JSON.stringify(z).slice(0, 400));
   ck("1b Continue after STOP does NOT set work zero (zeroSet stays false)", z.zero === false, JSON.stringify(z));
   ck("1b Start is locked after Continue", z.start === true && z.cur === 3);
-  ck("1b plain-words reason is shown (home / confirm work zero)", !z.why_hidden && /Home/i.test(z.why) && /work zero/i.test(z.why), z.why);
+  ck("1b plain-words reason is shown (home / set the start point)", !z.why_hidden && /Home/i.test(z.why) && /start point/i.test(z.why), z.why);
   await snap(page, "1b-continue-needs-home-and-zero-laptop");
   // unlock + home is not enough: work zero must be confirmed again
   await page.evaluate(() => document.getElementById("btnUnlock").click()); await sleep(900);

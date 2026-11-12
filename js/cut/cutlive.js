@@ -71,10 +71,10 @@ export function liveView(w, st, ctx = {}) {
     if (w.probe && Number.isFinite(ctx.switchOffset)) {
       const h = mz - (w.probe.z + ctx.switchOffset);
       out.height = { text: `${h.toFixed(1)} mm above sheet${demo}`, cls: "" };
-      out.note = `Height is worked out from the last touch-off. Z is ${wz.toFixed(1)} mm from the work zero.`;
+      out.note = `Height is worked out from the last touch-off. Z is ${wz.toFixed(1)} mm from the start point.`;
     } else {
       out.height = { text: `Z ${wz.toFixed(1)} mm${demo}`, cls: "" };
-      out.note = "Z is the controller's position from work zero. No touch-off yet, so the height above the sheet is not known.";
+      out.note = "Z is the controller's position from the start point. No touch-off yet, so the height above the sheet is not known.";
     }
   }
   if (out.arc === off && out.volts === off) out.note = (out.note ? out.note + " " : "") + "This controller doesn't report arc OK or arc voltage (only grblHAL with the plasma plugin does).";

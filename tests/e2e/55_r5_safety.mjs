@@ -129,9 +129,9 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   // ---- 9: zero must be confirmed again before a job starts
   await page.evaluate(() => { const u = document.getElementById("btnUnlock"); if (u && u.offsetParent) u.click(); }); await sleep(1500);
   const NZ = await throws(page, "window.plasmaTest.getM().startJob()");
-  ck("9 startJob refuses without confirmed work zero (machine level)", /zero/i.test(NZ || ""), NZ);
+  ck("9 startJob refuses without confirmed work zero (machine level)", /start point/i.test(NZ || ""), NZ);
   const NZ2 = await throws(page, "window.plasmaTest.getM().startJob({ fromCut: 2 })");
-  ck("9 Continue from cut N (startJob fromCut) refuses too", /zero/i.test(NZ2 || ""), NZ2);
+  ck("9 Continue from cut N (startJob fromCut) refuses too", /start point/i.test(NZ2 || ""), NZ2);
   await T(page, "window.plasmaTest.refresh()");
   ck("9 the Start button is blocked until zero is set again", !(await startable(page)));
   await page.evaluate(() => { document.querySelectorAll(".do-home").forEach((h) => h.offsetParent && h.click()); }); await sleep(5500);
@@ -187,7 +187,7 @@ const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while
   await page.evaluate(() => document.getElementById("btnRestart").click()); await sleep(600);
   ck("9 Continue: Start stays locked and asks to confirm work zero", !(await startable(page)) && /zero|start point/i.test(await blockersText(page) + await T(page, "document.getElementById('resumeWhy').textContent")), await blockersText(page));
   const NZ3 = await throws(page, "window.plasmaTest.getM().startJob({ fromCut: window.plasmaTest.S.startCut })");
-  ck("9 ...and the machine refuses it even if the button were bypassed", /zero/i.test(NZ3 || ""), NZ3);
+  ck("9 ...and the machine refuses it even if the button were bypassed", /start point/i.test(NZ3 || ""), NZ3);
   await page.evaluate(() => { document.querySelectorAll(".do-home").forEach((h) => h.offsetParent && h.click()); }); await sleep(5500);
   ck("9 re-homing does not bring zero back either", await T(page, "window.plasmaTest.S.zeroSet === false"));
   await zeroAndTick(page);

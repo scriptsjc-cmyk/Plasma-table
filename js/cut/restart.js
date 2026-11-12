@@ -72,7 +72,7 @@ function positionStillKnown() {
 function resumeNeeds() {
   const S = H.S, need = [];
   if (S.safety && S.safety.limits && !S.safety.referenced) need.push("press Home so the table finds its edges again");
-  if (!S.zeroSet) need.push("move the torch over the start of the work and press Start here to confirm work zero");
+  if (!S.zeroSet) need.push("move the torch over the start of the work and press Start here to set the start point again");
   return need;
 }
 export function startCut() { return Math.max(1, Math.trunc(H.S.startCut || 1)); }

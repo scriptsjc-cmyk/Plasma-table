@@ -17,7 +17,7 @@ const LATCH_BLOCKED = new Set(["resume", "jog", "jog_dir", "home", "goto_zero", 
 export const ALARM_DEFAULT = "The controller is locked (Alarm) and won't move. Check the torch is clear, then press Unlock (or Home).";
 const ALARM_MSG = "The controller is in Alarm, so it won't move. Press Unlock at the top of the screen first (or Home).";
 const ALARM_BLOCKED = new Set(["jog", "jog_dir", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test"]);
-const NO_ZERO_MSG = "Work zero isn't confirmed. Move the torch over the start of the work and press Start here first.";
+const NO_ZERO_MSG = "The start point isn't set. Move the torch over the start of the work and press Start here first.";
 
 export class Machine {
   constructor(machineCfg, chart, settingsText, store) {
