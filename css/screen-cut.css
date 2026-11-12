@@ -799,7 +799,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"] #btnStop.estop { flex-direction: row; gap: 8px; width: clamp(208px, 14vw, 260px); min-width: 208px; min-height: 86px; padding: 4px 12px; }
   body[data-screen="cut"] #btnStop.estop .estop-svg { width: 76px; height: 76px; }
   body[data-screen="cut"] #btnStop.estop .estop-label { font-size: 24px; margin: 0; padding: 6px 12px; border-radius: 8px; }
-  body[data-screen="cut"] #btnStop.pressed .estop-label { font-size: 17px; line-height: 1.1; padding: 4px 8px; white-space: normal; text-align: center; }
+  body[data-screen="cut"] #btnStop.pressed .estop-label { font-size: 19px; line-height: 1.05; padding: 4px 8px; white-space: normal; text-align: center; }
   /* a slimmer step bar, so the picture keeps the height */
   body.app-shell[data-screen="cut"][data-step="3"] .stepper li, body.app-shell[data-screen="cut"][data-step="4"] .stepper li { min-height: 34px; padding-top: 2px; padding-bottom: 4px; }
 
@@ -895,5 +895,6 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button:not(.blocker-jump),
   body[data-screen="cut"][data-step="4"] #cutView .stepPane button:not(.blocker-jump) { max-width: 300px; }
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button.xl, body[data-screen="cut"][data-step="4"] #cutView .stepPane button.xl { min-height: 48px; max-height: 56px; }
+  body[data-screen="cut"][data-step="3"] #cutView #btnTrace { min-height: 44px; padding: 4px 10px; font-size: 14px; }
   body[data-screen="cut"][data-step="4"] .runctl #btnPause { flex: 0 1 300px; min-height: 56px; }
 }
