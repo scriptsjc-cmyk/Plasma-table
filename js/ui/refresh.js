@@ -11,9 +11,9 @@ import { $, $$, clock, esc, fmtTime, placeToast } from "../core/dom.js";
 import { formatLen } from "../core/prefs.js";
 import { blockers, overlayLive, paintZeroWarn } from "../cut/checklist.js";
 import { drawPreview, fit, wcoNow } from "../cut/preview.js";
-import { paintWhy } from "./gate.js";
+import { paintConnectLock, paintWhy } from "./gate.js";
 import { paintGuide } from "../make/shapeform.js";
-import { lockText, machineAllowed } from "../machine/access.js";
+import { machineAllowed } from "../machine/access.js";
 import { canGo } from "./nav.js";
 import { liveProgress } from "../cut/progress.js";
 import { ampsNow } from "../cut/material.js";
@@ -50,10 +50,12 @@ export function paintChrome() {
     mode.textContent = label;
     mode.classList.toggle("hidden", !label);
   }
+  // r7 U12: one practice chip. On the practice table the connection pill already says "Practice table" (it never fires a torch),
+  // so "Practice run · torch off" only shows for a practice run on a real machine.
   const pr = $("practiceChip");
   if (pr) {
     const on = !!(S.prepared && S.prepared.dry_run) || ($("dryRun") && $("dryRun").checked);
-    pr.classList.toggle("hidden", !on);
+    pr.classList.toggle("hidden", !on || !!(S.connected && S.demo));
   }
   const zs = $("zeroState");
   if (zs) {
@@ -108,12 +110,7 @@ function paintJobCard() {
 export function refresh() {
   paintChrome();
   setTimeout(paintWhy, 0);
-  try {
-    const practicing = !!S.demo && !Acc.hasLinkedMachine();
-    const lt = practicing ? "Practice works without a machine. Link one to cut for real." : "🔒 " + lockText();
-    if ($("connectLockText").textContent !== lt) $("connectLockText").textContent = lt;
-    $("connectLock").classList.toggle("practice-ok", practicing);
-  } catch (e) { /* ignore */ }
+  paintConnectLock();
   // stats + fit (preview pane)
   const f = fit();
   $("fit").className = "fit " + f.cls;
@@ -140,7 +137,8 @@ export function refresh() {
   paintZeroWarn();
   $("btnStart").disabled = b.length > 0 || !machineAllowed();
   paintStartWhy(b);
-  $("blockers").innerHTML = b.length && S.cur === 3 ? `Can't start yet:<ul>${b.map((x) => `<li><button type="button" class="blocker-jump" data-jump="${esc(jumpFor(x))}">${esc(x)}</button></li>`).join("")}</ul>` : "";
+  // each reason is text with a small "Show me" button that jumps to the control (r7 U28: no sentence-sized button outsizes STOP)
+  $("blockers").innerHTML = b.length && S.cur === 3 ? `Can't start yet:<ul>${b.map((x) => `<li><span>${esc(x)}</span> <button type="button" class="blocker-jump small" data-jump="${esc(jumpFor(x))}">Show me</button></li>`).join("")}</ul>` : "";
   paintSetupCards();
 
 
@@ -236,7 +234,7 @@ function jumpFor(text) {
   if (/alarm|Unlock/i.test(t)) return "btnUnlock";
   if (/homing|press Home/i.test(t)) return "zeroCard";
   if (/doesn't fit|sheet/i.test(t)) return "layoutCard";
-  if (/Tick every box/i.test(t)) return "checklist";
+  if (/safety check box/i.test(t)) return "checklist";
   if (/No part|step 1/i.test(t)) return "step1Title";
   if (/E-STOP/i.test(t)) return "btnStop";
   return "checkCard";

@@ -118,7 +118,7 @@
   <button type="button" id="btnSettings" class="pill iconbtn" title="Settings" aria-label="Settings"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-gear"></use></svg></button>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
   <span id="modeChip" class="pill chip hidden" title="App mode"></span>
-  <span id="practiceChip" class="pill chip practice hidden">PRACTICE RUN</span>
+  <span id="practiceChip" class="pill chip practice hidden">Practice run · torch off</span>
   </div>
   <span id="stateBadge" class="badge hidden"></span>
   <span id="torchPill" class="pill torch off" hidden>TORCH OFF</span>
@@ -627,7 +627,7 @@
           <summary><b>3 · Check, then cut</b></summary>
           <p class="checkmat"><span id="checkMat"></span> <button type="button" id="btnChangeMat" class="small">Change material or part</button></p>
           <ul class="checklist" id="checklist"></ul>
-          <p id="zeroWarn" class="warntext hidden">The start point isn’t set yet. Move the torch over the start of the work and press Start here (in “Connect, home and set the start point” above), or the part may be cut in the wrong place.</p>
+          <p id="zeroWarn" class="warntext hidden">The start point isn’t set yet. Move the torch over the sheet’s bottom-left corner and press Start here, or the part may be cut in the wrong place.</p>
         <div id="startCutRow" class="startcut hidden">
           <label>Start from cut
             <select id="startCut" aria-label="Start from cut number"></select>
