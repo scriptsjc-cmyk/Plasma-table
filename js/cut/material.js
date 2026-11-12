@@ -71,10 +71,23 @@ export function renderMaterials() {
   $("ovDelay").placeholder = auto(r.pierce_delay_s);
   $("ovKerf").placeholder = auto(r.kerf_mm ?? S.chart.kerf_mm ?? 1.5); $("ovLead").placeholder = auto(r.lead_in_mm ?? S.chart.lead_in_mm ?? 3);
   $("ovPierce").placeholder = auto(r.pierce_height_mm ?? S.chart.pierce_height_mm); $("ovCut").placeholder = auto(r.cut_height_mm ?? S.chart.cut_height_mm);
+  const kerf = o.kerf_mm || (r.kerf_mm ?? S.chart.kerf_mm ?? 1.5);
+  const feed = S.speed || r.feed_mm_min;
+  const delay = o.pierce_delay_s || r.pierce_delay_s;
+  const maxT = r.max_cuttable_mm || material().max_cuttable_mm || S.chart.max_cuttable_mm;
+  const est = (src) => /estimate|interpolated|user-reported/i.test(src || "") ? ' <span class="est">(estimate)</span>' : "";
   $("ampsCard").innerHTML = `
     <div>Set the plasma to</div>
     <div class="big">${ampsNow()} A</div>
-    <div class="sub"><span>Air <b>${r.air_bar ?? S.chart.air_bar} bar</b></span><span>Pierce <b>${o.pierce_delay_s || r.pierce_delay_s} s</b> at <b>${ph} mm</b></span><span>Cut height <b>${ch} mm</b></span></div>
+    <dl class="ampsdl">
+      <div><dt>Cut speed</dt><dd>${esc(String(feed))} mm/min${est(r.feed_source)}</dd></div>
+      <div><dt>Pierce</dt><dd>${esc(String(delay))} s at ${esc(String(ph))} mm${est(r.pierce_delay_source || r.pierce_height_source)}</dd></div>
+      <div><dt>Cut height</dt><dd>${esc(String(ch))} mm${est(r.cut_height_source)}</dd></div>
+      <div><dt>Kerf</dt><dd>${esc(String(kerf))} mm${est(r.kerf_source)}</dd></div>
+      <div><dt>Air</dt><dd>${esc(String(r.air_bar ?? S.chart.air_bar))} bar</dd></div>
+      ${maxT ? `<div><dt>Max cuttable</dt><dd>${esc(String(maxT))} mm on this 60 A / P-80</dd></div>` : ""}
+    </dl>
+    <p class="ampssrc muted small">Starting points from the PrimeWeld CUT60 chart (a close 60 A equivalent) and P-80 pierce-height notes. Values marked estimate are not in those charts — test on scrap.</p>
     ${r.note ? `<div class="ampsnote">⚠ ${esc(r.note)}</div>` : ""}`;
   try { localStorage.setItem("plasma.material", JSON.stringify({ m: S.material, t: S.thickness })); } catch (e) { /* ignore */ }
   renderSpeed();
