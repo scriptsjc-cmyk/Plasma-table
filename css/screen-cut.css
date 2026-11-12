@@ -599,6 +599,8 @@ body[data-screen="make"].beginner #btnSavePartQuick, body[data-screen="make"].be
 body.short-land .tabs .tab { min-height: 44px; padding-top: 2px; padding-bottom: 2px; font-size: 14px; }
 body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .holeadd button { min-height: 44px; }
+/* r7 U4: a phone on its side keeps the cutting header on one row: the account is in the menu, so its pill steps aside here */
+body.short-land[data-screen="cut"] #acctPill { display: none; }
 /* r7 U12: the connect card's link line is a suggestion (Practice always works), not a warning */
 #connectLock .locknote { color: var(--text); font-weight: 600; }
 /* r7 U6: the banner's Unlock is disabled while the E-stop is latched, and says why beside it */
