@@ -326,6 +326,11 @@ for (const [w, h] of [[390, 664], [1366, 768]]) {
   if (await prompt()) await page.click("#migrateNo");
   await sleep(300);
   ck("10 A signs back in: Pro again (stored on the account, not the browser)", (await ws()).pro === true);
+  // the real flow: signed out, on the sign-in page, a new account signs up there and nothing else is tapped
+  await T(page, `window.plasmaTest.sketch.add("disc")`); await out(); await sleep(300);
+  await T(page, `(() => { document.getElementById("goSignUp").click(); upEmail.value = "ws-c@example.com"; upPin.value = "letmein1"; formSignUp.requestSubmit(); })()`);
+  await page.waitForFunction(() => window.plasmaTest.account.isSignedIn(), null, { timeout: 10000 }); await sleep(1200);
+  ck("10 signing up on the sign-in page itself: 'Keep this drawing?' comes up on its own", await prompt(), await T(page, `[document.body.dataset.screen, [...document.querySelectorAll(".acctdlg:not(.hidden)")].map((d) => d.id).join(",")]`));
   ck("10 no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
   await ctx.close();
 }
