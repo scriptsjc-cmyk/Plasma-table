@@ -6,6 +6,7 @@ import { drawNumbers, drawPlay, playActive } from "./playback.js";
 import { S, sketch } from "../core/state.js";
 import { $, themeColor } from "../core/dom.js";
 import { renderQuickBar } from "../core/hooks.js";
+import { applyPreviewCam, previewCam } from "./previewnav.js";
 
 // where the start point is, in table view coordinates (the one being dragged wins)
 function originView() { const w = wcoNow(); return toView(w[0], w[1]); }
@@ -97,11 +98,23 @@ function drawCanvas(cv, main) {
     slat: themeColor("--cad-grid-major", "#D5DAE0"),
   };
   ctx.fillStyle = C.canvas; ctx.fillRect(0, 0, w, h);
+  applyPreviewCam(ctx, w, h);
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
   const X = (x) => offX + (x - A.x[0]) * sc, Y = (y) => h - offY - (y - A.y[0]) * sc;
-  cv._zmap = main && zoom ? { toMm: (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc], toPx: (x, y) => [X(x), Y(y)] } : null;
-  cv._map = zoom ? null : { toMm: (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc], toPx: (x, y) => [X(x), Y(y)], sc, T: A.table };
+  const cam = previewCam();
+  const toMmRaw = (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc];
+  const toMm = (px, py) => {
+    if (cam.s === 1 && !cam.x && !cam.y) return toMmRaw(px, py);
+    return toMmRaw(w / 2 + (px - w / 2 - cam.x) / cam.s, h / 2 + (py - h / 2 - cam.y) / cam.s);
+  };
+  const toPx = (x, y) => {
+    const px = X(x), py = Y(y);
+    if (cam.s === 1 && !cam.x && !cam.y) return [px, py];
+    return [w / 2 + cam.x + cam.s * (px - w / 2), h / 2 + cam.y + cam.s * (py - h / 2)];
+  };
+  cv._zmap = main && zoom ? { toMm, toPx } : null;
+  cv._map = zoom ? null : { toMm, toPx, sc, T: A.table };
   if (!zoom) drawMachineBed(ctx, A.table, X, Y, sc);
   if (S.prepared) {
     const pv = S.prepared.preview;

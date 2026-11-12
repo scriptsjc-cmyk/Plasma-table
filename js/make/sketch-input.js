@@ -101,12 +101,17 @@ export class InputMethods {
     cv.addEventListener("pointerdown", (e) => {
       if (!this.active) return;
       e.preventDefault();
-      cv.setPointerCapture(e.pointerId);
+      try { cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic / already released */ }
       const [sx, sy] = pos(e);
       this.pointers.set(e.pointerId, [sx, sy]);
-      if (this.pointers.size === 2) {                         // pinch zoom
+      if (this.pointers.size === 2) {                         // two-finger: pan + pinch zoom (never edits a part)
+        if (this.drag && this.drag.kind !== "pinch" && this.drag.kind !== "pan" && this.drag.before) {
+          try { this.items = JSON.parse(this.drag.before); } catch (err) { /* keep current */ }
+          this.label = null; this.guides = [];
+          this.onChange(false);
+        }
         const [a, b] = [...this.pointers.values()];
-        this.drag = { kind: "pinch", d: Math.hypot(a[0] - b[0], a[1] - b[1]), view: { ...this.view } };
+        this.drag = { kind: "pinch", d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, mx: (a[0] + b[0]) / 2, my: (a[1] + b[1]) / 2, view: { ...this.view } };
         return;
       }
       if (this.pointers.size > 2) return;
@@ -173,8 +178,13 @@ export class InputMethods {
       if (d.kind === "pinch") {
         if (this.pointers.size < 2) return;
         const [a, b] = [...this.pointers.values()];
+        const dist = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         this.view = { ...d.view };
-        this.zoomAt((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, Math.hypot(a[0] - b[0], a[1] - b[1]) / d.d);
+        this.zoomAt(d.mx, d.my, (d.d > 0 ? dist / d.d : 1));
+        this.view.vx -= (mx - d.mx) / this.view.s;
+        this.view.vy += (my - d.my) / this.view.s;
+        this.draw();
         return;
       }
       if (d.kind === "dim") {
@@ -279,8 +289,18 @@ export class InputMethods {
       if (!this.active) return;
       e.preventDefault();
       const [sx, sy] = pos(e);
-      this.zoomAt(sx, sy, Math.exp(-e.deltaY * 0.0015));
+      if (e.ctrlKey || e.metaKey) {
+        this.zoomAt(sx, sy, Math.exp(-e.deltaY * 0.0015));
+        return;
+      }
+      if (!this.view) return;
+      this.view.vx += e.deltaX / this.view.s;
+      this.view.vy -= e.deltaY / this.view.s;
+      this.draw();
     }, { passive: false });
+    for (const ev of ["gesturestart", "gesturechange", "gestureend"]) {
+      cv.addEventListener(ev, (e) => { if (this.active) e.preventDefault(); });
+    }
     cv.addEventListener("dblclick", (e) => {
       if (!this.active) return;
       const [sx, sy] = pos(e);
