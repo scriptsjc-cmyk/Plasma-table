@@ -21,7 +21,7 @@ export function applyBodyMode() {
 export function syncModeSwitch() {
   const pro = isProMode();
   const mode = pro ? "pro" : "beginner";
-  $$("#modeSwitch [data-mode], .acct-modesw [data-mode]").forEach((b) => b.classList.toggle("sel", b.dataset.mode === mode));
+  $$("#modeSwitch [data-mode], #topModeSwitch [data-mode]").forEach((b) => b.classList.toggle("sel", b.dataset.mode === mode));
   $$('input[name="acctMode"], input[name="suMode"]').forEach((r) => { r.checked = r.value === mode; });
 }
 export function setAppMode(mode, opts) {
@@ -64,7 +64,7 @@ export function applyAccountMode(mode) {
 }
 export function bindMode() {
   document.addEventListener("click", (e) => {
-    const b = e.target.closest("#modeSwitch [data-mode], .acct-modesw [data-mode]");
+    const b = e.target.closest("#modeSwitch [data-mode], #topModeSwitch [data-mode]");
     if (!b) return;
     e.preventDefault();
     setAppMode(b.dataset.mode);

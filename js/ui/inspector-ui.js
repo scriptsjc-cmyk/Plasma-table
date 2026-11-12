@@ -159,6 +159,7 @@ function shellHtml() {
         <h3 id="ptInspLayersH">${icon("grid")} Cut layers</h3>
         <ul id="ptInspLayers" class="pt-layers" aria-label="Cut layers"></ul>
       </section>
+      <section id="ptInspCutSum" class="cutsummary pt-cutsum" aria-label="Cut settings"></section>
     </div>`;
 }
 

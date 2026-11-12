@@ -159,7 +159,7 @@ body.pro-mode .beginner-only { display: none !important; }
 .bgshapes button.sel { border-color: var(--accent); background: var(--accent-weak); }
 .bgmore { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 body.beginner .drop .small { display: none; }
-body.beginner #srcShape > *:not(#shapeForm):not(#cutCheck) { display: none !important; }
+body.beginner #srcShape > *:not(#shapeForm):not(#cutCheck):not(#cutSummary) { display: none !important; }
 body.beginner .shapeform .tip { font-size: 16px; }
 body.beginner .shapeform .grid2 label { font-size: 16px; }
 body.beginner .shapeform input { min-height: 52px; font-size: 20px; }
@@ -484,3 +484,25 @@ body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
   body.app-shell.pro-mode[data-screen="make"] .previewDock #jobStats { display: none; }
   body.app-shell.pro-mode[data-screen="make"] .previewDock .exportrow { flex: none; flex-wrap: nowrap; }
 }
+/* ---- Round 5 item 9: cut settings summary (both modes) and Beginner's parts list */
+.cutsummary { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.cutsummary:empty, body.pro-mode #cutSummary, body.beginner:not(.bg-picked) #cutSummary { display: none; }
+.pt-cutsum { margin: 10px 8px; }
+.cutsummary h3 { margin: 0 0 6px; font-size: 15px; }
+.cutsum { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin: 0; }
+.cutsum div { display: flex; justify-content: space-between; gap: 8px; min-width: 0; border-bottom: 1px dashed var(--line); padding: 3px 0; }
+.cutsum dt { color: var(--muted); font-size: 14px; }
+.cutsum dd { margin: 0; font-weight: 600; font-size: 14px; text-align: right; }
+.cutsum-adv { margin-top: 8px; }
+.cutsum-adv > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+.cutsum-change { min-height: 44px; margin-top: 8px; }
+.bgparts ul { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.bgparts li button { width: 100%; min-height: 48px; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; }
+.bgparts li button.sel { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.bgparts li button span { color: var(--muted); font-size: 14px; }
+.lockline button { min-height: 44px; margin-left: 6px; }
+/* the header's Beginner / Pro switch: on every screen except Make a part, which has its own in #makeBar */
+body[data-screen="make"] #topModeSwitch, body[data-screen="login"] #topModeSwitch, body[data-screen="boot"] #topModeSwitch { display: none; }
+/* a phone on its side while cutting: the header row is kept for Ready / TORCH / STOP (round 5 safety), and the mode only changes Make a part */
+body.short-land[data-screen="cut"] #topModeSwitch { display: none; }
+#topModeSwitch .modesw-btn { min-height: 44px; font-size: 14px; }

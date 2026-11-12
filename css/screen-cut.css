@@ -342,7 +342,7 @@ body[data-step="3"] #exportRow { display: none; }
 }
 @media (max-width: 560px) {
   .topmenu .modesw-btn { flex: 1; }
-  .topmenu .modesw-btn[data-mode="beginner"] { font-size: 13px; }
+  .topmenu .modesw-btn[data-mode="beginner"] { font-size: 14px; }
   #topMenu #connPill, body.demo-on #topMenu #connPill { max-width: none; font-size: 13px; white-space: normal; }
   body.beginner[data-step="3"] .guidehead #ghTitle { font-size: 18px; }
 }

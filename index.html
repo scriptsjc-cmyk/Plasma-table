@@ -107,6 +107,10 @@
   <button type="button" id="btnHowto" class="pill iconbtn" title="How to use" aria-label="How to use">?</button>
   <button type="button" id="btnSettings" class="pill iconbtn" title="Settings" aria-label="Settings">⚙</button>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
+  <div id="topModeSwitch" class="modesw topmodesw" role="group" aria-label="Design mode for Make a part">
+    <button type="button" class="modesw-btn" data-mode="beginner" title="Make a part: guided, step by step">Beginner</button>
+    <button type="button" class="modesw-btn" data-mode="pro" title="Make a part: dense workspace with every tool">Pro</button>
+  </div>
   <span id="modeChip" class="pill chip hidden" title="App mode"></span>
   <span id="practiceChip" class="pill chip practice hidden">PRACTICE RUN</span>
   </div>
@@ -429,6 +433,7 @@
           <h3>Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
           <div id="holeTiles" class="tiles small"></div>
           <div id="shapeForm" class="shapeform"></div>
+          <section id="cutSummary" class="cutsummary" aria-label="Cut settings"></section>
           <div id="cutCheck" class="cutcheck"></div>
           <details class="guide"><summary>What this machine can cut</summary><div class="limitsBody"></div></details>
           <details class="guide howto beginner-help">

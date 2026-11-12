@@ -15,7 +15,7 @@ try {
 for (const prof of profiles) {
   const page = await newPage(br, prof, { base: srv.base }); const P = (s) => `[${prof}] ${s}`;
   t.check(P("opens on the main menu (test bypass), not inside a tool"), await page.evaluate(() => document.body.dataset.screen === "menu"));
-  t.check(P("the Beginner / Pro switch exists only inside the Make-a-part bar"), (await page.locator("#modeSwitch").count()) === 1 && (await page.locator("#makeBar #modeSwitch").count()) === 1 && (await page.locator("#modeSwitch [data-mode]").count()) === 2);
+  t.check(P("one Beginner / Pro switch in the Make-a-part bar, one in the header for the other screens"), (await page.locator("#modeSwitch").count()) === 1 && (await page.locator("#makeBar #modeSwitch").count()) === 1 && (await page.locator("#modeSwitch [data-mode]").count()) === 2 && (await page.locator(".topbar #topModeSwitch [data-mode]").count()) === 2);
   t.check(P("the old Pro checkbox / palette star and the account-menu mode radios are gone"), (await page.locator("#skPro").count()) === 0 && (await page.locator('#quickBar [data-qb="pro"]').count()) === 0 && (await page.locator(".acct-modesw, input[name='acctMode']").count()) === 0);
   t.check(P("the switch is NOT visible on the main menu"), await page.evaluate(() => document.getElementById("modeSwitch").offsetParent === null));
   await demoToShape(page, { stay: "make" });

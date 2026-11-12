@@ -182,6 +182,13 @@ export class EditMethods {
     for (const it of list) it.lock = on;
     this.commit(); this.onSelect();
   }
+  // round 5 item 9: one tap frees every locked part (Beginner has no Lock button, so no lock may stay hidden there)
+  unlockAll() {
+    if (!this.items.some((i) => i.lock)) return;
+    this.remember();
+    for (const it of this.items) it.lock = false;
+    this.commit(); this.onSelect();
+  }
   flipV() {
     const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
     this.remember();

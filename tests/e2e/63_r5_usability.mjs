@@ -6,6 +6,7 @@
 //  W  Put the table on your Wi-Fi: FluidNC value encoding, the scan list, the $ lines sent, the password never logged / kept / shown
 //  10 a different account signing in gets "Keep this drawing?" once; Start fresh clears drawing, undo, recent files and material; the mode follows the account
 //  8  Pro on a phone: the inspector is a bottom sheet, the tool list one row, the status under the picture
+//  9  mode switch in the header on every screen but Make; one Cut settings summary in both modes; Beginner parts list and Unlock
 //  5  Beginner Make a part: the picture fills the free space (phone, phone on its side, laptop), a draggable divider, Zoom to fit, Expand picture, scroll zoom
 import { serve, launch, demoToShape } from "../lib/r2compat.mjs"; import { T as Rec } from "../lib/t.mjs"; import fs from "node:fs";
 const out = new URL("../screenshots/", import.meta.url).pathname; fs.mkdirSync(out, { recursive: true });
@@ -147,6 +148,48 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   await snap(page, "pro-phone-sheet");
   await page.context().close();
 }
+// ================================================================== 9: mode everywhere, cut settings, parts list, no hidden locks
+{
+  const page = await phone(1366, 768);
+  const vis = (q) => T(page, `(() => { const e = document.querySelector(${JSON.stringify(q)}); if (!e) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden"; })()`);
+  await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("beginner", { persist: false, autoFs: false }); T.showScreen("menu", { force: true }); })()`); await sleep(300);
+  ck("9 the main menu has the Beginner / Pro switch in the header", await vis("#topModeSwitch"));
+  await page.click('#topModeSwitch [data-mode="pro"]'); await sleep(300);
+  ck("9 the header switch sets the mode", await T(page, `window.plasmaTest.isProMode() && document.querySelector('#topModeSwitch [data-mode="pro"]').classList.contains("sel")`));
+  await T(page, `window.plasmaTest.showScreen("make", { force: true }); window.plasmaTest.setShapeFs(false)`); await sleep(400);
+  ck("9 Make a part: only its own switch shows (the header one is hidden) and it agrees", !(await vis("#topModeSwitch")) && await vis("#makeBar #modeSwitch") && await T(page, `document.querySelector('#modeSwitch [data-mode="pro"]').classList.contains("sel")`));
+  // Pro: the cut settings at the foot of the inspector
+  await T(page, `(() => { const T = window.plasmaTest; T.sketch.clear(); T.sketch.add("plate", true); T.sketch.fitView(); T.renderShapeForm ? T.renderShapeForm() : 0; })()`); await sleep(400);
+  const rowsOf = (q) => T(page, `[...document.querySelectorAll(${JSON.stringify(q + " dt")})].map((d) => d.textContent)`);
+  const want = ["Material", "Thickness", "Cut width (kerf)", "Pierce delay", "Cut speed", "Lead-in", "Practice run"];
+  ck("9 Pro: the inspector shows Cut settings (material, thickness, kerf, pierce delay, speed, lead-in, practice)", JSON.stringify(await rowsOf("#ptInspCutSum")) === JSON.stringify(want) && await vis("#ptInspCutSum [data-cutsum=change]"), await rowsOf("#ptInspCutSum"));
+  // lock it in Pro, then switch to Beginner: the lock is visible with an Unlock button
+  await T(page, `(() => { const k = window.plasmaTest.sketch; k.pick([k.items[0].id]); k.toggleLock(); })()`); await sleep(200);
+  await page.click('#modeSwitch [data-mode="beginner"]'); await sleep(500);
+  ck("9 Beginner: the header switch stays hidden on Make; no body pro-mode", !(await vis("#topModeSwitch")) && await T(page, `document.body.classList.contains("beginner")`));
+  ck("9 a part locked in Pro shows as locked in Beginner, with Unlock", await vis('#shapeForm .lockline [data-sk="toggleLock"]') || await vis('#shapeForm [data-sk="unlockAll"]'));
+  await page.click('#shapeForm .lockline button'); await sleep(300);
+  ck("9 Unlock in Beginner frees it", await T(page, `!window.plasmaTest.sketch.items.some((i) => i.lock)`));
+  // Beginner: the same cut settings, Change behind Advanced
+  ck("9 Beginner: Cut settings shows the same seven values", JSON.stringify(await rowsOf("#cutSummary")) === JSON.stringify(want) && !(await vis("#ptInspCutSum")), await rowsOf("#cutSummary"));
+  ck("9 Beginner: Change is behind the Advanced fold", await T(page, `!!document.querySelector("#cutSummary details.cutsum-adv:not([open]) [data-cutsum=change]")`));
+  await T(page, `(() => { const d = document.getElementById("dryRun"); d.checked = !d.checked; d.dispatchEvent(new Event("change")); })()`); await sleep(300);
+  const dry = await T(page, `[document.getElementById("dryRun").checked, [...document.querySelectorAll("#cutSummary dd")].pop().textContent]`);
+  ck("9 the summary follows the Practice run box", dry[0] ? /^On/.test(dry[1]) : dry[1] === "Off", dry);
+  // Beginner parts list: two parts, tap the second to pick it
+  await T(page, `(() => { const k = window.plasmaTest.sketch; k.add("disc", true); k.pick([]); k.draw(); window.plasmaTest.sketch.onSelect(); })()`); await sleep(400);
+  const pl = await T(page, `[...document.querySelectorAll("#shapeForm .bgparts [data-bpart]")].map((b) => b.textContent)`);
+  ck("9 Beginner: a simple list of the parts in the drawing", pl.length === 2, pl);
+  await page.click("#shapeForm .bgparts li:nth-child(2) button"); await sleep(300);
+  ck("9 tapping a part in the list picks it", await T(page, `(() => { const k = window.plasmaTest.sketch, p = k.picked(); return p.length === 1 && p[0].type === "disc"; })()`));
+  await snap(page, "mode-beginner-parts");
+  await page.click("#cutSummary .cutsum-adv > summary"); await sleep(200);
+  await page.click("#cutSummary [data-cutsum=change]"); await sleep(600);
+  ck("9 Change opens the cutting screen's material step with More cut options open", await T(page, `window.plasmaTest.screen() === "cut" && document.getElementById("advCut").open && document.body.dataset.step === "1"`), await T(page, `[window.plasmaTest.screen(), document.body.dataset.step]`));
+  ck("9 the cutting screen has the header switch and no Beginner / Pro styling", await vis("#topModeSwitch") && await T(page, `!document.body.classList.contains("beginner") && !document.body.classList.contains("pro-mode")`));
+  ck("9 no page errors", noErrors(page).length === 0, noErrors(page).join("|"));
+  await page.context().close();
+}
 // ================================================================== 6: Add a hole lands inside the part
 {
   const page = await phone(390, 664); await makeBeginner(page, false);
@@ -177,8 +220,8 @@ const geom = (page) => T(page, `(() => { const r = (q) => { const e = document.q
   const f = await T(page, `({ inputs: document.querySelectorAll("#shapeForm input[data-p]").length, sel: !!window.plasmaTest.sketch.selected() })`);
   ck("7 Beginner, one part, nothing picked: its size boxes still show (the part is picked for you)", f.inputs >= 2 && f.sel, f);
   await T(page, `(() => { const s = window.plasmaTest.sketch; s.add("disc"); s.pick([]); s.onSelect(); })()`); await sleep(250);
-  const g = await T(page, `({ inputs: document.querySelectorAll("#shapeForm input[data-p]").length, text: document.getElementById("shapeForm").textContent.trim().slice(0, 60) })`);
-  ck("7 Beginner, two parts, nothing picked: it says to tap one (no guessing)", g.inputs === 0 && /Click a shape/.test(g.text), g);
+  const g = await T(page, `({ inputs: document.querySelectorAll("#shapeForm input[data-p]").length, text: document.getElementById("shapeForm").textContent.trim().slice(0, 160) })`);
+  ck("7 Beginner, two parts, nothing picked: it says to tap one (no guessing)", g.inputs === 0 && /Tap a part in the list/.test(g.text), g);
   await T(page, `(() => { const T = window.plasmaTest; T.setAppMode("pro", { persist: false, autoFs: false }); T.setShapeFs(false); const s = T.sketch; s.clear(); s.add("rect"); s.pick([]); s.onSelect(); })()`); await sleep(250);
   ck("7 Pro keeps nothing picked when you tap empty space", await T(page, `!window.plasmaTest.sketch.selected()`));
   await page.context().close();

@@ -11,6 +11,7 @@ import { syncModeSwitch } from "../ui/mode.js";
 import { renderProTools, setShapeFs } from "./protools.js";
 import { runPro } from "./cad.js";
 import { showSource, useShape, useShapeSoon } from "../core/hooks.js";
+import { paintCutSummary } from "./cutsummary.js";
 
 let editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
@@ -90,7 +91,21 @@ function holeHostHtml(it, sh) {
     </div>
     <div class="skbtns"><button data-sk="centreInHost">◎ Centre in the part</button><button data-sk="pickHost">↩ Select the part</button><button data-pro="linarray">Row of copies</button><button data-pro="polar">Circle of copies</button></div>`;
 }
+// round 5 item 9: Beginner's simple parts list (tap one to pick it), shown once there is more than one part or any part is locked
+function beginnerPartsHtml() {
+  const parts = sketch.items.filter((o) => !sketch.isHole(o)), locked = sketch.items.some((i) => i.lock);
+  if (parts.length < 2 && !locked) return "";
+  const picked = new Set(sketch.picked().map((i) => i.id));
+  const li = parts.map((it, n) => {
+    const b = sketch.boxOf(it), sh = shapeDef(it.type);
+    const size = `${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm`;
+    return `<li><button type="button" data-bpart="${it.id}" class="${picked.has(it.id) ? "sel" : ""}" aria-pressed="${picked.has(it.id)}"><b>${n + 1}. ${esc(sh ? sh.name : it.type)}</b><span>${size}${it.lock ? " · 🔒 locked" : ""}</span></button></li>`;
+  }).join("");
+  const unlock = locked ? `<p class="tip lockline">A locked part can't be moved or resized. <button type="button" data-sk="unlockAll">🔓 Unlock all</button></p>` : "";
+  return `<div class="bgparts"><h4>Parts in this drawing</h4><ul>${li}</ul>${unlock}</div>`;
+}
 export function renderShapeForm() {
+  try { paintCutSummary(); } catch (e) { /* the cut chart is not loaded yet */ }
   // round 5 item 7: Beginner always sees the size boxes: with nothing picked, the only part is picked for you
   // (not in the full-screen editor, where Esc first drops the pick and then leaves)
   if (!sketch.opts.pro && !sketch.layout && !S.shapeFs && !sketch.picked().length) {
@@ -102,8 +117,9 @@ export function renderShapeForm() {
   $("skClear").disabled = !sketch.items.length; $("skAll").disabled = !sketch.items.length;
   paintGuide(); renderBeginnerShapes();
   if (!list.length) {
-    $("shapeForm").innerHTML = sketch.items.length
-      ? `<p class="muted">Click a shape on the drawing to change it. Shift-click or drag a box round several to move, copy, join or line them up.</p>` : "";
+    $("shapeForm").innerHTML = !sketch.items.length ? "" : sketch.opts.pro
+      ? `<p class="muted">Click a shape on the drawing to change it. Shift-click or drag a box round several to move, copy, join or line them up.</p>`
+      : beginnerPartsHtml() + `<p class="muted">Tap a part in the list or on the drawing to change it.</p>`;
     return;
   }
   if (list.length > 1) {
@@ -118,7 +134,7 @@ export function renderShapeForm() {
         <button data-pro="lock">${list.every((i) => i.lock) ? "Unlock" : "🔒 Lock"}</button>
         <button data-sk="flipV">⇅ Flip up/down</button>
       </div>` : "";
-    $("shapeForm").innerHTML = `
+    $("shapeForm").innerHTML = (sketch.opts.pro ? "" : beginnerPartsHtml()) + `
       <div class="selhead"><b>${list.length} shapes picked</b></div>
       <p class="tip">Drag any of them to move them all. <b>Join</b> makes touching shapes one part (with their holes).</p>
       <div class="skbtns">
@@ -134,9 +150,9 @@ export function renderShapeForm() {
   }
   const sh = shapeDef(it.type), b = sketch.boxOf(it);
   if (!sketch.opts.pro) {                        // Beginner: just the sizes, turn, add a hole, remove
-    $("shapeForm").innerHTML = `
-      <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b></div>
-      <p class="tip">Type the size in millimetres.</p>
+    $("shapeForm").innerHTML = beginnerPartsHtml() + `
+      <div class="selhead"><b>${sh.icon} ${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}</div>
+      ${it.lock ? `<p class="tip lockline">This part is locked, so it can't change. <button type="button" data-sk="toggleLock">🔓 Unlock</button></p>` : `<p class="tip">Type the size in millimetres.</p>`}
       <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
         `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}</div>${customSizeHtml(it, b)}
       <div class="skbtns bigbtns">
@@ -241,6 +257,8 @@ export function bindShapeForm() {
       if (spec) sketch.applyVariant(spec);
       return;
     }
+    const bp = e.target.closest("[data-bpart]");
+    if (bp) { sketch.pick([Number(bp.dataset.bpart)]); sketch.draw(); renderShapeForm(); return; }
     const p = e.target.closest("[data-pro]");
     if (p) { runPro(p.dataset.pro); return; }
     const b = e.target.closest("[data-sk]"); if (!b) return;
