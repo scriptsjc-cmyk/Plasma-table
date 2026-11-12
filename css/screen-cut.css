@@ -757,3 +757,8 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   /* (layout.css forces these to inline-block on its side; centre the word as upright) */
   body.short-land[data-screen="cut"] #stateBadge:not(.hidden), body.short-land[data-screen="cut"] #torchPill:not([hidden]) { display: inline-flex !important; }
 }
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 700px) {
+  /* smaller phones on their side: the pill goes back to its dot so Ready and TORCH keep the one header row beside STOP */
+  body.short-land[data-screen="cut"] #connPill.on::after { content: none; }
+  body.short-land[data-screen="cut"] #connPill.on { width: 44px; max-width: 44px; padding: 0; }
+}
