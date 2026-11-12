@@ -1,0 +1,177 @@
+/* Make it yours + the sliding bottom (or top) canvas toolbar.
+   Load last (see index.html) so these layout rules win over the older side-rail / wrap rules
+   in layout.css and screen-make.css. */
+
+/* ---- toolbar button size (compact is the default; touch screens stay at least 44px) ---- */
+body, body.yours-btns-compact { --tool-h: 36px; --tool-minw: 56px; --tool-fs: 11px; --tool-icon: 16px; --tool-pad: 2px 6px; }
+body.yours-btns-normal { --tool-h: 44px; --tool-minw: 64px; --tool-fs: 12px; --tool-icon: 18px; --tool-pad: 4px 8px; }
+body.yours-btns-large { --tool-h: 52px; --tool-minw: 72px; --tool-fs: 13px; --tool-icon: 20px; --tool-pad: 6px 10px; }
+@media (pointer: coarse) {
+  body, body.yours-btns-compact { --tool-h: 44px; --tool-minw: 64px; }
+}
+
+/* ---- sliding row + edge fades ---- */
+.scrollrow-wrap { position: relative; min-width: 0; min-height: 0; display: flex; align-items: stretch; }
+.scrollrow-wrap.hidden { display: none !important; }
+.scrollrow-wrap > .scrollrow,
+#quickBar.quickbar.scrollrow {
+  display: flex; flex-direction: row; flex-wrap: nowrap; align-items: stretch;
+  gap: 4px; overflow-x: auto; overflow-y: hidden; min-width: 0; width: 100%;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scrollbar-width: thin;
+  touch-action: pan-x;
+}
+.scrollrow-fade {
+  position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; z-index: 2;
+  opacity: 0; transition: opacity .15s;
+}
+.scrollrow-fade.start { left: 0; background: linear-gradient(90deg, var(--card), transparent); }
+.scrollrow-fade.end { right: 0; background: linear-gradient(270deg, var(--card), transparent); }
+.scrollrow-wrap.fade-start > .scrollrow-fade.start,
+.scrollrow-wrap.fade-end > .scrollrow-fade.end { opacity: 1; }
+
+/* ---- #quickBar is always one sideways-scrolling row, sitting at the bottom (or top) of the canvas ---- */
+#quickBarWrap { min-width: 0; z-index: 16; min-height: calc(var(--tool-h, 36px) + 8px); }
+.cutgrid.with-qb #quickBar.quickbar {
+  display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
+  overflow-x: auto !important; overflow-y: hidden !important;
+  height: auto !important; max-height: none !important; width: 100% !important;
+  position: static !important; top: auto !important;
+  align-items: stretch; gap: 4px; padding: 4px 6px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
+  padding-bottom: max(4px, env(safe-area-inset-bottom));
+}
+.cutgrid.with-qb #quickBar .qb-group {
+  display: flex !important; flex: 0 0 auto !important; width: auto !important;
+  align-items: center; padding: 0 6px; margin: 0 2px 0 6px;
+  border-left: 1px solid var(--line); font-size: 10px; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--muted); white-space: nowrap;
+}
+.cutgrid.with-qb #quickBar .qb-group:first-of-type { border-left: 0; margin-left: 0; }
+.cutgrid.with-qb #quickBar .qb-search {
+  flex: 0 0 132px !important; width: 132px !important; margin: 0 !important;
+  display: flex; align-items: center;
+}
+.cutgrid.with-qb #quickBar .qb-search input { width: 100%; min-height: var(--tool-h, 36px); font-size: 14px; }
+#quickBar.quickbar button,
+.cutgrid.with-qb #quickBar.quickbar button,
+body.app-shell .cutgrid.with-qb #quickBar button {
+  box-sizing: border-box;
+  flex: 0 0 auto !important; width: auto !important; min-width: var(--tool-minw, 56px) !important;
+  max-width: none !important; min-height: var(--tool-h, 36px) !important; height: var(--tool-h, 36px) !important;
+  padding: var(--tool-pad, 2px 6px) !important;
+  font-size: var(--tool-fs, 11px) !important; line-height: 1.15; gap: 4px;
+  flex-direction: row !important; flex-wrap: nowrap !important; white-space: nowrap; overflow: hidden;
+  align-items: center; justify-content: center;
+}
+#quickBar.quickbar button kbd { display: none; } /* shortcuts stay on the title; hiding them keeps the row short */
+#quickBar.quickbar button span { overflow: hidden; text-overflow: ellipsis; }
+#quickBar.quickbar button i,
+.cutgrid.with-qb #quickBar button i { font-size: var(--tool-icon, 16px) !important; }
+.cutgrid.with-qb #quickBar button i .ico { width: var(--tool-icon, 16px); height: var(--tool-icon, 16px); }
+
+/* laptop / tablet Pro: inspector stays on the right; the sliding toolbar sits under the picture only.
+   Beginner Make (controls | divider | picture) is left alone — those rules live in screen-make.css. */
+@media (min-width: 900px) {
+  body.app-shell.pro-mode .cutgrid.with-qb {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 360px) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    grid-template-areas: "preview step" "tools step" !important;
+  }
+  body.yours-toolbar-top.app-shell.pro-mode .cutgrid.with-qb {
+    grid-template-areas: "tools step" "preview step" !important;
+  }
+  body.app-shell.pro-mode .cutgrid.with-qb #quickBarWrap,
+  body.app-shell.pro-mode .cutgrid.with-qb #quickBar { grid-area: tools; height: auto !important; max-height: none !important; }
+  body.app-shell.pro-mode .cutgrid.with-qb .previewPane { grid-area: preview !important; grid-column: auto !important; grid-row: auto !important; }
+  body.app-shell.pro-mode .cutgrid.with-qb .stepPane { grid-area: step !important; grid-column: auto !important; grid-row: auto !important; }
+}
+
+/* short landscape phone: drop the side rail so the picture is wider; toolbar is a single bottom (or top) row */
+@media (orientation: landscape) and (max-height: 540px) {
+  body.app-shell.short-land.pro-mode .cutgrid.with-qb {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 32vw) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    grid-template-areas: "preview step" "tools step" !important;
+  }
+  body.yours-toolbar-top.app-shell.short-land.pro-mode .cutgrid.with-qb {
+    grid-template-areas: "tools step" "preview step" !important;
+  }
+  body.app-shell.short-land.pro-mode .cutgrid.with-qb #quickBarWrap,
+  body.app-shell.short-land.pro-mode .cutgrid.with-qb #quickBar { grid-area: tools; order: unset; }
+  body.app-shell.short-land.pro-mode .cutgrid.with-qb .previewPane { grid-area: preview !important; order: unset; }
+  body.app-shell.short-land.pro-mode .cutgrid.with-qb .stepPane { grid-area: step !important; order: unset; }
+  body.short-land.pro-mode .cutgrid.with-qb #quickBar { padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+}
+
+/* portrait phones: keep the existing preview / tools / step stack; tools stay one sliding row just under the picture */
+@media (max-width: 899px) and (orientation: portrait) {
+  body.app-shell:not(.short-land) .cutgrid.with-qb #quickBarWrap,
+  body.app-shell:not(.short-land) .cutgrid.with-qb #quickBar { grid-area: tools; }
+  body.yours-toolbar-top.app-shell:not(.short-land) .cutgrid.with-qb {
+    grid-template-areas: "tools" "preview" "step" !important;
+  }
+  body.app-shell.pro-mode[data-screen="make"] .cutgrid { padding-bottom: max(56px, env(safe-area-inset-bottom)); }
+}
+
+/* full-screen editor: picture + sliding toolbar, no leftover side column */
+body.shape-fs.pro-mode .cutgrid.with-qb,
+body.shape-fs .cutgrid.with-qb {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) auto !important;
+  grid-template-areas: "preview" "tools" !important;
+}
+body.yours-toolbar-top.shape-fs.pro-mode .cutgrid.with-qb,
+body.yours-toolbar-top.shape-fs .cutgrid.with-qb {
+  grid-template-areas: "tools" "preview" !important;
+}
+body.shape-fs .cutgrid.with-qb .previewPane { grid-area: preview !important; grid-column: auto !important; grid-row: auto !important; }
+body.shape-fs .cutgrid.with-qb #quickBarWrap,
+body.shape-fs .cutgrid.with-qb #quickBar { grid-area: tools; grid-column: auto !important; grid-row: auto !important; }
+
+
+/* short landscape + expanded editor: keep a visible sliding row (never a collapsed 0-height rail) */
+@media (orientation: landscape) and (max-height: 540px) {
+  body.shape-fs.short-land .cutgrid.with-qb,
+  body.app-shell.shape-fs.short-land .cutgrid.with-qb {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    grid-template-areas: "preview" "tools" !important;
+  }
+  body.shape-fs.short-land .cutgrid.with-qb .previewPane { grid-area: preview !important; grid-column: auto !important; grid-row: auto !important; }
+  body.shape-fs.short-land .cutgrid.with-qb #quickBarWrap,
+  body.shape-fs.short-land .cutgrid.with-qb #quickBar {
+    grid-area: tools !important; grid-column: auto !important; grid-row: auto !important; order: unset;
+    display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important;
+    overflow-x: auto !important; overflow-y: hidden !important;
+    height: auto !important; max-height: none !important; min-height: calc(var(--tool-h, 36px) + 8px);
+  }
+}
+
+/* the canvas itself: pan/zoom belongs to the drawing, not the browser page */
+canvas#preview { touch-action: none; overscroll-behavior: none; }
+html, body.app-shell { overscroll-behavior-x: none; }
+
+/* Make it yours form */
+.yourspane .yours-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 16px; }
+.yourspane label { display: flex; flex-direction: column; gap: 4px; font-weight: 650; }
+.yourspane .check { flex-direction: row; align-items: center; gap: 8px; font-weight: 650; }
+.yours-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.yours-swatches input { position: absolute; opacity: 0; pointer-events: none; }
+.yours-swatches label { width: 36px; height: 36px; min-height: 36px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+.yours-swatches input:checked + label, .yours-swatches label:has(input:checked) { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--accent); }
+.yours-swatch { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; display: inline-block; }
+.yours-swatch input { appearance: none; width: 100%; height: 100%; border-radius: 50%; margin: 0; cursor: pointer; background: transparent; }
+.yours-swatch[data-accent="blue"] { background: #005A9E; }
+.yours-swatch[data-accent="teal"] { background: #0B6E6E; }
+.yours-swatch[data-accent="green"] { background: #0A6A32; }
+.yours-swatch[data-accent="purple"] { background: #6B21A8; }
+.yours-swatch[data-accent="navy"] { background: #0B1F33; }
+.yours-swatch[data-accent="rust"] { background: #9A3412; }
+[data-theme="dark"] .yours-swatch[data-accent="blue"] { background: #4f9cf0; }
+[data-theme="dark"] .yours-swatch[data-accent="teal"] { background: #2EC4C4; }
+[data-theme="dark"] .yours-swatch[data-accent="green"] { background: #3DCF7A; }
+[data-theme="dark"] .yours-swatch[data-accent="purple"] { background: #C084FC; }
+[data-theme="dark"] .yours-swatch[data-accent="navy"] { background: #8FB3D4; }
+[data-theme="dark"] .yours-swatch[data-accent="rust"] { background: #FB923C; }
+
+.yourspane .yours-actions { margin-top: 12px; }

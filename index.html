@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="css/screen-make.css">
 <link rel="stylesheet" href="css/screen-cut.css">
 <link rel="stylesheet" href="css/screen-admin.css">
+<link rel="stylesheet" href="css/yours.css">
 <script src="js/sw-register.js"></script>
 </head>
 <body class="app-shell" data-screen="boot">
@@ -267,7 +268,11 @@
     </div>
 
     <div id="makeSplit" class="makesplit" role="separator" aria-orientation="vertical" aria-label="Drag to make the picture bigger or smaller" aria-valuemin="0" aria-valuemax="100" aria-valuenow="34" tabindex="0"></div>
-    <nav id="quickBar" class="quickbar hidden" aria-label="Design tools"></nav>
+    <div id="quickBarWrap" class="scrollrow-wrap hidden">
+      <nav id="quickBar" class="quickbar hidden scrollrow" aria-label="Design tools"></nav>
+      <span class="scrollrow-fade start" aria-hidden="true"></span>
+      <span class="scrollrow-fade end" aria-hidden="true"></span>
+    </div>
 
     <div class="stepPane">
       <!-- step 1 -->
@@ -1305,6 +1310,78 @@
     </div>
     <p class="muted small setintro"><span class="beg-copy">The everyday settings for your table, each with a short explanation.</span><span class="pro-copy">Firmware tools (steps/mm, invert, raw $ settings) are under Firmware, after a warning. Those writes only go out when the machine is Idle and no job is running, and the current $$ list is backed up first.</span></p>
     <div id="settingsTabs" class="settabs" role="tablist"></div>
+
+    <div class="setpane hidden yourspane" data-setpane="yours">
+      <h3>Make it yours</h3>
+      <p class="muted small">These choices stay on this device, and each signed-in account on this browser keeps its own. They are not uploaded to the account (the server has nowhere to keep them yet).</p>
+      <div class="yours-grid">
+        <label>Theme
+          <select id="yoursTheme">
+            <option value="auto">Match the device</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <label>Accent colour
+          <select id="yoursAccent">
+            <option value="blue">Blue</option>
+            <option value="teal">Teal</option>
+            <option value="green">Green</option>
+            <option value="purple">Purple</option>
+            <option value="navy">Navy</option>
+            <option value="rust">Rust</option>
+          </select>
+        </label>
+        <label>Toolbar
+          <select id="yoursToolbar">
+            <option value="bottom">Bottom of the picture</option>
+            <option value="top">Top of the picture</option>
+          </select>
+        </label>
+        <label>Button size
+          <select id="yoursButtons">
+            <option value="compact">Compact</option>
+            <option value="normal">Normal</option>
+            <option value="large">Large</option>
+          </select>
+        </label>
+        <label>Units
+          <select id="yoursUnits">
+            <option value="mm">Millimetres</option>
+            <option value="inch">Inches (display only)</option>
+          </select>
+        </label>
+        <label>Default mode
+          <select id="yoursMode">
+            <option value="beginner">Beginner</option>
+            <option value="pro">Pro</option>
+          </select>
+        </label>
+        <label class="check"><input id="yoursGrid" type="checkbox"> Show the grid</label>
+        <label>Grid size
+          <select id="yoursGridSize">
+            <option value="0">Auto</option>
+            <option value="1">1 mm</option>
+            <option value="2">2 mm</option>
+            <option value="5">5 mm</option>
+            <option value="10">10 mm</option>
+            <option value="20">20 mm</option>
+            <option value="50">50 mm</option>
+          </select>
+        </label>
+        <label class="check"><input id="yoursSnap" type="checkbox"> Snap to the grid</label>
+        <label>Canvas background
+          <select id="yoursCanvas">
+            <option value="default">Default</option>
+            <option value="white">White</option>
+            <option value="paper">Paper</option>
+            <option value="grey">Grey</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </div>
+      <div class="row wrap yours-actions"><button type="button" id="yoursReset" class="secondary">Reset to defaults</button></div>
+    </div>
 
     <div class="setpane" data-setpane="machine">
       <h3>Machine and axes</h3>
