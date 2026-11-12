@@ -194,7 +194,7 @@ try {
       window.plasmaTest.showScreen("cut"); window.plasmaTest.goStep(3); window.plasmaTest.refreshGate();
     });
     await p.waitForSelector("#connectLock:not(.hidden)", { timeout: 8000 });
-    t.check(`${prof}: Run stays locked until claim`, /link (your |a )?machine/i.test(await p.locator("#connectLockText").textContent()) && await p.evaluate(() => document.getElementById("btnStart").disabled));
+    t.check(`${prof}: Run stays locked until claim`, /cut for real/i.test(await p.locator("#connectLockText").textContent()) && await p.evaluate(() => document.getElementById("btnStart").disabled));
     await p.evaluate(() => document.getElementById("btnLinkMachine").click());
     await p.waitForSelector("#claimDlg:not(.hidden), #gateDlg:not(.hidden)", { timeout: 5000 });
     const gateClaim = await p.locator("#gateDlg:not(.hidden) #gateClaim");

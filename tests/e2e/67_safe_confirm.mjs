@@ -28,8 +28,12 @@ const snap = async (page, name) => { await sleep(200); await page.screenshot({ p
   }); await sleep(300);
   const blockers = await T(page, "document.getElementById('blockers').textContent");
   ck("Start is allowed when no edges are saved (not blocked for homing)", await T(page, "!document.getElementById('btnStart').disabled") && !/Home/.test(blockers), blockers);
-  // a real machine with no saved edges asks first (the practice table doesn't, r7 U24): stand in for a real one for the click
-  await page.evaluate(() => { const S = window.plasmaTest.S, sim = S.demo; S.demo = null; document.getElementById("btnStart").click(); S.demo = sim; });
+  // a real machine with no saved edges asks first (the practice table doesn't, r7 U24). Stand in for a real one for the click:
+  // the machine lock (access.js) still sees the practice table, everything else sees a real machine
+  await page.evaluate(() => { const S = window.plasmaTest.S, sim = S.demo;
+    Object.defineProperty(S, "demo", { configurable: true, get: () => (/access\.js/.test(new Error().stack) ? sim : null) });
+    document.getElementById("btnStart").click();
+    Object.defineProperty(S, "demo", { configurable: true, writable: true, enumerable: true, value: sim }); });
   await page.waitForSelector("#safeDlg:not(.hidden)", { timeout: 8000 });
   const prompt = await T(page, "({ title: document.getElementById('safeDlgTitle').textContent, body: document.getElementById('safeDlgBody').textContent, focus: document.activeElement && document.activeElement.id })");
   ck("Start without saved edges warns and asks to confirm", /Start without homing/.test(prompt.title) && /No table edges are saved/.test(prompt.body), JSON.stringify(prompt));
