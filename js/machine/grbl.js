@@ -258,6 +258,7 @@ export class WiFiTransport {
 
 // ------------------------------------------------------------------ controller link
 const POLL_MS = 100;
+const CONFIG_ERR = /Configuration is invalid|^\[MSG:ERR: (Ignored key|Configuration error|Pin .* cannot be used)/;
 export const NO_REPLY_MSG = "No reply from the controller. Check the baud rate (115200), that you picked the right COM port, that the board is running FluidNC/grblHAL, and that no other program (FluidNC web installer, a serial terminal) has the port open.";
 
 export class GrblLink {
@@ -496,6 +497,8 @@ export class GrblLink {
       this._emit("log", { text: line, level: "info" });
       return;
     }
+    // FluidNC ConfigAlarm: config.yaml has an error. The status says plain "Alarm", but $X can't clear it, so say what it really is
+    if (CONFIG_ERR.test(line)) this._emit("alarm", { code: "config", message: `FluidNC reports a problem in its config.yaml (${line.replace(/^\[MSG:(ERR: )?|\]$/g, "")}). Unlock won't clear this: fix config.yaml, then restart the board. Type $SS in the console to see its start-up messages.` });
     if (line.startsWith("[PRB:")) this._emit("probe", { text: line });
     if (this.inflight[0] && this.inflight[0].got) this.inflight[0].got.push(line);     // the answer to an ask() comes before its ok
     this._emit("log", { text: line, level: "rx" });

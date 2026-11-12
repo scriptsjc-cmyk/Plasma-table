@@ -143,6 +143,16 @@ const lastStatus = (ev) => [...ev].reverse().find(([k]) => k === "status")?.[1];
   t.check("error:9 is acked (nothing left in flight)", r.M.grbl.inflight.length === 0);
   await r.M.disconnect(false);
 }
+// 9b) FluidNC ConfigAlarm (a bad config.yaml) is named, because $X can't clear it
+{
+  const r = await rig({ answer: true });
+  r.port.push("[MSG:ERR: Ignored key idle_disabel]\r\n");
+  await sleep(100);
+  const al = r.ev.find(([k]) => k === "alarm")?.[1];
+  t.check("config error: reported as an alarm naming config.yaml", al && al.code === "config" && /config\.yaml/.test(al.message) && /idle_disabel/.test(al.message), JSON.stringify(al));
+  t.check("config error: says Unlock won't clear it", /Unlock won't clear/.test(al?.message || ""));
+  await r.M.disconnect(false);
+}
 // 10) a deliberate disconnect is not reported as a lost link
 {
   const r = await rig({ answer: true });
