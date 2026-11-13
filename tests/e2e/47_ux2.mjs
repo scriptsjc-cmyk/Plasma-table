@@ -1,5 +1,5 @@
 // UX2: palette, full-screen editor, dimension typing, Settings, How to use,
-// TORCH ON pill, start-here, Mach3 export, FluidNC option, phone run STOP.
+// TORCH ON pill, start-here, Mach3 export, phone run STOP.
 import { T } from "../lib/t.mjs";
 import { startServer, launch, newPage, demoToShape, tapCanvas, shot } from "../lib/browser.mjs";
 import fs from "node:fs";
@@ -28,9 +28,10 @@ for (const prof of profiles) {
   t.check(P("header has TORCH OFF pill, Settings and How to use"),
     await page.locator("#torchPill").count() && await page.locator("#btnSettings").count() && await page.locator("#btnHowto").count());
 
-  // FluidNC option on the connect screen
-  t.check(P("FluidNC (Wi-Fi) option is on the connect screen"), await page.locator("#btnFluidNC").count() === 1);
-  t.check(P("FluidNC host field exists"), await page.locator("#fnHost").count() === 1);
+  // FluidNC Wi-Fi option is gone; Connect is USB or Bluetooth
+  t.check(P("the connect screen has no FluidNC Wi-Fi option"), await page.locator("#btnFluidNC").count() === 0 && await page.locator("#fnBox").count() === 0 && await page.locator("#fnHost").count() === 0);
+  const connLabel = await page.locator("#btnConnect").textContent();
+  t.check(P("Connect is labelled USB or Bluetooth"), /USB or Bluetooth/i.test(connLabel || ""), connLabel);
 
   await demoToShape(page);
   await page.evaluate(() => window.plasmaTest.setAppMode("pro", { persist: false, autoFs: false }));   // Round 2: the tool palette is a Pro-mode thing; Beginner uses big shape tiles
@@ -94,7 +95,7 @@ for (const prof of profiles) {
   await page.evaluate(() => window.plasmaTest.openHowto("fluidnc"));
   await page.waitForSelector("#howtoDlg:not(.hidden)");
   const body = await page.locator("#howtoBody").innerText();
-  t.check(P("How to use has a FluidNC section"), /FluidNC/i.test(body) && /ws:\/\//i.test(body));
+  t.check(P("How to use has a FluidNC section"), /FluidNC/i.test(body) && /USB or Bluetooth/i.test(body) && !/ws:\/\//i.test(body));
   await snap(page, `ux2-howto-${tag[prof]}`);
   await page.evaluate(() => window.plasmaTest.closeHowto());
 

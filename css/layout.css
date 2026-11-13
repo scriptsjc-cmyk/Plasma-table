@@ -429,7 +429,7 @@ body.app-shell .nav { margin-top: 8px; }
   body.app-shell:not(.short-land)[data-screen="cut"][data-step="1"] .cutgrid:not(.with-qb):not(.editing) .previewPane { display: none; }
 }
 @media (min-width: 1280px) {
-  /* ROUND 5 item 14: on a laptop-wide screen the "Put the parts on the bed" and "Connect, home and set the start point" cards sit side by side, so the connect buttons and the FluidNC (Wi-Fi) host box are in view without scrolling past the whole layout card first. */
+  /* ROUND 5 item 14: on a laptop-wide screen the "Put the parts on the bed" and "Connect, home and set the start point" cards sit side by side, so the connect buttons are in view without scrolling past the whole layout card first. */
   body.app-shell:not(.short-land)[data-screen="cut"] .step[data-step="3"]:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; align-items: start; }
   body.app-shell[data-screen="cut"] .step[data-step="3"] > h2, body.app-shell[data-screen="cut"] .step[data-step="3"] > #checkCard, body.app-shell[data-screen="cut"] .step[data-step="3"] > .nav { grid-column: 1 / -1; }
 }

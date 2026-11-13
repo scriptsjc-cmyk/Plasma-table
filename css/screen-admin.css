@@ -44,10 +44,7 @@
   .howto-nav .howto-step { display: none; }
   .howto-pick { display: block; width: 100%; min-height: 44px; font-size: 16px; }
 }
-/* FluidNC box + export pop */
-.fnbox { margin: 16px auto 0; max-width: 520px; text-align: left; background: var(--well);
-  border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
-.fnbox summary { font-weight: 650; cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+/* export pop */
 /* new-version banner is a normal banner; About pane */
 .aboutmark { display: block; height: 64px; width: auto; max-width: min(100%, 320px); margin: 0 0 10px; }
 .aboutver { font-size: var(--fs-lg); margin: 4px 0; }

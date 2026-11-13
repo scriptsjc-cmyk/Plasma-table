@@ -154,7 +154,7 @@
             <p class="muted small" id="bedStartHelp">The part cuts where you place it on the bed. You do not set a start point on the part. <b>Start here</b> only tells the table where the sheet's bottom-left corner is (that corner is 0, 0 on the layout; every cut is measured from there). The torch does not move. <b>Go to start point</b> then goes to where the cut begins.</p>
             <div id="connectCard" class="connectcard">
               <div class="row wrap">
-                <button id="btnConnect" class="xl go">Connect with USB</button>
+                <button id="btnConnect" class="xl go">Connect (USB or Bluetooth)</button>
                 <button id="btnDemo" class="xl">Practice (no machine)</button>
                 <button type="button" id="btnDisconnect" class="xl hidden">Disconnect</button>
               </div>
@@ -162,18 +162,7 @@
                 <p id="connectLockText" class="locknote">Or, to cut for real:</p>
                 <button type="button" id="btnLinkMachine" class="xl go">Link a machine</button>
               </div>
-              <details id="fnBox" class="fnbox">
-                <summary>FluidNC (Wi-Fi)</summary>
-                <p class="muted small">ESP32 running FluidNC on the same Wi-Fi. Default socket is <code>ws://&lt;ip&gt;:81</code>.</p>
-                <div class="grid2">
-                  <label>IP or hostname<input id="fnHost" type="text" placeholder="192.168.1.50 or fluidnc.local" autocomplete="off" autocorrect="off" spellcheck="false"></label>
-                  <label>WebSocket port<input id="fnPort" type="number" value="81" min="1" max="65535" inputmode="numeric"></label>
-                </div>
-                <button type="button" id="btnFluidNC" class="xl">Connect to FluidNC</button>
-                <p id="fnMixed" class="warntext hidden"></p>
-                <button type="button" id="btnWifiSetup">Put the table on your Wi-Fi…</button>
-              </details>
-              <p id="connectHelp" class="muted small">USB works in Chrome or Edge on a computer. Close Mach3 or any other program using the port first. Got the Wi-Fi Pi fitted? Open <b>http://plasma.local</b> instead. FluidNC from the live https site is blocked by the browser — serve a local http copy, or use USB.</p>
+              <p id="connectHelp" class="muted small">Works in Chrome or Edge on a computer. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as "Standard Serial over Bluetooth link"). Close the FluidNC installer or any other program using the port first.</p>
             </div>
             <div class="row wrap homerow">
               <button class="do-home">⌂ Home</button>

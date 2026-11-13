@@ -5,8 +5,6 @@ const A = await load();
 const t = new T("09_ux2");
 const dialect = await mod("dialect");
 const adv = await mod("admin-machine");
-const fn = await mod("fluidnc");
-
 const src = "G21 G90\n$32=0\nG0 X10 Y10\nG4 P0.4\nM3\nG1 X20 F1000\nM5\n";
 
 const mach = dialect.convertGcode(src, "mach3");
@@ -31,9 +29,6 @@ t.check("M3 is allowed after confirm (rebuilt tokens)", allowed.ok === true && a
 t.check("M7 still blocked", adv.filterConsoleCommand("M7").ok === false);
 t.check("$RST still blocked", adv.filterConsoleCommand("$RST=*").ok === false);
 t.check("plain $$ still allowed", adv.filterConsoleCommand("$$").ok === true);
-
-t.check("FluidNC URL default port 81", fn.fluidncWsUrl("192.168.1.50") === "ws://192.168.1.50:81/");
-t.check("mixed-content helper flags https+ws", typeof fn.fluidncMixedContentMessage() === "string" && fn.fluidncMixedContentMessage().length > 20);
 
 const sk = A.newSketch();
 sk.add("rect", true);

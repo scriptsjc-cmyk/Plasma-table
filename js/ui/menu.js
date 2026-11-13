@@ -1,11 +1,6 @@
-// The top menu, the phone cutting screen's "More" sheet and a small scroll fix for the FluidNC box.
+// The top menu and the phone cutting screen's "More" sheet.
 import { $ } from "../core/dom.js";
 
-// B5 14: opening the FluidNC (Wi-Fi) box brings its host / port fields clear of the sticky Back / Start bar
-export function bindFnScroll() {
-  const d = $("fnBox"); if (!d) return;
-  d.addEventListener("toggle", () => { if (d.open) setTimeout(() => { try { d.scrollIntoView({ block: "nearest" }); } catch (e) { /* ignore */ } }, 0); });
-}
 // Narrow header: pills collapse into one menu. STOP and a lit torch stay on the bar.
 function closeTopMenu() {
   const bar = document.querySelector(".topbar");

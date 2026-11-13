@@ -86,15 +86,3 @@ probe:
 #   feed_hold_pin: NO_PIN
 #   cycle_start_pin: NO_PIN
 
-# Wi-Fi: station mode so this app can reach ws://<ip>:81 from the same LAN.
-# (A page served from https:// GitHub Pages cannot open ws:// — see docs/FLUIDNC.md)
-http:
-  port: 80
-
-sta:
-  ssid: YOUR_WIFI_NAME
-  password: YOUR_WIFI_PASSWORD
-# Or start as an access point the first time:
-# ap:
-#   ssid: FluidNC
-#   password: 12345678

@@ -4,7 +4,6 @@
 
 import * as Acc from "../account/account.js";
 import { filterConsoleCommand, renderAdvancedMachine } from "./admin-machine.js";
-import { fluidncMixedContentMessage } from "./fluidnc.js";
 import { DIALECTS } from "./dialect.js";
 
 const KEY = "plasma.settings.v1";
@@ -422,4 +421,4 @@ export function bindSettings() {
   });
 }
 
-export { filterConsoleCommand, fluidncMixedContentMessage };
+export { filterConsoleCommand };
