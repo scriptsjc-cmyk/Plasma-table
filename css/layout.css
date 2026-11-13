@@ -461,7 +461,6 @@ body.pro-mode kbd { font: 10px/1.2 ui-monospace, Menlo, Consolas, monospace; bor
   /* UX2: narrow header wraps so the mode switch never pushes pills off-screen */
   .topbar { flex-wrap: nowrap; align-items: flex-start; }
   .topbar-main { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; overflow: visible; }
-  #modeChip { display: none; }
   #torchPill:not(.on) { display: none; }
   #connPill { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
@@ -636,7 +635,7 @@ body.pro-mode:not(.beginner) #cutView:has(#ptInspector) > .cutgrid { grid-column
 /* ============================================================================================ ROUND 4 Screens: boot -> login -> menu -> make | cut.  body[data-screen] says which one is showing (js/flow.js). Beginner / Pro (body.beginner / body.pro-mode) only exist on "make"; the cutting screen has neither class, so it looks and works the same for everyone. */
 body[data-screen="boot"] .topbar, body[data-screen="login"] .topbar { display: none; }
 /* chrome that only belongs on one screen */
-#btnHome, #btnStop, #connPill, #torchPill, #stateBadge, #modeChip, #practiceChip, .tabs, #estopBar, #alarmBar, #lostBar, #homeBar, #stepper, #makeBar { display: none; }
+#btnHome, #btnStop, #connPill, #torchPill, #stateBadge, #practiceChip, .tabs, #estopBar, #alarmBar, #lostBar, #homeBar, #stepper, #makeBar { display: none; }
 body[data-screen="cut"] #connPill { display: inline-block; }
 body[data-screen="cut"] .tabs { display: flex; }
 body[data-screen="cut"] #stepper { display: flex; }

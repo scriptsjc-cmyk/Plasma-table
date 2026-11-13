@@ -46,15 +46,6 @@ export function paintChrome() {
     pill.classList.toggle("on", torch);
     pill.classList.toggle("off", !torch);
   }
-  const mode = $("modeChip");
-  if (mode) {
-    let label = "";
-    if (S.connected && S.demo) label = "";
-    else if (S.connected && S.fluidnc) label = "FluidNC";
-    else if (S.connected) label = "Connected";
-    mode.textContent = label;
-    mode.classList.toggle("hidden", !label);
-  }
   // r7 U12: one practice chip. On the practice table the connection pill already says "Practice table" (it never fires a torch),
   // so "Practice run · torch off" only shows for a practice run on a real machine.
   const pr = $("practiceChip");

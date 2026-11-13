@@ -336,7 +336,7 @@ body.shape-fs[data-screen="make"] .fsbar { top: calc(var(--topbar-h, 56px) + 5px
   border: 1px solid var(--line-strong);
   background: var(--accent);
 }
-body[data-screen="cut"] #modeChip:not(.hidden), body[data-screen="cut"] #practiceChip:not(.hidden) { display: inline-block; }
+body[data-screen="cut"] #practiceChip:not(.hidden) { display: inline-block; }
 body[data-screen="make"] #makeBar { display: flex; }
 @media (max-width: 520px) {
   #btnHome span { display: none; }

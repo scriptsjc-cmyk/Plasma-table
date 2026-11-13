@@ -16,9 +16,9 @@ import { goStep, showTab } from "../ui/nav.js";
 export function setConnected(on, label = "") {
   S.connected = on;
   if (on && $("lostBar")) $("lostBar").classList.add("hidden");
-  const connLabel = on ? (S.fluidnc ? "FluidNC" : S.demo ? "Practice table" : "Connected") : "Not connected";
+  const connLabel = on ? (S.demo ? "Practice table" : "Connected") : "Not connected";
   $("connPill").innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-dot"></use></svg> <span class="connword">${connLabel}</span>`;
-  $("connPill").title = connLabel; $("connPill").setAttribute("aria-label", connLabel + (on ? ": open Machine setup" : ": connect"));
+  $("connPill").title = on && S.fluidnc ? "Connected (FluidNC)" : connLabel; $("connPill").setAttribute("aria-label", connLabel + (on ? ": open Machine setup" : ": connect"));
   document.body.classList.toggle("demo-on", !!(on && S.demo));
   $("connPill").className = "pill " + (on ? "on" : "off");
   if (!on) { S.fluidnc = false; S.zeroSet = false; }
