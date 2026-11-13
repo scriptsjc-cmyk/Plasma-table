@@ -44,7 +44,7 @@ export function paintCutStatus() {
   btn.innerHTML = bad
     ? `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label">Check the cut</span><span class="cutstatus-n">${issues.length}</span>`
     : `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label">Cut looks ready</span>`;
-  btn.title = bad ? issues.map((i) => i.text).join(" ") : "Nothing is wrong with the cut";
+  btn.removeAttribute("title");
   if (pop) {
     const rows = issues.map((i) => {
       const link = i.kind === "setup"

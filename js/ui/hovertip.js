@@ -19,7 +19,6 @@ const SELECTOR = [
   "label:has(#skSnap)",
   "#snapRow button",
   ".sktools button",
-  "#cutStatus",
 ].join(",");
 
 const DELAY = 450;

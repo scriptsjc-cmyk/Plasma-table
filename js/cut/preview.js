@@ -28,6 +28,11 @@ function viewArea() {
   const t = S.cfg.travel_mm;
   return { x: [0, t.x], y: [0, t.y], label: "table" };
 }
+// On Cut step 1 the canvas is only a preview of the chosen part (centred and fitted).
+// The table, gantry and torch appear from Bed & start (step 3) onward.
+function isPartPreview() { return screen() === "cut" && Number(S.cur) === 1; }
+function machineVisible() { return !!S.showMachine && !isPartPreview(); }
+
 export function fit() {
   if (!S.prepared) return { cls: "", text: "" };
   if (!S.safety.limits) return { cls: "unknown", text: S.demo ? "Demo: tap here and the edges are set up for you." : "Edges not set up – can't check it fits (Machine setup tab)." };
@@ -59,15 +64,26 @@ function drawCanvas(cv, main) {
   if (!cv || !cv.offsetParent) return;
   const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 600;
   // steps 1-2: zoom in on the part. Step 3 onwards (and the Move tab): the whole table, with the part where it will be cut.
-  const zoom = main && S.prepared && S.cur <= 2;
+  const zoom = main && S.prepared && isPartPreview();
   let A, ox = 0, oy = 0;
+  if (isPartPreview() && !S.prepared) {
+    const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 600;
+    const box = cv.closest(".previewPane") || cv.parentElement;
+    const dock = box && box.querySelector(".previewDock");
+    const h = Math.max(120, (box ? (box.clientHeight - (dock ? dock.offsetHeight : 0)) : 0) || cv.clientHeight || 200);
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = themeColor("--cad-canvas", "#FFFFFF"); ctx.fillRect(0, 0, w, h);
+    cv._zmap = null; cv._map = null;
+    return;
+  }
   if (zoom) {
     const b = S.prepared.stats.bounds, pad = Math.max(5, 0.06 * Math.max(b[2] - b[0], b[3] - b[1]));
     A = { x: [b[0] - pad, b[2] + pad], y: [b[1] - pad, b[3] + pad], label: "" };
   } else {
     const T = viewArea();
     // room around the table for the machine: X beam along the front, Y arm off its carriage
-    const mg = S.showMachine ? [70, 190, 70, 140] : [0, 0, 0, 0];   // left, front, back, right
+    const mg = machineVisible() ? [70, 190, 70, 140] : [0, 0, 0, 0];   // left, front, back, right
     A = { x: [T.x[0] - mg[0], T.x[1] + mg[3]], y: [T.y[0] - mg[1], T.y[1] + mg[2]], label: T.label, table: T };
     [ox, oy] = originView();
   }
@@ -115,7 +131,7 @@ function drawCanvas(cv, main) {
   };
   cv._zmap = main && zoom ? { toMm, toPx } : null;
   cv._map = zoom ? null : { toMm, toPx, sc, T: A.table };
-  if (!zoom) drawMachineBed(ctx, A.table, X, Y, sc);
+  if (!zoom && !isPartPreview()) drawMachineBed(ctx, A.table, X, Y, sc);
   if (S.prepared) {
     const pv = S.prepared.preview;
     const path = (p) => { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(X(x + ox), Y(y + oy)) : ctx.moveTo(X(x + ox), Y(y + oy)))); ctx.stroke(); };
@@ -143,9 +159,11 @@ function drawCanvas(cv, main) {
       ctx.fillText("orange: torch path   grey: your part   dots: where it pierces", 8, h - 8);
     }
   }
-  ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(X(ox) - 9, Y(oy)); ctx.lineTo(X(ox) + 9, Y(oy)); ctx.moveTo(X(ox), Y(oy) - 9); ctx.lineTo(X(ox), Y(oy) + 9); ctx.stroke();
-  if (!zoom) drawGantry(ctx, A.table, X, Y, sc);
+  if (!isPartPreview()) {
+    ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(X(ox) - 9, Y(oy)); ctx.lineTo(X(ox) + 9, Y(oy)); ctx.moveTo(X(ox), Y(oy) - 9); ctx.lineTo(X(ox), Y(oy) + 9); ctx.stroke();
+  }
+  if (!zoom && !isPartPreview()) drawGantry(ctx, A.table, X, Y, sc);
 }
 // ---- bird's-eye view of the machine (HMM-style: X beam along the front, Y arm cantilevered across the table,
 // torch on a plate on the left face of the arm). Sizes in mm.
@@ -155,7 +173,7 @@ function drawMachineBed(ctx, T, X, Y, sc) {
   const R = (x, y, w, h) => [X(x), Y(y + h), w * sc, h * sc];
   // water tray / table
   ctx.fillStyle = themeColor("--cad-grid", "#ECEEF1"); ctx.fillRect(...R(x0, y0, x1 - x0, y1 - y0));
-  if (S.showMachine) {
+  if (machineVisible()) {
     ctx.strokeStyle = themeColor("--cad-grid-major", "#D5DAE0"); ctx.lineWidth = Math.max(1, 3 * sc);                 // slats every 100 mm
     ctx.beginPath();
     for (let x = Math.ceil((x0 + 1) / 100) * 100; x < x1; x += 100) { ctx.moveTo(X(x), Y(y0)); ctx.lineTo(X(x), Y(y1)); }
@@ -168,7 +186,7 @@ function drawMachineBed(ctx, T, X, Y, sc) {
   ctx.strokeRect(...R(x0, y0, x1 - x0, y1 - y0));
   ctx.fillStyle = themeColor("--cad-label", "#4B5563"); ctx.font = "12px Barlow, system-ui";
   ctx.textAlign = "right"; ctx.fillText(`${T.label} ${Math.round(x1 - x0)} × ${Math.round(y1 - y0)} mm`, X(x1) - 8, Y(y1) - 8 + 20); ctx.textAlign = "start";
-  if (!S.showMachine) return;
+  if (!machineVisible()) return;
   // X beam: box section with the rail on top and end caps
   const bx0 = x0 - 40, bx1 = x1 + 110, by = y0 - 20 - MACH.beamH;
   ctx.fillStyle = "#262d36"; ctx.fillRect(...R(bx0, by, bx1 - bx0, MACH.beamH));
@@ -183,7 +201,7 @@ function drawGantry(ctx, T, X, Y, sc) {
   const has = !!S.status.MPos;
   const [tx, ty] = has ? toView(S.status.MPos[0], S.status.MPos[1]) : [T.x[0], T.y[0]];
   const r = Math.max(5, 9 * sc);
-  if (!S.showMachine) {                      // just the torch dot
+  if (!machineVisible()) {                      // just the torch dot
     if (!has) return;
     ctx.fillStyle = S.status.torch ? themeColor("--torch", "#C05600") : themeColor("--text", "#1F2A37");
     ctx.beginPath(); ctx.arc(X(tx), Y(ty), 6, 0, 7); ctx.fill();

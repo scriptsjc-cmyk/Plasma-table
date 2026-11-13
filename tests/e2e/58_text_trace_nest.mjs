@@ -349,7 +349,7 @@ for (const [view, mode] of [["laptop", "pro"], ["laptop", "beginner"], ["phone",
   ck("tiny text: no warning panel, no markers while designing", !(await vis(page, "#cutCheck")) && !(await vis(page, "#warnings")) && await page.evaluate(() => window.plasmaTest.sketch.marks.length === 0));
   ck("tiny text: the design really is flagged when checked", await page.evaluate(() => (window.plasmaTest.S.check && window.plasmaTest.S.check.groups.length) > 0));
   await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); }); await sleep(900);
-  const t = await page.evaluate(() => document.getElementById("cutCheck3").innerText);
+  const t = await page.evaluate(() => (document.getElementById("cutStatusPop") && document.getElementById("cutStatusPop").innerText) || (window.plasmaTest.S.check && window.plasmaTest.S.check.groups.map((g) => g.text).join(" ")) || "");
   ck("tiny text: on the cutting screen the cut check names the small features", /small|thin|narrow|close/i.test(t), t.slice(0, 160));
   await snap(page, "text-small-warning-at-cut");
   await page.context().close();

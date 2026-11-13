@@ -33,8 +33,8 @@ const PAGE = `
       .filter((b) => { const r = b.getBoundingClientRect(); return r.width * r.height >= sa; }).map((b) => b.id || b.className); };
   window.__noPageScroll = () => { const d = document.scrollingElement; return d.scrollHeight <= innerHeight + 1 && d.scrollWidth <= innerWidth + 1; };`;
 const ONE_LINE = ["#cutBar > *", ".setupcard > summary > b", "#checkMat", "#btnChangeMat", ".homerow button", "#connectLockText", "#btnTrace", "#btnZero",
-  "#layoutCard .laybtns button", "#layoutCard .sheetrow label", ".checkwhat", "#cutCheck3 .ok", ".step[data-step='3'] .nav button", ".blocker-jump"];
-const CARDS = ["#cutCheck3", "#layoutCard", "#checkCard", ".previewPane", "#zeroCard", ".step[data-step='3'] > .nav"];
+  "#layoutCard .laybtns button", "#layoutCard .sheetrow label", ".checkwhat", ".step[data-step='3'] .nav button", ".blocker-jump"];
+const CARDS = ["#layoutCard", "#checkCard", ".previewPane", "#zeroCard", ".step[data-step='3'] > .nav"];
 
 async function bedPage(prof, query) {
   const page = await newPage(br, prof, { base: srv.base, consoleErrors: false, ...(query ? { query } : {}) });

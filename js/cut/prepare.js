@@ -1,5 +1,6 @@
 // Turns the drawing into a job: kerf / lead-in, the safety check and loadJob().
 import { resetPreviewCam } from "../cut/previewnav.js";
+import { paintCutStatus } from "./cutstatus.js";
 import { checkDesign, machineLimits } from "./check.js";
 import { screen } from "../ui/flow.js";
 import { designToGcode } from "./cam.js";
@@ -37,12 +38,7 @@ export function renderCutCheck() {
   const cutting = screen() === "cut";
   $("cutCheck").innerHTML = "";
   $("cutCheck2").innerHTML = html + tabBtn;
-  // r8 item 3: the full check lives on step 1 (Part). Bed & start only repeats a short list when something is wrong.
-  if ($("cutCheck3")) {
-    const issues = chk && chk.groups && chk.groups.length;
-    $("cutCheck3").innerHTML = issues ? html + tabBtn
-      : (chk ? `<p class="ok">✓ Looks cuttable<span class="okmore"> – the full check is on Part</span>.</p>` : "");
-  }
+  try { paintCutStatus(); } catch (e) { /* ignore */ }
   if (sketch) sketch.setMarks(cutting && S.src === "shape" && chk ? chk.issues : []);
   const L = machineLimits(limitsNow());
   const rows = [

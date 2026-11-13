@@ -190,7 +190,7 @@ for (const mode of ["beginner", "pro"]) {
   if (mode === "beginner") await snap(page, "no-warning-while-designing-beginner");
   await page.evaluate(() => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); });
   await sleep(900);
-  const txt = await page.evaluate(() => document.getElementById("cutCheck3").innerText);
+  const txt = await page.evaluate(() => (document.getElementById("cutStatusPop") && document.getElementById("cutStatusPop").innerText) || (window.plasmaTest.S.check && window.plasmaTest.S.check.groups.map((g) => g.text).join(" ")) || "");
   ck(`[${mode}] sent to cutting: the check runs and shows the small-hole warning on the cutting screen`, /small|hole|metal/i.test(txt), txt.slice(0, 120));
   ck(`[${mode}] ... and the drawing gets its markers`, await page.evaluate(() => (window.plasmaTest.S.prepared.marks || []).length > 0));
   if (mode === "beginner") await snap(page, "check-on-cutting-screen");

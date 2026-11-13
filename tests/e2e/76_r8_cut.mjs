@@ -39,7 +39,7 @@ for (const prof of ["d1440", "d1366"]) {
       stop: st("btnStop"),
     };
   });
-  t.check(n("item 1: the header Not-connected pill is hidden on Cut"), one.pill.exists && !one.pill.show, JSON.stringify(one.pill));
+  t.check(n("r9 item 4: the header connection pill is visible on Cut"), one.pill.exists && one.pill.show && /connected/i.test(one.pill.text), JSON.stringify(one.pill));
   t.check(n("item 1/4: the cut-bar slot is not a Not-connected pill when disconnected"), !one.bar.show || !/not connected/i.test(one.bar.text), JSON.stringify(one.bar));
   t.check(n("item 1: Connect with USB is the clear place to connect (on Bed, or at least in the document)"), one.usb.exists, JSON.stringify(one.usb));
   t.check(n("item 4: a cut-status box sits next to Cut"), one.status.exists && one.status.show, JSON.stringify(one.status));
@@ -84,7 +84,7 @@ for (const prof of ["d1440", "d1366"]) {
     };
   });
   t.check(n("item 3: the cut check is on step 1 (Part)"), /cut check|looks cuttable|too small/i.test(part.chk2 || ""), part.chk2);
-  t.check(n("item 3: Bed & start does not repeat the full check while still on Part"), !part.chk3 || /full check is on Part/i.test(part.chk3) && !/too small|hole|thin/i.test(part.chk3), part.chk3);
+  t.check(n("r9 item 5: Bed & start has no cut-check panel"), !part.chk3, part.chk3);
   t.check(n("item 5: Machine setup is not a Cut-row tab"), !part.setupTab);
   t.check(n("item 6: Show machine is not on step 1"), !part.showMachOnPart);
   t.check(n("item 7: the amps card shows 60 A settings and a source"), /A/.test(part.amps) && /mm\/min/.test(part.amps) && /kerf/i.test(part.amps) && /PrimeWeld|CUT60|P-80|source|starting points/i.test(part.amps), (part.amps || "").slice(0, 400));

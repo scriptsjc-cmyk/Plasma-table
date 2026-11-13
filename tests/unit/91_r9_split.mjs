@@ -39,7 +39,7 @@ ck("boot.js starts the app after the partials load", /await loadPartials\(\)/.te
 
 const ids = {
   "html/make.html": ["makeBar", "srcShape", "bgPick", "shapeLib"],
-  "html/cut.html": ["stepper", "pickPane", "cutCheck3", "btnStart"],
+  "html/cut.html": ["stepper", "pickPane", "btnStart"],
   "html/setup.html": ["setupView", "wizard"],
   "html/parts.html": ["partsDlg", "partsList"],
 };
