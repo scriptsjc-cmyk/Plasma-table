@@ -216,6 +216,54 @@ export class EdgeMethods {
       c.bulges[info.ei] = clampBulge(b);
     });
   }
+  // True corner fillet: trim the two edges at the picked corner and insert an arc
+  // of the given radius. (setEdgeCurve still bends a whole edge into an arc, which
+  // cannot use a radius smaller than half that edge — so Fillet a corner of a long
+  // L would wrongly refuse an 8 mm radius.)
+  filletCorner(radius) {
+    const r = Number(radius);
+    if (!(r > 0)) { this.onMessage("Enter a radius."); return false; }
+    const info = this.edgeInfo();
+    if (!info) { this.onMessage("Click the corner you want to fillet, then Fillet."); return false; }
+    return this._guarded(info.it, () => {
+      const c = info.it.shape.cs[info.ci], pts = c.pts, n = pts.length;
+      if (n < 3) return false;
+      let vi = info.vi;
+      if (vi == null) {
+        this.onMessage("Click the corner you want to fillet, then Fillet.");
+        return false;
+      }
+      const A = pts[(vi - 1 + n) % n], P = pts[vi], Q = pts[(vi + 1) % n];
+      const bs = c.bulges || [];
+      if (Math.abs(Number(bs[(vi - 1 + n) % n]) || 0) > 1e-6 || Math.abs(Number(bs[vi]) || 0) > 1e-6) {
+        this.onMessage("Fillet needs two straight edges at the corner. Flatten a curve first, or pick another corner.");
+        return false;
+      }
+      const v1 = [A[0] - P[0], A[1] - P[1]], v2 = [Q[0] - P[0], Q[1] - P[1]];
+      const l1 = Math.hypot(v1[0], v1[1]), l2 = Math.hypot(v2[0], v2[1]);
+      if (l1 < 0.05 || l2 < 0.05) return false;
+      const i1 = [v1[0] / l1, v1[1] / l1], i2 = [v2[0] / l2, v2[1] / l2];
+      const ang = Math.acos(Math.max(-1, Math.min(1, i1[0] * i2[0] + i1[1] * i2[1])));
+      if (!(ang > 1e-3) || ang > Math.PI - 1e-3) { this.onMessage("That corner is too flat or too sharp to fillet."); return false; }
+      const d = r / Math.tan(ang / 2);
+      if (!(d > 0.05) || d > l1 - 0.05 || d > l2 - 0.05) {
+        const maxR = r1(Math.min(l1, l2) * Math.tan(ang / 2) - 0.05);
+        this.onMessage("That radius is too big for this corner. Use " + Math.max(0.1, maxR).toFixed(1) + " mm or less.");
+        return false;
+      }
+      const T1 = [P[0] + i1[0] * d, P[1] + i1[1] * d], T2 = [P[0] + i2[0] * d, P[1] + i2[1] * d];
+      const left = (T2[0] - T1[0]) * (P[1] - T1[1]) - (T2[1] - T1[1]) * (P[0] - T1[0]) > 0;
+      const b = bulgeFromRadius(T1, T2, r, left);
+      if (!(Math.abs(b) > 1e-6)) { this.onMessage("That radius does not make a corner fillet."); return false; }
+      c.pts[vi] = [r1(T1[0]), r1(T1[1])];
+      c.pts.splice(vi + 1, 0, [r1(T2[0]), r1(T2[1])]);
+      c.bulges = (c.bulges || []).slice();
+      while (c.bulges.length < n) c.bulges.push(0);
+      c.bulges.splice(vi + 1, 0, Number(c.bulges[vi]) || 0);
+      c.bulges[vi] = clampBulge(b);
+      this.edgeSel = { id: info.it.id, ci: info.ci, ei: vi, vi: null };
+    });
+  }
   straightenEdge() {
     return this._withEdge((it, info) => {
       const c = it.shape.cs[info.ci];

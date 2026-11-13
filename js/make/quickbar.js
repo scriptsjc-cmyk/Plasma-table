@@ -189,8 +189,8 @@ export function quickAction(a) {
       openCad("Fillet a corner", [{ id: "r", label: "Radius (mm)", value: 5 }], (v) => {
         if (!(v.r > 0)) { toast("Enter a radius.", true); return; }
         if (sketch.edgeInfo && sketch.edgeInfo()) {
-          if (sketch.setEdgeCurve({ radius: v.r })) toast("Corner filleted.");
-        } else toast(clickVerb() + " an edge on a custom outline first (Draw outline, then Edit edge), then Fillet.");
+          if (sketch.filletCorner(v.r)) toast("Corner filleted.");
+        } else toast(clickVerb() + " the corner on a custom outline first (Draw outline, then click the corner), then Fillet.");
       });
       break;
     case "chamfer":

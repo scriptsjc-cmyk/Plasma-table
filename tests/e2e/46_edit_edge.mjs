@@ -143,6 +143,51 @@ try {
     await snap(p, "edit-edge-phone");
     await p.close(); await p.ctx.close();
   }
+
+  {
+    // Real mouse click on a drawn inner-corner handle (no selectEdge test hook)
+    const p = await newPage(K.browser, "desktop", { base: srv.base });
+    await openShape(p);
+    await p.evaluate(() => {
+      const s = window.plasmaTest.sketch;
+      s.setTool && s.setTool("draw");
+      s.tool = "draw";
+      s.drawPts = [[0, 0], [220, 0], [220, 70], [100, 70], [100, 160], [0, 160]];
+      s.finishDraw();
+      s.fitView && s.fitView();
+    });
+    await sleep(300);
+    const clk = await p.evaluate(() => {
+      const s = window.plasmaTest.sketch, cv = document.getElementById("preview"), r = cv.getBoundingClientRect();
+      const [sx, sy] = s.toScreen(100, 70);          // inner corner of the L
+      return { x: r.left + sx, y: r.top + sy, selected: !!(s.selected() && s.selected().type === "custom") };
+    });
+    t.check("L is selected before the corner click", clk.selected);
+    await p.mouse.click(clk.x, clk.y);
+    await sleep(300);
+    const picked = await p.evaluate(() => {
+      const i = window.plasmaTest.sketch.edgeInfo && window.plasmaTest.sketch.edgeInfo();
+      return i ? { kind: i.vi != null ? "vertex" : "edge", length: i.length, ei: i.ei } : null;
+    });
+    t.check("a real mouse click on the inner corner selects that edge or vertex", !!(picked && (picked.kind === "edge" || picked.kind === "vertex")), JSON.stringify(picked));
+    if (picked) {
+      await p.locator('[data-qb="fillet"]').click();
+      await sleep(250);
+      if (await p.locator("#cadFields input").count()) {
+        await p.locator("#cadFields input").first().fill("8");
+        await p.click("#cadOk");
+        await sleep(300);
+      }
+      const after = await p.evaluate(() => {
+        const s = window.plasmaTest.sketch, it = s.items[0], c = it && it.shape && it.shape.cs[0];
+        const bs = (c && c.bulges) || [];
+        return { n: c ? c.pts.length : 0, maxBulge: Math.max(0, ...bs.map((b) => Math.abs(b || 0))), toast: (document.getElementById("toast") || {}).innerText || "" };
+      });
+      t.check("Fillet R8 on the clicked inner corner keeps a curve", after.maxBulge > 0.05 && after.n === 7, JSON.stringify(after));
+    }
+    await snap(p, "edit-edge-fillet-click-desktop");
+    await p.close(); await p.ctx.close();
+  }
 } catch (e) {
   t.check("suite threw", false, String(e && e.stack || e));
 } finally {

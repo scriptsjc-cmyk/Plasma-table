@@ -175,6 +175,24 @@ for (const [type, d] of [["rect", 5], ["rect", -5], ["plate", 3], ["plate", -3],
   const bAfter = (keep.items[0].shape.cs[0].bulges || []).slice();
   t.check("fillet radius 8 mm on a 120 mm curved edge is refused and the curve is kept", bAfter.some((b) => Math.abs(b) > 0.05) && Math.abs((bAfter.find((b) => Math.abs(b) > 0.05) || 0) - (bBefore.find((b) => Math.abs(b) > 0.05) || 0)) < 1e-6, `before=${JSON.stringify(bBefore)} after=${JSON.stringify(bAfter)} msg=${keep.messages.slice(-1)}`);
   t.check("fillet refusal explains the minimum radius", /too small|at least 60/i.test(String(keep.messages.slice(-1))), String(keep.messages.slice(-1)));
+  // Fillet a corner (not "bend the whole edge"): R8 on the inner corner of a long-sided L
+  const ell = mk([]);
+  ell.setTool("draw");
+  ell.drawPts = [[0, 0], [220, 0], [220, 70], [100, 70], [100, 160], [0, 160]];
+  ell.finishDraw();
+  const host = ell.items[0];
+  ell.selectEdge(host.id, 0, 3, 3);          // vertex (100, 70) — the inner corner
+  const n0 = host.shape.cs[0].pts.length;
+  const ok = ell.filletCorner(8);
+  const n1 = ell.items[0].shape.cs[0].pts.length;
+  const fb = (ell.items[0].shape.cs[0].bulges || []).map((b) => Math.abs(b || 0));
+  t.check("Fillet R8 on an L inner corner succeeds", ok === true, `ok=${ok} msg=${ell.messages.slice(-1)}`, "CORNER-FILLET");
+  t.check("Fillet R8 splits the inner corner into a curved edge", n1 === n0 + 1 && fb.some((b) => b > 0.05), `n ${n0}→${n1} bulges=${JSON.stringify(fb.map((x) => +x.toFixed(3)))}`, "CORNER-FILLET");
+  const tooBig = mk([]);
+  tooBig.setTool("draw"); tooBig.drawPts = [[0, 0], [220, 0], [220, 70], [100, 70], [100, 160], [0, 160]]; tooBig.finishDraw();
+  tooBig.selectEdge(tooBig.items[0].id, 0, 3, 3);
+  const refused = tooBig.filletCorner(120);
+  t.check("Fillet R120 on the same corner is refused with a clear limit", refused === false && /too big|or less/i.test(String(tooBig.messages.slice(-1))), String(tooBig.messages.slice(-1)), "CORNER-FILLET");
 }
 // ---------- nest / auto-arrange
 {
