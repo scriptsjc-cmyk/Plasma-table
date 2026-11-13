@@ -963,8 +963,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 }
 
 
-/* ---- r8: one connect control, cut-status box, E-STOP zone, slim upload ---- */
-body[data-screen="cut"] #connPill { display: none !important; }
+/* ---- r8: cut-status box, E-STOP zone, slim upload; r9: connection pill stays visible on Cut and Machine setup ---- */
 
 /* E-STOP sits in its own yellow zone so it stands out; size is not reduced. */
 body[data-screen="cut"] #btnStop,
@@ -1072,3 +1071,135 @@ body[data-screen="cut"] .tabs { position: relative; }
 
 /* Check cut button in the Make header */
 #btnMakeCheckCut { flex: none; }
+
+
+/* ---- r9: two-row Cut header; E-STOP spans both rows; no cut-tab row on Machine setup ---- */
+body[data-screen="cut"][data-tab="setup"] .tabs { display: none !important; }
+
+/* Cut header: on a phone the account row and STOP stay on one compact line,
+   with the Cut / steps row underneath. On a laptop, E-STOP spans both rows. */
+body[data-screen="cut"][data-tab="cut"] .topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0 8px;
+}
+body[data-screen="cut"][data-tab="cut"] .topbar-main {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+body[data-screen="cut"][data-tab="cut"] #btnStop,
+body[data-screen="cut"][data-tab="cut"] #btnStop.estop {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+body[data-screen="cut"][data-tab="cut"] .tabs {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  max-width: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+}
+@media (min-width: 900px) and (min-height: 600px) {
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] .topbar {
+    align-items: stretch;
+    gap: 0 8px;
+    padding-top: max(4px, env(safe-area-inset-top));
+    padding-bottom: 4px;
+  }
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] .topbar-main {
+    min-height: 0;
+    overflow: hidden;
+    align-self: center;
+  }
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] .tabs {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop,
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop {
+    grid-row: 1 / 3;
+    align-self: stretch;
+    height: auto;
+    flex-direction: column;
+    width: auto;
+    min-width: 136px;
+    min-height: 104px;
+    padding: 2px 8px;
+  }
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop .estop-svg { width: 84px; height: 84px; }
+}
+
+/* Hide-header must win over the two-row Cut header (same properties, later file).
+   The account bar collapses; the Cut / steps / Layout row stays in a slim fixed
+   strip so it is not taken out of flow and covered by the banners. */
+body.header-hidden[data-screen="cut"] .topbar,
+body.header-hidden[data-screen="cut"][data-tab="cut"] .topbar {
+  display: flex;
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  gap: 0;
+  background: transparent;
+  overflow: visible;
+}
+body.header-hidden[data-screen="cut"][data-tab="cut"] .tabs {
+  display: flex !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: calc(var(--stop-float-w, 0px) + 16px + env(safe-area-inset-right, 0px));
+  z-index: 130;
+  margin: 0;
+  padding: 2px 8px 2px max(52px, env(safe-area-inset-left, 0px));
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+  pointer-events: auto;
+}
+body.header-hidden[data-screen="cut"][data-tab="cut"] {
+  padding-top: 44px;
+}
+
+/* r9 item 7: Show machine is a small overlay in the canvas top-left, on Bed & start only. */
+body.app-shell[data-screen="cut"][data-step="3"] .previewPane,
+body.app-shell[data-screen="cut"][data-step="3"] .cutgrid.editing .previewPane,
+body.app-shell[data-screen="cut"][data-step="3"] .cutgrid.with-qb .previewPane {
+  position: relative;
+}
+body[data-screen="cut"][data-step="3"] #showMachWrap.showmach {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: auto;
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 2px 7px;
+  min-height: 0;
+  z-index: 3;
+  background: color-mix(in srgb, var(--well) 92%, transparent);
+  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+body[data-screen="cut"][data-step="3"] #showMachWrap.showmach input {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+}
+
+/* r9 item 4: the Connected / Not connected pill stays visible on Cut and Machine setup.
+   A phone on its side already has a tight one-row header (Back, state, TORCH, STOP);
+   connection stays the USB control there, so the pill steps aside. */
+body[data-screen="cut"] #connPill { display: inline-flex !important; }
+body.short-land[data-screen="cut"] #connPill { display: none !important; }

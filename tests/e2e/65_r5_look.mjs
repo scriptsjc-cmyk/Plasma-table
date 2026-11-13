@@ -151,7 +151,7 @@ for (const [w, h] of [[390, 664], [844, 390], [1366, 768]]) {
   await T(page, `(() => { window.plasmaTest.goStep(3); document.getElementById("btnDemo").click(); })()`); await sleep(2500);
   const hd = await T(page, `(() => { const a = document.getElementById("acctPill"), c = document.getElementById("connPill"), s = document.getElementById("btnStop").getBoundingClientRect(); const cs = getComputedStyle(c); return { name: a.scrollWidth <= a.clientWidth + 1, connShow: cs.display !== "none" && c.getBoundingClientRect().width > 0, stop: s.right <= innerWidth + 1 && s.width >= 44 && s.height >= 44, stopW: Math.round(s.width) }; })()`);
   ck("C 844x390 cutting: the account name is shown in full", hd.name, hd);
-  ck("C 844x390 cutting: the header connection pill is hidden (one connect control, r8 item 1)", hd.connShow === false, hd);
+  ck("C 844x390 cutting: the header connection pill stays out of the one-row phone header (connection is the USB control)", hd.connShow === false, hd);
   ck("C 844x390 cutting: STOP stays fully on screen", hd.stop, hd);
   await snap(page, "land-cut-header");
   ck("C 844x390: no page errors", noErrors(page).length === 0, noErrors(page).join("|"));

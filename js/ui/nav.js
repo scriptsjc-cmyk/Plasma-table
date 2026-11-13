@@ -112,6 +112,7 @@ export function showTab(name) {
   $("cutView").classList.toggle("hidden", !(scr === "make" || (scr === "cut" && name === "cut")));
   $("setupView").classList.toggle("hidden", !(scr === "cut" && name === "setup"));
   S.tab = name;
+  document.body.dataset.tab = (scr === "cut" && name === "setup") ? "setup" : (scr === "cut" ? "cut" : "");
   if (name === "cut") drawPreview();
 }
 export function canGo(n) {
