@@ -306,6 +306,34 @@ export class ViewMethods {
       }
     }
 
+    if (this.centrePick) {
+      const prompt = this.centrePrompt ? this.centrePrompt() : "Click an edge";
+      const strokeEdge = (e, color, width) => {
+        if (!e || !e.a || !e.b) return;
+        const [ax, ay] = S(e.a[0], e.a[1]), [bx, by] = S(e.b[0], e.b[1]);
+        ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+      };
+      const first = this.centrePick.edges && this.centrePick.edges[0];
+      if (first) strokeEdge(first, C.sel, 4);
+      if (this.centreHover) {
+        const it = this.centreHover.it, cs = this.contoursOf(it), c = cs[this.centreHover.ci], i = this.centreHover.ei;
+        if (c && c.pts && c.pts[i]) {
+          const q = c.pts[(i + 1) % c.pts.length];
+          strokeEdge({ a: c.pts[i], b: q }, C.guide || C.sel, 3);
+        }
+      }
+      ctx.font = "600 16px Barlow, system-ui";
+      const tw = ctx.measureText(prompt).width + 24, th = 32;
+      const x = w / 2, y = 22;
+      ctx.fillStyle = C.sel;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x - tw / 2, y - th / 2, tw, th, 8); else ctx.rect(x - tw / 2, y - th / 2, tw, th);
+      ctx.fill();
+      ctx.fillStyle = themeColor("--cad-tag-text", "#FFFFFF"); ctx.textAlign = "center";
+      ctx.fillText(prompt, x, y + 6); ctx.textAlign = "start";
+    }
+
     if (this.items.length) {
       const b = this.allBox();
       ctx.fillStyle = C.label; ctx.font = "12px Barlow, system-ui";

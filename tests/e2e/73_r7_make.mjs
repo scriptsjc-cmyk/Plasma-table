@@ -497,5 +497,52 @@ for (const [w, h, tag] of [[1440, 900, "1440x900"], [1366, 768, "1366x768"]]) {
   await page.context().close();
 }
 
+// Centre between: two real pointer picks, with an on-canvas prompt for each
+{
+  const page = await view(1440, 900, false);
+  await openMake(page, "pro");
+  const setup = await ev(page, `(() => {
+    const sk = window.plasmaTest.sketch;
+    sk.clear();
+    sk.tool = "draw";
+    sk.drawPts = [[0, 0], [220, 0], [220, 70], [100, 70], [100, 160], [0, 160]];
+    sk.finishDraw();
+    const host = sk.items[0];
+    sk.pick([host.id]);
+    sk.add("hole", true);
+    const hole = sk.items[sk.items.length - 1];
+    sk.pick([hole.id]);
+    sk.fitView();
+    sk.onSelect && sk.onSelect();
+    return { host: host.id, hole: hole.id, x0: (sk.boxOf(hole)[0] + sk.boxOf(hole)[2]) / 2 };
+  })()`);
+  await sleep(300);
+  await ev(page, `document.querySelector('[data-sk="centreBetween"]').click()`);
+  await sleep(200);
+  const p1 = await ev(page, `(() => {
+    const sk = window.plasmaTest.sketch, cv = document.getElementById("preview"), r = cv.getBoundingClientRect();
+    const [sx, sy] = sk.toScreen(4, 110);
+    return { prompt: sk.centrePrompt(), picking: !!sk.centrePick, x: r.left + sx, y: r.top + sy };
+  })()`);
+  ck("Centre between shows 'Click the first edge' on the canvas", p1.prompt === "Click the first edge" && p1.picking, p1);
+  await page.mouse.click(p1.x, p1.y);
+  await sleep(250);
+  const p2 = await ev(page, `(() => {
+    const sk = window.plasmaTest.sketch, cv = document.getElementById("preview"), r = cv.getBoundingClientRect();
+    const [sx, sy] = sk.toScreen(100, 110);
+    return { prompt: sk.centrePrompt(), n: sk.centrePick && sk.centrePick.edges.length, x: r.left + sx, y: r.top + sy };
+  })()`);
+  ck("after the first edge, prompt asks for the second edge", p2.prompt === "Click the second edge" && p2.n === 1, p2);
+  await page.mouse.click(p2.x, p2.y);
+  await sleep(300);
+  const done = await ev(page, `(() => {
+    const sk = window.plasmaTest.sketch, hole = sk.items.find((i) => i.type === "hole"), b = sk.boxOf(hole);
+    return { picking: !!sk.centrePick, prompt: sk.centrePrompt(), cx: (b[0] + b[2]) / 2, toast: (document.getElementById("toast") || {}).innerText || "" };
+  })()`);
+  ck("Centre between finishes after two edge clicks", !done.picking && done.prompt === "", done);
+  ck("hole is centred between the upright edges", Math.abs(done.cx - 50) < 2, done);
+  await page.context().close();
+}
+
 await br.close(); await s.close();
 process.exit(rec.done() ? 1 : 0);

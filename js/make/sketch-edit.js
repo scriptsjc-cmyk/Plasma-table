@@ -1,5 +1,5 @@
 // Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...).
-import { MIN, clone, def, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
+import { MIN, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { bbox, bulgeMidpoint, differenceOutlines, offsetPolygon, pointInPoly, selfIntersects, signedArea, unionOutlines } from "../core/geom.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
@@ -219,24 +219,67 @@ export class EditMethods {
     }
     this.commit(); this.onSelect();
   }
+  centrePrompt() {
+    const job = this.centrePick;
+    if (!job) return "";
+    return job.edges && job.edges.length ? "Click the second edge" : "Click the first edge";
+  }
+  cancelCentrePick(silent) {
+    if (!this.centrePick) return false;
+    this.centrePick = null;
+    this.centreHover = null;
+    if (!silent) this.onMessage("Centre between cancelled.");
+    this.draw();
+    return true;
+  }
+  // Nearest contour edge of any other part (not the shape being centred). Used while
+  // Centre between is asking for two edge picks: the hole is selected, so the usual
+  // hit test would only look at that hole and treat a click on the host as "move".
+  hitCentreEdge(sx, sy, touch) {
+    const job = this.centrePick;
+    if (!job) return null;
+    const R = touch ? 28 : 18;
+    const [wx, wy] = this.toWorld(sx, sy);
+    const tol = R / (this.view && this.view.s ? this.view.s : 1);
+    let best = null, bestD = tol;
+    for (const it of this.items) {
+      if (it.id === job.id) continue;
+      if (this.layerHidden && this.layerHidden(it)) continue;
+      const cs = this.contoursOf(it);
+      for (let ci = 0; ci < cs.length; ci++) {
+        const pts = cs[ci].pts, n = pts && pts.length;
+        if (!n || n < 2) continue;
+        const closed = cs[ci].closed !== false;
+        const edges = closed ? n : n - 1;
+        const bs = cs[ci].bulges || [];
+        for (let i = 0; i < edges; i++) {
+          const d = distToEdge(wx, wy, pts[i], pts[(i + 1) % n], bs[i]);
+          if (d < bestD) { bestD = d; best = { kind: "edge", it, ci, ei: i }; }
+        }
+      }
+    }
+    return best;
+  }
   centreBetween() {
     const list = this.picked();
     if (list.length !== 1) { this.onMessage("Pick one shape, then Centre between, then two edges."); return; }
     this.centrePick = { id: list[0].id, edges: [] };
-    this.onMessage("Pick the first edge, then the second.");
+    this.centreHover = null;
+    this.onMessage(this.centrePrompt());
+    this.draw();
   }
   takeCentreEdge(hit) {
     const job = this.centrePick;
     if (!job) return false;
-    if (!hit || hit.kind !== "edge" || !hit.it) { this.onMessage("Pick an edge."); return true; }
+    if (!hit || hit.kind !== "edge" || !hit.it) { this.onMessage(this.centrePrompt() + " — click an edge of a part."); return true; }
     const c = this.contoursOf(hit.it)[hit.ci];
     const pts = c && c.pts;
-    if (!pts || pts.length < 2) return true;
+    if (!pts || pts.length < 2) { this.onMessage(this.centrePrompt() + " — click an edge of a part."); return true; }
     const i = hit.ei != null ? hit.ei : hit.vi;
     const a = pts[i], b = pts[(i + 1) % pts.length];
-    if (!a || !b) return true;
-    job.edges.push({ a: [...a], b: [...b] });
-    if (job.edges.length < 2) { this.onMessage("Pick the second edge."); return true; }
+    if (!a || !b) { this.onMessage(this.centrePrompt() + " — click an edge of a part."); return true; }
+    job.edges.push({ a: [...a], b: [...b], it: hit.it.id, ci: hit.ci, ei: i });
+    if (job.edges.length < 2) { this.onMessage(this.centrePrompt()); this.draw(); return true; }
     const it = this.item(job.id);
     this.centrePick = null;
     if (!it) return true;

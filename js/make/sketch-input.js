@@ -150,7 +150,7 @@ export class InputMethods {
       }
       const [wx, wy] = this.toWorld(sx, sy);
       if (this.centrePick && !panBtn) {
-        const eh = this.hit(sx, sy, touch);
+        const eh = this.hitCentreEdge ? this.hitCentreEdge(sx, sy, touch) : this.hit(sx, sy, touch);
         if (this.takeCentreEdge && this.takeCentreEdge(eh)) { this.draw(); return; }
       }
       if ((this.tool === "draw" || this.tool === "rect" || this.tool === "disc") && !panBtn) {
@@ -236,6 +236,13 @@ export class InputMethods {
       if (!d) {                                                 // hover cursor
         const h = this.spaceDown ? null : this.hit(sx, sy, false);
         cv.style.cursor = !h ? (getPrefs().emptyDragPan ? "grab" : "crosshair") : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
+        if (this.centrePick && this.hitCentreEdge) {
+          const next = this.hitCentreEdge(sx, sy, false);
+          const prev = this.centreHover;
+          const same = !!(prev && next && prev.it === next.it && prev.ci === next.ci && prev.ei === next.ei) || (!prev && !next);
+          this.centreHover = next || null;
+          if (!same) this.draw();
+        }
         const [mwx, mwy] = this.toWorld(sx, sy);
         const sn = snapWorld(this, mwx, mwy);
         this.snapMark = sn;
@@ -475,6 +482,11 @@ export class InputMethods {
       if (e.key === "Escape") {
         // Cancel an in-progress line / rect / disc first; otherwise leave Escape
         // for the full-screen editor (dialogs.js) and other dialogs.
+        if (this.centrePick) {
+          e.stopImmediatePropagation(); e.preventDefault();
+          this.cancelCentrePick && this.cancelCentrePick();
+          return;
+        }
         if (this.drawPts && this.drawPts.length || this.drawDraft) {
           e.stopImmediatePropagation(); e.preventDefault();
           cancelDrawHud(); return;

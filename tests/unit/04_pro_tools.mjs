@@ -214,4 +214,38 @@ for (const [type, d] of [["rect", 5], ["rect", -5], ["plate", 3], ["plate", -3],
   A.store.set("plasma.sketch.opts", JSON.stringify({ pro: "yes", snap: "abc", pointSnap: null })); const sk4 = new A.Sketch(sk.cv, {}); t.note("opts with wrong types accepted as-is", JSON.stringify(sk4.opts)); t.check("opts: wrong-typed values don't poison the grid snap (snap must be a number)", typeof sk4.opts.snap === "number", `snap=${JSON.stringify(sk4.opts.snap)}`, "LS-VALIDATE");
   A.store.set("plasma.sketch.opts", "{\"__proto__\":{\"polluted\":1}}"); new A.Sketch(sk.cv, {}); t.check("localStorage __proto__ doesn't pollute Object.prototype", ({}).polluted === undefined, "");
 }
+// ---------- Centre between two edges (reliable picks + prompts)
+{
+  const mkL = (pts) => { const sk = mk([]); sk.tool = "draw"; sk.drawPts = pts.map((p) => [...p]); sk.finishDraw(); sk.view = { s: 1, vx: -20, vy: -20 }; sk.size = () => [400, 300]; return sk; };
+  const L = [[0, 0], [220, 0], [220, 70], [100, 70], [100, 160], [0, 160]];
+  const sk = mkL(L); const host = sk.items[0];
+  sk.pick([host.id]); sk.add("hole", true);
+  const hole = sk.items.at(-1);
+  const before = sk.boxOf(hole);
+  sk.pick([hole.id]);
+  sk.centreBetween();
+  t.check("Centre between prompt asks for the first edge", sk.centrePrompt() === "Click the first edge" && !!sk.centrePick, sk.centrePrompt(), "CENTRE-BETWEEN");
+  // Click from *inside* the upright (would have been kind "move" on the old hit test)
+  const [sx, sy] = sk.toScreen(3, 110);  // just inside the left upright edge
+  const hit1 = sk.hitCentreEdge(sx, sy, false);
+  t.check("first pick finds an edge from inside the part", !!(hit1 && hit1.kind === "edge"), JSON.stringify(hit1 && { kind: hit1.kind, ei: hit1.ei }), "CENTRE-BETWEEN");
+  sk.takeCentreEdge(hit1);
+  t.check("after first pick, prompt asks for the second edge", sk.centrePrompt() === "Click the second edge" && sk.centrePick.edges.length === 1, sk.centrePrompt(), "CENTRE-BETWEEN");
+  // Second edge: inner upright at x=100
+  const [sx2, sy2] = sk.toScreen(100, 110);
+  const hit2 = sk.hitCentreEdge(sx2, sy2, false);
+  t.check("second pick finds the inner upright edge", !!(hit2 && hit2.kind === "edge"), JSON.stringify(hit2 && { kind: hit2.kind, ei: hit2.ei }), "CENTRE-BETWEEN");
+  sk.takeCentreEdge(hit2);
+  t.check("after two picks, Centre between finishes", !sk.centrePick, "still picking", "CENTRE-BETWEEN");
+  const after = sk.boxOf(hole);
+  const cx = (after[0] + after[2]) / 2;
+  t.check("hole is centred in X between the upright's sides (~50 mm)", Math.abs(cx - 50) < 1.5, `cx=${cx.toFixed(2)} was=${((before[0]+before[2])/2).toFixed(2)}`, "CENTRE-BETWEEN");
+  // A miss while picking stays in the mode and keeps the prompt (does not abort)
+  const sk2 = mkL(L); sk2.pick([sk2.items[0].id]); sk2.add("hole", true); sk2.pick([sk2.items.at(-1).id]); sk2.centreBetween();
+  const used = sk2.takeCentreEdge(null);
+  t.check("a missed click keeps Centre between active", used === true && !!sk2.centrePick && sk2.centrePrompt() === "Click the first edge", sk2.centrePrompt(), "CENTRE-BETWEEN");
+  sk2.cancelCentrePick();
+  t.check("Escape cancels Centre between", !sk2.centrePick && sk2.centrePrompt() === "", "", "CENTRE-BETWEEN");
+}
 process.exit(t.done() ? 1 : 0);
+
