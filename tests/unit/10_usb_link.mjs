@@ -161,4 +161,16 @@ const lastStatus = (ev) => [...ev].reverse().find(([k]) => k === "status")?.[1];
   t.check("Disconnect by the operator: Disconnected with no 'lost' reason", st.state === "Disconnected" && !st.reason, JSON.stringify(st));
   t.check("Disconnect by the operator: port closed", r.port.isOpen === false);
 }
+// 11) Connect always shows the port list, even when Chrome remembers a port
+{
+  const env = {}; const { serial, port } = installMockSerial(env, { answer: true });
+  let asked = 0; const req = serial.requestPort; serial.requestPort = async (...a) => { asked++; return req(...a); };
+  const tr = new G.WebSerialTransport(serial);
+  await tr.open(115200, false);
+  t.check("Connect (no reuse): Chrome's port list is shown even with a remembered port", asked === 1, asked);
+  await tr.close();
+  t.check("Connect (no reuse): port closed again", port.isOpen === false);
+  const src = fs.readFileSync(SITE + "js/machine/connection.js", "utf8");
+  t.check("Connect button opens the port without reusing a remembered one", /t\.open\([^)]*,\s*false\)/.test(src));
+}
 process.exit(t.done() ? 1 : 0);

@@ -37,7 +37,9 @@ async function connectUSB() {
   S.usbBusy = true;
   const t = new WebSerialTransport();
   try {
-    try { await t.open(S.cfg.serial.baud || 115200); } catch (e) {
+    // Always show Chrome's port list on Connect: silently reusing a remembered port fails when the board is on a
+    // different port (or a different board is plugged in) and never lets the operator pick the right one.
+    try { await t.open(S.cfg.serial.baud || 115200, false); } catch (e) {
       if (e && e.name === "NotFoundError") return; // picker closed
       toast("Couldn't open the port: " + e.message + " – is another program (FluidNC web installer, a serial terminal, Mach3) using it?", true);
       return;
