@@ -214,6 +214,30 @@ for (const [type, d] of [["rect", 5], ["rect", -5], ["plate", 3], ["plate", -3],
   A.store.set("plasma.sketch.opts", JSON.stringify({ pro: "yes", snap: "abc", pointSnap: null })); const sk4 = new A.Sketch(sk.cv, {}); t.note("opts with wrong types accepted as-is", JSON.stringify(sk4.opts)); t.check("opts: wrong-typed values don't poison the grid snap (snap must be a number)", typeof sk4.opts.snap === "number", `snap=${JSON.stringify(sk4.opts.snap)}`, "LS-VALIDATE");
   A.store.set("plasma.sketch.opts", "{\"__proto__\":{\"polluted\":1}}"); new A.Sketch(sk.cv, {}); t.check("localStorage __proto__ doesn't pollute Object.prototype", ({}).polluted === undefined, "");
 }
+// ---------- hole placement on a non-rectangular part (L)
+{
+  const mkL = (pts) => { const sk = mk([]); sk.tool = "draw"; sk.drawPts = pts.map((p) => [...p]); sk.finishDraw(); return sk; };
+  const inMat = (sk, host, p) => sk.contoursOf(host).filter((k) => A.pointInPoly(p, k.pts)).length % 2 === 1;
+  const mid = (b) => [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+  // 220×160 L, 100 mm upright, 70 mm foot — bbox centre sits in the empty notch
+  const L = [[0, 0], [220, 0], [220, 70], [100, 70], [100, 160], [0, 160]];
+  {
+    const sk = mkL(L); const host = sk.items[0]; const hb = sk.boxOf(host); const [mx, my] = mid(hb);
+    t.check("L-bracket bbox centre is empty", !inMat(sk, host, [mx, my]), `mid=${mx},${my}`);
+    sk.pick([host.id]); sk.add("hole", true);
+    const hole = sk.items.at(-1), b = sk.boxOf(hole), [cx, cy] = mid(b);
+    t.check("L-bracket hole lands on solid", inMat(sk, host, [cx, cy]) && sk.holeFitsIn(hole, host), `c=${cx.toFixed(1)},${cy.toFixed(1)} fits=${sk.holeFitsIn(hole, host)}`, "HOLE-SOLID");
+    t.check("L-bracket hole is not left at the empty bbox middle", Math.hypot(cx - mx, cy - my) > 5, `d=${Math.hypot(cx - mx, cy - my).toFixed(1)}`, "HOLE-SOLID");
+  }
+  {
+    // Oversized ring cannot fully fit in a thin C, but its centre must still sit on solid metal
+    const Cpts = [[0, 0], [200, 0], [200, 20], [20, 20], [20, 80], [200, 80], [200, 100], [0, 100]];
+    const sk = mkL(Cpts); const host = sk.items[0]; const [mx, my] = mid(sk.boxOf(host));
+    sk.pick([host.id]); sk.add("boltcircle", true);
+    const hole = sk.items.at(-1), [cx, cy] = mid(sk.boxOf(hole));
+    t.check("oversized hole on a C is not left in the empty middle", inMat(sk, host, [cx, cy]) && Math.hypot(cx - mx, cy - my) > 5, `c=${cx.toFixed(1)},${cy.toFixed(1)} mid=${mx},${my} in=${inMat(sk, host, [cx, cy])} fits=${sk.holeFitsIn(hole, host)}`, "HOLE-SOLID");
+  }
+}
 // ---------- Centre between two edges (reliable picks + prompts)
 {
   const mkL = (pts) => { const sk = mk([]); sk.tool = "draw"; sk.drawPts = pts.map((p) => [...p]); sk.finishDraw(); sk.view = { s: 1, vx: -20, vy: -20 }; sk.size = () => [400, 300]; return sk; };

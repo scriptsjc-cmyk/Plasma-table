@@ -125,16 +125,42 @@ export class GeomMethods {
     const inMaterial = (p) => hc.filter((k) => pointInPoly(p, k.pts)).length % 2 === 1;
     return cs.every((c) => c.pts.every(inMaterial));
   }
-  // move a new hole to the middle of a part, or to the solid place nearest the middle; false when it fits nowhere (it is left in the middle)
+  // Closest point of the part's solid material to (x, y). Used so a hole on an L or
+  // other non-rectangle is not dropped in the empty bounding-box middle.
+  nearestSolidPoint(host, x, y) {
+    const hc = this.contoursOf(host);
+    if (!hc.length) return null;
+    const inMaterial = (p) => hc.filter((k) => pointInPoly(p, k.pts)).length % 2 === 1;
+    if (inMaterial([x, y])) return [x, y];
+    const hb = this.boxOf(host);
+    const step = Math.max(1, Math.min(2, (hb[2] - hb[0]) / 80, (hb[3] - hb[1]) / 80));
+    let best = null, bestD = Infinity;
+    for (let px = hb[0] + step / 2; px <= hb[2] + 1e-9; px += step) {
+      for (let py = hb[1] + step / 2; py <= hb[3] + 1e-9; py += step) {
+        if (!inMaterial([px, py])) continue;
+        const d = Math.hypot(px - x, py - y);
+        if (d < bestD) { bestD = d; best = [px, py]; }
+      }
+    }
+    return best;
+  }
+  // Move a new hole to the solid place nearest the part's middle. Prefer a pose where
+  // the whole hole sits in the material; if it cannot fit, still put its centre on
+  // solid metal (not in the empty inside corner of an L). False when it does not fully fit.
   placeHoleIn(it, host) {
     const hb = this.boxOf(host), moveTo = (cx, cy) => { const b = this.boxOf(it); it.x = r1(it.x + cx - (b[0] + b[2]) / 2); it.y = r1(it.y + cy - (b[1] + b[3]) / 2); };
     const mx = (hb[0] + hb[2]) / 2, my = (hb[1] + hb[3]) / 2;
+    const solid = this.nearestSolidPoint(host, mx, my);
     moveTo(mx, my); if (this.holeFitsIn(it, host)) return true;
-    const b = this.boxOf(it), w = b[2] - b[0], h = b[3] - b[1], step = Math.max(1, Math.min(w, h) / 2, (hb[2] - hb[0]) / 40, (hb[3] - hb[1]) / 40), spots = [];
+    if (solid) { moveTo(solid[0], solid[1]); if (this.holeFitsIn(it, host)) return true; }
+    const b = this.boxOf(it), w = b[2] - b[0], h = b[3] - b[1];
+    const step = Math.max(1, Math.min(4, w / 4, h / 4, (hb[2] - hb[0]) / 50, (hb[3] - hb[1]) / 50));
+    const spots = [];
     for (let x = hb[0] + w / 2; x <= hb[2] - w / 2 + 1e-6; x += step) for (let y = hb[1] + h / 2; y <= hb[3] - h / 2 + 1e-6; y += step) spots.push([x, y]);
     spots.sort((a, c) => Math.hypot(a[0] - mx, a[1] - my) - Math.hypot(c[0] - mx, c[1] - my));
     for (const [x, y] of spots) { moveTo(x, y); if (this.holeFitsIn(it, host)) return true; }
-    moveTo(mx, my); return false;
+    if (solid) moveTo(solid[0], solid[1]); else moveTo(mx, my);
+    return false;
   }
   // pick the part that holds the picked hole (so you can get back to it after adding holes)
   pickHost() {
