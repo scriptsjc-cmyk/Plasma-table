@@ -136,7 +136,7 @@ const vis = (page, id) => T(page, `(() => { const e = document.getElementById('$
   ck("35 the resumed job runs from that cut", await T(page, "window.plasmaTest.getM().runFrom") === nBefore);
   ck("35 lost-arc box cleared by the new job", !(await vis(page, "lostArc")));
   await page.keyboard.press("Space"); await sleep(800);
-  // a controller that never sends THC (plain grblHAL / FluidNC / Pi bridge)
+  // a controller that never sends THC (plain grblHAL / FluidNC)
   await holdBtn(page, 1800);
   await T(page, "window.plasmaTest.S.demo.thcReport = false; window.plasmaTest.S.demo.arcLost = false"); await sleep(800);
   p = await panel(page);

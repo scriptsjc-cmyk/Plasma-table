@@ -75,7 +75,7 @@ export function hasLinkedMachine() {
   if (!u) return false;
   return demoState().machines.some((m) => m.owner === u.id);
 }
-// May this page drive a REAL machine (USB or the Wi-Fi bridge)? Demo accounts live only in this
+// May this page drive a REAL machine (USB or Bluetooth serial)? Demo accounts live only in this
 // browser, so on a site that has a cloud backend (?demo=1 / ?test=1 on the real site) they must
 // never unlock real hardware; the on-screen practice table is always free. A site with no backend
 // configured at all (self-hosted, offline) keeps the old behaviour.
@@ -99,8 +99,8 @@ export function accessToken() {
   const s = cloudSess();
   return s && s.access ? s.access : null;
 }
-// Access token for the Wi-Fi bridge: refreshed first, so a token that expired while the
-// page sat open does not lock the operator out of a job that is running on the Pi.
+// Refresh the access token first, so a token that expired while the page sat open
+// does not lock the operator out of a signed-in session.
 export async function freshAccessToken() {
   if (!cloudOn()) return null;
   try { await refreshIfNeeded(); } catch (e) { /* offline: use what we have */ }

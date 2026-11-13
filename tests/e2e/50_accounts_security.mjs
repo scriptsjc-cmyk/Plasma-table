@@ -80,13 +80,13 @@ try {
     t.check("DEMO-0000 claim links the practice table in the demo store", /Linked/i.test(await toastText(p)) && /linked/i.test(await linkedText(p)), `${await toastText(p)} | ${await linkedText(p)}`);
     await toBed(p);
     // KNOWN APP BUG #1 (tests/KNOWN-BUGS.md): js/app.js:1907 classList.toggle("hidden", on || (id==="btnConnect" && S.noUsb)) passes undefined as "force" when S.noUsb is unset,
-    // which FLIPS the class instead of clearing it, so "Connect with USB" is hidden on a fresh load of a USB-capable browser. The click below is done from script so the rest of the suite still runs.
-    t.check("Connect with USB is visible on the bed step of a USB-capable browser while disconnected", await p.locator("#btnConnect").isVisible(), "", "BUG-1-CONNECT-HIDDEN");
+    // which FLIPS the class instead of clearing it, so the Connect button is hidden on a fresh load of a USB-capable browser. The click below is done from script so the rest of the suite still runs.
+    t.check("Connect is visible on the bed step of a USB-capable browser while disconnected", await p.locator("#btnConnect").isVisible(), "", "BUG-1-CONNECT-HIDDEN");
     await p.evaluate(() => document.getElementById("btnConnect").click()); await sleep(500);
     const net = await p.evaluate(() => window.__net);
     t.check("demo-linked account: Connect does NOT open Web Serial on the live host", net.serial.length === 0, JSON.stringify(net), "DEMO-REAL");
     t.check("demo-linked account: Connect shows the 'demo accounts can't control a real machine' message", /demo accounts can't control a real machine/i.test(await toastText(p)), await toastText(p), "DEMO-REAL");
-    t.check("no WebSocket was opened (Wi-Fi path shares the same gate)", net.ws.length === 0, JSON.stringify(net.ws), "DEMO-REAL");
+    t.check("no WebSocket was opened", net.ws.length === 0, JSON.stringify(net.ws), "DEMO-REAL");
     await p.evaluate(() => document.getElementById("btnDemo").click()); await sleep(1200);
     t.check("the on-screen practice table still works in demo mode", await p.evaluate(() => !!document.getElementById("btnStop") && getComputedStyle(document.getElementById("btnStop")).display !== "none") && (await scr(p)) === "cut", await scr(p));
     t.check("no uncaught page errors in demo flow", p.errors.length === 0, p.errors.slice(0, 2).join(" | "));

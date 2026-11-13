@@ -1,5 +1,5 @@
 // The GRBL text protocol (FluidNC / grblHAL) for every link: character-counting streaming, status polling + watchdog,
-// the connect handshake, real-time commands, status parsing; and the Pi Wi-Fi bridge transport. USB itself is usbserial.js.
+// the connect handshake, real-time commands, and status parsing. USB / Bluetooth serial itself is usbserial.js.
 // Same protocol handling as plasma/grbl.py.
 
 export const RT = {
@@ -68,83 +68,11 @@ function decodePins(pn = "") {
   return out;
 }
 
-// ------------------------------------------------------------------ Wi-Fi: the Raspberry Pi bridge at the table (pi/bridge.py)
-// The Pi serves this page, passes commands to the controller and runs cut jobs itself,
-// so a Wi-Fi dropout or a phone going to sleep can't stall the torch mid-cut.
-export class WiFiTransport {
-  constructor(url, token, jwt) {
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const q = token ? `?token=${encodeURIComponent(token)}` : "";
-    this.url = url || `${proto}://${location.host}/ws${q}`;
-    this.jwt = jwt || "";
-    this.onLine = null; this.onClose = null; this.onJob = null;
-    this.remoteJobs = true; this.label = "Wi-Fi"; this.kept = null; this.hello = null;
-  }
-  // is this page being served by the Pi?
-  static async available() {
-    // the public GitHub Pages site is never the Pi: don't ask it for bridge.json (it only logs a 404)
-    if (/\.github\.io$/i.test(location.hostname)) return null;
-    try {
-      const r = await fetch("bridge.json", { cache: "no-store" });
-      if (!r.ok) return null;
-      const j = await r.json();
-      return j && j.bridge ? j : null;
-    } catch (e) { return null; }
-  }
-  open() {
-    return new Promise((resolve, reject) => {
-      let ready = false;
-      const ws = new WebSocket(this.url);
-      this.ws = ws;
-      const timer = setTimeout(() => { if (!ready) { try { ws.close(); } catch (e) { /* ignore */ } reject(new Error("The Pi didn't answer. Check it's switched on and on the same Wi-Fi.")); } }, 6000);
-      ws.onmessage = (ev) => {
-        let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
-        if (m.t === "hello") {
-          clearTimeout(timer);
-          this.hello = m; this.kept = m.keep || null; this.label = `Wi-Fi (${m.name || "Pi"})`;
-          if (!m.serial) {
-            this.closing = true; ws.close();
-            reject(new Error("The Pi is on, but it can't see the controller. Check the USB cable from the Pi to the controller."));
-            return;
-          }
-          if (m.need_account) {
-            ws.send(JSON.stringify({ t: "auth", jwt: this.jwt || "" }));
-            return;
-          }
-          ready = true; resolve();
-        } else if (m.t === "auth_ok") {
-          if (!ready) { ready = true; resolve(); }
-        } else if (m.t === "auth_err") {
-          this.closing = true; ws.close();
-          reject(new Error(m.msg || "This account is not linked to this table."));
-        } else if (m.t === "l") { if (this.onLine) this.onLine(m.d); }
-        else if (m.t === "job") { if (this.onJob) this.onJob(m.job); }
-        else if (m.t === "serial" && !m.ok) { if (this.onLine) this.onLine("[MSG:Controller unplugged from the Pi]"); this.closing = true; ws.close(); }
-        else if (m.t === "taken") { this.takenOver = true; }
-      };
-      ws.onclose = () => {
-        clearTimeout(timer);
-        if (!ready) { reject(new Error("Couldn't reach the Pi over Wi-Fi.")); return; }
-        if (this.onClose) this.onClose();
-      };
-      ws.onerror = () => { /* onclose follows */ };
-    });
-  }
-  _send(obj) { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(obj)); }
-  write(data) {
-    this._send({ t: "w", d: typeof data === "string" ? data : String.fromCharCode(...data) });
-    return Promise.resolve();
-  }
-  startJob(lines) { this._send({ t: "job", lines }); }
-  keep(data) { this._send({ t: "keep", data }); }       // the Pi remembers this until the controller resets
-  async close() { this.closing = true; try { this.ws.close(); } catch (e) { /* ignore */ } }
-}
-
 // ------------------------------------------------------------------ controller link
 const POLL_MS = 100;
 const CONFIG_ERR = /Configuration is invalid|^\[MSG:ERR: (Ignored key|Configuration error|Pin .* cannot be used)/;
 export const BOOT_WAIT_MS = 25000;
-export const BOOT_STUCK_MSG = "The controller is talking but never finished starting up. Check its start-up messages in the FluidNC web installer's Terminal for errors (config.yaml, Wi-Fi), then restart the board.";
+export const BOOT_STUCK_MSG = "The controller is talking but never finished starting up. Check its start-up messages in the FluidNC web installer's Terminal for errors (config.yaml), then restart the board.";
 export const NO_REPLY_MSG = "No reply from the controller. Check the baud rate (115200), that you picked the right COM port, that the board is running FluidNC/grblHAL, and that no other program (FluidNC web installer, a serial terminal) has the port open.";
 
 export class GrblLink {
@@ -166,20 +94,6 @@ export class GrblLink {
     this.t.onLine = (l) => this._line(l);
     this.t.onClose = (reason) => this._closed(reason);
     this.poll = setInterval(() => this._tick(), POLL_MS);
-    if (transport.remoteJobs) {          // the Pi runs the job; we just show its progress
-      transport.onJob = (p) => this._remoteJob(p);
-      const j = transport.hello && transport.hello.job;
-      if (j && j.running) this._remoteJob(j);
-    }
-  }
-  _remoteJob(p) {
-    if (!p) return;
-    const was = this.job;
-    this.job = { total: p.total, sent: p.sent, acked: p.acked, errors: p.errors, running: p.running, result: p.result,
-      started: was && was.started ? was.started : (p.started ? p.started * 1000 : Date.now()),
-      finished: p.running ? null : (was && was.finished) || Date.now() };
-    if (was && was.running && !p.running && p.message) this._emit("log", { text: p.message, level: p.result === "done" ? "info" : "warn" });
-    this._emit("job", this.jobProgress());
   }
 
   // status poll + watchdog. Polls are counted, not just timed: a hidden tab slows timers to one a minute, and that alone
@@ -197,7 +111,7 @@ export class GrblLink {
   }
 
   // Resolves once the controller has really answered: its start-up banner ("Grbl 3.7 [FluidNC v4.1.1 ...]") or a <...> status
-  // report to '?'. FluidNC prints its boot log first and only answers once boot ends; joining Wi-Fi can take 10+ s. So once
+  // report to '?'. FluidNC prints its boot log first and only answers once boot ends, which can take 10+ s. So once
   // any line has arrived we wait up to BOOT_WAIT_MS and never touch the reset lines (that would restart the boot).
   // A board that stays fully silent has its auto-reset lines released once (it may be held in reset), then we give up.
   handshake(timeoutMs = 6000) {
@@ -258,7 +172,6 @@ export class GrblLink {
     if (this.job && this.job.running) throw new Error("A job is already running.");
     const body = lines.filter((l) => l.trim() && !l.trim().startsWith(";"));
     this.job = { total: body.length, sent: 0, acked: 0, errors: 0, running: true, started: Date.now(), finished: null, result: null };
-    if (this.t.remoteJobs) { this.t.startJob(body); this._emit("job", this.jobProgress()); return; }
     for (const l of body) this.pending.push({ line: l, source: "job" });
     this._pump();
     this._emit("job", this.jobProgress());
@@ -300,7 +213,7 @@ export class GrblLink {
 
   async close() {
     clearInterval(this.poll);
-    try { await this.t.close(); } catch (e) { /* ignore */ }   // USB / Wi-Fi report the close through onClose -> _closed
+    try { await this.t.close(); } catch (e) { /* ignore */ }   // the transport reports the close through onClose -> _closed
     this.running = false;
   }
 

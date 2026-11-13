@@ -19,7 +19,6 @@ table and a TOTAL; logs are in `tests/results/`, screenshots in `tests/screensho
 | `e2e/NN_*.mjs` | Playwright + Chrome against a local static server of the repo (table below). `_cf_helpers.mjs` is shared by 56 |
 | `lib/` | the one shared harness: `browser.mjs` (server, pages, profiles, practice-table helpers), `site.mjs` (finds modules **by file name**, so moving a module never breaks a test), `t.mjs` (check recorder), `env.mjs` (loads modules in node with a fake DOM), `analyze.mjs` / `verify.mjs` (G-code analysis), `r2compat.mjs` (helpers some older suites use) |
 | `data/` | sample drawings and fixtures |
-| `tools/fakectl.py` | a fake controller for the Pi-bridge checks |
 
 Safety: everything runs against a local static server. Accounts are the browser-only **demo** store (`?demo=1`, claim code `DEMO-0000`) or
 Playwright `route` stubs for the Supabase host; the live project, its keys, SQL and every real machine are never touched. The "cloud" parts

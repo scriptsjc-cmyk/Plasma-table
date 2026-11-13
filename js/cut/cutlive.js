@@ -2,7 +2,7 @@
 //
 // RULE: show only what the controller really reports. Anything that is not reported is "not connected":
 //  - Arc OK and arc voltage come ONLY from the "|THC:<volts>,<flags>" field of grblHAL's plasma plugin (grbl.js parseThc).
-//    Plain grblHAL, FluidNC and the Pi bridge send no such field, so for them these stay "not connected". Nothing is guessed from the torch relay.
+//    Plain grblHAL and FluidNC send no such field, so for them these stay "not connected". Nothing is guessed from the torch relay.
 //  - Torch height: the Z position the controller reports (WPos/MPos). "Height above the sheet" is only worked out from the last
 //    touch-off this app saw ([PRB:...:1]) plus the switch offset in the machine config; before any touch-off it says so.
 //  - The demo / practice controller (sim.js) pretends to be a grblHAL with the plasma plugin so the panel can be tried; its numbers are made up, and say so.

@@ -19,7 +19,6 @@ exist: `index.html`, every `css/**/*.css`, every `js/**/*.js` (any folder depth)
 exactly its own app shell and a new, moved or renamed file can never be forgotten (`tests/e2e/59` fails if a module is missing from the list). Old `plasma-cad-*` caches are
 deleted when the new worker activates.
 
-`.github/workflows/pages.yml` also runs `./scripts/harden-csp.sh`, which removes `ws:` from the page's `connect-src` **in the deployed
-copy only**. The repo copy keeps `ws:` so a copy served over plain http on your LAN (or by the Pi) can reach FluidNC at `ws://<ip>:81`.
-The public site is https, and browsers never let an https page open `ws://`, so there it was only extra room for a hostile script.
-Neither copy allows `wss:` any more: nothing in the app uses it for an outside host.
+`.github/workflows/pages.yml` also runs `./scripts/harden-csp.sh`, which checks that the page's `connect-src` has no `ws:` or `wss:`.
+The app talks to the table over Web Serial (USB or Bluetooth), so nothing needs a WebSocket. The script is idempotent: if the policy
+is already clean, it leaves it alone.

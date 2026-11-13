@@ -1,9 +1,8 @@
 // Round 5 group 4 (items 26-31) tests.
-//  26 server gating: client degrades before the SQL is applied, obeys the server after   27 CSP: no wss:, hardened public copy has no ws:, LAN ws still works
+//  26 server gating: client degrades before the SQL is applied, obeys the server after   27 CSP: no ws: or wss:
 //  28 practice code tidy   29 window.ptInspector only for test/localhost or admin   30 service worker: precache, cleanup, no stale-after-deploy, atomic install
 //  31 docs/FLUIDNC.md agrees with the console filter
 import fs from "node:fs"; import path from "node:path"; import http from "node:http"; import { execFileSync } from "node:child_process";
-import { WebSocketServer } from "ws";
 import { serve, open, launch, REPO, SITE, DATA, SHOTS, mod, readJs, jsRel, allJsText, J_INIT } from "../lib/r2compat.mjs";
 const br = await launch(), s = await serve();
 let pass = 0, fail = 0;
@@ -32,36 +31,18 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   const html = read("index.html");
   const csp = (html.match(/Content-Security-Policy" content="([^"]+)"/) || [])[1] || "";
   const conn = (csp.match(/connect-src ([^;]+)/) || [])[1] || "";
-  ck("27 the repo copy never allows wss: (nothing needs it)", !/\bwss:/.test(conn), conn);
-  ck("27 the repo copy keeps ws: so a LAN http copy can reach ws://<ip>:81", /(^|\s)ws:(\s|$)/.test(conn), conn);
-  ck("27 connect-src is only self, ws: and the Supabase project (no wildcard, no https:)", conn.split(/\s+/).every((x) => x === "'self'" || x === "ws:" || /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(x)), conn);
+  ck("27 the repo copy never allows ws: or wss: (nothing needs a WebSocket)", !/\bwss?:/.test(conn), conn);
+  ck("27 connect-src is only self and the Supabase project (no wildcard, no https:)", conn.split(/\s+/).every((x) => x === "'self'" || /^https:\/\/[a-z0-9]+\.supabase\.co$/.test(x)), conn);
   ck("27 scripts are still 'self' only, no inline/eval", /script-src 'self'(;|$)/.test(csp) && !/unsafe-eval/.test(csp) && !/script-src[^;]*unsafe-inline/.test(csp), csp);
   const tmp = copySite("/tmp/r5h-csp");
   const out = execFileSync("bash", [path.join(tmp, "scripts/harden-csp.sh"), tmp]).toString();
   const hconn = (fs.readFileSync(path.join(tmp, "index.html"), "utf8").match(/connect-src ([^;]+)/) || [])[1] || "";
-  ck("27 the deploy hardening removes ws: from the public copy", !/\bwss?:/.test(hconn) && /supabase\.co/.test(hconn) && /'self'/.test(hconn), hconn + " | " + out);
+  ck("27 the deploy hardening leaves a public copy with no ws: or wss:", !/\bwss?:/.test(hconn) && /supabase\.co/.test(hconn) && /'self'/.test(hconn), hconn + " | " + out);
   let again = ""; try { execFileSync("bash", [path.join(tmp, "scripts/harden-csp.sh"), tmp], { stdio: "pipe" }); again = "ok"; } catch (e) { again = "fails"; }
-  ck("27 running the hardening twice fails loudly instead of silently doing nothing", again === "fails");
+  ck("27 running the hardening twice still succeeds (it is safe to re-run)", again === "ok");
   ck("27 the Pages workflow runs the hardening after the stamp and before the upload", (() => { const w = read(".github/workflows/pages.yml"); return w.indexOf("harden-csp.sh") > w.indexOf("stamp-version.sh") && w.indexOf("harden-csp.sh") < w.indexOf("upload-pages-artifact"); })());
 
-  // behaviour: a LAN-style WebSocket from the repo copy works; from the hardened copy the browser blocks it
-  const wss = new WebSocketServer({ port: 0, host: "127.0.0.1" }); await new Promise((r) => wss.on("listening", r));
-  const wport = wss.address().port;
-  wss.on("connection", (sock) => sock.send("hello"));
-  const tryWs = async (base) => {
-    const page = await open(br, "laptop", base, "?test=1&turn=0");
-    await T(page, "window.__csp = []; document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI))");
-    const r = await T(page, `new Promise((res) => { let done = false; const f = (v) => { if (!done) { done = true; res(v); } }; try { const w = new WebSocket("ws://127.0.0.1:${wport}/"); w.onmessage = (m) => f("msg:" + m.data); w.onerror = () => f("error"); setTimeout(() => f("timeout"), 3000); } catch (e) { f("throw:" + e.name); } })`);
-    const v = await T(page, "window.__csp");
-    await page.context().close();
-    return { r, v };
-  };
-  const a = await tryWs(s.base);
-  ck("27 repo copy: ws://<lan host>:<port> still connects (FluidNC from a local http copy)", a.r === "msg:hello" && a.v.length === 0, a);
-  const hs = await serve(tmp);
-  const b = await tryWs(hs.base);
-  ck("27 hardened public copy: the same ws:// is blocked by the policy", b.r !== "msg:hello" && b.v.some((x) => /connect-src/.test(x)), b);
-  hs.close(); wss.close(); fs.rmSync(tmp, { recursive: true, force: true });
+  fs.rmSync(tmp, { recursive: true, force: true });
 }
 
 // ================================================================== 29 window.ptInspector only for test/localhost or admin

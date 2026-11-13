@@ -4,7 +4,6 @@
 import { demoEdges } from "./ui/demo.js";
 import { provide } from "./core/hooks.js";
 import { Machine } from "./machine/machine.js";
-import { WiFiTransport } from "./machine/grbl.js";
 import { WebSerialTransport } from "./machine/usbserial.js";
 import { Sketch } from "./make/sketch.js";
 import { evalExpr } from "./core/expr.js";
@@ -13,7 +12,6 @@ import { initAccountUi } from "./account/account-ui.js";
 import { openAccount, openAdmin, openClaim, openGate } from "./account/accounthome.js";
 import { saveCurrent } from "./account/savepart.js";
 import { fillSettingsFromText, setFirmwareText, filterConsoleCommand } from "./machine/admin-machine.js";
-import { FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps } from "./machine/fluidnc.js";
 import { convertGcode } from "./machine/dialect.js";
 import { initSettings, bindSettings, openSettings, closeSettings, currentSettings, matchPreset, refreshPublishedPresets } from "./machine/settings.js";
 import { applyChrome, drawingSheet, getPrefs, savePrefs } from "./core/prefs.js";
@@ -55,7 +53,7 @@ import { bindExport, exportGcode } from "./cut/export.js";
 import { applyAccountMode, bindMode, firmwareDenied, isProMode, setAppMode } from "./ui/mode.js";
 import { addTestPattern, adminMayTalk, bindMachineControls, fillEdgePanel, readControllerSettings, takeVerifiedBackup } from "./machine/panels.js";
 import { bindShapeForm, paintGuide, renderShapeForm, renderShapeTiles } from "./make/shapeform.js";
-import { bindConnection, connectWiFi, setConnected, wifiWatch } from "./machine/connection.js";
+import { bindConnection, setConnected } from "./machine/connection.js";
 import { bindQuickBar, renderQuickBar } from "./make/quickbar.js";
 import { bindCadUi, publishCadTestHooks } from "./make/cadui.js";
 import { bindHeader, setHeaderHidden } from "./ui/header.js";
@@ -72,7 +70,6 @@ import { bindMakeHeaderTools } from "./make/headertools.js";
 import { bindCutPanels } from "./cut/cutpanels.js";
 import { bindViewport } from "./ui/viewport.js";
 import { bindPicture } from "./make/picture.js";
-import { bindWifiSetup } from "./ui/wifisetup.js";
 import { bindCutSummary } from "./make/cutsummary.js";
 
 // Late-bound calls (see core/hooks.js): the real functions are registered here once, before anything runs.
@@ -109,7 +106,6 @@ function bind() {
   bindJog();
   bindViewport();
   bindPicture();
-  bindWifiSetup();
   bindCutSummary();
   bindYours();
   bindScrollRows();
@@ -190,12 +186,6 @@ async function init() {
   watchWhy(paintWhy);
   try { const s0 = currentSettings(); if (s0 && s0.bed && S.cfg && S.cfg.travel_mm) S.cfg.travel_mm = { x: s0.bed.x, y: s0.bed.y, z: s0.bed.z }; } catch (e) { /* defaults stay */ }   // a saved bed size also applies after a reload
   bindHowto();
-  try {
-    const fh = localStorage.getItem("plasma.fluidnc.host");
-    if (fh && $("fnHost")) $("fnHost").value = fh;
-    const fp = localStorage.getItem("plasma.fluidnc.port");
-    if (fp && $("fnPort")) $("fnPort").value = fp;
-  } catch (e) { /* ignore */ }
   defaultSpeed();
   applyMatchingPreset();
   renderMaterials();
@@ -363,25 +353,14 @@ async function init() {
       useShape();
     },
   });
-  const pi = await WiFiTransport.available();
-  if (pi) {
-    S.wifi = true;
-    S.wifiToken = pi.token;
-    $("btnConnect").textContent = "Connect over Wi-Fi";
-    $("btnConnect").onclick = () => { S.userDisconnected = false; connectWiFi(); };
-    $("connectHelp").innerHTML = pi.serial
-      ? "This page is coming from the Pi at the table. The Pi runs each cut itself, so the job carries on if your phone sleeps or the Wi-Fi drops."
-      : "The Pi is on, but it can't see the controller. Check the USB cable from the Pi to the controller.";
-    const steps = document.querySelector(".hero ol.plain"); if (steps) steps.classList.add("hidden");
-    wifiWatch();
-  } else if (!WebSerialTransport.supported()) {
+  if (!WebSerialTransport.supported()) {
     const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const phone = apple || /Android/.test(navigator.userAgent);
     $("connectHelp").innerHTML = apple
-      ? "iPhones and iPads can't plug into the table by USB. With the Wi-Fi Pi fitted, open <b>http://plasma.local</b> instead. Otherwise run the table from the laptop in <b>Chrome or Edge</b>. You can still look around with the demo here."
+      ? "iPhones and iPads can't plug into the table by USB or Bluetooth. Run the table from a computer in <b>Chrome or Edge</b>. You can still look around with the demo here."
       : phone
         ? "Phones can't plug into the table. Run it from a computer in <b>Chrome or Edge</b>. You can still look around with the demo here."
-        : "This browser can't talk to USB. Open this page in <b>Chrome or Edge on a computer</b>. You can still try the demo.";
+        : "This browser can't talk to USB or Bluetooth serial. Open this page in <b>Chrome or Edge on a computer</b>. You can still try the demo.";
     S.noUsb = true;
     $("btnConnect").classList.add("hidden");
     $("btnDemo").classList.add("go");
@@ -394,7 +373,7 @@ async function init() {
   routeAuth();
   refreshPublishedPresets().then(() => { applyMatchingPreset(); renderMaterials(); }).catch(() => {});
   // Test hooks only once the app has finished starting, so a test never talks to a half-ready page.
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow };
   if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   if (window.plasmaTest) publishCadTestHooks();
 }

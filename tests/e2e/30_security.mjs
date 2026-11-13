@@ -1,5 +1,5 @@
-import { T } from "../lib/t.mjs"; import { startServer, launchKillable, newPage, demoToShape, shot, SITE } from "../lib/browser.mjs"; import { allJsText, readJs } from "../lib/site.mjs";
-import { spawn } from "node:child_process"; import fs from "node:fs"; import http from "node:http";
+import { T } from "../lib/t.mjs"; import { startServer, launchKillable, newPage, demoToShape, shot, SITE } from "../lib/browser.mjs"; import { allJsText } from "../lib/site.mjs";
+import fs from "node:fs";
 const t = new T("30_security"); const srv = await startServer(); const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const K = await launchKillable();
 const PAYLOAD = `"><img src=x onerror="window.__xss=(window.__xss||0)+1">`;
@@ -39,7 +39,7 @@ for (const [id, name, body] of hostile) {
 }
 // ---- 4. static header / CSP / third party
 const html = fs.readFileSync(SITE + "index.html", "utf8");
-t.check("CSP present (meta or header)", /Content-Security-Policy/i.test(html), "no CSP: any XSS has full access to Web Serial + the Pi socket", "CSP-MISSING");
+t.check("CSP present (meta or header)", /Content-Security-Policy/i.test(html), "no CSP: any XSS has full access to Web Serial", "CSP-MISSING");
 const ext = [...html.matchAll(/<(?:script|link)[^>]+(?:src|href)="(https?:[^"]+)"[^>]*>/g)].map((m) => m[0]);
 t.check("third-party resources carry SRI (integrity=)", ext.every((e) => /integrity=/.test(e)), ext.join(" | ").slice(0, 300), "SRI-MISSING");
 const allHtml = [html, ...((fs.existsSync(SITE + "html") ? fs.readdirSync(SITE + "html") : []).filter((f) => f.endsWith(".html")).map((f) => fs.readFileSync(SITE + "html/" + f, "utf8")))];
@@ -58,28 +58,4 @@ t.check("?test=1 hook (window.plasmaTest / plasmaSketch) only exists under ?test
 // demo mode network silence
 { const p = await newPage(K.browser, "desktop", { base: srv.base }); await demoToShape(p); await sleep(800); const n = await p.evaluate(() => window.__net); t.check("demo mode: no WebSocket / Web Serial / fetch / beacon", n.ws.length === 0 && n.serial.length === 0 && n.beacon.length === 0, JSON.stringify(n), "DEMO-NETWORK");
   t.check("page makes no third-party requests besides Google Fonts", p.requests.filter((u) => !u.startsWith(srv.base) && !/fonts\.(googleapis|gstatic)\.com/.test(u)).length === 0, p.requests.filter((u) => !u.startsWith(srv.base)).join(","), "THIRD-PARTY"); }
-// ---- 5. Pi bridge against a fake pty controller (loopback only)
-const BPORT = 18000 + Math.floor(Math.random() * 1000), out = "/tmp/fakectl-" + BPORT + ".out"; fs.writeFileSync(out, "");
-const fc = spawn("python3", [new URL("../tools/fakectl.py", import.meta.url).pathname, SITE, String(BPORT), out], { stdio: ["ignore", "ignore", "pipe"] }); let fcErr = ""; fc.stderr.on("data", (d) => (fcErr += d));
-await sleep(1500);
-try {
-  const attacker = await (async () => { const a = http.createServer((q, s) => { s.writeHead(200, { "content-type": "text/html" }); s.end("<h1>other site</h1>"); }); await new Promise((r) => a.listen(0, "localhost", r)); return a; })();
-  const aorigin = `http://localhost:${attacker.address().port}`;
-  const ctx = await K.browser.newContext(); const pg = await ctx.newPage(); await pg.goto(aorigin + "/");
-  const res = await pg.evaluate((port) => new Promise((resolve) => { const ws = new WebSocket("ws://127.0.0.1:" + port + "/ws"); const got = []; ws.onmessage = (e) => got.push(e.data.slice(0, 120)); ws.onopen = () => { ws.send(JSON.stringify({ t: "w", d: "M3 S1000\n" })); setTimeout(() => { ws.send(JSON.stringify({ t: "w", d: "G91 G0 X5\n" })); }, 300); setTimeout(() => { ws.close(); resolve({ open: true, got }); }, 1200); }; ws.onerror = () => resolve({ open: false, got }); }), BPORT);
-  await sleep(500); const ser = fs.readFileSync(out, "latin1");
-  t.check(`Pi bridge rejects a WebSocket from a foreign web origin (${aorigin})`, !res.open, `connected=${res.open}; hello=${res.got[0]}`, "BRIDGE-ORIGIN");
-  t.check("Pi bridge: foreign page could NOT make the controller receive 'M3' (torch on)", !/M3/.test(ser), `controller received: ${JSON.stringify(ser)}`, "BRIDGE-ORIGIN");
-  // takeover: a second socket kicks the operator's screen mid-session
-  const take = await pg.evaluate((port) => new Promise((resolve) => { const a = new WebSocket("ws://127.0.0.1:" + port + "/ws"); let taken = false; a.onmessage = (e) => { if (JSON.parse(e.data).t === "taken") taken = true; }; a.onopen = () => { const b = new WebSocket("ws://127.0.0.1:" + port + "/ws"); b.onopen = () => setTimeout(() => { resolve(taken); a.close(); b.close(); }, 600); }; a.onerror = () => resolve("blocked"); }), BPORT);
-  t.check("Pi bridge: a second (unauthenticated) client cannot silently take over the operator's session", take !== true, `taken=${take}`, "BRIDGE-TAKEOVER");
-  const bj = await pg.evaluate((port) => fetch("http://127.0.0.1:" + port + "/bridge.json").then((r) => r.text()).catch((e) => "blocked:" + e.message), BPORT);
-  t.note("cross-origin fetch of /bridge.json from foreign origin (info leak: machine name, serial state)", bj.slice(0, 120));
-  // raw-lines path: unsafe codes through 'w'
-  t.check("Pi bridge: auth token / shared secret required", /token|auth|secret/i.test(fs.readFileSync(SITE + "pi/bridge.py", "utf8")), "bridge.py has no auth of any kind; it listens on 0.0.0.0:80", "BRIDGE-AUTH");
-  t.check("Pi bridge: site is served over http, so ws:// is plain-text on the LAN (no TLS) — documented/accepted?", /wss|tls|ssl/i.test(fs.readFileSync(SITE + "pi/bridge.py", "utf8")), "no TLS option", "BRIDGE-TLS");
-  const ws = readJs("grbl").match(/ws:\/\/[^"'`]*|wss:\/\/[^"'`]*/g); t.note("ws URLs in grbl.js", JSON.stringify(ws));
-  const app = allJsText().map((x) => x[1]).join("\n"); t.note("how the bridge URL is chosen", (app.match(/new WifiLink\([^)]*\)|location\.host[^;]*|ws:\/\/[^;]*/g) || []).join(" | ").slice(0, 300));
-  await ctx.close(); attacker.close();
-} finally { fc.kill("SIGTERM"); await sleep(300); fs.rmSync("/tmp/bridge_local.py", { force: true }); }
 K.kill(); await srv.close(); process.exit(t.done() ? 1 : 0);

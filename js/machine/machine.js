@@ -37,8 +37,6 @@ export class Machine {
 
   on(fn) { this.listeners.push(fn); }
   emit(kind, data) {
-    // over Wi-Fi the Pi remembers where home is, so a reconnect doesn't need re-homing
-    if (kind === "safety" && this.grbl && this.grbl.t.keep) this.grbl.t.keep({ ref: this.safety.ref, refMode: this.safety.refMode });
     for (const fn of this.listeners) { try { fn(kind, data); } catch (e) { console.error(e); } }
   }
 
@@ -50,12 +48,8 @@ export class Machine {
     this.safety.clearReference();
     this.emit("safety", this.safety.state());
     this.grbl = new GrblLink(transport, this.cfg.rx_buffer_size || 127, (k, d) => this.onGrbl(k, d));
-    if (transport.needsHandshake) {       // USB: an open port is not a connection; wait for the controller to answer
+    if (transport.needsHandshake) {       // USB / Bluetooth: an open port is not a connection; wait for the controller to answer
       try { await this.grbl.handshake(transport.handshakeMs); } catch (e) { await this.disconnect(false); throw e; }
-    }
-    if (transport.kept && transport.kept.ref) {
-      this.safety.setReference(transport.kept.ref, transport.kept.refMode || "kept");
-      this.emit("safety", this.safety.state());
     }
     this.emit("log", { text: `Connected to ${transport.label || "controller"}`, level: "info" });
   }
@@ -329,12 +323,11 @@ export class Machine {
     return { ok: true };
   }
 
-  // Live pierce delay (local USB / FluidNC jobs): rewrite the dwell of every pierce that has NOT been sent to the controller yet.
+  // Live pierce delay: rewrite the dwell of every pierce that has NOT been sent to the controller yet.
   // A pierce that is already in the controller's buffer keeps its old value. Returns how many pierces will use the new delay.
   setPierceDelay(delayS) {
     const g = this.grbl;
     if (!g || !g.job || !g.job.running) throw new JobError("Pierce delay can be changed while a job is running.");
-    if (g.t && g.t.remoteJobs) throw new JobError("This job is running on the Pi, so the pierce delay can't be changed from here.");
     const d = Math.round(Number(delayS) * 100) / 100;
     if (!Number.isFinite(d) || d < 0 || d > 5) throw new JobError("Pierce delay must be 0 to 5 seconds.");
     let n = 0;

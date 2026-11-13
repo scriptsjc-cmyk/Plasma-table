@@ -12,7 +12,7 @@ A static site (no build step) that works offline once loaded. Live: https://scri
 | `tests/` | unit + end-to-end tests, one command: `cd tests && npm install && npm test` (see `tests/README.md`) |
 | `scripts/` | `stamp-version.sh` (deploy stamp + offline file list), `harden-csp.sh`, `serve-local.sh`, `gen-claim-codes.mjs` |
 | `supabase/` | database schema, policies and fixes for the accounts backend (run by the owner, never by the app) |
-| `pi/` | optional Raspberry Pi bridge; `samples/` example drawings |
+| `samples/` | example drawings |
 
 Run it locally: `./scripts/serve-local.sh` then open http://localhost:8080/?test=1 (practice table, test handle on).
 Deploys happen from `main` through GitHub Pages (`.github/workflows/pages.yml`); the live `version.json` always equals the deployed commit.

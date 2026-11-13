@@ -10,8 +10,8 @@ claims live in the **Supabase** project you already created:
 - Redirect URL: `https://scriptsjc-cmyk.github.io/Plasma-table/**`
 
 The publishable key and the legacy anon JWT are already in `js/account/config.js`.
-Never put the **service_role** key in the website, in `js/account/config.js`, or on
-the Pi. Only the public/anon key is used in the client. All permission rules
+Never put the **service_role** key in the website or in `js/account/config.js`.
+Only the public/anon key is used in the client. All permission rules
 are enforced by Row Level Security and the SQL functions in
 `supabase/schema.sql`.
 
@@ -24,9 +24,7 @@ so they stay offline.
 ## 1. Project — already done
 
 The project, email provider, Site URL and redirect URL are in place. If you
-later serve the site from the Pi at `http://plasma.local`, add that as a
-redirect URL too. `http://localhost:*` and `http://127.0.0.1:*` are useful
-when trying the site on a laptop.
+`http://localhost:*` and `http://127.0.0.1:*` are useful when trying the site on a laptop.
 
 ## 2. Run the schema (still to do)
 
@@ -125,7 +123,7 @@ page if a table changes hands.
 | Design, CAM preview, save | Allowed                  | Allowed               |
 | Download G-code           | **Allowed**              | Allowed               |
 | On-screen “Try the demo”  | Allowed (nothing moves)  | Allowed               |
-| Connect / jog / Send / Run (real USB or Wi-Fi Pi) | Locked, with “Link your machine to run jobs” | Allowed |
+| Connect / jog / Send / Run (real USB or Bluetooth) | Locked, with “Link your machine to run jobs” | Allowed |
 
 Download G-code stays free so someone can still take a file to another
 controller. To lock export as well, set `ALLOW_GCODE_EXPORT_WITHOUT_MACHINE`
@@ -134,14 +132,9 @@ to `false` in `js/account/config.js` and reload. That is the only switch.
 ## 7. Real enforcement (because the website is public)
 
 The lock on the buttons is only a courtesy — anyone can change the JavaScript.
-The Pi bridge can enforce it for **Wi-Fi** connections:
-
-1. Create `pi/bridge.account.json` on the Pi (see `pi/README.md`) with this
-   table's serial, the project URL and the **anon JWT** (the `eyJ…` value in
-   `js/account/config.js`, not the service_role key).
-2. Restart the bridge. It keeps requiring the usual pairing token, and also
-   checks the user's session and that `machines.owner` matches this serial
-   **before it will accept G-code**.
+When the laptop is plugged straight into the controller there is **no server
+in the middle**. The app still hides Connect / Run / Jog until a machine is
+linked, but a modified copy of the page can talk to the serial port anyway.
 
 ### Pro and firmware limits on the server (`supabase/b5-gating.sql`)
 
@@ -154,14 +147,10 @@ It is safe to run twice, needs no secret key, and changes nothing for anyone tod
   needs a linked machine). The app uses it instead of what the browser stored and asks again right before a firmware write.
 
 Until you run it the app works as before and **Admin** says "Pro and firmware limits are only checked in this browser".
-After you run it and reload, Admin says "…enforced by the server". The machine itself still trusts anyone on its own network, so keep
-the Wi-Fi password, the Pi pairing token and the table's STOP as your real protection there.
+After you run it and reload, Admin says "…enforced by the server". The machine itself still trusts anyone who can open its serial port, so keep the table's STOP as your real protection there.
 
-### Direct USB (Web Serial)
+### Direct USB or Bluetooth (Web Serial)
 
-When the laptop is plugged straight into the controller there is **no server
-in the middle**. The app still hides Connect / Run / Jog until a machine is
-linked, but a modified copy of the page can talk to the serial port anyway.
 Mitigations, for later if you want them:
 
 - A small firmware (or grblHAL) setting that refuses motion until it is given
@@ -169,8 +158,6 @@ Mitigations, for later if you want them:
 - Store the table serial in firmware / EEPROM and have the app refuse to send
   jobs unless the live serial matches a claimed one (still bypassable, but it
   raises the bar).
-- Prefer the Wi-Fi Pi path for customer machines, where the check above is
-  actually enforced.
 
 ## 8. Parts: offline, sync, first login
 
@@ -198,4 +185,3 @@ and point `SUPABASE_URL` at it. No licence fee, and you keep the data.
 - [ ] `supabase/schema.sql` ran cleanly in the SQL Editor
 - [ ] Your account (`jchappell2003@gmail.com`) exists, is confirmed, and is the only admin (`supabase/make-admin.sql`, or `select public.set_admin('jchappell2003@gmail.com');`). Then run `supabase/admin-powers.sql` after `schema-fixes.sql` if those have not been applied yet, and then `supabase/admin-powers-fixes.sql` (idempotent; a fresh `schema.sql` already contains all of it). The admin account must have a **confirmed** email: `is_admin()` is false until it is.
 - [ ] Five (or however many) serials added, codes written on the stickers
-- [ ] Optional: `pi/bridge.account.json` on each Pi

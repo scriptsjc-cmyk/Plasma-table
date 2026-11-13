@@ -116,7 +116,6 @@ const PRECACHE = [
   "js/machine/settings.js",
   "js/machine/sim.js",
   "js/machine/usbserial.js",
-  "js/machine/wifi.js",
   "js/make/cad.js",
   "js/make/cadui.js",
   "js/make/checkcut.js",
@@ -196,7 +195,6 @@ const PRECACHE = [
   "js/ui/viewport.js",
   "js/ui/whyoff.js",
   "js/ui/whytip.js",
-  "js/ui/wifisetup.js",
   "js/ui/yours.js",
   "js/version.js",
   "config/cut_chart.json",
@@ -248,9 +246,8 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (url.origin !== location.origin) return;              // Supabase, the Pi bridge, the machine: never touched
+  if (url.origin !== location.origin) return;              // Supabase and other origins: never touched
   if (url.pathname.endsWith("/sw.js")) return;             // the browser checks the worker script itself
-  if (url.pathname.endsWith("/bridge.json")) return;       // live Pi detection: always the network
 
   e.respondWith((async () => {
     // A newer release has deleted this release's cache while this worker was still answering: just pass through, never re-create it.

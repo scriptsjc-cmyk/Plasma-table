@@ -92,7 +92,7 @@ export function onEvent(kind, d) {
     onStatus(d);
     if (d.state === "Disconnected") {
       setConnected(false);
-      // a dropped link (Wi-Fi, USB pulled) cannot be told to switch the torch off: say so loudly
+      // a dropped link (USB / Bluetooth unplugged) cannot be told to switch the torch off: say so loudly
       // (no toast: it would only repeat the banner and cover the run numbers, r7 U29)
       if (wasHot && $("lostBar")) showLost(LOST_HOT);
       // USB link gone while idle (unplugged, power off, no answers): still say so loudly, with the reason

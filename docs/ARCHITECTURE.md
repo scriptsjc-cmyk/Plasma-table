@@ -72,7 +72,7 @@ file / shape form / text / trace ──► Sketch (items: shapes with params, ho
                                        ▼
                        machine/machine.js  Machine.startJob(): safety rules, zero rule, latch
                                        │
-                       machine/grbl.js protocol over usbserial.js (USB) | wifi / fluidnc.js (WebSocket) | sim.js (practice table)
+                       machine/grbl.js protocol over usbserial.js (USB or Bluetooth serial) | sim.js (practice table)
                                        │  status, events
                                        ▼
                     machine/events.js onStatus/onEvent ─► ui/refresh.js refresh() ─► DOM
@@ -95,8 +95,8 @@ The browser UI is never the only guard: the same rule is also enforced in the mo
 | The sheet layout only places parts; every shape/size route is refused there (handles, inspector, keys, 27 Sketch mutators) | `make/sketch-lock.js` (`this.layout` guards + prototype wrappers) |
 | Machine control needs a signed-in account with a linked machine (live origins only; demo/test hooks don't arm real control) | `machine/access.js`, `account/acctstate.js` (`realControlAllowed`, `canPro`, `canFirmware`), server side `supabase/schema.sql` + `b5-gating.sql` (RLS, `profiles_enforce_pro`) |
 | No secret in the client: only the **publishable** key; never the `service_role` key | `account/config.js`, scanned by `tests/e2e/50`, `59`, `unit/07` |
-| CSP: no inline scripts, no `ws:` on the public https copy | `index.html` (repo copy keeps `ws:` for LAN use), `scripts/harden-csp.sh` (deploy only) |
-| Pi / FluidNC console, restore and announcements are validated and escaped | `machine/admin-machine.js`, `account/announceui.js`, tests 62/30 |
+| CSP: no inline scripts, no `ws:` or `wss:` | `index.html`, `scripts/harden-csp.sh` (deploy checks the policy is clean) |
+| FluidNC console, restore and announcements are validated and escaped | `machine/admin-machine.js`, `account/announceui.js`, tests 62/30 |
 
 ## 5. Deploy, version stamp and the offline cache
 
@@ -165,19 +165,19 @@ Line counts are approximate. Regenerate the table's descriptions from each file'
 |---|---:|---|
 | `access.js` | 32 | Machine access rules: send a command only when allowed (signed in, machine linked, not e-stopped). |
 | `admin-machine.js` | 414 | Admin-only Advanced Machine panel: GRBL `$` settings, firmware text, the filtered console (`filterConsoleCommand`). |
-| `connection.js` | 143 | Connect / disconnect (USB, Wi-Fi, FluidNC, demo), keep-awake, and the unload safety stop. |
+| `connection.js` |  | Connect / disconnect (USB or Bluetooth serial, and the practice table), keep-awake, and the unload safety stop. |
 | `console.js` | 42 | The controller console pane: the log lines and the typed-command box. |
 | `dialect.js` | 94 | Turn the app's prepared GRBL/grblHAL job into another controller dialect. |
 | `events.js` | 104 | Reacts to everything the machine reports: status, safety flags, events, job log entry. |
-| `fluidnc.js` | 142 | FluidNC over Wi-Fi: a raw GRBL-compatible WebSocket (default ws://host:81). |
-| `grbl.js` | 390 | The GRBL text protocol for every link (FluidNC / grblHAL): streaming, status poll + watchdog, connect handshake, the Pi Wi-Fi transport. |
+| `fluidnc.js` |  | Serial FluidNC detection from the controller's banner or status text. |
+| `grbl.js` |  | The GRBL text protocol for every link (FluidNC / grblHAL): streaming, status poll + watchdog, connect handshake. |
 | `jog.js` | 107 | Jogging: on-screen pad, arrow keys, hold-to-glide; and the position read-out. |
 | `machine.js` | 338 | `Machine`: ties the controller link, job builder and safety checks together; E-stop latch, work-zero rule, start guard. |
 | `panels.js` | 143 | Machine panels on the Get set up screen: edge/limits panel, controller settings backup, test patterns, command buttons. |
 | `safety.js` | 118 | Keeping the torch inside the machine (same rules as plasma/safety.py). |
 | `settings.js` | 412 | Settings menu: machine, speeds, torch, pierce/cut, materials, homing, I/O, backup/restore. |
 | `sim.js` | 238 | Demo mode: a pretend grblHAL controller in the browser (same as plasma/sim.py). |
-| `usbserial.js` | 115 | USB to the controller (Web Serial, Chrome/Edge desktop): opens the port at 115200 8N1, reads lines, notices an unplug. |
+| `usbserial.js` | 115 | USB or Bluetooth serial to the controller (Web Serial, Chrome/Edge desktop): opens the port at 115200 8N1, reads lines, notices an unplug. |
 
 ### `js/make/`
 
@@ -258,7 +258,7 @@ Line counts are approximate. Regenerate the table's descriptions from each file'
 | `inspector-api.js` | 106 | window.ptInspector: the small, validated API the Pro inspector panel talks to. mm and degrees CLOCKWISE. |
 | `inspector-ui.js` | 532 | Pro docked inspector (shell and layout only). |
 | `labels.js` | 43 | Keeps the preview's labels off the sheet and machine drawing. |
-| `menu.js` | 37 | The top menu and a small scroll fix for the FluidNC box. |
+| `menu.js` |  | The top menu and the phone cutting screen's More sheet. |
 | `mode.js` | 72 | Beginner / Pro mode switch and the account mode that decides it. |
 | `nav.js` | 135 | Screens and steps: menu, Make a part -> Get set up -> Cut, tabs and the stepper. |
 | `refresh.js` | 167 | The big repaint: refresh() brings every button, banner and lamp in line with the current state. |
