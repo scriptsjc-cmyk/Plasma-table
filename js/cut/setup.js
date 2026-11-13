@@ -12,6 +12,7 @@ import * as Acc from "../account/account.js";
 import { insideRegion } from "./nest.js";
 import { initNestUi, paintNest, nestNow } from "./nestui.js";
 import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
+import { drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
@@ -142,7 +143,24 @@ function viewBox(sk) {
   const W = wa ? Math.max(sheet.w, wa.x[1]) : sheet.w, Hh = wa ? Math.max(sheet.h, wa.y[1]) : sheet.h;
   return [x0, y0, W, Hh];
 }
+function machineView(toScreen, sk) {
+  const wa = workArea();
+  const t = H.S.cfg && H.S.cfg.travel_mm;
+  const T = wa
+    ? { x: wa.x, y: wa.y, label: "machine edges" }
+    : t
+      ? { x: [0, t.x], y: [0, t.y], label: "table" }
+      : { x: [0, sheet.w], y: [0, sheet.h], label: "table" };
+  const X = (x) => toScreen(x, 0)[0];
+  const Y = (y) => toScreen(0, y)[1];
+  const sc = (sk.view && sk.view.s) || 1;
+  return { T, X, Y, sc };
+}
 function drawBg(sk, ctx, S, C, w, h) {
+  if (machineVisible()) {
+    const m = machineView(S, sk);
+    drawMachineBed(ctx, m.T, m.X, m.Y, m.sc);
+  }
   const [x0, y0] = S(0, sheet.h), [x1, y1] = S(sheet.w, 0);
   if (sheet.remnant) {                                                    // a saved leftover: draw its real outline
     ctx.beginPath();
@@ -158,7 +176,8 @@ function drawBg(sk, ctx, S, C, w, h) {
   const mat = H.S.material ? ` · ${H.S.material.toLowerCase()} ${H.S.thickness} mm` : "";
   ctx.fillText(`${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(4, x0 + 6), Math.max(14, y0 + 16));
   const wa = workArea();
-  if (wa) {
+  // When Show machine is on, the table border already marks the work area.
+  if (wa && !machineVisible()) {
     const [a0, b0] = S(wa.x[0], wa.y[1]), [a1, b1] = S(wa.x[1], wa.y[0]);
     ctx.setLineDash([8, 5]); ctx.strokeStyle = "#2e8b57"; ctx.lineWidth = 2; ctx.strokeRect(a0, b0, a1 - a0, b1 - b0); ctx.setLineDash([]);
     ctx.fillStyle = "#2e8b57"; ctx.fillText("Machine work area", Math.max(4, a0 + 6), Math.min(h - 6, b1 - 6));
@@ -176,6 +195,10 @@ function drawTop(sk, ctx, S, C) {
     ctx.fillText(String(u.n), X, Y + 4); ctx.textAlign = "left";
   }
   drawStartMark(sk, ctx, S, H.S.prepared, a.units);
+  if (machineVisible()) {
+    const m = machineView(S, sk);
+    drawGantry(ctx, m.T, m.X, m.Y, m.sc, { sheet: true });
+  }
   // live distances for the picked part: to the sheet edges and to the nearest part on each side
   const one = sk.selected();
   const me = one && a.units.find((u) => u.id === one.id || (sk.hostOf && sk.hostOf(one) && u.id === sk.hostOf(one).id));

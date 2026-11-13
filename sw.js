@@ -85,6 +85,7 @@ const PRECACHE = [
   "js/cut/cutstatus.js",
   "js/cut/export.js",
   "js/cut/job.js",
+  "js/cut/machinedraw.js",
   "js/cut/material.js",
   "js/cut/nest.js",
   "js/cut/nestui.js",

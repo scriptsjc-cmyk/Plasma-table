@@ -164,7 +164,7 @@ body.beginner #srcShape > *:not(#shapeForm):not(#cutCheck):not(#cutSummary) { di
 body.beginner .shapeform .tip { font-size: 16px; }
 body.beginner .shapeform .grid2 label { font-size: 16px; }
 body.beginner .shapeform input { min-height: 52px; font-size: 20px; }
-body.beginner #btnSavePartQuick, body.beginner #btnExportMenu, body.beginner .showmach { display: none; }
+body.beginner #btnSavePartQuick, body.beginner #btnExportMenu, body.beginner[data-screen="make"] .showmach { display: none; }
 body.beginner .nav .next, body.beginner #btnStart { flex: 1 1 auto; max-width: none; min-height: 72px; font-size: 22px; font-weight: 800; background: var(--accent); border-color: var(--accent); color: var(--on-accent); border-radius: 12px; }
 body.beginner .nav .next:disabled, body.beginner #btnStart:disabled { background: var(--well); border-color: var(--line-strong); color: var(--muted); }
 body.beginner .livespeed .row, body.beginner .livespeed > .muted { display: none; }

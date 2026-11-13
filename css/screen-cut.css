@@ -1,4 +1,4 @@
-/* Cutting screen: Part / Bed & start / Cut steps, set-up cards, run screen, STOP + E-stop, live torch panel, start points, coupon.
+/* Cutting screen: Part / Setup / Cut steps, set-up cards, run screen, STOP + E-stop, live torch panel, start points, coupon.
    Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours.
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
@@ -287,7 +287,7 @@ body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
 }
 body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
 body[data-step="3"] #exportRow { display: none; }
-/* ---- Portrait "turn your phone sideways" cover. Only on the cutting bed (cut screen, "Bed & start" step, Cut tab): sign-in, the menu,
+/* ---- Portrait "turn your phone sideways" cover. Only on the cutting bed (cut screen, "Setup" step, Cut tab): sign-in, the menu,
    Make a part and the Part step all work upright. It starts below the header, which is lifted above it, so Menu / Back and STOP are
    never covered (r7 U10); "Use it upright" hides it for this visit (js/cut/turncover.js). It is only paint (nothing is paused, hidden
    from the app or reset), so a running job carries on underneath. Off unless body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
@@ -588,7 +588,7 @@ body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text
 .holeadd button { min-height: 44px; }
 /* r7 U4: a phone on its side keeps the cutting header on one row: the account is in the menu, so its pill steps aside here */
 body.short-land[data-screen="cut"] #acctPill { display: none; }
-/* r7 U8: a phone on its side keeps Bed & start short: sheet size, nest and saved start points live in More (js/ui/menu.js) */
+/* r7 U8: a phone on its side keeps Setup short: sheet size, nest and saved start points live in More (js/ui/menu.js) */
 body.short-land[data-screen="cut"] #layoutCard .sheetrow, body.short-land[data-screen="cut"] #layoutCard #nestBox, body.short-land[data-screen="cut"] #zeroCard #originCard { display: none; }
 /* r7 U12: the connect card's link line is a suggestion (Practice always works), not a warning */
 #connectLock .locknote { color: var(--text); font-weight: 600; }
@@ -698,7 +698,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .cutsheet-body .sheetrow label { flex-direction: column; align-items: stretch; gap: 2px; white-space: nowrap; }
   .cutsheet-body .sheetrow input { flex: 1 1 auto; width: 100%; min-width: 0; }
   .cutsheet-body .livespeed .row { gap: 6px; }
-  /* Bed & start: Back / Start / More in the sticky bar; Download G-code is in More */
+  /* Setup: Back / Start / More in the sticky bar; Download G-code is in More */
   body[data-screen="cut"] .step[data-step="3"] > .nav #btnExport3 { display: none; }
   body[data-screen="cut"] .step[data-step="3"] > .nav { flex-wrap: wrap; align-items: stretch; }
   body[data-screen="cut"] .step[data-step="3"] > .nav .cutmore-btn { order: 2; }
@@ -767,7 +767,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"] #cutView #done button { font-size: 14px; padding: 4px 8px; }
 }
 @media (max-width: 899px) and (orientation: portrait) {
-  /* Bed & start upright: the layout canvas marks the grid "editing", which picked up Make's three-row picture / tools / step grid
+  /* Setup upright: the layout canvas marks the grid "editing", which picked up Make's three-row picture / tools / step grid
      and left an empty 140px band where Make's tool bar would be. The cutting screen has no tool bar: picture and step share the height. */
   body.app-shell:not(.short-land)[data-screen="cut"] .cutgrid.editing:not(.with-qb) {
     grid-template-areas: "preview" "step" !important; grid-template-rows: minmax(0, 0.85fr) minmax(0, 1.15fr) !important; }
@@ -799,7 +799,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 }
 
 /* ===================== Laptop cutting screen: a wide screen with a mouse (the media query below; no JS). The bed picture is big and in
-   the middle. Bed & start: the cut check, layout card and checklist on the left; the start-point card (connect, home, X / Y / Z, jog,
+   the middle. Setup: the cut check, layout card and checklist on the left; the start-point card (connect, home, X / Y / Z, jog,
    Start here) and Back / Start / Download on the right. Cut: the run panel (progress, X / Y / Z, TORCH, speed, Pause) on the right.
    The job and machine card (#jobCard) sits under the picture. STOP stays in the header and is the biggest control. Phones and
    tablets (touch, or under 1100 x 560) never see any of this. */
@@ -850,7 +850,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .arrcover .arrname { font-size: 16px; white-space: nowrap; }
   .arrcover.dragging { opacity: .5; }
   .arrcover.dropon { background: color-mix(in srgb, var(--accent) 16%, var(--card)); }
-  /* Bed & start:   cut check   |                 | start point: connect, home, X / Y / Z, jog, Start here
+  /* Setup:   cut check   |                 | start point: connect, home, X / Y / Z, jog, Start here
                     layout card | the bed picture |
                     checklist   |                 | Back / Start / Download
      The picture spans every row and each side card spans the rows it shares, so no card leaves a gap. */
@@ -969,9 +969,10 @@ body[data-screen="cut"] .topbar {
   padding-bottom: 8px;
 }
 
-/* Show machine belongs on Bed & start, not on Part. */
+/* Show machine belongs on Setup and Cut, not on Part. */
 body[data-screen="cut"][data-step="1"] #showMachWrap { display: none !important; }
-body[data-screen="cut"][data-step="3"] #showMachWrap { display: flex !important; visibility: visible; }
+body[data-screen="cut"][data-step="3"] #showMachWrap,
+body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important; visibility: visible; pointer-events: auto; }
 
 
 .cutstatus {
@@ -1161,13 +1162,17 @@ body.header-hidden[data-screen="cut"][data-tab="cut"] {
   padding-top: 44px;
 }
 
-/* r9 item 7: Show machine is a small overlay in the canvas top-left, on Bed & start only. */
+/* r9 item 7: Show machine is a small overlay in the canvas top-left, on Setup and Cut. */
 body.app-shell[data-screen="cut"][data-step="3"] .previewPane,
 body.app-shell[data-screen="cut"][data-step="3"] .cutgrid.editing .previewPane,
-body.app-shell[data-screen="cut"][data-step="3"] .cutgrid.with-qb .previewPane {
+body.app-shell[data-screen="cut"][data-step="3"] .cutgrid.with-qb .previewPane,
+body.app-shell[data-screen="cut"][data-step="4"] .previewPane,
+body.app-shell[data-screen="cut"][data-step="4"] .cutgrid.editing .previewPane,
+body.app-shell[data-screen="cut"][data-step="4"] .cutgrid.with-qb .previewPane {
   position: relative;
 }
-body[data-screen="cut"][data-step="3"] #showMachWrap.showmach {
+body[data-screen="cut"][data-step="3"] #showMachWrap.showmach,
+body[data-screen="cut"][data-step="4"] #showMachWrap.showmach {
   position: absolute;
   top: 8px;
   left: 8px;
@@ -1183,7 +1188,8 @@ body[data-screen="cut"][data-step="3"] #showMachWrap.showmach {
   background: color-mix(in srgb, var(--well) 92%, transparent);
   box-shadow: 0 1px 2px rgba(0,0,0,.12);
 }
-body[data-screen="cut"][data-step="3"] #showMachWrap.showmach input {
+body[data-screen="cut"][data-step="3"] #showMachWrap.showmach input,
+body[data-screen="cut"][data-step="4"] #showMachWrap.showmach input {
   width: 14px;
   height: 14px;
   min-width: 14px;
