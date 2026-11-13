@@ -13,6 +13,7 @@ import { insideRegion } from "./nest.js";
 import { initNestUi, paintNest, nestNow } from "./nestui.js";
 import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
 import { MACH, drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
+import { drawAxisHints } from "./bedview.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
@@ -195,9 +196,11 @@ function drawBg(sk, ctx, S, C, w, h) {
     ctx.fillStyle = "rgba(90,130,190,.10)"; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
     ctx.strokeStyle = "#5b7fb0"; ctx.lineWidth = 2; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
   }
-  ctx.fillStyle = "#3d5a85"; ctx.font = "bold 12px Barlow, system-ui"; ctx.textAlign = "left";
+  ctx.fillStyle = "#3d5a85"; ctx.font = "bold 12px Barlow, system-ui";
   const mat = H.S.material ? ` · ${H.S.material.toLowerCase()} ${H.S.thickness} mm` : "";
-  ctx.fillText(`${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(4, x0 + 6), Math.max(14, y0 + 16));
+  const sl = Math.min(x0, x1), st = Math.min(y0, y1);
+  ctx.textAlign = "left";
+  ctx.fillText(`${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(4, sl + 6), Math.max(14, st + 16));
   const wa = workArea();
   // When Show machine is on, the table border already marks the work area.
   if (wa && !machineVisible()) {
@@ -208,9 +211,16 @@ function drawBg(sk, ctx, S, C, w, h) {
   // the start point = the sheet's bottom-left corner
   const [ox, oy] = S(0, 0);
   ctx.fillStyle = "#c05600"; ctx.beginPath(); ctx.arc(ox, oy, 5, 0, 7); ctx.fill();
-  if (H.S.zeroSet) ctx.fillText("Sheet corner (0, 0)", Math.min(w - 110, ox + 8), Math.min(h - 26, oy - 24));     // work zero: the sheet corner, not the part
+  if (H.S.zeroSet) {                                                     // work zero: the sheet corner, not the part
+    const [ix, iy] = S(80, 40);                                          // offset into the sheet so the label stays readable when the view is rotated
+    ctx.textAlign = ix >= ox ? "left" : "right";
+    ctx.textBaseline = iy >= oy ? "top" : "bottom";
+    ctx.fillText("Sheet corner (0, 0)", ox + (ix >= ox ? 8 : -8), oy + (iy >= oy ? 10 : -10));
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  }
 }
 function drawTop(sk, ctx, S, C) {
+  drawAxisHints(ctx, S);
   const a = last, gap = a.gap ?? gapMm();
   for (const u of a.units) {
     const [X, Y] = S((u.box[0] + u.box[2]) / 2, (u.box[1] + u.box[3]) / 2);

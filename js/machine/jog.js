@@ -4,6 +4,7 @@ import { syncSteps } from "../ui/nav.js";
 import { $, $$, toast } from "../core/dom.js";
 import { M, S } from "../core/state.js";
 import { cmd, machineAllowed, requireMachine } from "./access.js";
+import { jogToMachine, syncJogPadLabels } from "../cut/bedview.js";
 
 // ------------------------------------------------------------------ jog pad (one template, used on 3 screens)
 export function mountJogPads() {
@@ -17,12 +18,14 @@ export function mountJogPads() {
     if (sb) { S.jogStep = Number(sb.dataset.step); syncSteps(); return; }
   });
   syncSteps();
+  syncJogPadLabels();
 }
-function jog(axis, dir) {
+function jogMachine(axis, dir) {
   if (!machineAllowed()) { requireMachine("Link your machine to run jobs"); return; }
   const step = axis === "Z" ? Math.min(S.jogStep, 10) : S.jogStep;
   cmd("jog", { axis, dist: step * dir });
 }
+function jog(axis, dir) { jogMachine(...jogToMachine(axis, dir)); }
 // ---- press-and-hold jogging
 // press: one step straight away. Still held after a moment: glide towards the edge (absolute target,
 // queued behind the step, so there's no stop-start). Change direction: cancel, wait for it to stop, go again.
@@ -47,10 +50,11 @@ async function glide() {
 }
 function jogPress(id, axis, dir) {
   if (!M.grbl) return;
+  [axis, dir] = jogToMachine(axis, dir);
   const first = J.held.size === 0;
   J.held.set(id, [axis, dir]);
   if (first) {
-    jog(axis, dir);                                  // tap = one step
+    jogMachine(axis, dir);                           // tap = one step (already in machine space)
     clearTimeout(J.timer);
     J.timer = setTimeout(() => { if (J.held.size) glide(); }, 220);
   } else if (J.gliding) glide();                     // second key: go diagonal
@@ -115,4 +119,5 @@ export function bindJog() {
   });
   window.addEventListener("blur", jogReleaseAll);
   document.addEventListener("visibilitychange", () => { if (document.hidden) jogReleaseAll(); });
+  syncJogPadLabels();
 }

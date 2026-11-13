@@ -2,6 +2,7 @@
 import { $ } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
 import { drawPreview } from "../cut/preview.js";
+import { syncJogPadLabels } from "../cut/bedview.js";
 import { syncMachineView } from "../cut/setup.js";
 
 export function bindViewport() {
@@ -20,6 +21,7 @@ export function bindViewport() {
       const changed = short !== lastShort; lastShort = short;
       drawPreview();
       if (sketch && sketch.active && changed) sketch.fitView();
+      syncJogPadLabels();
     }, 60);
   };
   window.addEventListener("resize", relayout);

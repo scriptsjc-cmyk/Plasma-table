@@ -8,6 +8,7 @@ import { $, themeColor } from "../core/dom.js";
 import { renderQuickBar } from "../core/hooks.js";
 import { applyPreviewCam, previewCam } from "./previewnav.js";
 import { drawGantry, drawMachineBed, isPartPreview, machineVisible, markMachine } from "./machinedraw.js";
+import { bedViewRotated, drawAxisHints } from "./bedview.js";
 
 // where the start point is, in table view coordinates (the one being dragged wins)
 function originView() { const w = wcoNow(); return toView(w[0], w[1]); }
@@ -119,9 +120,14 @@ function drawCanvas(cv, main) {
   applyPreviewCam(ctx, w, h);
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
-  const X = (x) => offX + (x - A.x[0]) * sc, Y = (y) => h - offY - (y - A.y[0]) * sc;
+  const rot = !isPartPreview() && bedViewRotated();
+  const X0 = (x) => offX + (x - A.x[0]) * sc, Y0 = (y) => h - offY - (y - A.y[0]) * sc;
+  const X = (x) => rot ? w - X0(x) : X0(x), Y = (y) => rot ? h - Y0(y) : Y0(y);
   const cam = previewCam();
-  const toMmRaw = (px, py) => [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc];
+  const toMmRaw = (px, py) => {
+    if (rot) { px = w - px; py = h - py; }
+    return [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc];
+  };
   const toMm = (px, py) => {
     if (cam.s === 1 && !cam.x && !cam.y) return toMmRaw(px, py);
     return toMmRaw(w / 2 + (px - w / 2 - cam.x) / cam.s, h / 2 + (py - h / 2 - cam.y) / cam.s);
@@ -165,5 +171,8 @@ function drawCanvas(cv, main) {
     ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(X(ox) - 9, Y(oy)); ctx.lineTo(X(ox) + 9, Y(oy)); ctx.moveTo(X(ox), Y(oy) - 9); ctx.lineTo(X(ox), Y(oy) + 9); ctx.stroke();
   }
-  if (!zoom && !isPartPreview()) drawGantry(ctx, A.table, X, Y, sc, { toView });
+  if (!zoom && !isPartPreview()) {
+    drawGantry(ctx, A.table, X, Y, sc, { toView });
+    drawAxisHints(ctx, (x, y) => [X(x), Y(y)]);
+  }
 }

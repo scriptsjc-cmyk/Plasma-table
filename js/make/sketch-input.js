@@ -1,6 +1,7 @@
 // Sketch: mouse, touch and keyboard (picking, dragging, snapping guides, resize handles, pan and zoom).
 import { getPrefs } from "../core/prefs.js";
 import { boxOverlap, clone, r1, unionBox, wholeSet } from "./sketch-util.js";
+import { screenBoxToWorld, shiftView } from "../cut/bedview.js";
 import { pointInPoly } from "../core/geom.js";
 import { snapWorld, constraintOf, applyConstraints } from "./snaps.js";
 import { afterDrawPoint, startRectAt, startDiscAt, paintDrawHud, commitRectDisc, closeDrawHud, cancelDrawHud } from "./drawhud.js";
@@ -298,8 +299,8 @@ export class InputMethods {
         const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         this.view = { ...d.view };
         this.zoomAt(d.mx, d.my, (d.d > 0 ? dist / d.d : 1));
-        this.view.vx -= (mx - d.mx) / this.view.s; this.clampView && this.clampView();
-        this.view.vy += (my - d.my) / this.view.s;
+        shiftView(this.view, mx - d.mx, my - d.my);
+        this.clampView && this.clampView();
         this.draw();
         return;
       }
@@ -312,7 +313,9 @@ export class InputMethods {
       }
       if (d.kind === "pan") {
         if (Math.abs(sx - d.sx) + Math.abs(sy - d.sy) > 3) d.moved = true;
-        this.view.vx = d.vx - (sx - d.sx) / this.view.s; this.view.vy = d.vy + (sy - d.sy) / this.view.s; this.clampView && this.clampView();
+        this.view.vx = d.vx; this.view.vy = d.vy;
+        shiftView(this.view, sx - d.sx, sy - d.sy);
+        this.clampView && this.clampView();
         cv.style.cursor = "grabbing";
         this.draw(); return;
       }
@@ -381,8 +384,7 @@ export class InputMethods {
       }
       if (d.kind === "box") {
         if (!d.moved) { if (this.sel.ids.length) { this.pick([]); this.onSelect(); } this.draw(); return; }
-        const [ax, ay] = this.toWorld(Math.min(d.sx, d.cx), Math.max(d.sy, d.cy)), [bx, by] = this.toWorld(Math.max(d.sx, d.cx), Math.min(d.sy, d.cy));
-        const box = [ax, ay, bx, by];
+        const box = screenBoxToWorld(this.toWorld.bind(this), d.sx, d.sy, d.cx, d.cy);
         const leftToRight = d.cx >= d.sx;
         const hit = (i) => {
           const b = this.boxOf(i);
@@ -433,8 +435,7 @@ export class InputMethods {
         this.zoomAt(sx, sy, Math.exp(-dy * 0.0015));
         return;
       }
-      this.view.vx += dx / this.view.s;
-      this.view.vy -= dy / this.view.s;
+      shiftView(this.view, -dx, -dy);
       this.clampView && this.clampView();
       this.draw();
     }, { passive: false });
@@ -516,11 +517,11 @@ export class InputMethods {
         if (e.key === "Delete" || e.key === "Backspace") return;
         if (isArrow && this.view) {
           stop();
-          const step = (e.shiftKey ? 80 : 40) / this.view.s;
-          if (e.key === "ArrowLeft") this.view.vx -= step;
-          if (e.key === "ArrowRight") this.view.vx += step;
-          if (e.key === "ArrowUp") this.view.vy += step;
-          if (e.key === "ArrowDown") this.view.vy -= step;
+          const px = e.shiftKey ? 80 : 40;
+          if (e.key === "ArrowLeft") shiftView(this.view, px, 0);
+          if (e.key === "ArrowRight") shiftView(this.view, -px, 0);
+          if (e.key === "ArrowUp") shiftView(this.view, 0, px);
+          if (e.key === "ArrowDown") shiftView(this.view, 0, -px);
           if (e.key === "PageUp") this.zoomAt(this.size()[0] / 2, this.size()[1] / 2, 1.15);
           if (e.key === "PageDown") this.zoomAt(this.size()[0] / 2, this.size()[1] / 2, 1 / 1.15);
           this.clampView && this.clampView();

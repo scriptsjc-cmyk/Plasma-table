@@ -3,6 +3,7 @@
 import { screen } from "../ui/flow.js";
 import { S } from "../core/state.js";
 import { themeColor } from "../core/dom.js";
+import { worldRect } from "./bedview.js";
 
 export const MACH = { beamH: 50, armW: 50, plate: 26, torchOff: 30, carW: 190, carD: 120, motor: 57 };
 
@@ -30,7 +31,7 @@ export function torchXY(T, opts = {}) {
 export function drawMachineBed(ctx, T, X, Y, sc) {
   if (!machineVisible() || !T) return;
   const [x0, x1] = T.x, [y0, y1] = T.y;
-  const R = (x, y, w, h) => [X(x), Y(y + h), w * sc, h * sc];
+  const R = (x, y, w, h) => worldRect(X, Y, x, y, w, h);
   // water tray / table
   ctx.fillStyle = themeColor("--cad-grid", "#ECEEF1"); ctx.fillRect(...R(x0, y0, x1 - x0, y1 - y0));
   ctx.strokeStyle = themeColor("--cad-grid-major", "#D5DAE0"); ctx.lineWidth = Math.max(1, 3 * sc);                 // slats every 100 mm
@@ -43,7 +44,11 @@ export function drawMachineBed(ctx, T, X, Y, sc) {
   ctx.strokeStyle = edgesOn() ? themeColor("--go", "#0A6A32") : themeColor("--line-strong", "#B8BFC9"); ctx.lineWidth = edgesOn() ? 2 : 1;
   ctx.strokeRect(...R(x0, y0, x1 - x0, y1 - y0));
   ctx.fillStyle = themeColor("--cad-label", "#4B5563"); ctx.font = "12px Barlow, system-ui";
-  ctx.textAlign = "right"; ctx.fillText(`${T.label} ${Math.round(x1 - x0)} × ${Math.round(y1 - y0)} mm`, X(x1) - 8, Y(y1) - 8 + 20); ctx.textAlign = "start";
+  const [lx, ly] = [X(x1), Y(y1)], [ix, iy] = [X((x0 + x1) / 2), Y((y0 + y1) / 2)];
+  ctx.textAlign = ix >= lx ? "left" : "right";
+  ctx.textBaseline = iy >= ly ? "top" : "bottom";
+  ctx.fillText(`${T.label} ${Math.round(x1 - x0)} × ${Math.round(y1 - y0)} mm`, lx + (ix >= lx ? 8 : -8), ly + (iy >= ly ? 6 : -6));
+  ctx.textAlign = "start"; ctx.textBaseline = "alphabetic";
   // X beam: box section with the rail on top and end caps
   const bx0 = x0 - 40, bx1 = x1 + 110, by = y0 - 20 - MACH.beamH;
   ctx.fillStyle = "#262d36"; ctx.fillRect(...R(bx0, by, bx1 - bx0, MACH.beamH));
@@ -60,7 +65,7 @@ export function drawGantry(ctx, T, X, Y, sc, opts = {}) {
   const has = !!(S.status && S.status.MPos);
   const [tx, ty] = torchXY(T, opts);
   const r = Math.max(5, 9 * sc);
-  const M_ = MACH, R = (x, y, w, h) => [X(x), Y(y + h), w * sc, h * sc];
+  const M_ = MACH, R = (x, y, w, h) => worldRect(X, Y, x, y, w, h);
   const rr = (x, y, w, h, rad) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(...R(x, y, w, h), rad * sc); else ctx.rect(...R(x, y, w, h)); };
   const armX = tx + M_.torchOff, armC = armX + M_.armW / 2;          // arm's left face sits just right of the torch
   const by = T.y[0] - 20 - M_.beamH, top = T.y[1] + 30, carY = by - 25;

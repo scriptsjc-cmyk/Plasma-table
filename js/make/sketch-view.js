@@ -3,6 +3,7 @@ import { bbox, expandContour } from "../core/geom.js";
 import { def, r1, themeColor } from "./sketch-util.js";
 import { clickVerb, clickVerbLower } from "../ui/laptop.js";
 import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
+import { applyBedScreen, bedViewRotated, visibleWorld } from "../cut/bedview.js";
 
 // When the preview dock is overlaid on the canvas (phone Cut), lift the footer captions above it
 function dockFoot() {
@@ -20,7 +21,8 @@ export class ViewMethods {
   fitView() {
     const [w, h] = this.size(), b = this.layout ? this.layout.viewBox(this) : this.allBox();
     const bw = Math.max(40, b[2] - b[0]), bh = Math.max(40, b[3] - b[1]);
-    const padX = 48, padTop = 52, padBot = 44;
+    const rot = bedViewRotated();
+    const padX = 48, padTop = 52, padBot = rot ? 52 : 44;
     const s = Math.min((w - padX * 2) / bw, (h - padTop - padBot) / bh);
     // a little extra room at the top for the tappable size label
     this.view = { s, vx: (b[0] + b[2]) / 2 - w / 2 / s, vy: (b[1] + b[3]) / 2 - h / 2 / s + (padTop - padBot) / 2 / s };
@@ -30,11 +32,19 @@ export class ViewMethods {
     if (!this.view) return;
     const [w, h] = this.size(), b = this.pickedBox();
     if (!Number.isFinite(b[0])) return;
-    const [x0, y0] = this.toScreen(b[0], b[3]), [x1, y1] = this.toScreen(b[2], b[1]);
-    if (x0 < 10 || y0 < 10 || x1 > w - 10 || y1 > h - 10) this.fitView();
+    const pts = [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].map(([x, y]) => this.toScreen(x, y));
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    if (Math.min(...xs) < 10 || Math.min(...ys) < 10 || Math.max(...xs) > w - 10 || Math.max(...ys) > h - 10) this.fitView();
   }
-  toScreen(x, y) { const [, h] = this.size(), v = this.view; return [(x - v.vx) * v.s, h - (y - v.vy) * v.s]; }
-  toWorld(sx, sy) { const [, h] = this.size(), v = this.view; return [sx / v.s + v.vx, (h - sy) / v.s + v.vy]; }
+  toScreen(x, y) {
+    const [w, h] = this.size(), v = this.view;
+    return applyBedScreen((x - v.vx) * v.s, h - (y - v.vy) * v.s, w, h);
+  }
+  toWorld(sx, sy) {
+    const [w, h] = this.size(), v = this.view;
+    [sx, sy] = applyBedScreen(sx, sy, w, h);
+    return [sx / v.s + v.vx, (h - sy) / v.s + v.vy];
+  }
 
   clampView() {
     if (!this.view) return;
@@ -95,7 +105,7 @@ export class ViewMethods {
     const auto = steps.find((v) => v * s >= 12) || 1000;
     const g = prefs.gridSize > 0 ? prefs.gridSize : auto, G = steps.find((v) => v >= g * 5) || g * 5;
     if (prefs.grid) {
-      const [wx0, wy0] = this.toWorld(0, h), [wx1, wy1] = this.toWorld(w, 0);
+      const [wx0, wy0, wx1, wy1] = visibleWorld((x, y) => this.toWorld(x, y), w, h);
       for (const [step, col] of [[g, C.grid], [G, C.gridMajor]]) {
         ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.beginPath();
         for (let x = Math.floor(wx0 / step) * step; x <= wx1; x += step) { const X = Math.round(S(x, 0)[0]) + 0.5; ctx.moveTo(X, 0); ctx.lineTo(X, h); }

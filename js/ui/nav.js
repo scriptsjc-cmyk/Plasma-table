@@ -17,6 +17,7 @@ import { drawPreview } from "../cut/preview.js";
 import { renderChecklist } from "../cut/checklist.js";
 import { paintChrome, refresh, renderQuickBar, showSource, useShape } from "../core/hooks.js";
 import { resetPreviewCam } from "../cut/previewnav.js";
+import { syncJogPadLabels } from "../cut/bedview.js";
 
 // ------------------------------------------------------------------ screens (login -> menu -> make | cut)
 // body[data-screen] is owned by flow.js; this is what each screen shows.
@@ -114,6 +115,7 @@ export function showTab(name) {
   S.tab = name;
   document.body.dataset.tab = (scr === "cut" && name === "setup") ? "setup" : (scr === "cut" ? "cut" : "");
   if (name === "cut") drawPreview();
+  syncJogPadLabels();
 }
 export function canGo(n) {
   if (n === 4) return !!S.job;
@@ -138,6 +140,7 @@ export function goStep(n) {
   refresh();
   window.scrollTo({ top: 0, behavior: "smooth" });
   const sp = document.querySelector(".stepPane"); if (sp) sp.scrollTop = 0;
+  syncJogPadLabels();
 }
 export function syncSteps() {
   $$(".steps button").forEach((b) => b.classList.toggle("sel", Number(b.dataset.step) === S.jogStep));

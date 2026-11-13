@@ -71,12 +71,18 @@ for (const prof of ["d1366", "d1440"]) {
   t.check(n("J13: one tick box to confirm the checks"), l.boxes === 1, JSON.stringify(l));
   t.check(n("U28: blockers have short 'Show me' links"), l.jumps.length > 0 && l.jumps.every((s) => s === "Show me"), JSON.stringify(l));
 
-  // J4: arrows move the torch; not while a number box has focus
+  // J4: arrows move the torch toward the matching screen direction (laptop Setup/Cut is rotated 180°, so
+  // the right arrow is machine −X). A focused number box still keeps the keys.
   const wx = () => ev(page, () => Number((window.plasmaTest.S.status.WPos || [0])[0]));
+  const torchSx = () => ev(page, () => {
+    const w = window.plasmaTest.S.status.WPos || [0, 0];
+    return window.plasmaTest.sketch.toScreen(w[0], w[1])[0];
+  });
   await ev(page, () => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); });
-  let x0 = await wx(); await page.keyboard.down("ArrowRight"); await sleep(120); await page.keyboard.up("ArrowRight"); await sleep(900);
-  let x1 = await wx();
-  t.check(n("J4: the right arrow moves the torch right"), x1 > x0, `${x0} -> ${x1}`);
+  let x0 = await wx(), s0 = await torchSx();
+  await page.keyboard.down("ArrowRight"); await sleep(120); await page.keyboard.up("ArrowRight"); await sleep(900);
+  let x1 = await wx(), s1 = await torchSx();
+  t.check(n("J4: the right arrow moves the torch toward screen-right"), s1 > s0 && x1 < x0, `screen ${s0} -> ${s1}, X ${x0} -> ${x1}`);
   await page.focus("#sheetW"); x0 = await wx(); await page.keyboard.press("ArrowUp"); await sleep(700); x1 = await wx();
   t.check(n("J4: not while a number box has focus"), x1 === x0, `${x0} -> ${x1}`);
   await ev(page, () => document.activeElement.blur());
