@@ -1,6 +1,8 @@
 // The GRBL text protocol (FluidNC / grblHAL) for every link: character-counting streaming, status polling + watchdog,
 // the connect handshake, real-time commands, and status parsing. USB / Bluetooth serial itself is usbserial.js.
 // Same protocol handling as plasma/grbl.py.
+import { looksLikeFluidNC } from "./fluidnc.js";
+import { parseFileField, onBoardLine, onBoardStatus, onBoardClosed, abortBoardUpload, attachBoardRun } from "./boardrun.js";
 
 export const RT = {
   STATUS: "?", HOLD: "!", RESUME: "~", RESET: "\x18",
@@ -52,6 +54,7 @@ export function parseStatus(text) {
     else if (k === "Ov") st.overrides = v;
     else if (k === "A") st.accessories = v;
     else if (k === "THC") st.thc = parseThc(v);   // grblHAL Plugin_plasma only: "|THC:<arc volts>,<flags>"
+    else if (k === "SD") st.file = parseFileField(v);  // FluidNC file job: "|SD:<pct>,<path>" or "|SD: <path>: Sent"
   }
   return st;
 }
@@ -91,15 +94,22 @@ export class GrblLink {
     this.lastRx = Date.now();
     this.pollsSinceRx = 0;
     this.heard = false;                 // any line at all: the board is alive (maybe still booting)
+    this.fluidnc = false;
+    this.pollPaused = false;            // off during XModem: '?' would be written into the file
     this.t.onLine = (l) => this._line(l);
     this.t.onClose = (reason) => this._closed(reason);
     this.poll = setInterval(() => this._tick(), POLL_MS);
   }
+  pausePoll() { this.pollPaused = true; }
+  resumePoll() { this.pollPaused = false; }
+  setRaw(on, onBytes) { if (this.t.setRaw) this.t.setRaw(on, onBytes); }
+  attachBoardRunIfActive(previous) { return attachBoardRun(this, this.status, previous); }
+
 
   // status poll + watchdog. Polls are counted, not just timed: a hidden tab slows timers to one a minute, and that alone
   // must not look like a dead link. Lost = several '?' in a row went unanswered AND the watchdog time has passed.
   _tick() {
-    if (!this.running) return;
+    if (!this.running || this.pollPaused) return;
     const wd = this.t.watchdogMs;
     if (wd && this.ready && this.pollsSinceRx >= Math.ceil(wd / POLL_MS) && Date.now() - this.lastRx > wd) {
       this._closed(`No reply from the controller for ${Math.round(wd / 1000)} s. Check the USB cable and the controller's power.`);
@@ -138,6 +148,7 @@ export class GrblLink {
     this.status = { ...this.status, state: "Disconnected", reason: reason || "" };
     this._emit("status", this.status);
     this._emit("log", { text: reason ? `Controller disconnected: ${reason}` : "Controller disconnected.", level: "error" });
+    if (onBoardClosed(this)) return;
     if (this.job && this.job.running) this._finishJob("error", "Job stopped: controller disconnected.");
   }
 
@@ -194,8 +205,10 @@ export class GrblLink {
     // Drop everything still queued NOW. Before, the 250 ms between feed-hold and reset let each 'ok' pump more
     // job lines (even M3) into the controller after STOP had been pressed; reset flushed them, but nothing should be sent.
     this.pending = [];
+    const uploading = this.job && this.job.running && this.job.boardRun && this.job.phase === "upload";
+    if (uploading) abortBoardUpload(this);
     this.realtime(RT.HOLD);
-    setTimeout(() => this.reset(reason), 250);
+    setTimeout(() => this.reset(reason), uploading ? 400 : 250);
   }
   reset(reason) {
     this.pending = [];
@@ -208,7 +221,9 @@ export class GrblLink {
     const j = this.job;
     if (!j) return null;
     return { total: j.total, sent: j.sent, acked: j.acked, errors: j.errors, running: j.running, result: j.result,
-      elapsed: Math.round(((j.finished || Date.now()) - j.started) / 1000) };
+      elapsed: Math.round(((j.finished || Date.now()) - j.started) / 1000),
+      boardRun: !!j.boardRun, phase: j.phase || (j.boardRun ? "run" : "stream"), pct: j.pct, unwatched: !!j.unwatched,
+      attached: !!j.attached, path: j.path || "", message: j.message || "", sawFile: !!j.sawFile };
   }
 
   async close() {
@@ -220,7 +235,7 @@ export class GrblLink {
   _finishJob(result, message) {
     const j = this.job;
     if (j && j.running) {
-      j.running = false; j.result = result; j.finished = Date.now();
+      j.running = false; j.result = result; j.finished = Date.now(); j.message = message;
       this._emit("job", this.jobProgress());
       this._emit("log", { text: message, level: result === "done" ? "info" : "warn" });
     }
@@ -266,6 +281,8 @@ export class GrblLink {
     this.heard = true;
     this.lastRx = Date.now();
     this.pollsSinceRx = 0;
+    if (looksLikeFluidNC(line)) this.fluidnc = true;
+    onBoardLine(this, line);
     if (line.startsWith("<") && line.endsWith(">")) {
       this.ready = true;
       const st = parseStatus(line.slice(1, -1));
@@ -277,6 +294,7 @@ export class GrblLink {
       if (st.overrides) this.feedOv = Number(st.overrides.split(",")[0]) || 100;  // only sent now and then
       st.feedOv = this.feedOv;
       this.status = st;
+      onBoardStatus(this, st);
       this._emit("status", st);
       return;
     }

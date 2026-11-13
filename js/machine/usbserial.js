@@ -11,6 +11,8 @@ export class WebSerialTransport {
     this.handshakeMs = 8000;      // a silent board gets this long; once it prints anything GrblLink waits for boot to finish (BOOT_WAIT_MS)
     this.watchdogMs = 3000;       // no answer to '?' for this long = the link is lost (GrblLink)
     this.gone = false;
+    this.raw = false;          // XModem: deliver bytes, don't split on newlines (packets may contain 0x0A)
+    this.onBytes = null;
     this._onDisconnect = (e) => { if (!e || !e.target || e.target === this.port || e.port === this.port) this._lost("The USB cable was unplugged (or the controller lost power)."); };
   }
   static supported() { return typeof navigator !== "undefined" && "serial" in navigator; }
@@ -48,6 +50,16 @@ export class WebSerialTransport {
     try { await this.port?.setSignals?.({ dataTerminalReady: false, requestToSend: false }); return true; } catch (e) { return false; }
   }
 
+  setRaw(on, onBytes) {
+    if (on && this.buf) {
+      const leftover = this.enc.encode(this.buf);
+      this.buf = "";
+      if (leftover.length && onBytes) onBytes(leftover);
+    }
+    this.raw = !!on;
+    this.onBytes = on ? onBytes : null;
+  }
+
   async readLoop() {
     const dec = new TextDecoder();
     let why = "The USB port closed.";
@@ -58,6 +70,11 @@ export class WebSerialTransport {
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
+          if (this.raw && this.onBytes) {
+            if (this.buf) { const left = this.enc.encode(this.buf); this.buf = ""; if (left.length) this.onBytes(left); }
+            if (value && value.length) this.onBytes(value);
+            continue;
+          }
           this.buf += dec.decode(value, { stream: true });
           if (this.buf.length > 65536 && !this.buf.includes("\n")) this.buf = "";   // noise at the wrong baud must not grow memory
           let i;
@@ -98,6 +115,9 @@ export class WebSerialTransport {
     this.port?.removeEventListener?.("disconnect", this._onDisconnect);
     if (this.onClose) this.onClose(reason);
   }
+  // Do not toggle DTR/RTS here. On a DevKitC the CP2102 auto-reset circuit treats an edge on either line as a
+  // pulse on EN, and Windows closing the port can already do that — an extra setSignals would only add another edge.
+  // Bluetooth has no DTR, so a drop there does not reset the ESP32.
   async _release() {
     const port = this.port;
     try { await this.reader?.cancel(); } catch (e) { /* ignore */ }

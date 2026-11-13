@@ -2,6 +2,7 @@
 // (same behaviour as the App class in plasma/server.py, without a server).
 
 import { GrblLink, RT } from "./grbl.js";
+import { startBoardJob, fileRunActive } from "./boardrun.js";
 import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt, jobPlan, restartLines } from "../cut/job.js";
 import { Safety, SafetyError } from "./safety.js";
 import { filterConsoleCommand } from "./admin-machine.js";
@@ -43,25 +44,37 @@ export class Machine {
   estopLatched() { try { return !!(this.estopProvider && this.estopProvider()); } catch (e) { return false; } }
 
   async connect(transport) {
+    const prevJob = this.grbl && this.grbl.job && this.grbl.job.running && this.grbl.job.boardRun ? this.grbl.job : null;
+    const keepZero = !!prevJob, keepRef = !!prevJob && this.safety.referenced;
     await this.disconnect(false);
-    this.zeroConfirmed = false;
-    this.safety.clearReference();
-    this.emit("safety", this.safety.state());
+    if (!keepZero) this.zeroConfirmed = false;
+    if (!keepRef) {
+      this.safety.clearReference();
+      this.emit("safety", this.safety.state());
+    }
     this.grbl = new GrblLink(transport, this.cfg.rx_buffer_size || 127, (k, d) => this.onGrbl(k, d));
     if (transport.needsHandshake) {       // USB / Bluetooth: an open port is not a connection; wait for the controller to answer
       try { await this.grbl.handshake(transport.handshakeMs); } catch (e) { await this.disconnect(false); throw e; }
     }
+    // Re-attach if the board is already running a local file (handshake never sends 0x18 once the board has spoken).
+    if (fileRunActive(this.grbl.status)) this.grbl.attachBoardRunIfActive(prevJob);
     this.emit("log", { text: `Connected to ${transport.label || "controller"}`, level: "info" });
   }
+  // stopFirst is false when reconnecting, and when a FluidNC board run should carry on after a deliberate disconnect.
+  boardRunLive() { const j = this.grbl && this.grbl.job; return !!(j && j.running && j.boardRun && j.phase === "run"); }
   async disconnect(stopFirst = true) {
-    if (this.grbl && stopFirst) {
+    const link = this.grbl;
+    if (link && stopFirst) {
       try {
-        this.grbl.stop("Disconnected.");
+        link.stop("Disconnected.");
         await new Promise((r) => setTimeout(r, 400));
       } catch (e) { /* already gone */ }
     }
+    // A reconnect may have replaced this.grbl while we waited. Don't close the new link, and don't clear its zero.
+    if (this.grbl !== link) return false;
     if (this.grbl) { await this.grbl.close(); this.grbl = null; }
     this.zeroConfirmed = false;
+    return true;
   }
 
   onGrbl(kind, data) {
@@ -318,9 +331,14 @@ export class Machine {
     }
     this.plan = jobPlan(lines, this.cfg);
     this.runFrom = fromCut; this.liveDelay = null;
-    this.grbl.startJob(lines);
-    this.emit("log", { text: `Started ${this.prepared.name}${note}${this.prepared.dry_run ? " (dry run)" : ""}`, level: "info" });
-    return { ok: true };
+    if (this.grbl.fluidnc && !opts.stream) {
+      startBoardJob(this.grbl, lines);
+      this.emit("log", { text: `Sending ${this.prepared.name}${note} to the table${this.prepared.dry_run ? " (dry run)" : ""}`, level: "info" });
+    } else {
+      this.grbl.startJob(lines);
+      this.emit("log", { text: `Started ${this.prepared.name}${note}${this.prepared.dry_run ? " (dry run)" : ""}`, level: "info" });
+    }
+    return { ok: true, board: !!(this.grbl.fluidnc && !opts.stream) };
   }
 
   // Live pierce delay: rewrite the dwell of every pierce that has NOT been sent to the controller yet.
@@ -328,6 +346,7 @@ export class Machine {
   setPierceDelay(delayS) {
     const g = this.grbl;
     if (!g || !g.job || !g.job.running) throw new JobError("Pierce delay can be changed while a job is running.");
+    if (g.job.boardRun) throw new JobError("Pierce delay can't be changed while the cut is running on the table. Stop and start again to use a new delay.");
     const d = Math.round(Number(delayS) * 100) / 100;
     if (!Number.isFinite(d) || d < 0 || d > 5) throw new JobError("Pierce delay must be 0 to 5 seconds.");
     let n = 0;

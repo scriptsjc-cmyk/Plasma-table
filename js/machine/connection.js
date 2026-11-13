@@ -58,10 +58,16 @@ async function connectDemo() {
   setConnected(true, "the demo (nothing real moves)");
 }
 async function disconnect() {
-  if (M.jobRunning() && !(await askConfirm({ title: "Disconnect while a job is running?", body: "A job is running. Disconnecting now leaves the controller mid-cut — the torch may stay on. Press STOP first if you can. Disconnect anyway?", ok: "Disconnect", cancel: "Cancel", danger: true }))) return;
+  const board = M.boardRunLive && M.boardRunLive();
+  if (M.jobRunning() && !(await askConfirm({
+    title: "Disconnect while a job is running?",
+    body: board
+      ? "The table will keep cutting by itself. Reconnect to watch it or to stop it. Use the table's own E-stop if you need to stop it now."
+      : "A job is running. Disconnecting now leaves the controller mid-cut — the torch may stay on. Press STOP first if you can. Disconnect anyway?",
+    ok: "Disconnect", cancel: "Cancel", danger: true }))) return;
   S.userDisconnected = true;
-  await M.disconnect();
-  setConnected(false);
+  const hungUp = await M.disconnect(!board);   // a board run must not get a soft reset just because we hung up
+  if (hungUp) setConnected(false);
 }
 let wakeLock = null;
 export async function keepAwake(on) {
@@ -83,6 +89,8 @@ export function bindConnection() {
     try {
       const g = M && M.grbl; if (!g) return;
       // only when something is actually moving or lit: a reset on an idle controller would make the next visit re-home
+      // A cut already running on the FluidNC board must keep going if the laptop sleeps or the tab closes.
+      if (g.job && g.job.running && g.job.boardRun && g.job.phase === "run") return;
       const busy = (g.job && g.job.running) || g.status.torch || ["Run", "Jog", "Hold", "Home"].includes(g.status.state);
       if (!busy) return;
       g.pending = []; g.inflight = [];

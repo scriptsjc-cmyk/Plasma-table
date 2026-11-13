@@ -91,8 +91,7 @@ export async function sendXmodem(data, io, opts = {}) {
     if (hello === CRC_C) { useCrc = true; break; }
     if (hello === NAK) { useCrc = false; break; }
     if (hello === CAN) {
-      const next = await io.readByte(1000);
-      await abortXmodem(io);
+      await io.readByte(1000).catch(() => -1);  // a second CAN is typical; do not reply — 0x18 is soft reset once XModem ends
       throw new Error("The table cancelled the upload.");
     }
     waited += helloStep;
@@ -109,7 +108,7 @@ export async function sendXmodem(data, io, opts = {}) {
       await io.write(pkt);
       const r = await read(opts.ackMs || DLY_ACK_MS);
       if (r === ACK) { acked = true; break; }
-      if (r === CAN) { await abortXmodem(io); throw new Error("The table cancelled the upload."); }
+      if (r === CAN) { throw new Error("The table cancelled the upload."); }
       if (r !== NAK && r >= 0) continue;       // ignore leftover text / status noise
     }
     if (!acked) { await abortXmodem(io); throw new Error("The table did not accept a block of the file (too many retries)."); }
@@ -124,7 +123,7 @@ export async function sendXmodem(data, io, opts = {}) {
     await io.write(new Uint8Array([EOT]));
     const r = await read(opts.ackMs || DLY_ACK_MS);
     if (r === ACK) { eotOk = true; break; }
-    if (r === CAN) { await abortXmodem(io); throw new Error("The table cancelled the upload."); }
+    if (r === CAN) { throw new Error("The table cancelled the upload."); }
   }
   if (!eotOk) { await abortXmodem(io); throw new Error("The table did not confirm the end of the file transfer."); }
   onProgress({ sent: bytes.length, total: bytes.length, block: blocks, blocks, done: true });
