@@ -6,7 +6,7 @@
 <meta name="description" content="Porta Plazma CNC — design parts and cut them on a plasma table from your browser.">
   <meta name="theme-color" content="#E8EAED">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ws: https://sjtjgumbsnakipkgskxt.supabase.co; script-src 'self'; object-src 'none'; worker-src 'self'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://sjtjgumbsnakipkgskxt.supabase.co; script-src 'self'; object-src 'none'; worker-src 'self'; base-uri 'self'; form-action 'self'">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -532,47 +532,6 @@
 
 <!-- round 5 item 13: saved parts have their own screen (was inside Account) -->
 <div id="slot-parts" hidden></div>
-
-<!-- round 5: put a FluidNC controller on the customer's home Wi-Fi (js/ui/wifisetup.js) -->
-<div id="wifiDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="wifiTitle">
-  <div class="shapelib-card slim acctcard">
-    <div class="shapelib-head">
-      <h2 id="wifiTitle">Put the table on your Wi-Fi</h2>
-      <button type="button" class="acct-close" id="wifiClose">Close</button>
-    </div>
-    <div id="wifiPick" class="wifipane">
-      <p>The table's controller can join your home Wi-Fi. Then you can connect to it without the USB cable.</p>
-      <p id="wifiWhy" class="warntext hidden"></p>
-      <button type="button" id="wifiScan" class="xl go">Find my Wi-Fi</button>
-      <p id="wifiScanning" class="muted hidden" role="status">Looking for Wi-Fi networks… this takes about 5 seconds.</p>
-      <ul id="wifiList" class="wifilist" aria-label="Wi-Fi networks the table can see"></ul>
-      <button type="button" id="wifiOther" class="small">My Wi-Fi isn't in the list</button>
-    </div>
-    <form id="wifiForm" class="wifipane col hidden" autocomplete="off">
-      <label id="wifiSsidRow" class="hidden">Wi-Fi name<input id="wifiSsid" type="text" maxlength="32" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"></label>
-      <p id="wifiChosen" class="wifichosen"></p>
-      <label id="wifiPwRow">Wi-Fi password<span class="pwfield"><input id="wifiPw" type="password" maxlength="64" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"><button type="button" class="pwshow" data-pw="wifiPw" aria-pressed="false" aria-label="Show password">Show</button></span></label>
-      <p class="muted small">The password goes straight to the table. This app doesn't keep it or show it anywhere.</p>
-      <p id="wifiFormErr" class="warntext hidden" role="alert"></p>
-      <div class="row wrap">
-        <button type="button" id="wifiBack">Back</button>
-        <button type="submit" id="wifiJoin" class="xl go">Connect the table</button>
-      </div>
-    </form>
-    <div id="wifiDone" class="wifipane hidden">
-      <p class="okline"><b id="wifiDoneTitle">Saved on the table.</b></p>
-      <p><b>Now restart the controller</b> so it joins your Wi-Fi: press the button below, or switch the table's controller off and on again.</p>
-      <button type="button" id="wifiRestart" class="xl go">Restart the controller now</button>
-      <h3>Then find it</h3>
-      <ol class="wifisteps">
-        <li>Wait about 20 seconds.</li>
-        <li>On a phone or computer on <b id="wifiDoneSsid"></b>, open <b id="wifiDoneHost">http://fluidnc.local</b>. If that doesn't open, find the table in your router's list of devices and use its number (like 192.168.1.50).</li>
-        <li>Here, type that name or number into <b>IP or hostname</b> under <b>FluidNC (Wi-Fi)</b> and press <b>Connect to FluidNC</b>.</li>
-      </ol>
-      <p class="muted small">Can't join (wrong password?) It makes its own Wi-Fi again, usually called <b>FluidNC</b> (password 12345678). Join that, or plug the USB cable back in, and try again.</p>
-    </div>
-  </div>
-</div>
 
 <!-- sign-in gate (shown when a signed-out user opens something locked) -->
 <div id="gateDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
