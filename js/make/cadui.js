@@ -27,6 +27,10 @@ export function bindCadUi() {
   }
   syncLaptopUi();
   if (typeof renderQuickBar === "function") try { renderQuickBar(); } catch (e) { /* not ready */ }
+  publishCadTestHooks();
+}
+
+export function publishCadTestHooks() {
   if (typeof window !== "undefined" && window.plasmaTest) {
     Object.assign(window.plasmaTest, { startRectAt, startDiscAt, applyHudPoint, cancelDrawHud, paintDrawHud });
   }

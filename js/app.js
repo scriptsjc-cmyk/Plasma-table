@@ -57,7 +57,7 @@ import { addTestPattern, adminMayTalk, bindMachineControls, fillEdgePanel, readC
 import { bindShapeForm, paintGuide, renderShapeForm, renderShapeTiles } from "./make/shapeform.js";
 import { bindConnection, connectWiFi, setConnected, wifiWatch } from "./machine/connection.js";
 import { bindQuickBar, renderQuickBar } from "./make/quickbar.js";
-import { bindCadUi } from "./make/cadui.js";
+import { bindCadUi, publishCadTestHooks } from "./make/cadui.js";
 import { bindHeader, setHeaderHidden } from "./ui/header.js";
 import { clickVerb, clickVerbLower } from "./ui/laptop.js";
 import { bindPhoneSheet } from "./make/phonesheet.js";
@@ -396,5 +396,6 @@ async function init() {
   // Test hooks only once the app has finished starting, so a test never talks to a half-ready page.
   if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
   if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
+  if (window.plasmaTest) publishCadTestHooks();
 }
 init().catch((e) => toast("Couldn't start: " + e.message, true));
