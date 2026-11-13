@@ -173,4 +173,13 @@ const lastStatus = (ev) => [...ev].reverse().find(([k]) => k === "status")?.[1];
   const src = fs.readFileSync(SITE + "js/machine/connection.js", "utf8");
   t.check("Connect button opens the port without reusing a remembered one", /t\.open\([^)]*,\s*false\)/.test(src));
 }
+// 12) FluidNC still booting (Wi-Fi join) past the normal wait: keep waiting, don't touch the reset lines
+{
+  const t0 = Date.now();
+  const r = await rig({ slowBoot: 2500 }, { handshakeMs: 1000 });
+  t.check("slow boot: connects once the banner arrives", !r.err && r.M.grbl, String(r.err));
+  t.check("slow boot: waited past the normal timeout", Date.now() - t0 >= 2400, Date.now() - t0);
+  t.check("slow boot: reset lines left alone while the board is talking", r.port.signals.length === 0, JSON.stringify(r.port.signals));
+  await r.M.disconnect(false);
+}
 process.exit(t.done() ? 1 : 0);

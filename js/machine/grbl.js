@@ -143,6 +143,8 @@ export class WiFiTransport {
 // ------------------------------------------------------------------ controller link
 const POLL_MS = 100;
 const CONFIG_ERR = /Configuration is invalid|^\[MSG:ERR: (Ignored key|Configuration error|Pin .* cannot be used)/;
+export const BOOT_WAIT_MS = 25000;
+export const BOOT_STUCK_MSG = "The controller is talking but never finished starting up. Check its start-up messages in the FluidNC web installer's Terminal for errors (config.yaml, Wi-Fi), then restart the board.";
 export const NO_REPLY_MSG = "No reply from the controller. Check the baud rate (115200), that you picked the right COM port, that the board is running FluidNC/grblHAL, and that no other program (FluidNC web installer, a serial terminal) has the port open.";
 
 export class GrblLink {
@@ -160,6 +162,7 @@ export class GrblLink {
     this.ready = !transport.needsHandshake;   // USB: only after a banner or a <status> report (see handshake())
     this.lastRx = Date.now();
     this.pollsSinceRx = 0;
+    this.heard = false;                 // any line at all: the board is alive (maybe still booting)
     this.t.onLine = (l) => this._line(l);
     this.t.onClose = (reason) => this._closed(reason);
     this.poll = setInterval(() => this._tick(), POLL_MS);
@@ -194,7 +197,9 @@ export class GrblLink {
   }
 
   // Resolves once the controller has really answered: its start-up banner ("Grbl 3.7 [FluidNC v4.1.1 ...]") or a <...> status
-  // report to '?'. An ESP32 that stays silent has its auto-reset lines released once (it may be held in reset), then we give up.
+  // report to '?'. FluidNC prints its boot log first and only answers once boot ends; joining Wi-Fi can take 10+ s. So once
+  // any line has arrived we wait up to BOOT_WAIT_MS and never touch the reset lines (that would restart the boot).
+  // A board that stays fully silent has its auto-reset lines released once (it may be held in reset), then we give up.
   handshake(timeoutMs = 6000) {
     if (this.ready) return Promise.resolve();
     return new Promise((resolve, reject) => {
@@ -204,8 +209,9 @@ export class GrblLink {
         if (this.ready) { clearInterval(check); resolve(); return; }
         if (!this.running) { clearInterval(check); reject(new Error(this.closeReason || "The controller disconnected.")); return; }
         const dt = Date.now() - t0;
-        if (!nudged && dt > timeoutMs / 2 && this.t.releaseResetLines) { nudged = true; this.t.releaseResetLines(); }
-        if (dt > timeoutMs) { clearInterval(check); reject(new Error(NO_REPLY_MSG)); }
+        if (!nudged && !this.heard && dt > timeoutMs / 2 && this.t.releaseResetLines) { nudged = true; this.t.releaseResetLines(); }
+        const limit = this.heard ? Math.max(timeoutMs, BOOT_WAIT_MS) : timeoutMs;
+        if (dt > limit) { clearInterval(check); reject(new Error(this.heard ? BOOT_STUCK_MSG : NO_REPLY_MSG)); }
       }, 50);
     });
   }
@@ -344,6 +350,7 @@ export class GrblLink {
   }
 
   _line(line) {
+    this.heard = true;
     this.lastRx = Date.now();
     this.pollsSinceRx = 0;
     if (line.startsWith("<") && line.endsWith(">")) {

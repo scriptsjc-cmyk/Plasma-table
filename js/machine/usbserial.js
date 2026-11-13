@@ -8,7 +8,7 @@ export class WebSerialTransport {
     this.serial = serial;
     this.onLine = null; this.onClose = null; this.port = null; this.buf = ""; this.label = "USB"; this.kind = "usb";
     this.needsHandshake = true;   // "connected" only after the controller answers (GrblLink.handshake)
-    this.handshakeMs = 6000;      // an ESP32 that was reset by the port opening needs ~1-2 s to boot and print its banner
+    this.handshakeMs = 8000;      // a silent board gets this long; once it prints anything GrblLink waits for boot to finish (BOOT_WAIT_MS)
     this.watchdogMs = 3000;       // no answer to '?' for this long = the link is lost (GrblLink)
     this.gone = false;
     this._onDisconnect = (e) => { if (!e || !e.target || e.target === this.port || e.port === this.port) this._lost("The USB cable was unplugged (or the controller lost power)."); };

@@ -4,9 +4,10 @@
 //   opts.answer   reply to '?' with a <status> report (false = a silent board: wrong port/baud, or held in reset)
 //   opts.banner   print the FluidNC banner as soon as the port opens (as after an ESP32 reset)
 //   opts.state    "Idle" or "Alarm" at start-up
+//   opts.slowBoot  ms of FluidNC boot log (no answer to '?') after opening, then the banner; reset lines restart it
 //   opts.wakeOnRelease  silent until setSignals({dtr:false, rts:false}) releases the reset line, then boots
 export function installMockSerial(target, opts = {}) {
-  const o = { answer: true, banner: false, state: "Idle", wakeOnRelease: false, ...opts };
+  const o = { answer: true, banner: false, state: "Idle", wakeOnRelease: false, slowBoot: 0, ...opts };
   const enc = new TextEncoder(), dec = new TextDecoder();
   const BANNER = "Grbl 3.7 [FluidNC v4.1.1 (noradio) '$' for help]";
   class MockPort extends EventTarget {
@@ -18,8 +19,17 @@ export function installMockSerial(target, opts = {}) {
       this.readable = new ReadableStream({ start: (c) => { this.ctl = c; } });
       this.writable = new WritableStream({ write: (chunk) => this._rx(typeof chunk === "string" ? chunk : dec.decode(chunk)) });
       if (o.banner) setTimeout(() => this.boot(), 20);
+      if (o.slowBoot) this.slow();
     }
-    async setSignals(s) { this.signals.push(s); if (o.wakeOnRelease && s.requestToSend === false) { this.answer = true; setTimeout(() => this.boot(), 20); } }
+    slow() {
+      this.answer = false; clearInterval(this.bootTimer); const t0 = Date.now();
+      this.bootTimer = setInterval(() => {
+        if (!this.isOpen) { clearInterval(this.bootTimer); return; }
+        if (Date.now() - t0 < o.slowBoot) { this.push("[MSG:INFO: Connecting to STA SSID:test]\r\n"); return; }
+        clearInterval(this.bootTimer); this.answer = true; this.boot();
+      }, 200);
+    }
+    async setSignals(s) { this.signals.push(s); if (o.slowBoot) this.slow(); if (o.wakeOnRelease && s.requestToSend === false) { this.answer = true; setTimeout(() => this.boot(), 20); } }
     boot() { this.push("[MSG:INFO: FluidNC v4.1.1 https://github.com/bdring/FluidNC]\r\n" + BANNER + "\r\n"); }
     push(text) { try { if (this.ctl) this.ctl.enqueue(enc.encode(text)); } catch (e) { /* closed */ } }
     status() { return `<${this.state}|MPos:0.000,0.000,0.000|FS:0,0>`; }
@@ -42,7 +52,7 @@ export function installMockSerial(target, opts = {}) {
       this.dispatchEvent(new Event("disconnect"));
       serial.dispatchEvent(Object.assign(new Event("disconnect"), { port: this }));
     }
-    async close() { this.isOpen = false; try { this.ctl.close(); } catch (e) { /* ignore */ } this.readable = null; this.writable = null; }
+    async close() { this.isOpen = false; clearInterval(this.bootTimer); try { this.ctl.close(); } catch (e) { /* ignore */ } this.readable = null; this.writable = null; }
   }
   const port = new MockPort();
   const serial = new EventTarget();
