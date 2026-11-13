@@ -110,8 +110,10 @@ export function onEvent(kind, d) {
     if (looksLikeFluidNC(d.text)) S.fluidnc = true;
   }
   else if (kind === "job") {
+    const wasRunning = !!(S.job && S.job.running);
     S.job = d;
-    if (d.running && d.boardRun) { keepAwake(true); try { goStep(4); } catch (e) { /* not on cut */ } }
+    // only when a board run first shows up (start or re-attach), not on every progress update
+    if (d.running && d.boardRun && !wasRunning) { keepAwake(true); try { goStep(4); } catch (e) { /* not on cut */ } }
     if (!d.running) {
       keepAwake(false);
       if (d.boardRun && d.result === "error" && d.phase === "upload") S.needStreamFallback = true;
