@@ -236,29 +236,34 @@ for (const prof of ["d1440", "d1366"]) {
     const ctx = cv.getContext("2d");
     const { width: w, height: h } = cv;
     const data = ctx.getImageData(0, 0, w, h).data;
-    let minX = w, maxX = 0, minY = h, maxY = 0, n = 0;
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = (y * w + x) * 4;
-        const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
-        if (a < 180) continue;
-        if (Math.abs(r - 38) < 10 && Math.abs(g - 45) < 10 && Math.abs(b - 54) < 10) {
-          n++;
-          if (x < minX) minX = x; if (x > maxX) maxX = x;
-          if (y < minY) minY = y; if (y > maxY) maxY = y;
-        }
+    const isBeam = (cssX, cssY) => {
+      const x = Math.round(cssX * dpr), y = Math.round(cssY * dpr);
+      const r = 4;
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        const px = x + dx, py = y + dy;
+        if (px < 0 || py < 0 || px >= w || py >= h) continue;
+        const i = (py * w + px) * 4;
+        if (data[i + 3] < 180) continue;
+        if (Math.abs(data[i] - 38) < 16 && Math.abs(data[i + 1] - 45) < 16 && Math.abs(data[i + 2] - 54) < 16) return true;
       }
-    }
-    const beamW = n ? (maxX - minX + 1) / dpr : 0;
-    const beamH = n ? (maxY - minY + 1) / dpr : 0;
+      return false;
+    };
+    // Sample the beam away from the torch/carriage at the sheet corner.
+    const midY = (mach.beam.y0 + mach.beam.h / 2);
+    const span = mach.x[1] - mach.x[0];
+    const pA = sk.toScreen(mach.x[0] + span * 0.3, midY);
+    const pB = sk.toScreen(mach.x[0] + span * 0.85, midY);
+    const sawA = isBeam(pA[0], pA[1]), sawB = isBeam(pB[0], pB[1]);
+    const spanPx = Math.hypot(pB[0] - pA[0], pB[1] - pA[1]);
+    const spanExpect = Math.abs(span * 0.55) * mach.sc;
     const tol = (exp) => Math.max(6, exp * 0.08);
     return {
-      missing: false, n, sc: mach.sc, scView, tablePx,
+      missing: false, sc: mach.sc, scView, tablePx,
       tableExpect: (mach.x[1] - mach.x[0]) * mach.sc,
-      beamW, beamH, expectW, expectH, inView,
+      expectW, expectH, inView, sawA, sawB, spanPx, spanExpect,
       okSc: Math.abs(mach.sc - scView) <= 0.02 || Math.abs(mach.sc - scView) / Math.max(scView, 1e-6) < 0.04,
       okTable: Math.abs(tablePx - (mach.x[1] - mach.x[0]) * mach.sc) <= tol(tablePx || 1),
-      okW: !inView || (n > 20 && Math.abs(beamW - expectW) <= tol(expectW)),
+      okW: !inView || (sawA && sawB && Math.abs(spanPx - spanExpect) <= tol(spanExpect)),
     };
   };
   await ev(page, () => {
@@ -289,6 +294,33 @@ for (const prof of ["d1440", "d1366"]) {
   t.check(n("Setup: after pan, gantry scale still matches the table"), !panScale.missing && panScale.okSc && panScale.okTable && panScale.okW, JSON.stringify(panScale));
 
   await ev(page, () => { if (window.plasmaTest.sketch && window.plasmaTest.sketch.fitView) window.plasmaTest.sketch.fitView(); });
+  await ev(page, () => {
+    const box = document.getElementById("showMach");
+    if (box && !box.checked) { box.checked = true; box.dispatchEvent(new Event("change", { bubbles: true })); }
+    const t = document.getElementById("toast"); if (t) t.classList.add("hidden");
+  });
+  await sleep(80);
+  const beforeDrag = await ev(page, () => {
+    const sk = window.plasmaTest.sketch, it = sk.items[0], b = sk.boxOf(it);
+    const [x0, y0] = sk.toScreen(b[0], b[3]), [x1, y1] = sk.toScreen(b[2], b[1]);
+    const r = document.getElementById("preview").getBoundingClientRect();
+    return {
+      x: it.x, y: it.y, show: !!window.plasmaTest.S.showMachine,
+      cx: r.left + (x0 + x1) / 2, cy: r.top + (y0 + y1) / 2,
+    };
+  });
+  await page.mouse.move(beforeDrag.cx, beforeDrag.cy);
+  await page.mouse.down();
+  await page.mouse.move(beforeDrag.cx + 90, beforeDrag.cy - 50, { steps: 8 });
+  await page.mouse.up();
+  await sleep(150);
+  const afterDrag = await ev(page, () => {
+    const it = window.plasmaTest.sketch.items[0];
+    return { x: it.x, y: it.y };
+  });
+  const moved = Math.hypot(afterDrag.x - beforeDrag.x, afterDrag.y - beforeDrag.y);
+  t.check(n("Setup: dragging the part works with Show machine on"), beforeDrag.show && moved > 40, JSON.stringify({ beforeDrag, afterDrag, moved }));
+
   await ev(page, () => { window.plasmaTest.S.job = window.plasmaTest.S.job || { running: false }; window.plasmaTest.goStep(4); });
   await sleep(200);
   const cutVis = await ev(page, () => {

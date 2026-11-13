@@ -178,6 +178,8 @@ function drawBg(sk, ctx, S, C, w, h) {
   if (machineVisible()) {
     const m = machineView(S, sk);
     drawMachineBed(ctx, m.T, m.X, m.Y, m.sc);
+    // Gantry under the parts so it never covers them or steals a drag at the sheet corner.
+    drawGantry(ctx, m.T, m.X, m.Y, m.sc, { sheet: true });
     markMach(sk, m);
   } else if (sk.cv && sk.cv._mach) {
     sk.cv._mach = null;
@@ -216,10 +218,6 @@ function drawTop(sk, ctx, S, C) {
     ctx.fillText(String(u.n), X, Y + 4); ctx.textAlign = "left";
   }
   drawStartMark(sk, ctx, S, H.S.prepared, a.units);
-  if (machineVisible()) {
-    const m = machineView(S, sk);
-    drawGantry(ctx, m.T, m.X, m.Y, m.sc, { sheet: true });
-  }
   // live distances for the picked part: to the sheet edges and to the nearest part on each side
   const one = sk.selected();
   const me = one && a.units.find((u) => u.id === one.id || (sk.hostOf && sk.hostOf(one) && u.id === sk.hostOf(one).id));

@@ -53,6 +53,21 @@ export class InputMethods {
       const b = this.boxOf(it);
       if (wx > b[0] - tol && wx < b[2] + tol && wy > b[1] - tol && wy < b[3] + tol && (b[2] - b[0] < 3 * tol || b[3] - b[1] < 3 * tol)) return { kind: "move", it };
     }
+    // Layout overview (especially with Show machine on) can shrink a part to a few
+    // pixels and the gantry sits over the sheet corner. Keep a minimum grab target
+    // so a drag still starts on the part, not as a box-select or pan.
+    if (this.layout) {
+      const min = 22;
+      for (const it of list) {
+        if (this.layerHidden && this.layerHidden(it)) continue;
+        const b = this.boxOf(it); if (!b) continue;
+        const [sx0, sy0] = this.toScreen(b[0], b[3]), [sx1, sy1] = this.toScreen(b[2], b[1]);
+        const cx = (sx0 + sx1) / 2, cy = (sy0 + sy1) / 2;
+        const hw = Math.max(min, Math.abs(sx1 - sx0) / 2), hh = Math.max(min, Math.abs(sy1 - sy0) / 2);
+        if (sx >= cx - hw && sx <= cx + hw && sy >= cy - hh && sy <= cy + hh)
+          return { kind: "move", it: this.holeOwner(it) || it };
+      }
+    }
     const loose = this.hitCustomHandles(sx, sy, touch, false);
     if (loose) return loose;
     return null;
