@@ -1,5 +1,5 @@
 // r9 items 2–8: Machine setup has no Cut-tab row; the Cut header is two rows with
-// E-STOP spanning both; a live Connected pill stays visible; Bed & start has no
+// E-STOP spanning both; a live Connected pill stays visible; Setup has no
 // cut-check panel (warnings live in the white Check-the-cut box); no black or
 // native tooltip on that box; Show machine is a small top-left canvas overlay;
 // Cut step 1 previews only the part.
@@ -116,11 +116,11 @@ for (const prof of ["d1440", "d1366"]) {
       layout: !!(window.plasmaTest.Setup && window.plasmaTest.Setup.layoutActive && window.plasmaTest.Setup.layoutActive()),
     };
   });
-  t.check(n("item 5: Bed & start has no cut-check panel"), !bed.cutCheck3, JSON.stringify(bed));
+  t.check(n("item 5: Setup has no cut-check panel"), !bed.cutCheck3, JSON.stringify(bed));
   t.check(n("item 7: Show machine is a small overlay in the canvas top-left"), bed.showMach && bed.left <= 16 && bed.top <= 16 && bed.h <= 40 && bed.w <= 200, JSON.stringify(bed));
-  t.check(n("item 8: Bed & start is the bed step, not the part-only preview"), bed.step === 3 && (bed.mmap || bed.layout), JSON.stringify(bed));
+  t.check(n("item 8: Setup is the bed step, not the part-only preview"), bed.step === 3 && (bed.mmap || bed.layout), JSON.stringify(bed));
 
-  // Live connection: Practice on Bed & start flips the header pill (never press USB Connect).
+  // Live connection: Practice on Setup flips the header pill (never press USB Connect).
   const before = await ev(page, () => (document.getElementById("connPill").textContent || "").replace(/\s+/g, " ").trim());
   await ev(page, () => { const b = document.getElementById("btnDemo"); if (b) b.click(); });
   await page.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 8000 }).catch(() => {});

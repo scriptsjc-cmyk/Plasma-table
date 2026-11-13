@@ -1,8 +1,8 @@
-<!-- Go to cutting: the step bar and the Part / Bed & start / Cut panes. Loaded into the shell at start-up. -->
+<!-- Go to cutting: the step bar and the Part / Setup / Cut panes. Loaded into the shell at start-up. -->
 <template data-slot="cut-stepper">
 <ol class="stepper" id="stepper">
     <li data-step="1"><span>1</span>Part</li>
-    <li data-step="3"><span>2</span>Bed &amp; start</li>
+    <li data-step="3"><span>2</span>Setup</li>
     <li data-step="4"><span>3</span>Cut</li>
   </ol>
 </template>
@@ -266,7 +266,7 @@
             <div class="row"><button type="button" id="cpSave" class="xl accent grow" disabled>Save to the cut chart</button><button type="button" id="cpSkip" class="grow">Not now</button></div>
           </div>
           <div id="restartBox" class="restartbox hidden">
-            <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">After a stop the machine may have lost its position, so you will Home it and set the start point again on Bed &amp; start before the torch can fire. The torch stays off until it is over the start of the cut.</span></p>
+            <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">After a stop the machine may have lost its position, so you will Home it and set the start point again on Setup before the torch can fire. The torch stays off until it is over the start of the cut.</span></p>
             <div class="row">
               <label class="grow">Continue from cut <select id="restartCut" aria-label="Continue from cut number"></select></label>
               <button type="button" id="btnRestart" class="xl accent grow">Continue from cut 1</button>

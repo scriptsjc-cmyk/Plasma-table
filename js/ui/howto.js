@@ -14,12 +14,12 @@ const STEPS = [
     "Press Cut this part when the drawing looks right. That sends the part to the cutting screen, starting at material and thickness.",
   ]},
   { id: "cut", title: "Cutting screen", body: [
-    "The steps are: 1 Part (material and thickness), 2 Bed & start (place the sheet and set Start here), then cut.",
+    "The steps are: 1 Part (material and thickness), 2 Setup (place the sheet and set Start here), then cut.",
     "Practice run keeps the torch off (the header chip says “Practice run · torch off”). Pause holds motion and the torch. STOP or the space bar cancels the job. The red STOP button stays visible even if you hide the header.",
     "A red TORCH ON pill in the header lights whenever the controller says the torch is firing.",
   ]},
   { id: "zero", title: "Set the start point (Start here)", body: [
-    "Put the sheet on the slats. On Bed & start, jog the torch to the sheet's bottom-left corner, at a safe height.",
+    "Put the sheet on the slats. On Setup, jog the torch to the sheet's bottom-left corner, at a safe height.",
     "Press Start here. That sets the start point. If you skip it, Start is blocked — you could cut in the wrong place.",
     "Use Trace the outline (torch off) to walk the path on the sheet before a real cut.",
   ]},
