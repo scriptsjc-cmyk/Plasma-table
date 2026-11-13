@@ -1,10 +1,9 @@
 /* Machine setup tab, settings, help and the admin dialog.
-   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours.
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
 
-#setupView .card + .card { border-radius: var(--r); margin-top: 12px; }
 .limits { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: var(--fs-sm); }
 .limits td { padding: 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
 .limits td:first-child { color: var(--muted); padding-right: 12px; width: 46%; }
@@ -49,7 +48,6 @@
 .fnbox { margin: 16px auto 0; max-width: 520px; text-align: left; background: var(--well);
   border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
 .fnbox summary { font-weight: 650; cursor: pointer; min-height: 44px; display: flex; align-items: center; }
-body.app-shell #setupView { overflow: auto; }
 /* new-version banner is a normal banner; About pane */
 .aboutmark { display: block; height: 64px; width: auto; max-width: min(100%, 320px); margin: 0 0 10px; }
 .aboutver { font-size: var(--fs-lg); margin: 4px 0; }

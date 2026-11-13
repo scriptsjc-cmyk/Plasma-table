@@ -1,6 +1,6 @@
 /* Layout: the app shell (top bar, tabs, banners, status pills), the preview / step-pane grid, the stepper and the nav bar,
    plus the short-landscape / portrait phone rules that resize them.
-   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours.
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
@@ -134,13 +134,6 @@ label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm)
   background: var(--well); border: 2px solid var(--line); font-weight: 800; font-size: var(--fs-lg); }
 .torchbig.on { background: var(--warn-bg); color: var(--warn-text); border-color: var(--torch);
   box-shadow: 0 0 0 3px rgba(192, 86, 0, .25); }
-/* setup */
-.status2 div { background: var(--well); border-radius: var(--r); padding: 10px 12px; border: 1px solid var(--line); }
-.status2 span { display: block; font-size: var(--fs-xs); color: var(--muted); }
-.status2 b.good { color: var(--ok-text); }
-.status2 b.bad { color: var(--alarm); }
-.status2 b.todo { color: var(--warn-text); }
-.wizard { margin: 12px 0 0; padding-left: 22px; display: grid; gap: 12px; }
 .log .error { color: var(--alarm); }
 .log .warn { color: var(--warn); }
 .lamps.mini { flex-wrap: wrap; gap: 4px 14px; }

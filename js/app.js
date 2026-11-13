@@ -230,10 +230,7 @@ async function init() {
   fitBar(); window.addEventListener("resize", fitBar); window.addEventListener("orientationchange", () => setTimeout(fitBar, 200));
   const travel = machine.travel_mm || { x: 1300, y: 800 };
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
-  // Test hooks only on a local test server, never on the live site (they hand out S, the sketch and the account API).
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
-if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   setInspectorApi(makeInspector({
     sketch: () => sketch, S, leadNow, jobRunning: () => !!(S.job && S.job.running),
     setLead: (v) => { $("ovLead").value = String(v); },
@@ -396,5 +393,8 @@ if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } }
   Acc.onAccountChange(routeAuth);
   routeAuth();
   refreshPublishedPresets().then(() => { applyMatchingPreset(); renderMaterials(); }).catch(() => {});
+  // Test hooks only once the app has finished starting, so a test never talks to a half-ready page.
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, FluidNCTransport, fluidncWsUrl, fluidncBlockedByHttps };
+  if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
 }
 init().catch((e) => toast("Couldn't start: " + e.message, true));

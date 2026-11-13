@@ -25,12 +25,18 @@ const PRECACHE = [
   "icon-512.png",
   "logo-dark.svg",
   "logo.svg",
+  "html/cut.html",
+  "html/make.html",
+  "html/parts.html",
+  "html/setup.html",
   "css/base.css",
   "css/components.css",
   "css/layout.css",
   "css/screen-admin.css",
   "css/screen-cut.css",
   "css/screen-make.css",
+  "css/screen-parts.css",
+  "css/screen-setup.css",
   "css/screen-signin-menu.css",
   "css/tokens.css",
   "css/yours.css",
@@ -58,6 +64,7 @@ const PRECACHE = [
   "js/account/uibase.js",
   "js/account/userprefs.js",
   "js/app.js",
+  "js/boot.js",
   "js/core/dom.js",
   "js/core/expr.js",
   "js/core/geom.js",
@@ -201,7 +208,7 @@ const PRECACHE = [
 const PREFIX = "plasma-cad-";
 const SLOW_MS = 6000;
 const scopeUrl = (p) => new URL(p, self.registration.scope).href;
-const isRequired = (p) => p === "./" || p === "index.html" || p === "manifest.json" || p === "version.json" || /^(js|css|config)\//.test(p);
+const isRequired = (p) => p === "./" || p === "index.html" || p === "manifest.json" || p === "version.json" || /^(js|css|config|html)\//.test(p);
 
 self.addEventListener("install", (e) => {
   e.waitUntil((async () => {

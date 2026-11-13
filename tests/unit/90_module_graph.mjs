@@ -3,7 +3,7 @@
 //   * module file names are unique across folders (tests and docs find modules by name)
 //   * every relative import resolves to a real file, and nothing imports a missing name that the target does not export
 //   * no circular imports (late calls go through js/core/hooks.js instead)
-//   * no orphan module: everything is reachable from index.html (js/app.js, js/sw-register.js)
+//   * no orphan module: everything is reachable from index.html (js/boot.js, js/sw-register.js, and their imports, including dynamic import())
 //   * core/ is the bottom layer: it imports nothing from the other folders
 import fs from "node:fs"; import path from "node:path";
 import { SITE, jsRel } from "../lib/site.mjs"; import { T } from "../lib/t.mjs";
@@ -36,6 +36,16 @@ for (const f of files) { edges[f] = new Set(); let m; IMPORT.lastIndex = 0;
     const braces = m[2].match(/\{([^}]*)\}/); if (braces && !/^\s*export\s+\*/.test(m[0])) { const ex = exportsOf(target);
       for (const spec of braces[1].split(",").map((x) => x.trim()).filter(Boolean)) { const name = spec.split(/\s+as\s+/)[0].trim(); if (!ex.has(name)) t.check(`${f}: ${target} exports ${name}`, false, ""); } } } }
 t.check("every relative import resolves to a module", true);
+// Dynamic import() is used to start the app after HTML partials load, and to break static cycles.
+// Count them for reachability (orphans) but not for the cycle walk.
+const dynEdges = {};
+for (const f of files) { dynEdges[f] = new Set();
+  for (const m of text[f].matchAll(/import\s*\(\s*["'](\.[^"']+)["']\s*\)/g)) {
+    const target = path.posix.normalize(path.posix.join(path.posix.dirname(f), m[1]));
+    if (!files.includes(target)) { t.check(`${f}: import("${m[1]}") resolves`, false, target); continue; }
+    dynEdges[f].add(target);
+  }
+}
 // 4. cycles
 const color = {}; const cycles = []; const stack = [];
 const dfs = (f) => { color[f] = 1; stack.push(f); for (const g of edges[f]) { if (color[g] === 1) cycles.push([...stack.slice(stack.indexOf(g)), g].join(" -> ")); else if (!color[g]) dfs(g); } stack.pop(); color[f] = 2; };
@@ -44,7 +54,7 @@ t.check("no circular imports", cycles.length === 0, [...new Set(cycles)].join(" 
 // 5. orphans
 const html = fs.readFileSync(SITE + "index.html", "utf8");
 const roots = [...html.matchAll(/<script[^>]*src="(js\/[^"]+)"/g)].map((m) => m[1]);
-const seen = new Set(); const walk = (f) => { if (seen.has(f)) return; seen.add(f); (edges[f] || []).forEach(walk); }; roots.forEach(walk);
+const seen = new Set(); const walk = (f) => { if (seen.has(f)) return; seen.add(f); (edges[f] || []).forEach(walk); (dynEdges[f] || []).forEach(walk); }; roots.forEach(walk);
 for (const f of files) t.check(`${f} is used (reachable from index.html)`, seen.has(f), "");
 // 6. core is the bottom layer
 for (const f of files.filter((x) => x.startsWith("js/core/"))) t.check(`${f} imports only from core/`, [...edges[f]].every((g) => g.startsWith("js/core/")), [...edges[f]].join(", "));

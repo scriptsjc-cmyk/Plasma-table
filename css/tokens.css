@@ -1,6 +1,6 @@
 /* Design tokens: the colour, type, spacing and CAD-canvas variables everything else reads. Light and dark themes
    (html[data-theme]) plus safety text colours that stay readable in both.
-   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours.
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */

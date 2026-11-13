@@ -42,7 +42,8 @@ const html = fs.readFileSync(SITE + "index.html", "utf8");
 t.check("CSP present (meta or header)", /Content-Security-Policy/i.test(html), "no CSP: any XSS has full access to Web Serial + the Pi socket", "CSP-MISSING");
 const ext = [...html.matchAll(/<(?:script|link)[^>]+(?:src|href)="(https?:[^"]+)"[^>]*>/g)].map((m) => m[0]);
 t.check("third-party resources carry SRI (integrity=)", ext.every((e) => /integrity=/.test(e)), ext.join(" | ").slice(0, 300), "SRI-MISSING");
-t.check("no inline event handlers in index.html", !/\son[a-z]+="/i.test(html), "", "INLINE-HANDLERS");
+const allHtml = [html, ...((fs.existsSync(SITE + "html") ? fs.readdirSync(SITE + "html") : []).filter((f) => f.endsWith(".html")).map((f) => fs.readFileSync(SITE + "html/" + f, "utf8")))];
+t.check("no inline event handlers in the page or HTML partials", allHtml.every((h) => !/\son[a-z]+="/i.test(h)), "", "INLINE-HANDLERS");
 t.check("referrer-policy meta", /name="referrer"/.test(html), "", "REFERRER");
 const jsAll = allJsText().map(([f, txt]) => [f.replace(/^js\//, ""), txt]);
 for (const [f, src] of jsAll) { const m = src.match(/\b(eval\s*\(|new Function\s*\(|(?<![.\w])Function\s*\()/g); if (m) t.check(`${f}: no eval / Function()`, false, `${f}: ${m.join(",")}`, "EVAL"); }

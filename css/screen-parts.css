@@ -1,0 +1,19 @@
+/* Your parts: the parts dialog, folders and the list of saved parts.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu,
+   screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours. */
+
+.partlist { display: grid; gap: 8px; margin-top: 10px; overflow: auto; max-height: 52vh; }
+.partrow .row { flex-wrap: wrap; gap: 6px; }
+.pfolder { border: 1px solid var(--line); border-radius: var(--r); background: var(--well); }
+.pfhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 6px; }
+.pftoggle { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; text-align: left; min-height: var(--tap, 44px); background: transparent; border: 0; }
+.pfbody { display: grid; gap: 6px; padding: 0 6px 8px; }
+.pfolder.closed .pfbody { display: none; }
+.pfempty { margin: 4px 6px; }
+.partrow { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 6px 10px; align-items: center; justify-content: stretch; }
+.partrow > .row { grid-column: 1 / -1; flex-wrap: wrap; gap: 6px; }
+.partinfo { min-width: 0; overflow-wrap: anywhere; }
+.movesel { min-height: 36px; max-width: 150px; }
+.partstools { margin: 6px 0; }
+.addfolder { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; margin-bottom: 6px; }
+.savedrow.folderrow { font-weight: 600; }

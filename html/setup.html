@@ -1,0 +1,67 @@
+<!-- Machine setup. Loaded into the shell at start-up. -->
+<section id="setupView" class="view hidden">
+  <div class="card">
+    <h1>Machine edges (crash protection)</h1>
+    <div class="grid2 status2">
+      <div><span>Position</span><b id="refState" class="todo">Unknown</b></div>
+      <div><span>Edges</span><b id="limState" class="todo">Not set</b></div>
+    </div>
+    <p class="muted small" id="safetyHint"></p>
+    <ol class="wizard" id="wizard">
+      <li id="wz1"><p><b>Find home.</b> Press Home. No home switches? Move the torch to your marked home corner, raised right up, then press “Torch is at home corner”.</p>
+        <div class="wzbtns"><button class="do-home small">Home</button><button id="btnRef" class="small">Torch is at home corner</button></div></li>
+      <li id="wz2"><p><b>Far corner.</b> Move to the furthest corner the torch can safely reach. <span id="wzFar" class="muted"></span></p>
+        <div class="wzbtns"><button class="small" data-cmd="limits_far">Set far corner</button></div></li>
+      <li id="wz3"><p><b>Lowest point.</b> No sheet on. Lower the torch onto a slat (1 mm steps at the end) until the <b>Floating head</b> light comes on. <span id="wzZ" class="muted"></span></p>
+        <div class="wzbtns"><button class="small" data-cmd="limits_zbottom">Set lowest point</button></div></li>
+      <li id="wz4"><p><b>Save.</b> The machine then checks every move against these edges.</p>
+        <div class="wzbtns"><button class="small accent" data-cmd="limits_save">Save edges</button><button class="small" id="btnClearLimits">Clear edges</button></div></li>
+    </ol>
+    <div class="jogmount"></div>
+  </div>
+
+  <div class="card">
+    <h2>Inputs (live)</h2>
+    <p class="muted small">A light comes on when that input is active. Press each switch by hand to check it's wired right.</p>
+    <div class="lamps grid">
+      <div class="lamp" data-in="probe"><b>Floating head</b><span>on when the torch is pushed up (touching)</span></div>
+      <div class="lamp" data-in="estop"><b>E-stop</b><span>on when pressed</span></div>
+      <div class="lamp" data-in="limX"><b>X home switch</b><span>on when triggered</span></div>
+      <div class="lamp" data-in="limY"><b>Y home switch</b><span>on when triggered</span></div>
+      <div class="lamp" data-in="limZ"><b>Z home switch</b><span>on when triggered</span></div>
+      <div class="lamp" data-in="hold"><b>Pause button</b><span>on when pressed</span></div>
+      <div class="lamp" data-in="start"><b>Start / resume button</b><span>on when pressed</span></div>
+      <div class="lamp" data-in="torch"><b>Torch relay (output)</b><span>on when the torch is firing</span></div>
+    </div>
+    <p class="muted small">Nothing lights when you press a switch? Check its wiring and the controller pin list (Show pins below).
+      Light stays on with nothing pressed? The input is inverted – fix it with the $5 / $6 / $14 settings.</p>
+    <div class="row hidden" id="demoInputs">
+      <button id="btnDemoEstop" class="warn">Demo: press / release e-stop</button>
+      <button id="btnDemoEdges" class="accent" title="Demo only: nothing real moves">Demo: set up the edges for me</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Tests</h2>
+    <div class="row">
+      <button id="btnTouchTest">Touch-off test</button>
+      <button id="btnTorchTest" class="warn">Torch test</button>
+    </div>
+    <p class="muted small">Touch-off test: the torch finds the sheet and stops at pierce height, no arc.
+      Torch test: fires the plasma for half a second over scrap.</p>
+  </div>
+
+  <div class="card admin-only" id="controllerCard">
+    <h2>Controller</h2>
+    <div class="row">
+      <button data-cmd="pins">Show pins</button>
+      <button data-cmd="settings_list">Show settings</button>
+      <button id="btnPushSettings">Send settings</button>
+    </div>
+    <div id="log" class="log"></div>
+    <form id="consoleForm" class="row">
+      <input id="consoleIn" class="grow" placeholder="G-code or $ command" autocomplete="off" autocapitalize="characters">
+      <button id="btnConsoleSend">Send</button>
+    </form>
+  </div>
+</section>

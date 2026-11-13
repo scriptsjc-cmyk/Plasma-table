@@ -21,6 +21,7 @@ sed -i "s|^const CACHE = .*|const CACHE = \"plasma-cad-$ID\";|" sw.js
 # precache list: the page, styles (css/**), scripts (js/**), config and icons that are really there (so a renamed, moved or new file can never be missed or 404 the install)
 LIST=$( { echo "./"; echo index.html; echo manifest.json; echo version.json
           ls favicon.svg favicon-32.png icon-*.png logo*.svg 2>/dev/null
+          find html -type f -name '*.html' 2>/dev/null | LC_ALL=C sort          # main-menu HTML partials (loaded at start-up, no build step)
           find css -type f -name '*.css' 2>/dev/null | LC_ALL=C sort            # every stylesheet, in any sub-folder
           find js -type f -name '*.js' | LC_ALL=C sort                          # every module, in any sub-folder (js/core, js/make, js/cut, ...)
           ls config/machine.json config/cut_chart.json config/grblhal_settings.txt config/fluidnc-plasma.yaml 2>/dev/null; } | awk 'NF && !seen[$0]++ { printf "  \"%s\",\n", $0 }' )

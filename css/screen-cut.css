@@ -1,5 +1,5 @@
 /* Cutting screen: Part / Bed & start / Cut steps, set-up cards, run screen, STOP + E-stop, live torch panel, start points, coupon.
-   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-admin.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu, screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours.
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
@@ -58,7 +58,6 @@ body.short-land .progress { height: 10px; }
   body.short-land #fit { top: 4px; bottom: auto; font-size: 11px; padding: 2px 6px; }
 }
 /* ================= ROUND 3: parts folders + batch DXF import ================= */
-.partlist { display: grid; gap: 8px; margin-top: 10px; overflow: auto; max-height: 52vh; }
 #exportRow { margin-top: 8px; }
 @media (max-width: 520px) {
   .shapeform .alignrow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -247,7 +246,6 @@ body.beginner #zeroState { font-size: 14px; }
 body.pro-mode .speedhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 body.pro-mode .speedrow button.xl { min-height: 40px; min-width: 52px; }
 body.pro-mode .speedrow { gap: 8px; }
-.partrow .row { flex-wrap: wrap; gap: 6px; }
 .custsize .wide2 { grid-column: 1 / -1; }
 /* ---- ROUND 2: step 3 "Get set up" (sheet layout + start point + checks) */
 .zeroscroll { display: contents; }     /* the start-point card's scrolling part on a laptop (below); elsewhere its children lay out as before */
@@ -305,19 +303,6 @@ body[data-step="3"] #exportRow { display: none; }
 @media (max-width: 899px) and (orientation: portrait) {
   body[data-step="3"] .previewDock .fit { font-size: 12px; margin: 0; }
 }
-.pfolder { border: 1px solid var(--line); border-radius: var(--r); background: var(--well); }
-.pfhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 6px; }
-.pftoggle { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; text-align: left; min-height: var(--tap, 44px); background: transparent; border: 0; }
-.pfbody { display: grid; gap: 6px; padding: 0 6px 8px; }
-.pfolder.closed .pfbody { display: none; }
-.pfempty { margin: 4px 6px; }
-.partrow { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 6px 10px; align-items: center; justify-content: stretch; }
-.partrow > .row { grid-column: 1 / -1; flex-wrap: wrap; gap: 6px; }
-.partinfo { min-width: 0; overflow-wrap: anywhere; }
-.movesel { min-height: 36px; max-width: 150px; }
-.partstools { margin: 6px 0; }
-.addfolder { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; margin-bottom: 6px; }
-.savedrow.folderrow { font-weight: 600; }
 /* the import dialog always fits under the top bar: the file list scrolls, the Import button stays on screen */
 .impdlg { z-index: 125; align-items: flex-start; padding: 6px; }
 .impdrop { min-height: 70px !important; margin: 8px 0; }

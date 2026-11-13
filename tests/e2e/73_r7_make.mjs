@@ -65,7 +65,9 @@ const box = `(() => {
   ck("U19 logo viewBox is wide enough that PORTA PLAZMA is not clipped", nums.length === 4 && nums[2] >= 500, vb && vb[1]);
   const grbl = fs.readFileSync(new URL("../../js/machine/grbl.js", import.meta.url), "utf8");
   ck("U20 unlock reminder tells the operator to set the start point again", /Unlock, then set the start point again/.test(grbl));
-  const html = fs.readFileSync(new URL("../../index.html", import.meta.url), "utf8");
+  const htmlDir = new URL("../../html/", import.meta.url);
+  const html = [fs.readFileSync(new URL("../../index.html", import.meta.url), "utf8"),
+    ...fs.readdirSync(htmlDir).filter((f) => f.endsWith(".html")).map((f) => fs.readFileSync(new URL(f, htmlDir), "utf8"))].join("\n");
   ck("J9 / U26 background-draw control is gone", !/id="bgDraw"/.test(html) && !/bgDraw/.test(html));
   ck("U23 pierce delay labels start with the visible text", /aria-label="− 0\.1 s, pierce delay shorter"/.test(html) && /aria-label="\+ 0\.1 s, pierce delay longer"/.test(html));
   const howto = fs.readFileSync(new URL("../../js/ui/howto.js", import.meta.url), "utf8");

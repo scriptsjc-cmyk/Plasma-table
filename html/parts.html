@@ -1,0 +1,20 @@
+<!-- Your parts. Loaded into the shell at start-up. -->
+<div id="partsDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="partsTitle">
+  <div class="shapelib-card acctcard wide">
+    <div class="shapelib-head">
+      <h2 id="partsTitle">Your parts</h2>
+      <button type="button" class="acct-close">Close</button>
+    </div>
+    <div class="row">
+      <input id="partName" class="grow" placeholder="Part name" maxlength="120" aria-label="Part name">
+      <button type="button" id="btnSavePart" class="accent">Save current drawing</button>
+    </div>
+    <div class="row partstools">
+      <button type="button" id="btnImportDxfs" class="accent" title="Pick up to 20 DXF or SVG files. Each one is saved as a part in a new folder.">⇪ Import DXF / SVG</button>
+      <button type="button" id="btnNewFolder">📁 New folder</button>
+    </div>
+    <div id="partsCard">
+      <div id="partsList" class="partlist"></div>
+    </div>
+  </div>
+</div>

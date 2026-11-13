@@ -1,0 +1,12 @@
+/* Machine setup: the edges wizard, status lamps layout and the setup page cards.
+   Load order (see index.html): tokens, base, layout, components, screen-signin-menu,
+   screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours. */
+
+#setupView .card + .card { border-radius: var(--r); margin-top: 12px; }
+body.app-shell #setupView { overflow: auto; }
+.status2 div { background: var(--well); border-radius: var(--r); padding: 10px 12px; border: 1px solid var(--line); }
+.status2 span { display: block; font-size: var(--fs-xs); color: var(--muted); }
+.status2 b.good { color: var(--ok-text); }
+.status2 b.bad { color: var(--alarm); }
+.status2 b.todo { color: var(--warn-text); }
+.wizard { margin: 12px 0 0; padding-left: 22px; display: grid; gap: 12px; }

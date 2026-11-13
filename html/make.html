@@ -1,0 +1,169 @@
+<!-- Make a part: the drawing bar, tools and shape library. Loaded into the shell at start-up. -->
+<template data-slot="make-bar">
+<div id="makeBar" class="makebar">
+    <h1>Make a part</h1>
+    <div id="qbPinned" class="qb-pinned" role="group" aria-label="Edit the drawing"></div>
+    <button type="button" id="btnSimpleSnap" class="small simplesnap" aria-pressed="false" title="Snap: shapes click neatly to the grid, edges and centres so they line up exactly">Snap</button>
+    <button type="button" id="btnDragPan" class="small dragpan" aria-pressed="false" title="When on, dragging empty canvas pans the view. When off, a drag on empty canvas draws a selection box. Space never pans — Space is STOP.">Box select</button>
+    <button type="button" id="btnMakeCheckCut" class="small makecheck" title="Check whether this drawing will cut cleanly" aria-label="Check cut">Check cut</button>
+    <button type="button" id="btnViewParts" class="small viewparts">Parts</button>
+    <div id="editorSwitch" class="editorsw" role="group" aria-label="Drawing tools">
+      <button type="button" id="btnAdvancedTools" class="modesw-btn">Advanced tools</button>
+      <button type="button" id="btnSimpleView" class="modesw-btn hidden">Simple view</button>
+      <button type="button" id="btnPresetParts" class="modesw-btn">Preset parts</button>
+    </div>
+  </div>
+</template>
+<template data-slot="make-split">
+<div id="makeSplit" class="makesplit" role="separator" aria-orientation="vertical" aria-label="Drag to make the picture bigger or smaller" aria-valuemin="0" aria-valuemax="100" aria-valuenow="34" tabindex="0"></div>
+    <div id="quickBarWrap" class="scrollrow-wrap hidden">
+      <nav id="quickBar" class="quickbar hidden scrollrow" aria-label="Design tools"></nav>
+      <span class="scrollrow-fade start" aria-hidden="true"></span>
+      <span class="scrollrow-fade end" aria-hidden="true"></span>
+    </div>
+</template>
+<template data-slot="make-bg">
+<div id="bgPick" class="bgpick beginner-only">
+          <button type="button" id="bgChange" class="xl">↺ Choose a different shape</button>
+          <div id="bgShapes" class="bgshapes"></div>
+          <div class="bgmore">
+            <button type="button" id="bgMore" class="xl">More shapes…</button>
+          </div>
+        </div>
+</template>
+<template data-slot="make-editor">
+<div id="srcShape" class="hidden">
+          <p class="muted small skhelp beginner-help">Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</p>
+          <div class="sktools">
+            <button id="skUndo" title="Undo (Ctrl+Z)">↶ Undo</button><button id="skRedo" title="Redo (Ctrl+Y)">↷ Redo</button>
+            <button id="skAll" title="Pick every shape (Ctrl+A)">▣ Pick all</button><button id="skFit" title="Show everything (double-click empty space)">⤢ Fit</button>
+            <button id="skClear" title="Remove every shape">Clear</button>
+          </div>
+          <div class="skopts">
+            <label>Snap to <select id="skSnap"><option value="0">off</option><option value="0.1">0.1 mm</option><option value="0.5">0.5 mm</option><option value="1">1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option></select></label>
+            <label class="check"><input type="checkbox" id="skGuides"> Line-up guides</label>
+          </div>
+          <div id="edgePanel" class="edgepanel hidden" hidden>
+            <h3>Edit edge</h3>
+            <p class="muted small" id="edgeHint">Click an edge of a drawn outline to set its length, square it up, or turn it into a curve. Drag corners, double-click an edge to add a corner, Delete removes one.</p>
+            <div class="grid2">
+              <label>Length (mm)
+                <span class="row" style="margin-top:0">
+                  <input id="edgeLen" type="number" min="0.1" step="0.1" inputmode="decimal">
+                  <button type="button" id="edgeLenApply" class="small">Set</button>
+                </span>
+              </label>
+              <label>Keep this end fixed
+                <select id="edgeFixed"><option value="start">Start</option><option value="end">End</option></select>
+              </label>
+            </div>
+            <div class="row wrap">
+              <button type="button" id="edgeSquare" class="small">Square up (0/90°)</button>
+              <button type="button" id="edgeSquarePrev" class="small">Square to previous</button>
+            </div>
+            <div class="grid2">
+              <label>Angle (°)
+                <span class="row" style="margin-top:0">
+                  <input id="edgeAng" type="number" step="0.1" inputmode="decimal">
+                  <button type="button" id="edgeAngApply" class="small">Set</button>
+                </span>
+              </label>
+              <label>Measured from
+                <select id="edgeAngMode"><option value="abs">Absolute</option><option value="rel">Previous edge</option></select>
+              </label>
+            </div>
+            <div class="grid2">
+              <label>Curve radius (mm)
+                <span class="row" style="margin-top:0">
+                  <input id="edgeRad" type="number" min="0" step="0.1" inputmode="decimal">
+                  <button type="button" id="edgeCurve" class="small">Curve</button>
+                </span>
+              </label>
+              <label>Bulge
+                <span class="row" style="margin-top:0">
+                  <input id="edgeBulge" type="number" step="0.05" inputmode="decimal">
+                  <button type="button" id="edgeStraight" class="small">Straight</button>
+                </span>
+              </label>
+            </div>
+            <div class="row wrap">
+              <button type="button" id="edgeAddV" class="small">Add corner in the middle</button>
+              <button type="button" id="edgeDelV" class="small warn">Delete corner</button>
+            </div>
+          </div>
+          <div id="proTools" class="protools hidden"></div>
+          <h3 class="addtiles">Add a part</h3>
+          <div id="shapeTiles" class="tiles small addtiles"></div>
+          <h3 class="addtiles">Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
+          <div id="holeTiles" class="tiles small addtiles"></div>
+          <div id="shapeForm" class="shapeform"></div>
+          <div id="sheetSizeBox" class="sheetsize">
+            <h3>Drawing sheet</h3>
+            <div class="grid2">
+              <label>Width <input id="sheetSizeW" type="number" min="50" max="20000" step="any" inputmode="decimal"> mm</label>
+              <label>Height <input id="sheetSizeH" type="number" min="50" max="20000" step="any" inputmode="decimal"> mm</label>
+            </div>
+          </div>
+          <section id="layersPanel" class="layerspanel" aria-label="Parts list">
+            <div class="layershead">
+              <h3>Parts</h3>
+              <button type="button" id="layersClose" class="small" aria-label="Close the parts list">✕</button>
+            </div>
+            <ul id="layersList" class="layerslist"></ul>
+          </section>
+          <section id="cutSummary" class="cutsummary" aria-label="Cut settings"></section>
+          <div id="cutCheck" class="cutcheck"></div>
+          <details class="guide"><summary>What this machine can cut</summary><div class="limitsBody"></div></details>
+          <details class="guide howto beginner-help">
+            <summary>How to use the shape maker</summary>
+            <ul>
+              <li><b>Add</b> – use the bar under the drawing for a rectangle, circle or triangle, or tap <b>More</b> for the full shape library. Tap a hole with a part picked and it drops into the middle of it.</li>
+              <li><b>Rotate your phone</b> – landscape gives you a bigger drawing, with the tools down the side. Portrait still works as before.</li>
+              <li><b>Move</b> – drag it. Guide lines appear when it lines up with another shape. Hold <b>Alt</b> to move freely.</li>
+              <li><b>Size</b> – tap the millimetre label above or beside the shape and type the exact size (you can use 100/2 or 50+12.5). Or drag a corner, or use the boxes below.</li>
+              <li><b>Versions</b> – tap a shape, then pick a version (rounded, chamfered, corner holes, flange, gusset…). It keeps the size and place.</li>
+              <li><b>Advanced tools</b> – opens the full drawing editor: a dense layout, arrays, subtract, offset and every tool in one place. Simple view takes you back to the templates.</li>
+              <li><b>Edit a drawn outline</b> – after <b>Draw outline</b>, click an edge to type an exact length, square it up, set an angle, or turn it into a curve (drag the midpoint handle). Drag corners, double-click an edge to add a corner, Delete removes one. Undo still works.</li>
+              <li><b>Holes</b> – drag a hole to move it. The numbers show how far its middle is from the part's left and bottom edges.</li>
+              <li><b>Several at once</b> – Shift-click them, or drag a box round them on empty space. Then move, copy, turn, mirror or delete them together.</li>
+              <li><b>Join</b> – pick shapes that touch or overlap and press <b>Join into one part</b>. They become one outline, with all their holes. Now copy it, resize it or turn it as one part.</li>
+              <li><b>Line up</b> – with several picked, the Line-up buttons move them to match the biggest one (e.g. pick a plate and a hole, press <b>Dead centre</b>).</li>
+              <li><b>Copy</b> – Copy button, or Ctrl+C then Ctrl+V. For lots of the same thing use <b>How many</b> below.</li>
+              <li><b>Keys</b> – arrows nudge 1 mm (Shift 10, Alt 0.1), L line, R rectangle, C circle, D dimension, M move, Delete removes, Ctrl+Z undo, Ctrl+Y redo, Ctrl+J join. Keys are ignored while you type in a box.</li>
+              <li><b>View</b> – on a laptop the wheel zooms to the cursor, the middle button pans and right-click opens a menu. On a phone, scroll still pans; pinch to zoom. Hold Space to pan. Double-click empty space to fit.</li>
+            </ul>
+          </details>
+          <h3>How many of the whole drawing?</h3>
+          <div class="grid3">
+            <label>Across<input id="cpX" type="number" min="1" value="1" inputmode="numeric"></label>
+            <label>Up<input id="cpY" type="number" min="1" value="1" inputmode="numeric"></label>
+            <label>Gap (mm)<input id="cpGap" type="number" min="0" value="10" inputmode="decimal"></label>
+          </div>
+          <p class="muted small">All sizes in mm and are the finished part – the cut width is allowed for automatically.</p>
+        </div>
+</template>
+<template data-slot="make-dialogs">
+<div id="shapeLib" class="shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="libTitle">
+  <div class="shapelib-card">
+    <div class="shapelib-head">
+      <h2 id="libTitle">Shape library</h2>
+      <button type="button" id="libClose">Close</button>
+    </div>
+    <input id="libSearch" type="search" placeholder="Search shapes" enterkeyhint="search" autocomplete="off">
+    <div id="libCats" class="libcats"></div>
+    <div id="libGrid" class="libgrid"></div>
+  </div>
+</div>
+<!-- Preset parts browser -->
+<div id="presetBrowser" class="presetbrowser hidden" hidden role="dialog" aria-modal="true" aria-labelledby="pbTitle" aria-hidden="true">
+  <div class="pb-frame">
+    <div class="pb-head">
+      <h2 id="pbTitle">Preset parts</h2>
+      <input id="pbSearch" type="search" placeholder="Search parts" enterkeyhint="search" autocomplete="off" aria-label="Search parts">
+      <button type="button" id="pbClose">Close</button>
+    </div>
+    <div id="pbCats" class="pbcats" role="tablist" aria-label="Part categories"></div>
+    <div id="pbGrid" class="pbgrid"></div>
+  </div>
+</div>
+</template>
