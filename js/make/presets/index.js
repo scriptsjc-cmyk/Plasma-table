@@ -9,6 +9,7 @@ import { GEAR_PRESETS } from "./gears-sprockets.js";
 import { BOX_PRESETS } from "./enclosures.js";
 import { FAB_PRESETS } from "./fab-transitions.js";
 import { R8_PRESETS } from "./r8-parts.js";
+import { FOLD_PRESETS } from "./fold-parts.js";
 
 export const PRESET_CATEGORIES = [
   { id: "plates", name: "Plates & brackets", items: PLATE_PRESETS },
@@ -21,6 +22,7 @@ export const PRESET_CATEGORIES = [
   { id: "enclosures", name: "Enclosures & boxes", items: BOX_PRESETS },
   { id: "sheetmetal", name: "Sheet-metal patterns", items: FAB_PRESETS },
   { id: "r8parts", name: "More workshop parts", items: R8_PRESETS },
+  { id: "folded", name: "Folded parts", items: FOLD_PRESETS },
 ];
 
 // Existing fabrication shapes (already in SHAPES) belong in Preset parts, not More shapes.
@@ -37,4 +39,4 @@ export const PRESET_GROUPS = PRESET_CATEGORIES.map((c) => ({
 export const PRESET_IDS = new Set(PRESET_SHAPES.map((s) => s.id));
 
 
-export { R8_PRESETS };
+export { R8_PRESETS, FOLD_PRESETS };

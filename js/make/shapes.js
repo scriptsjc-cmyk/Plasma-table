@@ -3,7 +3,9 @@ import { arcPoints, circleContour, signedArea } from "../core/geom.js";
 import { roundedRect, chamferRect, slot, roundCorners, dedupe } from "./shape-helpers.js";
 import { FAB_SHAPES } from "./shapes-fab.js";
 import { PRESET_SHAPES, PRESET_GROUPS } from "./presets/index.js";
-export { PRESET_SHAPES, PRESET_GROUPS, PRESET_IDS, R8_PRESETS, WORKSHOP_IDS } from "./presets/index.js";
+import { isFoldPart, foldTileSvg, foldModel, FOLD_MODELS } from "./fold3d.js";
+export { isFoldPart, foldModel, FOLD_MODELS };
+export { PRESET_SHAPES, PRESET_GROUPS, PRESET_IDS, R8_PRESETS, FOLD_PRESETS, WORKSHOP_IDS } from "./presets/index.js";
 
 const MIN = 2;
 const SIZE_KEYS = new Set(["w", "h", "d", "a", "b", "len", "wid", "s"]);
@@ -696,5 +698,12 @@ export function shapeThumb(sh, w = 64, h = 48) {
     if (!pts.length) return "";
     return pts.map((pt, i) => `${i ? "L" : "M"}${(ox + pt[0] * s).toFixed(2)},${(oy - pt[1] * s).toFixed(2)}`).join(" ") + " Z";
   }).join(" ");
-  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><path d="${d}" fill="currentColor" fill-rule="evenodd"></path></svg>`;
+  const flat = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><path d="${d}" fill="currentColor" fill-rule="evenodd"></path></svg>`;
+  if (isFoldPart(sh)) {
+    try {
+      const three = foldTileSvg(sh, flat, w, h, p);
+      if (three) return three;
+    } catch (e) { /* keep the flat thumb */ }
+  }
+  return flat;
 }

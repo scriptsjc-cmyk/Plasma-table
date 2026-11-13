@@ -1131,3 +1131,50 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
   #editorSwitch { flex: 1 1 100%; min-width: 0; }
   #btnAdvancedTools, #btnPresetParts, #btnSimpleView { flex: 1 1 auto; min-width: 0; max-width: 100%; }
 }
+
+/* Folded 3D view on Make a part (editor + preset tiles) */
+.fold3d-host { margin: 8px 0 10px; }
+.fold3d-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: #e8edf2;
+  overflow: hidden;
+}
+.fold3d-wrap canvas.fold3d {
+  display: block;
+  width: 100%;
+  height: 180px;
+  touch-action: none;
+  cursor: grab;
+  background: #e8edf2;
+}
+.fold3d-cap {
+  margin: 0;
+  padding: 4px 8px 6px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+body.phone-ui .fold3d-wrap canvas.fold3d,
+body:not(.laptop-ui) .fold3d-wrap canvas.fold3d { height: 96px; }
+/* Keep the preview clear of the sticky Next bar on a phone. */
+body.beginner:not(.laptop-ui)[data-screen="make"] .fold3d-host { margin-bottom: 6px; }
+body.beginner:not(.laptop-ui)[data-screen="make"] .fold3d-cap { padding-top: 2px; padding-bottom: 2px; font-size: 12px; }
+.pb-tile { position: relative; }
+.pb-tile svg.fold-thumb { width: 96px; height: 72px; }
+
+.previewPane { position: relative; }
+.fold3d-dock {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: min(46%, 168px);
+  margin: 0;
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0,0,0,.18);
+  background: #e8edf2;
+  border-radius: var(--r);
+}
+.fold3d-dock .fold3d-wrap { margin: 0; border-color: var(--line-strong, #b8bfc9); }
+.fold3d-dock canvas.fold3d { height: 88px; }
+.fold3d-dock .fold3d-cap { display: none; } /* caption would clip; canvas has an aria-label */
+body.laptop-ui .fold3d-dock { display: none; }

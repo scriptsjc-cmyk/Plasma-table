@@ -14,6 +14,7 @@ import { showSource, useShape, useShapeSoon } from "../core/hooks.js";
 import { paintCutSummary } from "./cutsummary.js";
 import { onShapeFormPainted } from "./phonesheet.js";
 import { clickVerb } from "../ui/laptop.js";
+import { isFoldPart, mountFoldView } from "./fold3d.js";
 
 let editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
@@ -107,7 +108,34 @@ function beginnerPartsHtml() {
   return `<div class="bgparts"><h4>Parts in this drawing</h4><ul>${li}</ul>${unlock}</div>`;
 }
 export function renderShapeForm() {
-  try { renderShapeFormCore(); } finally { try { onShapeFormPainted(); } catch (e) { /* phone sheet optional */ } }
+  try { renderShapeFormCore(); } finally {
+    try { paintFoldView(); } catch (e) { /* 3D view optional */ }
+    try { onShapeFormPainted(); } catch (e) { /* phone sheet optional */ }
+  }
+}
+function foldDock() {
+  let dock = document.getElementById("fold3dDock");
+  if (dock) return dock;
+  const pane = document.querySelector(".previewPane");
+  if (!pane) return null;
+  dock = document.createElement("div");
+  dock.id = "fold3dDock";
+  dock.className = "fold3d-host fold3d-dock";
+  dock.hidden = true;
+  pane.appendChild(dock);
+  return dock;
+}
+function paintFoldView() {
+  const formHost = document.getElementById("fold3dHost");
+  const dock = foldDock();
+  const it = sketch && sketch.selected();
+  const sh = it && shapeDef(it.type);
+  const on = !!(it && sh && isFoldPart(sh));
+  const phone = document.body.classList.contains("phone-ui") || !document.body.classList.contains("laptop-ui");
+  const hide = (el) => { if (!el) return; el.replaceChildren(); el.hidden = true; };
+  if (on && phone && dock) { hide(formHost); mountFoldView(dock, sh, it.p); }
+  else if (on && formHost) { hide(dock); mountFoldView(formHost, sh, it.p); }
+  else { hide(formHost); hide(dock); }
 }
 function renderShapeFormCore() {
   try { paintCutSummary(); } catch (e) { /* the cut chart is not loaded yet */ }
@@ -161,6 +189,7 @@ function renderShapeFormCore() {
   if (!sketch.opts.pro) {                        // Beginner: just the sizes, turn, add a hole, remove
     $("shapeForm").innerHTML = beginnerPartsHtml() + `
       <div class="selhead"><b>${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}</div>
+      <div id="fold3dHost" class="fold3d-host" hidden></div>
       ${it.lock ? `<p class="tip lockline">This part is locked, so it can't change. <button type="button" data-sk="toggleLock">🔓 Unlock</button></p>` : `<p class="tip">Type the size in millimetres.</p>`}
       <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
         `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}</div>${customSizeHtml(it, b)}
@@ -198,6 +227,7 @@ function renderShapeFormCore() {
       </div>` : "";
   $("shapeForm").innerHTML = `
     <div class="selhead"><b>${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
+    <div id="fold3dHost" class="fold3d-host" hidden></div>
     ${varBox}
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
     ${customSizeHtml(it, b)}
