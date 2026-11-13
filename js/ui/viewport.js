@@ -2,11 +2,13 @@
 import { $ } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
 import { drawPreview } from "../cut/preview.js";
+import { syncMachineView } from "../cut/setup.js";
 
 export function bindViewport() {
   $("showMach").addEventListener("change", () => {
     S.showMachine = $("showMach").checked;
     try { localStorage.setItem("plasma.showMachine", S.showMachine ? "1" : "0"); } catch (e) { /* ignore */ }
+    try { syncMachineView(); } catch (e) { /* ignore */ }
     drawPreview();
   });
   let layoutTimer = null, lastShort = null;

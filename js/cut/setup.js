@@ -12,7 +12,7 @@ import * as Acc from "../account/account.js";
 import { insideRegion } from "./nest.js";
 import { initNestUi, paintNest, nestNow } from "./nestui.js";
 import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
-import { drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
+import { MACH, drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
@@ -138,10 +138,18 @@ function viewBox(sk) {
     return [Math.min(0, b[0] - m) < b[0] - m ? b[0] - m : b[0] - m, b[1] - m, b[2] + m, b[3] + m];
   }
   const wa = workArea();
+  const t = H.S.cfg && H.S.cfg.travel_mm;
   const x0 = Math.min(0, wa ? wa.x[0] : 0), y0 = Math.min(0, wa ? wa.y[0] : 0);
   // the sheet, but never zoom out further than the machine area / a sensible window around the parts
-  const W = wa ? Math.max(sheet.w, wa.x[1]) : sheet.w, Hh = wa ? Math.max(sheet.h, wa.y[1]) : sheet.h;
-  return [x0, y0, W, Hh];
+  let x1 = wa ? Math.max(sheet.w, wa.x[1]) : (t ? Math.max(sheet.w, t.x) : sheet.w);
+  let y1 = wa ? Math.max(sheet.h, wa.y[1]) : (t ? Math.max(sheet.h, t.y) : sheet.h);
+  let vx0 = x0, vy0 = y0;
+  // When Show machine is on, leave room for the X beam (front) and Y arm, same margins as the Cut preview.
+  if (machineVisible()) {
+    const mg = [70, 190, 70, 140];                             // left, front, back, right
+    vx0 -= mg[0]; vy0 -= mg[1]; x1 += mg[3]; y1 += mg[2];
+  }
+  return [vx0, vy0, x1, y1];
 }
 function machineView(toScreen, sk) {
   const wa = workArea();
@@ -153,13 +161,26 @@ function machineView(toScreen, sk) {
       : { x: [0, sheet.w], y: [0, sheet.h], label: "table" };
   const X = (x) => toScreen(x, 0)[0];
   const Y = (y) => toScreen(0, y)[1];
-  const sc = (sk.view && sk.view.s) || 1;
+  // Scale from the same mapper as the sheet and parts, so zoom and pan stay in true millimetres.
+  const sc = (Math.abs(X(1000) - X(0)) + Math.abs(Y(0) - Y(1000))) / 2000 || (sk.view && sk.view.s) || 1;
   return { T, X, Y, sc };
+}
+function markMach(sk, m) {
+  if (!sk || !sk.cv) return;
+  sk.cv._mach = {
+    sc: m.sc,
+    x: m.T.x.slice(),
+    y: m.T.y.slice(),
+    beam: { x0: m.T.x[0] - 40, x1: m.T.x[1] + 110, y0: m.T.y[0] - 20 - MACH.beamH, h: MACH.beamH },
+  };
 }
 function drawBg(sk, ctx, S, C, w, h) {
   if (machineVisible()) {
     const m = machineView(S, sk);
     drawMachineBed(ctx, m.T, m.X, m.Y, m.sc);
+    markMach(sk, m);
+  } else if (sk.cv && sk.cv._mach) {
+    sk.cv._mach = null;
   }
   const [x0, y0] = S(0, sheet.h), [x1, y1] = S(sheet.w, 0);
   if (sheet.remnant) {                                                    // a saved leftover: draw its real outline
@@ -244,7 +265,7 @@ export function enter() {
   for (const it of sk.items) { if (!sk._seen.has(it.id) && sk.isHole(it) && sk.hostOf(it)) sk._holes.add(it.id); }
   if (!sk._layoutPlaced) { sk._layoutPlaced = true; bringOnSheet(sk); }
   sk.pick([]);
-  zoomParts = true; paintZoomBtns();
+  zoomParts = !machineVisible(); paintZoomBtns();
   paint();
   H.loadJob();
   H.refresh();
@@ -252,6 +273,19 @@ export function enter() {
 }
 export function leave() {
   const sk = H.sketch(); layoutOn = false; if (sk) sk.layout = null;      // (sheetMode stays on: the job keeps its sheet coordinates)
+}
+
+export function syncMachineView() {
+  if (!layoutOn) return;
+  const sk = H.sketch();
+  if (!sk) return;
+  if (machineVisible() && zoomParts) {
+    zoomParts = false;
+    paintZoomBtns();
+    sk.fitView();
+  } else {
+    sk.draw();
+  }
 }
 function convertFile() {
   const e = contoursToEditable(H.S.design.contours); if (!e) return;

@@ -218,6 +218,77 @@ for (const prof of ["d1440", "d1366"]) {
     t.check(n(label + ": toggle does not cover STOP, Pause or the start bar"), !on.cover.stop && !on.cover.pause && !on.cover.bar && !on.cover.start, JSON.stringify(on.cover));
   }
   await checkToggle("Setup (step 3) Show machine");
+
+  // The X beam must be drawn at the same millimetre scale as the table / sheet (not a zoomed-parts scale).
+  const measureBeam = () => {
+    const sk = window.plasmaTest.sketch;
+    const cv = document.getElementById("preview");
+    const mach = cv && cv._mach;
+    if (!sk || !mach) return { missing: true };
+    const dpr = window.devicePixelRatio || 1;
+    const [cw, ch] = sk.size();
+    const scView = Math.abs(sk.toScreen(1000, 0)[0] - sk.toScreen(0, 0)[0]) / 1000;
+    const tablePx = Math.abs(sk.toScreen(mach.x[1], 0)[0] - sk.toScreen(mach.x[0], 0)[0]);
+    const [bx0, by0] = sk.toScreen(mach.beam.x0, mach.beam.y0 + mach.beam.h);
+    const [bx1, by1] = sk.toScreen(mach.beam.x1, mach.beam.y0);
+    const expectW = Math.abs(bx1 - bx0), expectH = Math.abs(by1 - by0);
+    const inView = bx0 >= -1 && bx1 <= cw + 1 && Math.min(by0, by1) >= -1 && Math.max(by0, by1) <= ch + 1;
+    const ctx = cv.getContext("2d");
+    const { width: w, height: h } = cv;
+    const data = ctx.getImageData(0, 0, w, h).data;
+    let minX = w, maxX = 0, minY = h, maxY = 0, n = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+        if (a < 180) continue;
+        if (Math.abs(r - 38) < 10 && Math.abs(g - 45) < 10 && Math.abs(b - 54) < 10) {
+          n++;
+          if (x < minX) minX = x; if (x > maxX) maxX = x;
+          if (y < minY) minY = y; if (y > maxY) maxY = y;
+        }
+      }
+    }
+    const beamW = n ? (maxX - minX + 1) / dpr : 0;
+    const beamH = n ? (maxY - minY + 1) / dpr : 0;
+    const tol = (exp) => Math.max(6, exp * 0.08);
+    return {
+      missing: false, n, sc: mach.sc, scView, tablePx,
+      tableExpect: (mach.x[1] - mach.x[0]) * mach.sc,
+      beamW, beamH, expectW, expectH, inView,
+      okSc: Math.abs(mach.sc - scView) <= 0.02 || Math.abs(mach.sc - scView) / Math.max(scView, 1e-6) < 0.04,
+      okTable: Math.abs(tablePx - (mach.x[1] - mach.x[0]) * mach.sc) <= tol(tablePx || 1),
+      okW: !inView || (n > 20 && Math.abs(beamW - expectW) <= tol(expectW)),
+    };
+  };
+  await ev(page, () => {
+    const box = document.getElementById("showMach");
+    if (box && !box.checked) { box.checked = true; box.dispatchEvent(new Event("change", { bubbles: true })); }
+    if (window.plasmaTest.sketch && window.plasmaTest.sketch.fitView) window.plasmaTest.sketch.fitView();
+  });
+  await sleep(120);
+  const fitScale = await ev(page, measureBeam);
+  t.check(n("Setup: gantry scale matches the table / sheet (beam spans the table at view scale)"), !fitScale.missing && fitScale.okSc && fitScale.okTable && fitScale.okW && fitScale.inView, JSON.stringify(fitScale));
+
+  await ev(page, () => {
+    const sk = window.plasmaTest.sketch, [w, h] = sk.size();
+    sk.zoomAt(w / 2, h / 2, 2);
+  });
+  await sleep(80);
+  const zoomScale = await ev(page, measureBeam);
+  t.check(n("Setup: after zoom-in, gantry scale still matches the table"), !zoomScale.missing && zoomScale.okSc && zoomScale.okTable && zoomScale.okW && zoomScale.sc > fitScale.sc * 1.5, JSON.stringify({ fit: fitScale.sc, zoom: zoomScale }));
+
+  await ev(page, () => {
+    const sk = window.plasmaTest.sketch;
+    sk.view.vx += 80;
+    sk.clampView();
+    sk.draw();
+  });
+  await sleep(80);
+  const panScale = await ev(page, measureBeam);
+  t.check(n("Setup: after pan, gantry scale still matches the table"), !panScale.missing && panScale.okSc && panScale.okTable && panScale.okW, JSON.stringify(panScale));
+
+  await ev(page, () => { if (window.plasmaTest.sketch && window.plasmaTest.sketch.fitView) window.plasmaTest.sketch.fitView(); });
   await ev(page, () => { window.plasmaTest.S.job = window.plasmaTest.S.job || { running: false }; window.plasmaTest.goStep(4); });
   await sleep(200);
   const cutVis = await ev(page, () => {
