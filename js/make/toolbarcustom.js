@@ -173,8 +173,3 @@ export function bindToolbarCustom() {
   const openBtn = $("btnCustomiseToolbar");
   if (openBtn) openBtn.addEventListener("click", () => openToolbarCustom());
 }
-
-export function toolbarCustomOpen() {
-  const el = $("toolbarCustom");
-  return !!(el && el.classList.contains("is-open"));
-}

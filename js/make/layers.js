@@ -5,10 +5,6 @@ import { sketch } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { shapeDef } from "./sketch-util.js";
 
-export function isItemHidden(sk, it) {
-  return !!(it && (it.hide || (sk.hiddenLayers && sk.hiddenLayers.has(it.op || "cut"))));
-}
-
 function itemName(it) {
   const d = it && shapeDef(it.type);
   const base = (d && d.name) || (it && it.type) || "part";

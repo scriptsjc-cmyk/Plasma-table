@@ -8,11 +8,6 @@ let closeOpen = null;            // answers the confirm on screen (if any) with 
 // STOP answers any open confirm with Cancel, so a "Start anyway" can't be left waiting behind a latched E-stop (r7 U6)
 export function cancelConfirm() { if (closeOpen) closeOpen(false); }
 
-export function safeDlgOpen() {
-  const el = $("safeDlg");
-  return !!(el && !el.classList.contains("hidden"));
-}
-
 export function askConfirm({ title = "Please confirm", body = "", ok = "OK", cancel = "Cancel", danger = false, okDisabled = false, okDisabledReason = "" } = {}) {
   const run = async () => {
     const msg = [title, body].filter(Boolean).join("\n");

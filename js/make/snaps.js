@@ -90,4 +90,3 @@ export function applyConstraints(from, to, tags) {
   return [x, y];
 }
 
-export const SNAP_KINDS = KINDS;

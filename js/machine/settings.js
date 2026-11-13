@@ -109,14 +109,6 @@ let presets = []; // admin published + local overrides
 const LOCAL_PRESETS = "plasma.cutPresets.local";
 
 export function currentSettings() { return state; }
-export function applyUnits(units) {
-  if (units !== "mm" && units !== "inch") return;
-  if (!state) return;
-  state.units = units;
-  if ($("setUnits")) $("setUnits").value = units;
-  saveSettings(state);
-  if (host && host.onChange) host.onChange(state);
-}
 export function initSettings(opts) { host = opts || {}; state = loadSettings(); loadLocalPresets(); }
 
 function loadLocalPresets() {

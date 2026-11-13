@@ -21,8 +21,6 @@ export function normEditorMode(mode) {
 export function isProMode() {
   return !!(sketch && sketch.opts.pro);
 }
-export const isAdvanced = isProMode;
-
 // Layout classes stay beginner / pro-mode so existing Make and shared CSS keep working.
 // The cutting screen is the same for everyone, so it has neither class.
 export function applyBodyMode() {

@@ -221,4 +221,3 @@ export function initCutFeatures(host) {
   paintLive(); paintOrigin();
   return { watch, pierces, paintLive, paintOrigin, setOrigin9, originId, recall, saveHere, ANCHORS, couponContours, maybeAskCouponResult };
 }
-export const getState = () => ({ watch, pierces, origin9: originId() });
