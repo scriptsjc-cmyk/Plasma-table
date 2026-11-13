@@ -173,7 +173,7 @@ const lastStatus = (ev) => [...ev].reverse().find(([k]) => k === "status")?.[1];
   const src = fs.readFileSync(SITE + "js/machine/connection.js", "utf8");
   t.check("Connect button opens the port without reusing a remembered one", /t\.open\([^)]*,\s*false\)/.test(src));
 }
-// 12) FluidNC still booting (Wi-Fi join) past the normal wait: keep waiting, don't touch the reset lines
+// 12) FluidNC still booting past the normal wait: keep waiting, don't touch the reset lines
 {
   const t0 = Date.now();
   const r = await rig({ slowBoot: 2500 }, { handshakeMs: 1000 });

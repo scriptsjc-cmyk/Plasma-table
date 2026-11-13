@@ -41,7 +41,7 @@ for (const prof of ["d1440", "d1366"]) {
   });
   t.check(n("r9 item 4: the header connection pill is visible on Cut"), one.pill.exists && one.pill.show && /connected/i.test(one.pill.text), JSON.stringify(one.pill));
   t.check(n("item 1/4: the cut-bar slot is not a Not-connected pill when disconnected"), !one.bar.show || !/not connected/i.test(one.bar.text), JSON.stringify(one.bar));
-  t.check(n("item 1: Connect with USB is the clear place to connect (on Bed, or at least in the document)"), one.usb.exists, JSON.stringify(one.usb));
+  t.check(n("item 1: Connect is the clear place to connect (on Bed, or at least in the document)"), one.usb.exists, JSON.stringify(one.usb));
   t.check(n("item 4: a cut-status box sits next to Cut"), one.status.exists && one.status.show, JSON.stringify(one.status));
   t.check(n("STOP is visible and large"), one.stop.show && one.stop.w >= 44 && one.stop.h >= 44, JSON.stringify(one.stop));
 
@@ -136,7 +136,7 @@ for (const prof of ["d1440", "d1366"]) {
     };
   });
   t.check(n("item 6: Show machine is on Bed & start"), bed.showMach);
-  t.check(n("item 1: Connect with USB is visible on Bed & start"), bed.usb);
+  t.check(n("item 1: Connect is visible on Bed & start"), bed.usb);
   t.check(n("item 4: status is yellow/bad when something is wrong (not connected)"), bed.bad, JSON.stringify(bed));
   t.check(n("item 4: status never covers STOP"), !bed.overlap && bed.stopW >= 44, JSON.stringify(bed));
 

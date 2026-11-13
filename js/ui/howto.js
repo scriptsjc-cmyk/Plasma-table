@@ -34,20 +34,20 @@ const STEPS = [
     "Pierce height, cut height and delay are edited under Settings → Torch & THC.",
   ]},
   { id: "setup", title: "Setting up a new table", body: [
-    "This app talks to a plasma table through USB (grblHAL / FluidNC) or over Wi-Fi (a Pi bridge, or FluidNC on an ESP32).",
+    "This app talks to a plasma table through USB or Bluetooth serial (grblHAL / FluidNC) in Chrome or Edge on a computer.",
     "Typical wiring: the controller drives stepper drivers (for example DM542TE) for X, Y and Z; a relay fires the torch on M3 and turns it off on M5; a floating-head or ohmic probe finds the sheet; optional home switches and an e-stop feed input pins.",
     "Leave the torch lead, earth clamp and air supply as the cutter manufacturer describes. The app never replaces the e-stop.",
   ]},
   { id: "trouble", title: "Troubleshooting", body: [
-    "Won’t connect: use Chrome or Edge on a computer for USB. Close Mach3 or anything else using the port. For FluidNC, you must open this app over http on the LAN — GitHub Pages is https and the browser will block ws://. See the FluidNC page in this guide.",
+    "Won’t connect: use Chrome or Edge on a computer. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as “Standard Serial over Bluetooth link”). Close the FluidNC installer or any other program using the port first.",
     "Wrong size: check units (mm), kerf, and that Start here was set at the corner you meant. Trace the outline before cutting.",
     "Not cutting through: slow down a step, confirm amps and thickness, check air pressure and earth clamp, and that pierce delay is long enough for the arc to start.",
     "Torch won’t fire: not a practice run? M3 is confirmed in the console and the Torch test is on Machine setup. Check the torch relay wiring and that the cutter is ready.",
   ]},
   { id: "fluidnc", title: "FluidNC on an ESP32", body: [
-    "A typical path: an ESP32-DevKitC with a screw-terminal breakout, running FluidNC over Wi-Fi, driving stepper drivers.",
-    "On Connect, choose FluidNC (Wi-Fi) and enter the board’s IP or fluidnc.local. The app uses ws://<host>:81, which is GRBL-compatible.",
-    "FluidNC stores settings in config.yaml, not GRBL $ numbers. Mixed content: the live site is https, FluidNC is ws:// on the LAN, and browsers block that. Serve a local copy over http, or use USB. This is documented in docs/FLUIDNC.md.",
+    "A typical path: an ESP32-DevKitC with a screw-terminal breakout, running FluidNC, driving stepper drivers.",
+    "On a computer in Chrome or Edge, press Connect (USB or Bluetooth) and pick the board’s port. If you paired it in Windows Bluetooth settings first, it shows as Standard Serial over Bluetooth link.",
+    "FluidNC stores settings in config.yaml, not GRBL $ numbers. To change a setting, edit the YAML and copy it to the board, then restart it. This is documented in docs/FLUIDNC.md.",
   ]},
 ];
 
