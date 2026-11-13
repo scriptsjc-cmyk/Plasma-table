@@ -1107,6 +1107,8 @@ body[data-screen="cut"][data-tab="cut"] .tabs {
   background: transparent;
   min-width: 0;
 }
+/* A thin divider between the menu row and the Cut / steps / Layout row (phone and laptop). */
+body:not(.header-hidden)[data-screen="cut"][data-tab="cut"] .tabs { border-top: 2px solid var(--line-strong); padding-top: 4px; }
 @media (min-width: 900px) and (min-height: 600px) {
   body:not(.short-land)[data-screen="cut"][data-tab="cut"] .topbar {
     align-items: stretch;
