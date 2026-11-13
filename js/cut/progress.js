@@ -21,6 +21,13 @@ export function trackProgress(st) {
   R.shown = Math.max(R.shown || 0, R.t);          // never count backwards on screen
 }
 export function liveProgress() {
+  const j0 = S.job || {};
+  if (j0.boardRun) {
+    const pierces = S.prepared ? S.prepared.stats.pierces : 0;
+    const pct = Number(j0.pct) || (j0.total ? (100 * (j0.acked || 0)) / j0.total : 0);
+    const cut = pierces ? Math.max(0, Math.min(pierces, Math.round((pct / 100) * pierces))) : 0;
+    return { pct, left: 0, elapsed: j0.elapsed || 0, cut };
+  }
   const R = S.run, plan = R && R.plan;
   if (!plan || !plan.total) {
     const j = S.job || {};

@@ -6,6 +6,7 @@ import { fit } from "./preview.js";
 import { ampsNow, row } from "./material.js";
 import { $, $$, esc } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
+import { CHECK_LINE } from "../machine/boardrun.js";
 
 // ------------------------------------------------------------------ step 3 (second half): checks
 // Round 5 (safety): the first line, "Start point set", is not a box you tick. It follows the machine's zeroConfirmed flag
@@ -19,9 +20,10 @@ function zeroLineText() {
 export function checkItems() {
   const dry = S.prepared && S.prepared.dry_run;
   // Short lines, so each fits on one line in the laptop's narrow left column
-  return dry ? ["material flat on the slats", "area clear, hands away", "e-stop within reach"]
+  const board = S.fluidnc ? [CHECK_LINE] : [];
+  return dry ? ["material flat on the slats", "area clear, hands away", "e-stop within reach", ...board]
     : [...(row().check ? [row().check] : []), `plasma ON, set to ${ampsNow()} A`, `air on, ${row().air_bar ?? S.chart.air_bar} bar`,
-      "material clamped flat", "earth clamp on the sheet", "area clear, hands away", "e-stop within reach"];
+      "material clamped flat", "earth clamp on the sheet", "area clear, hands away", "e-stop within reach", ...board];
 }
 export function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;

@@ -156,20 +156,28 @@ export function refresh() {
     // r7 U11: the link dropped while the job ran. The app can't know what the machine is doing, so the panel stops counting
     // (frozen at the moment the link went), says so, and Pause is off (it can't reach the machine). The red banner says what to do.
     const linkLost = j.running && !S.connected;
+    const board = !!j.boardRun;
+    const uploading = board && j.phase === "upload";
     if (linkLost && !S.lostProgress) S.lostProgress = live;
     if (!linkLost) S.lostProgress = null;
     const P = S.lostProgress || live;
-    $("running").classList.toggle("linklost", linkLost);
+    $("running").classList.toggle("linklost", linkLost && !board);
     const finished = !j.running && S.status.state === "Idle";
-    const pct = j.result === "done" ? 100 : P.pct;
+    const pct = uploading ? (j.pct || 0) : j.result === "done" ? 100 : P.pct;
     $("pct").textContent = Math.floor(pct) + "%";
-    $("progBar").style.width = pct.toFixed(1) + "%";
-    $("timeLeft").textContent = linkLost ? "–" : j.running ? clock(P.left) : "0:00";
+    $("progBar").style.width = Number(pct).toFixed(1) + "%";
+    $("timeLeft").textContent = (linkLost && !board) ? "–" : uploading ? "–" : j.running ? clock(P.left) : "0:00";
     const pierces = S.prepared ? S.prepared.stats.pierces : 0;
-    $("runInfo").textContent = linkLost ? `Link lost after ${clock(P.elapsed)}. Use the machine's own E-stop or power switch.`
+    $("runInfo").textContent = uploading ? `Sending the cut to the table… ${Math.floor(pct)}%`
+      : (linkLost && board) ? "The table is still cutting. Reconnect to watch it or to stop it."
+      : linkLost ? `Link lost after ${clock(P.elapsed)}. Use the machine's own E-stop or power switch.`
       : `${clock(P.elapsed)} so far` + (pierces ? ` · cut ${Math.min(pierces, (M.runFrom || 1) - 1 + Math.max(1, P.cut))} of ${pierces}` : "");
-    $("runTitle").textContent = linkLost ? "Link lost: job state unknown" : S.status.state === "Hold" ? "Paused" : j.running ? "Cutting…" : "Finishing last moves…";
-    $("btnPause").disabled = linkLost;
+    $("runTitle").textContent = uploading ? "Sending the cut to the table…"
+      : (linkLost && board) ? "Running on the table (not watched)"
+      : linkLost ? "Link lost: job state unknown"
+      : S.status.state === "Hold" ? "Paused"
+      : j.running ? "Cutting…" : "Finishing last moves…";
+    $("btnPause").disabled = linkLost || uploading;
     const hold = S.status.state === "Hold";
     const pauseLabel = hold ? "Resume" : "Pause";
     if ($("btnPause").dataset.face !== pauseLabel) {
@@ -178,15 +186,20 @@ export function refresh() {
     }
     const ov = S.status.feedOv || 100;
     if (j.running) S.lastFeedOv = ov;
+    if ($("runHelp")) $("runHelp").textContent = board && j.running
+      ? (linkLost ? "The cut is running on the table. Use the table's own E-stop if you need to stop it now."
+        : "Pause and E-STOP still work while you're connected. The cut runs on the table, so it keeps going if the laptop disconnects. Stay with the table and know where its E-stop is.")
+      : "Pause stops the machine and the torch. E-STOP or the space bar cancels the job. Keep this tab open and the computer awake.";
     $("liveSpeed").textContent = `${Math.round((S.speed * ov) / 100)} mm/min` + (ov !== 100 ? ` (${ov}% of ${S.speed})` : "");
     const showDone = (!j.running && j.result !== "done") || finished;
     $("running").classList.toggle("hidden", showDone);
     $("done").classList.toggle("hidden", !showDone);
     if (showDone) {
       const ok = j.result === "done";
+      if ($("btnStreamFallback")) $("btnStreamFallback").classList.toggle("hidden", !(!ok && S.needStreamFallback));
       $("doneTitle").textContent = ok ? "Finished ✓" : "Stopped";
       $("doneInfo").textContent = ok ? `Took ${fmtTime(j.elapsed)}. Lift the part out when it's cool.`
-        : (S.lastAlarm || "The job was stopped before the end.");
+        : (j.message || S.lastAlarm || "The job was stopped before the end.");
       const changed = S.lastFeedOv !== 100 && S.prepared && !S.prepared.dry_run;
       const v = Math.round((S.speed * S.lastFeedOv) / 100 / 10) * 10;
       $("btnSaveSpeed").textContent = `Save ${v} mm/min as my speed for ${S.material.toLowerCase()} ${S.thickness} mm`;

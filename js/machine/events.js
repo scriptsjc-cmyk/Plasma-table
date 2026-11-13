@@ -10,6 +10,8 @@ import { $, $$, placeToast } from "../core/dom.js";
 import { renderPos } from "./jog.js";
 import { refresh } from "../ui/refresh.js";
 import { keepAwake, setConnected } from "./connection.js";
+import { LOST_BOARD } from "./boardrun.js";
+import { goStep } from "../ui/nav.js";
 import { log } from "./console.js";
 
 function onStatus(st) {
@@ -94,7 +96,10 @@ export function onEvent(kind, d) {
       setConnected(false);
       // a dropped link (USB / Bluetooth unplugged) cannot be told to switch the torch off: say so loudly
       // (no toast: it would only repeat the banner and cover the run numbers, r7 U29)
-      if (wasHot && $("lostBar")) showLost(LOST_HOT);
+      if (wasHot && $("lostBar")) {
+        const board = M.grbl && M.grbl.job && M.grbl.job.boardRun && (M.grbl.job.phase === "run" || M.grbl.job.unwatched);
+        showLost(board ? LOST_BOARD : LOST_HOT);
+      }
       // USB link gone while idle (unplugged, power off, no answers): still say so loudly, with the reason
       else if (d.reason && wasLive && !S.userDisconnected && $("lostBar")) showLost({ title: "Connection to the controller lost.", text: `${d.reason} Nothing will move until you reconnect. Check the cable, then press Connect again.` });
     }
@@ -104,7 +109,15 @@ export function onEvent(kind, d) {
     if ($("advConsoleLog")) appendConsole(d.text || "");
     if (looksLikeFluidNC(d.text)) S.fluidnc = true;
   }
-  else if (kind === "job") { S.job = d; if (!d.running) keepAwake(false); noteJobEnded(d); maybeLogJob(d); refresh(); }
+  else if (kind === "job") {
+    S.job = d;
+    if (d.running && d.boardRun) { keepAwake(true); try { goStep(4); } catch (e) { /* not on cut */ } }
+    if (!d.running) {
+      keepAwake(false);
+      if (d.boardRun && d.result === "error" && d.phase === "upload") S.needStreamFallback = true;
+    }
+    noteJobEnded(d); maybeLogJob(d); refresh();
+  }
   else if (kind === "alarm") { S.lastAlarm = d.message; S.lastAlarmCode = d.code; $("alarmTitle").textContent = "Alarm"; $("alarmText").textContent = d.message; if (POSITION_LOST_ALARMS.has(d.code)) S.zeroSet = false; refresh(); }
   else if (kind === "safety") onSafety(d);
 }

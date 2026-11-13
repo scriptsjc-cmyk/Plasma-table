@@ -9,6 +9,12 @@ export function paintDelay() {
   const el = $("liveDelay"); if (!el) return;
   const d = delayNow();
   el.textContent = Number.isFinite(d) ? `${d.toFixed(1)} s` : "–";
+  const board = !!(H.M() && H.M().grbl && H.M().grbl.job && H.M().grbl.job.running && H.M().grbl.job.boardRun);
+  for (const id of ["delDown", "delUp", "delSave"]) { const b = $(id); if (b) b.disabled = board; }
+  if ($("delNote")) {
+    if (board) $("delNote").textContent = "The cut is running on the table, so pierce delay can't be changed mid-job.";
+    else if (/can't be changed mid-job/.test($("delNote").textContent || "")) $("delNote").textContent = "";
+  }
 }
 export function bindDelay() {
   const bump = (dir) => {
