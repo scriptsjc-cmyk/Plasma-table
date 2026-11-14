@@ -36,18 +36,22 @@ async function openFold(page, id = "foldlbr") {
 
 function overlapCheck(page) {
   return ev(page, () => {
-    const host = [...document.querySelectorAll("#fold3dDock, #fold3dHost")].find((e) => e && !e.hidden && e.querySelector("canvas.fold3d")) || document.getElementById("fold3dDock") || document.getElementById("fold3dHost");
-    const cv = host && host.querySelector("canvas.fold3d");
+    const host = document.getElementById("fold3dHost");
+    const cv = host && !host.hidden && host.querySelector("canvas.fold3d");
     const box = cv && __box(cv);
-    const vis = !!(box && box.w > 40 && box.h > 40 && host && getComputedStyle(host).display !== "none" && !host.hidden);
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const fullyOnScreen = !!(box && box.l >= -1 && box.t >= -1 && box.r <= vw + 1 && box.b <= vh + 1);
+    const vis = !!(box && box.w > 40 && box.h > 40 && host && getComputedStyle(host).display !== "none" && !host.hidden && fullyOnScreen);
     const hits = [];
-    for (const sel of ["#btnStop", "#makeBar", "#btnPresetParts", "#btnAdvancedTools", "#next1", "#phoneBar"]) {
+    for (const sel of ["#btnStop", "#makeBar", "#btnPresetParts", "#btnAdvancedTools", "#next1", "#phoneBar", "#preview", ".previewPane"]) {
       const e = document.querySelector(sel);
       if (e && __box(e) && cv && __overlap(cv, e)) hits.push(sel);
     }
+    const inForm = !!(host && host.closest("#shapeForm"));
     const cap = host && host.querySelector(".fold3d-cap");
     return {
-      vis, hits, hidden: !!(host && host.hidden),
+      vis, hits, hidden: !!(host && host.hidden), inForm,
+      fullyOnScreen,
       cap: cap && cap.textContent,
       w: box && Math.round(box.w), h: box && Math.round(box.h),
       step: window.plasmaTest.S.cur, screen: window.plasmaTest.screen(),
@@ -64,7 +68,7 @@ for (const prof of ["d1366", "iphone14"]) {
   await openFold(page, "foldlbr");
   const a = await overlapCheck(page);
   t.check(n("folded 3D view is shown for a fold preset"), a.vis, JSON.stringify(a));
-  t.check(n("3D view does not overlap the drawing, Next, or header controls"), a.hits.length === 0, JSON.stringify(a));
+  t.check(n("3D view is in the size form, fully on screen, and does not overlap the drawing, Next, or header"), a.hits.length === 0 && a.inForm && a.fullyOnScreen, JSON.stringify(a));
   t.check(n("caption explains that the drawing is the flat pattern"), !!(a.cap && /flat pattern/i.test(a.cap)), a.cap);
 
   // the sketch still shows the flat strip (wider than it is thick in world, not a 3D projection)
@@ -111,7 +115,7 @@ for (const prof of ["d1366", "iphone14"]) {
   await ev(page, () => { const T = window.plasmaTest; T.sketch.clear(); T.sketch.add("rect", true); T.sketch.pick([T.sketch.items[0].id]); if (T.renderShapeForm) T.renderShapeForm(); else if (T.refresh) T.refresh(); });
   await sleep(150);
   const plain = await ev(page, () => {
-    const shown = [...document.querySelectorAll("#fold3dDock, #fold3dHost")].some((e) => e && !e.hidden && e.querySelector("canvas.fold3d") && e.querySelector("canvas.fold3d").getClientRects().length);
+    const shown = (() => { const e = document.getElementById("fold3dHost"); return !!(e && !e.hidden && e.querySelector("canvas.fold3d") && e.querySelector("canvas.fold3d").getClientRects().length); })();
     return { hidden: !shown, fold: window.plasmaTest.isFoldPart({ id: "rect" }) };
   });
   t.check(n("plain shapes do not show a folded 3D view"), plain.hidden && !plain.fold, JSON.stringify(plain));

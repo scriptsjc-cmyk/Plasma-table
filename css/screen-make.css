@@ -1154,27 +1154,24 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
   color: var(--muted);
   font-size: var(--fs-sm);
 }
+/* Phone: the 3D view lives in the size form (above the inputs), not over the drawing. */
 body.phone-ui .fold3d-wrap canvas.fold3d,
-body:not(.laptop-ui) .fold3d-wrap canvas.fold3d { height: 96px; }
-/* Keep the preview clear of the sticky Next bar on a phone. */
-body.beginner:not(.laptop-ui)[data-screen="make"] .fold3d-host { margin-bottom: 6px; }
-body.beginner:not(.laptop-ui)[data-screen="make"] .fold3d-cap { padding-top: 2px; padding-bottom: 2px; font-size: 12px; }
+body:not(.laptop-ui) .fold3d-wrap canvas.fold3d { height: 112px; }
+body.phone-ui .fold3d-host { margin: 6px 0 8px; flex: 0 0 auto; }
+body.phone-ui .fold3d-cap,
+body:not(.laptop-ui) .fold3d-cap {
+  padding: 3px 8px 5px;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: normal;
+}
+/* More room for the size form, and keep Next in the flow so it cannot sit on the 3D card. */
+body.app-shell.phone-ui.has-fold3d.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid,
+body.app-shell.phone-ui.has-fold3d[data-screen="make"].simple-mode:not(.short-land):not(.shape-fs) .cutgrid {
+  grid-template-rows: minmax(0, 1fr) minmax(300px, 1.25fr) !important;
+}
+body.phone-ui.has-fold3d[data-screen="make"] .stepPane > .step .nav {
+  position: static;
+}
 .pb-tile { position: relative; }
 .pb-tile svg.fold-thumb { width: 96px; height: 72px; }
-
-.previewPane { position: relative; }
-.fold3d-dock {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  width: min(46%, 168px);
-  margin: 0;
-  z-index: 2;
-  box-shadow: 0 1px 4px rgba(0,0,0,.18);
-  background: #e8edf2;
-  border-radius: var(--r);
-}
-.fold3d-dock .fold3d-wrap { margin: 0; border-color: var(--line-strong, #b8bfc9); }
-.fold3d-dock canvas.fold3d { height: 88px; }
-.fold3d-dock .fold3d-cap { display: none; } /* caption would clip; canvas has an aria-label */
-body.laptop-ui .fold3d-dock { display: none; }

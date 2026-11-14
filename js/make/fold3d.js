@@ -54,11 +54,14 @@ function poseFace(face, o, xA, yA, out) {
   for (const ch of face.children || []) {
     const fr = edgeFrame(w, h, ch.edge, ch.along || 0);
     const hingeO = mapPt(o, xA, yA, fr.o[0], fr.o[1]);
-    const hingeA = norm(add(scl(xA, fr.ax[0]), scl(yA, fr.ax[1])));
+    const edgeDir = norm(add(scl(xA, fr.ax[0]), scl(yA, fr.ax[1])));
     const away = norm(add(scl(xA, fr.ay[0]), scl(yA, fr.ay[1])));
-    // child's x along the hinge, child's y starts in the parent plane (away) and rotates around the hinge
-    const cX = hingeA;
-    const cY = rotAxis(away, hingeA, ch.angle || 0);
+    // Positive angle folds toward the parent normal (walls fold "up" off a base).
+    // Child's x still runs along the edge from `along`, so hole positions stay put.
+    let foldAxis = cross(away, n);
+    foldAxis = mag(foldAxis) < 1e-9 ? edgeDir : norm(foldAxis);
+    const cX = edgeDir;
+    const cY = rotAxis(away, foldAxis, ch.angle || 0);
     poseFace(ch.face, hingeO, cX, cY, out);
   }
 }
@@ -69,12 +72,20 @@ export function assemble(root, parts) {
   let dx = 0;
   for (const r of list) {
     if (!r) continue;
-    // Sit the first face in XY, y-up in 3D is parent's +Y, Z is the normal (up).
-    poseFace(r, V(dx, 0, 0), V(1, 0, 0), V(0, 1, 0), faces);
+    // Base lies in the XZ plane: parent +X → world +X, parent +Y → world −Z, normal is +Y (up).
+    poseFace(r, V(dx, 0, 0), V(1, 0, 0), V(0, 0, -1), faces);
     dx += (r.w || 0) + 20;
   }
+  sitOnTable(faces);
   const panels = faces.map((f) => ({ w: f.w, h: f.h }));
   return { faces, panels };
+}
+function sitOnTable(faces) {
+  let y0 = Infinity;
+  for (const f of faces) for (const p of f.pts) y0 = Math.min(y0, p[1]);
+  if (Number.isFinite(y0) && Math.abs(y0) > 1e-9) {
+    for (const f of faces) for (const p of f.pts) p[1] -= y0;
+  }
 }
 
 function hole(cx, cy, d) { return d > 0 ? { cx, cy, r: d / 2 } : null; }
@@ -94,23 +105,31 @@ export function foldU(len, web, leg, hs = []) {
   return assemble(W);
 }
 export function foldC(len, web, leg, fl) {
+  // C-channel: legs fold up, return flanges fold inward.
+  // Walls on parent edges 0 and 1 have an outward normal, so inward is a negative angle.
   const W = face(len, web);
   const L1 = face(len, leg), L2 = face(len, leg);
-  attach(L1, 2, 90, face(len, fl));
+  attach(L1, 2, -90, face(len, fl));
   attach(L2, 2, 90, face(len, fl));
   attach(W, 0, 90, L1);
   attach(W, 2, 90, L2);
   return assemble(W);
 }
 export function foldHat(len, web, leg, fl) {
-  // hat: flange + leg + web + leg + flange, flanges fold out
+  // Hat: same as a C but the flanges fold outward. Sit it on the flanges (web up).
   const W = face(len, web);
   const L1 = face(len, leg), L2 = face(len, leg);
   attach(L1, 2, 90, face(len, fl));
-  attach(L2, 2, 90, face(len, fl));
+  attach(L2, 2, -90, face(len, fl));
   attach(W, 0, 90, L1);
   attach(W, 2, 90, L2);
-  return assemble(W);
+  const m = assemble(W);
+  for (const f of m.faces) {
+    f.pts.forEach((p) => { p[1] = -p[1]; });
+    f.n = [f.n[0], -f.n[1], f.n[2]];
+  }
+  sitOnTable(m.faces);
+  return m;
 }
 export function foldZ(len, a, mid, b) {
   const M = face(len, mid);
@@ -128,18 +147,21 @@ export function foldOpenBox(l, w, h, sideHoles = []) {
 }
 export function foldLiddedBox(l, w, h) {
   const box = foldOpenBox(l, w, h);
-  // lid sitting on top, slightly open so you can see it
+  // Lid hinged at the back (z = −w), slightly open so you can see inside.
   const lid = face(l, w);
   const top = [];
-  poseFace(lid, V(0, 0, h + 1), V(1, 0, 0), V(0, 1, 0), top);
-  return { faces: box.faces.concat(top), panels: box.panels.concat([{ w: l, h: w }]) };
+  const ang = (22 * Math.PI) / 180;
+  poseFace(lid, V(0, h, -w), V(1, 0, 0), V(0, Math.sin(ang), Math.cos(ang)), top);
+  const faces = box.faces.concat(top);
+  sitOnTable(faces);
+  return { faces, panels: box.panels.concat([{ w: l, h: w }]) };
 }
 export function foldTrayCross(l, w, h, tab = 0) {
-  // one-piece tray: bottom with four sides (and optional tabs on the length sides)
+  // one-piece tray: bottom with four sides (and optional tabs on the length sides, folding inward)
   const bot = face(l, w);
-  const long = face(l, h);
-  if (tab > 0) { attach(long, 3, 90, face(h, tab)); attach(long, 1, 90, face(h, tab)); }
-  const long2 = face(l, h);
+  const long = face(l, h);            // parent edge 0: outward normal, inward = −90
+  if (tab > 0) { attach(long, 3, -90, face(h, tab)); attach(long, 1, -90, face(h, tab)); }
+  const long2 = face(l, h);           // parent edge 2: inward normal, inward = +90
   if (tab > 0) { attach(long2, 3, 90, face(h, tab)); attach(long2, 1, 90, face(h, tab)); }
   attach(bot, 0, 90, long);
   attach(bot, 2, 90, long2);
@@ -215,19 +237,61 @@ export function foldElbow(d, bendDeg, pieces, segs = 16) {
   return { faces, panels: [{ w: Math.PI * d, h: rad * bend }] };
 }
 export function foldRectElbow(w, h, r, bendDeg) {
-  const root = face(w, h);
-  // approximate as two ducts joined by a mitre: show as a bent rectangular tube (4 walls)
   const faces = [];
-  const bend = (bendDeg * Math.PI) / 180;
-  const rad = Math.max(r, 8);
+  const bend = (Math.max(15, bendDeg) * Math.PI) / 180;
   const segs = 8;
-  const walls = [[0, -h / 2, w], [0, h / 2, w], [-w / 2, 0, h], [w / 2, 0, h]];
-  // simpler: two rectangular tubes at an angle
-  const A = foldOpenBox(w, 0.01, h); // placeholder unused
-  void A;
-  const len = rad * bend + 40;
-  const U = foldC(len, w, h, 0);
-  return U;
+  const hw = w / 2, hh = h / 2;
+  // r is treated as an inner radius; the centre-line must clear the half-width
+  const rad = Math.max(r, 8) + hw;
+  const frame = (ang) => ({
+    c: V(rad * (1 - Math.cos(ang)), 0, rad * Math.sin(ang)),
+    n: V(Math.cos(ang), 0, -Math.sin(ang)),
+  });
+  const ringPt = (f, u, v) => add(f.c, add(scl(f.n, u), V(0, v, 0)));
+  const corners = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]];
+  for (let i = 0; i < segs; i++) {
+    const a0 = (i / segs) * bend, a1 = ((i + 1) / segs) * bend;
+    const f0 = frame(a0), f1 = frame(a1);
+    for (let k = 0; k < 4; k++) {
+      const [uA, vA] = corners[k], [uB, vB] = corners[(k + 1) % 4];
+      const pts = [ringPt(f0, uA, vA), ringPt(f0, uB, vB), ringPt(f1, uB, vB), ringPt(f1, uA, vA)];
+      const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+      faces.push({ pts, n, holes: [], w: mag(sub(pts[1], pts[0])), h: mag(sub(pts[3], pts[0])) });
+    }
+  }
+  const stub = Math.max(h, 50);
+  const stubAt = (ang, along) => {
+    const f = frame(ang);
+    const tan = V(Math.sin(ang), 0, Math.cos(ang)); // matches frame tangent
+    const end = { c: add(f.c, scl(tan, along)), n: f.n };
+    const ring = (fr, u, v) => add(fr.c, add(scl(fr.n, u), V(0, v, 0)));
+    for (let k = 0; k < 4; k++) {
+      const [uA, vA] = corners[k], [uB, vB] = corners[(k + 1) % 4];
+      const pts = [ring(f, uA, vA), ring(f, uB, vB), ring(end, uB, vB), ring(end, uA, vA)];
+      const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+      faces.push({ pts, n, holes: [], w: mag(sub(pts[1], pts[0])), h: Math.abs(along) });
+    }
+  };
+  stubAt(0, -stub);
+  stubAt(bend, stub);
+  sitOnTable(faces);
+  return { faces, panels: [{ w: (w + h) * 2, h: rad * bend + 2 * stub }] };
+}
+export function foldUSaddle(wid, d, leg, segs = 12) {
+  const faces = [];
+  const R = Math.max(d, 8) / 2, W = Math.max(wid, 2);
+  const pt = (x, a) => V(x, R * Math.sin(a), R * Math.cos(a));
+  for (let i = 0; i < segs; i++) {
+    const a0 = (i / segs) * Math.PI, a1 = ((i + 1) / segs) * Math.PI;
+    const pts = [pt(0, a0), pt(W, a0), pt(W, a1), pt(0, a1)];
+    const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+    faces.push({ pts, n, holes: [], w: W, h: R * (a1 - a0) });
+  }
+  // legs hang down from each side of the half-wrap
+  faces.push({ pts: [V(0, 0, R), V(W, 0, R), V(W, -leg, R), V(0, -leg, R)], n: V(0, 0, 1), holes: [], w: W, h: leg });
+  faces.push({ pts: [V(0, 0, -R), V(0, -leg, -R), V(W, -leg, -R), V(W, 0, -R)], n: V(0, 0, -1), holes: [], w: W, h: leg });
+  sitOnTable(faces);
+  return { faces, panels: [{ w: W, h: Math.PI * R + 2 * leg }] };
 }
 export function foldHopper(a, b, a2, b2, h) {
   const faces = [];
@@ -240,6 +304,21 @@ export function foldHopper(a, b, a2, b2, h) {
     const hh = mag(sub(top[i], bot[i]));
     faces.push({ pts, n, holes: [], w, h: hh });
   }
+  return { faces, panels: faces.map((f) => ({ w: f.w, h: f.h })) };
+}
+export function addTopFlanges(model, a2, b2, h, lip) {
+  if (!(lip > 0)) return model;
+  const faces = model.faces.slice();
+  const t = [[-a2 / 2, h, -b2 / 2], [a2 / 2, h, -b2 / 2], [a2 / 2, h, b2 / 2], [-a2 / 2, h, b2 / 2]];
+  const out = [V(0, 0, -1), V(1, 0, 0), V(0, 0, 1), V(-1, 0, 0)];
+  for (let i = 0; i < 4; i++) {
+    const p0 = t[i], p1 = t[(i + 1) % 4], o = out[i];
+    const q0 = add(p0, scl(o, lip)), q1 = add(p1, scl(o, lip));
+    const pts = [p0, p1, q1, q0];
+    const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+    faces.push({ pts, n, holes: [], w: mag(sub(p1, p0)), h: lip });
+  }
+  sitOnTable(faces);
   return { faces, panels: faces.map((f) => ({ w: f.w, h: f.h })) };
 }
 export function foldDustpan(back, front, d, h) {
@@ -314,10 +393,11 @@ export const FOLD_MODELS = {
   cuboidwrap: (p) => foldLiddedBox(p.len, p.wid, p.ht),
   fiveside: (p) => {
     const bot = face(p.wid, p.dep);
-    attach(bot, 0, 90, face(p.wid, p.ht));
     attach(bot, 3, 90, face(p.dep, p.ht));
     attach(bot, 1, 90, face(p.dep, p.ht));
-    attach(bot, 2, 90, face(p.wid, p.dep));          // top, folded over
+    const back = face(p.wid, p.ht);
+    attach(back, 2, 80, face(p.wid, p.dep));         // lid, slightly open
+    attach(bot, 2, 90, back);
     return assemble(bot);
   },
   totebox: (p) => foldOpenBox(p.len, p.wid, p.ht),
@@ -372,7 +452,7 @@ export const FOLD_MODELS = {
   elbow5: (p) => foldElbow(p.d, p.bend, 5),
   elbow45: (p) => foldElbow(p.d, p.bend, 3),
   redelbow: (p) => foldElbow((p.d + p.d2) / 2, p.bend, 4),
-  rectelbow: (p) => foldC(p.w + p.r + p.h, p.w, p.h, 0),
+  rectelbow: (p) => foldRectElbow(p.w, p.h, p.r, p.bend),
   dustpan: (p) => foldDustpan(p.w, p.front, p.d, p.h),
   scoop: (p) => foldScoop(p.w, p.d, p.h, p.r),
   panflash: (p) => foldZ(p.w, p.up, p.d, 0.1) && foldAngle(p.w, p.d, p.up),
@@ -420,7 +500,7 @@ export function foldModel(sh, p) {
 
 // ------------------------------------------------------------------ projection / drawing
 
-export const DEFAULT_CAM = { yaw: 0.7, pitch: 0.45 };
+export const DEFAULT_CAM = { yaw: 0.85, pitch: 0.52 };
 
 function rotCam(p, cam) {
   const y = cam.yaw, x = cam.pitch;
@@ -452,7 +532,8 @@ function projectFaces(faces, cam, w, h, pad = 10) {
     const qs = f.pts.map((p) => rotCam(p, cam));
     const depth = qs.reduce((a, p) => a + p[2], 0) / qs.length;
     const n = rotCam(f.n, cam);
-    const lit = Math.max(0.25, Math.min(1, 0.35 + 0.75 * Math.abs(dot(norm(n), light))));
+    const nd = dot(norm(n), light);
+    const lit = Math.max(0.32, Math.min(1, 0.46 + 0.42 * nd + 0.22 * Math.abs(nd)));
     const path = qs.map((p) => [ox + p[0] * s, oy - p[1] * s]);
     const holes = (f.holes || []).map((ring) => ring.map((p) => {
       const q = rotCam(p, cam);
@@ -476,7 +557,7 @@ export function drawFoldCanvas(cv, model, cam = DEFAULT_CAM) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = "#e8edf2"; ctx.fillRect(0, 0, w, h);
-  const polys = projectFaces(model.faces, cam, w, h, 12);
+  const polys = projectFaces(model.faces, cam, w, h, 16);
   for (const p of polys) {
     if (p.path.length < 3) continue;
     ctx.beginPath();

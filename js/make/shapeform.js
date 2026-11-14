@@ -113,29 +113,16 @@ export function renderShapeForm() {
     try { onShapeFormPainted(); } catch (e) { /* phone sheet optional */ }
   }
 }
-function foldDock() {
-  let dock = document.getElementById("fold3dDock");
-  if (dock) return dock;
-  const pane = document.querySelector(".previewPane");
-  if (!pane) return null;
-  dock = document.createElement("div");
-  dock.id = "fold3dDock";
-  dock.className = "fold3d-host fold3d-dock";
-  dock.hidden = true;
-  pane.appendChild(dock);
-  return dock;
-}
 function paintFoldView() {
   const formHost = document.getElementById("fold3dHost");
-  const dock = foldDock();
+  const stray = document.getElementById("fold3dDock");
+  if (stray) { stray.replaceChildren(); stray.hidden = true; stray.remove(); }
   const it = sketch && sketch.selected();
   const sh = it && shapeDef(it.type);
   const on = !!(it && sh && isFoldPart(sh));
-  const phone = document.body.classList.contains("phone-ui") || !document.body.classList.contains("laptop-ui");
-  const hide = (el) => { if (!el) return; el.replaceChildren(); el.hidden = true; };
-  if (on && phone && dock) { hide(formHost); mountFoldView(dock, sh, it.p); }
-  else if (on && formHost) { hide(dock); mountFoldView(formHost, sh, it.p); }
-  else { hide(formHost); hide(dock); }
+  document.body.classList.toggle("has-fold3d", on);
+  if (on && formHost) mountFoldView(formHost, sh, it.p);
+  else if (formHost) { formHost.replaceChildren(); formHost.hidden = true; }
 }
 function renderShapeFormCore() {
   try { paintCutSummary(); } catch (e) { /* the cut chart is not loaded yet */ }

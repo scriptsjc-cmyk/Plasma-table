@@ -4,7 +4,7 @@
 import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour } from "./helpers.js";
 import {
   foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedBox,
-  foldTrayCross, foldS2r, foldHopper, foldFrustum, face, attach, assemble,
+  foldTrayCross, foldS2r, foldHopper, addTopFlanges, foldFrustum, foldUSaddle, face, attach, assemble,
 } from "../fold3d.js";
 
 const panel = (w, h, holes = []) => {
@@ -34,20 +34,26 @@ function foldHoles(len, wid, d, inset, count, leg) {
 
 function crossTray(l, w, h, tab = 0) {
   // Plus-shaped one-piece tray: sides attached to the four edges of the bottom.
-  //     [ l × h ]
-  // [h × w][ l × w ][h × w]
-  //     [ l × h ]
-  const pts = [
-    [h, 0], [h + l, 0], [h + l, h], [h + l + h, h], [h + l + h, h + w],
-    [h + l, h + w], [h + l, h + w + h], [h, h + w + h], [h, h + w],
-    [0, h + w], [0, h], [h, h],
-  ];
-  const c = [poly(pts)];
-  // if tabs, add rectangles on the left/right of the long sides — kept as a packed extra for simplicity when tab>0
-  if (tab > 0) {
-    return packPieces([c, panel(h, tab), panel(h, tab), panel(h, tab), panel(h, tab)]).contours;
+  // Optional corner tabs are attached to the long walls (not loose pieces):
+  //      [tab][ l × h ][tab]
+  // [h × w][   l × w  ][h × w]
+  //      [tab][ l × h ][tab]
+  const t = Math.max(0, Math.min(tab, h, l / 2));
+  const x0 = h, x1 = h + l;
+  if (t <= 0) {
+    const pts = [
+      [x0, 0], [x1, 0], [x1, h], [x1 + h, h], [x1 + h, h + w],
+      [x1, h + w], [x1, h + w + h], [x0, h + w + h], [x0, h + w],
+      [0, h + w], [0, h], [x0, h],
+    ];
+    return [poly(pts)];
   }
-  return c;
+  const pts = [
+    [x0 - t, 0], [x1 + t, 0], [x1 + t, h], [x1 + h, h], [x1 + h, h + w],
+    [x1 + t, h + w], [x1 + t, h + w + h], [x0 - t, h + w + h], [x0 - t, h + w],
+    [0, h + w], [0, h], [x0 - t, h],
+  ];
+  return [poly(pts)];
 }
 
 export const FOLD_PRESETS = [
@@ -94,10 +100,10 @@ export const FOLD_PRESETS = [
     (p) => packPieces([panel(p.len, p.a + p.b), [poly([[0, 0], [p.g, 0], [0, p.g]])]]).contours,
     { sheet: true, noResize: true, fold: (p) => {
       const m = foldAngle(p.len, p.a, p.b);
-      const g = face(p.g, p.g);
-      const extra = assemble(g);
-      extra.faces.forEach((f) => f.pts.forEach((q) => { q[0] += p.len + 8; }));
-      return { faces: m.faces.concat(extra.faces), panels: m.panels.concat([{ w: p.g, h: p.g }]) };
+      const g = Math.min(p.g, p.a, p.b);
+      const x = p.len / 2;
+      const tri = { pts: [[x, 0, 0], [x, 0, -g], [x, g, 0]], n: [1, 0, 0], holes: [], w: g, h: g };
+      return { faces: m.faces.concat([tri]), panels: m.panels.concat([{ w: g, h: g }]) };
     } }),
 
   shape("hatsect", "Hat section", "⊓", "folded", "hat channel section furring",
@@ -107,26 +113,25 @@ export const FOLD_PRESETS = [
     { noResize: true, fold: (p) => foldHat(p.len, p.web, p.leg, p.flange) }),
 
   shape("opentabbox", "Open box with tabs", "▢", "folded", "open box tabs folded tray",
-    "One-piece open box: a plus-shaped unfold (bottom and four sides) plus four corner tabs packed beside it.",
+    "One-piece open box: a plus-shaped unfold (bottom and four sides) with corner tabs attached to the long walls.",
     [["len", "Inside length", 140], ["wid", "Inside width", 90], ["ht", "Height", 40], ["tab", "Tab width", 12]],
-    (p) => packPieces([crossTray(p.len, p.wid, p.ht), panel(p.ht, p.tab), panel(p.ht, p.tab), panel(p.ht, p.tab), panel(p.ht, p.tab)]).contours,
-    { sheet: true, noResize: true, fold: (p) => foldTrayCross(p.len, p.wid, p.ht, p.tab) }),
+    (p) => crossTray(p.len, p.wid, p.ht, p.tab),
+    { noResize: true, fold: (p) => foldTrayCross(p.len, p.wid, p.ht, p.tab) }),
 
   shape("closedtabbox", "Closed box with tabs", "▣", "folded", "closed box tabs lid folded",
-    "Closed box: the open-box plus-shaped unfold, a lid, and corner tabs.",
+    "Closed box: a plus-shaped unfold with corner tabs attached to the long walls, plus a separate lid.",
     [["len", "Inside length", 120], ["wid", "Inside width", 80], ["ht", "Height", 50], ["tab", "Tab width", 12]],
     (p) => packPieces([
-      crossTray(p.len, p.wid, p.ht),
+      crossTray(p.len, p.wid, p.ht, p.tab),
       panel(p.len, p.wid),
-      panel(p.ht, p.tab), panel(p.ht, p.tab), panel(p.ht, p.tab), panel(p.ht, p.tab),
     ]).contours,
     { sheet: true, noResize: true, fold: (p) => foldLiddedBox(p.len, p.wid, p.ht) }),
 
   shape("traytabs", "Tray with tabs", "▭", "folded", "tray tabs hem folded",
-    "Shallow one-piece tray (plus-shaped unfold) with corner tabs.",
+    "Shallow one-piece tray (plus-shaped unfold) with corner tabs attached to the long walls.",
     [["len", "Inside length", 180], ["wid", "Inside width", 110], ["ht", "Side height", 22], ["tab", "Tab width", 10]],
-    (p) => packPieces([crossTray(p.len, p.wid, p.ht), panel(p.ht, p.tab), panel(p.ht, p.tab), panel(p.ht, p.tab), panel(p.ht, p.tab)]).contours,
-    { sheet: true, noResize: true, fold: (p) => foldTrayCross(p.len, p.wid, p.ht, p.tab) }),
+    (p) => crossTray(p.len, p.wid, p.ht, p.tab),
+    { noResize: true, fold: (p) => foldTrayCross(p.len, p.wid, p.ht, p.tab) }),
 
   shape("foldshelf", "Folded shelf bracket", "⌊", "folded", "folded shelf bracket return flange",
     "Shelf bracket formed from an L with a small return flange on the shelf leg, and holes in the wall leg.",
@@ -185,17 +190,13 @@ export const FOLD_PRESETS = [
       for (const [x, y, d] of holesOn(p.wid, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, p.leg + web + y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
       return c;
     },
-    { noResize: true, fold: (p) => {
-      // approximate the belly as a U of web = d (across) rather than a true half-cylinder
-      const web = Math.max(p.d, 8);
-      return foldU(p.wid, web, p.leg, foldHoles(p.wid, web, p.hole, p.inset, 1, 0));
-    } }),
+    { noResize: true, fold: (p) => foldUSaddle(p.wid, p.d, p.leg) }),
 
   shape("usaddle", "U-saddle strap", "⋃", "folded", "u saddle pipe strap folded flanges",
     "Wider U-saddle with outward mounting flanges on both legs.",
-    [["d", "Pipe Ø (web)", 60], ["leg", "Leg height", 30], ["flange", "Mounting flange", 24], ["wid", "Strap width", 30], ["hole", "Hole Ø", 8]],
+    [["d", "Pipe Ø (web)", 60], ["leg", "Leg height", 30], ["flange", "Mounting flange", 24], ["wid", "Strap width", 80], ["hole", "Hole Ø", 8]],
     (p) => strip(p.wid, [p.flange, p.leg, p.d, p.leg, p.flange]),
-    { noResize: true, fold: (p) => foldC(p.wid, p.d, p.leg, p.flange) }),
+    { noResize: true, fold: (p) => foldHat(p.wid, p.d, p.leg, p.flange) }),
 
   shape("fanduct", "Fan duct transition", "⏢", "folded", "fan duct square to round folded",
     "Short square-to-round transition for a fan or filter, packed with a square flange.",
@@ -221,7 +222,7 @@ export const FOLD_PRESETS = [
       sides.push(trap(p.a, p.a2, slantA, p.lip), trap(p.a, p.a2, slantA, p.lip), trap(p.b, p.b2, slantB, p.lip), trap(p.b, p.b2, slantB, p.lip));
       return packPieces(sides).contours;
     },
-    { sheet: true, noResize: true, fold: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h) }),
+    { sheet: true, noResize: true, fold: (p) => addTopFlanges(foldHopper(p.a, p.b, p.a2, p.b2, p.h), p.a2, p.b2, p.h, p.lip) }),
 
   shape("gusflange", "Gusset with flanges", "◣", "folded", "gusset folded flanges stiffener",
     "Right-angle gusset with a folded flange along each leg, developed as one piece.",
@@ -236,10 +237,13 @@ export const FOLD_PRESETS = [
       return [poly(outline)];
     },
     { noResize: true, fold: (p) => {
-      const web = face(p.a, p.b);
-      attach(web, 0, 90, face(p.a, p.flange));
-      attach(web, 3, 90, face(p.b, p.flange));
-      return assemble(web);
+      const f = p.flange;
+      const faces = [
+        { pts: [[0, 0, 0], [p.a, 0, 0], [0, p.b, 0]], n: [0, 0, 1], holes: [], w: p.a, h: p.b },
+        { pts: [[0, 0, 0], [p.a, 0, 0], [p.a, 0, f], [0, 0, f]], n: [0, 1, 0], holes: [], w: p.a, h: f },
+        { pts: [[0, 0, 0], [0, 0, f], [0, p.b, f], [0, p.b, 0]], n: [-1, 0, 0], holes: [], w: p.b, h: f },
+      ];
+      return { faces, panels: [{ w: p.a, h: p.b }, { w: p.a, h: f }, { w: p.b, h: f }] };
     } }),
 
   shape("signbr", "Sign / flag bracket", "⚑", "folded", "sign flag bracket folded wall",
@@ -380,8 +384,10 @@ export const FOLD_PRESETS = [
     [["leg", "Each roof leg", 80], ["welt", "Centre welt (0 = none)", 10], ["len", "Length", 400]],
     (p) => strip(p.len, [p.leg, Math.max(0, p.welt), p.leg]),
     { noResize: true, fold: (p) => {
-      if (p.welt > 0) return foldZ(p.len, p.leg, p.welt, p.leg);
-      return foldAngle(p.len, p.leg, p.leg);
+      const W = face(p.len, Math.max(0.1, p.welt));
+      attach(W, 0, -45, face(p.len, p.leg));
+      attach(W, 2, -45, face(p.len, p.leg));
+      return assemble(W);
     } }),
 
   shape("postcap", "Post cap", "▣", "folded", "post cap folded box lid",
@@ -403,10 +409,10 @@ export const FOLD_PRESETS = [
     ]).contours,
     { sheet: true, noResize: true, fold: (p) => {
       const bot = face(p.len, p.wid);
-      const L = face(p.len, p.ht); attach(L, 2, -90, face(p.len, p.hem));
-      const L2 = face(p.len, p.ht); attach(L2, 2, -90, face(p.len, p.hem));
-      const S = face(p.wid, p.ht); attach(S, 2, -90, face(p.wid, p.hem));
-      const S2 = face(p.wid, p.ht); attach(S2, 2, -90, face(p.wid, p.hem));
+      const L = face(p.len, p.ht); attach(L, 2, 90, face(p.len, p.hem));    // edge 0: outward normal
+      const L2 = face(p.len, p.ht); attach(L2, 2, -90, face(p.len, p.hem));  // edge 2: inward normal
+      const S = face(p.wid, p.ht); attach(S, 2, -90, face(p.wid, p.hem));   // edge 3: inward normal
+      const S2 = face(p.wid, p.ht); attach(S2, 2, 90, face(p.wid, p.hem));  // edge 1: outward normal
       attach(bot, 0, 90, L); attach(bot, 2, 90, L2); attach(bot, 3, 90, S); attach(bot, 1, 90, S2);
       return assemble(bot);
     } }),
@@ -443,12 +449,12 @@ export const FOLD_PRESETS = [
       return packPieces([top, panel(p.w, p.h), panel(p.w, p.h), panel(p.d, p.h), panel(p.d, p.h)]).contours;
     },
     { sheet: true, noResize: true, fold: (p) => {
-      const bot = face(p.w, p.d, p.hole > 8 ? [{ cx: p.w / 2, cy: p.d / 2, r: p.hole / 2 }] : []);
-      attach(bot, 0, 90, face(p.w, p.h));
-      attach(bot, 2, 90, face(p.w, p.h));
-      attach(bot, 3, 90, face(p.d, p.h));
-      attach(bot, 1, 90, face(p.d, p.h));
-      return assemble(bot);
+      const top = face(p.w, p.d, p.hole > 8 ? [{ cx: p.w / 2, cy: p.d / 2, r: p.hole / 2 }] : []);
+      attach(top, 0, -90, face(p.w, p.h));
+      attach(top, 2, -90, face(p.w, p.h));
+      attach(top, 3, -90, face(p.d, p.h));
+      attach(top, 1, -90, face(p.d, p.h));
+      return assemble(top);
     } }),
 
   shape("battbox", "Battery box", "▣", "folded", "battery box tabs folded enclosure",
@@ -459,7 +465,7 @@ export const FOLD_PRESETS = [
         [p.inset, p.inset, p.hole], [p.len - p.inset, p.inset, p.hole],
         [p.len - p.inset, p.wid - p.inset, p.hole], [p.inset, p.wid - p.inset, p.hole],
       ] : []);
-      return packPieces([crossTray(p.len, p.wid, p.ht), lid, panel(p.ht, p.tab), panel(p.ht, p.tab), panel(p.ht, p.tab), panel(p.ht, p.tab)]).contours;
+      return packPieces([crossTray(p.len, p.wid, p.ht, p.tab), lid]).contours;
     },
     { sheet: true, noResize: true, fold: (p) => foldLiddedBox(p.len, p.wid, p.ht) }),
 

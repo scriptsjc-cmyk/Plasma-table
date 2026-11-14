@@ -66,6 +66,30 @@ for (const sh of foldShapes) {
   }
 }
 
+const TAB_IDS = ["opentabbox", "closedtabbox", "traytabs", "battbox"];
+for (const id of TAB_IDS) {
+  const sh = A.SHAPES.find((s) => s.id === id);
+  t.check(`${id}: is registered`, !!sh);
+  if (!sh) continue;
+  const sk = A.newSketch();
+  sk.add(id, true);
+  const cs = sk.contours() || [];
+  const items = cs.map((c) => ({ a: Math.abs(A.signedArea(c.pts || [])), b: bb(c.pts || []) }));
+  const isHole = (x) => items.some((y) => y !== x && y.a >= x.a && contains(y.b, x.b));
+  const outers = items.filter((x) => !isHole(x));
+  const p = {};
+  for (const [k, , d] of sh.params) p[k] = d;
+  const tab = p.tab || 0, wall = p.ht || 0;
+  const loose = outers.filter((x) => {
+    const w = x.b[2] - x.b[0], h = x.b[3] - x.b[1];
+    const a = Math.min(w, h), b = Math.max(w, h);
+    return tab > 0 && Math.abs(a - tab) < 1.1 && Math.abs(b - wall) < 1.1;
+  });
+  t.check(`${id}: corner tabs are attached to the walls, not loose rectangles`, loose.length === 0, `${loose.length} loose tab-sized outlines`);
+  const expectMin = id === "opentabbox" || id === "traytabs" ? 1 : 2;
+  t.check(`${id}: flat pattern is one connected box (plus a lid if closed)`, outers.length <= expectMin + 0.1 && outers.length >= 1, `${outers.length} outer outlines`);
+}
+
 const goldPath = new URL("../data/existing-preset-flat.json", import.meta.url);
 const gold = JSON.parse(fs.readFileSync(goldPath, "utf8"));
 t.check("golden flat-pattern fixture is present", Array.isArray(gold.rows) && gold.rows.length > 50, String(gold.rows && gold.rows.length));
