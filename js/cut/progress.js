@@ -11,7 +11,14 @@ export function trackProgress(st) {
   R.last = now;
   if (!j.running) return;
   const state = st.state || "";
-  if (!/^(Hold|Alarm|Door)/.test(state)) R.t += dt * (st.torch ? (st.feedOv || 100) / 100 : 1);
+  const paused = /^(Hold|Alarm|Door)/.test(state);
+  if (paused) {
+    if (!R.pauseSince) R.pauseSince = now;
+  } else if (R.pauseSince) {
+    R.pauseAcc = (R.pauseAcc || 0) + (now - R.pauseSince);
+    R.pauseSince = 0;
+  }
+  if (!paused) R.t += dt * (st.torch ? (st.feedOv || 100) / 100 : 1);
   const torch = !!st.torch;
   if (torch && !R.torch) { R.ons++; const i = plan.torchOn[R.ons - 1]; if (i != null) R.t = plan.cum[i]; }
   if (!torch && R.torch) { R.offs++; const i = plan.torchOff[R.offs - 1]; if (i != null) R.t = plan.cum[i]; }
@@ -26,15 +33,22 @@ export function liveProgress() {
     const pierces = S.prepared ? S.prepared.stats.pierces : 0;
     const pct = Number(j0.pct) || (j0.total ? (100 * (j0.acked || 0)) / j0.total : 0);
     const cut = pierces ? Math.max(0, Math.min(pierces, Math.round((pct / 100) * pierces))) : 0;
-    return { pct, left: 0, elapsed: j0.elapsed || 0, cut };
+    const R = S.run;
+    return { pct, left: 0, elapsed: elapsedOf(R, j0.elapsed || 0), cut };
   }
   const R = S.run, plan = R && R.plan;
   if (!plan || !plan.total) {
     const j = S.job || {};
-    return { pct: j.total ? (100 * j.acked) / j.total : 0, left: 0, elapsed: j.elapsed || 0, cut: 0 };
+    return { pct: j.total ? (100 * j.acked) / j.total : 0, left: 0, elapsed: elapsedOf(R, j.elapsed || 0), cut: 0 };
   }
   const ov = (S.status.feedOv || 100) / 100;
   const t = R.shown || 0;
   return { pct: Math.min(100, (100 * t) / plan.total), left: (plan.total - t) / (ov || 1),
-    elapsed: (Date.now() - R.start) / 1000, cut: R.ons };
+    elapsed: elapsedOf(R, (Date.now() - R.start) / 1000), cut: R.ons };
+}
+function elapsedOf(R, fallback) {
+  if (!R || !R.start) return fallback || 0;
+  const now = Date.now();
+  const hold = (R.pauseAcc || 0) + (R.pauseSince ? now - R.pauseSince : 0);
+  return Math.max(0, (now - R.start - hold) / 1000);
 }

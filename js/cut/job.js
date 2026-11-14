@@ -81,6 +81,8 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
     if (/PORTA-ETCH PLASMA/i.test(rawLine)) { etchMode = "plasma"; sawEtch = true; out.push(ETCH_START_PLASMA); continue; }
     if (/PORTA-ETCH SCRIBE/i.test(rawLine)) { etchMode = "scribe"; sawEtch = true; out.push(ETCH_START_SCRIBE); continue; }
     if (/PORTA-ETCH END/i.test(rawLine)) { etchMode = null; etchToolOn = false; out.push(ETCH_END); continue; }
+    // Amp-dial pauses sit outside the etch markers (before the pass and after END). Keep the tagged comments.
+    if (/PORTA-PAUSE/i.test(rawLine)) { out.push(rawLine.trim()); continue; }
     const line = stripComments(rawLine);
     if (!line || line.startsWith("%")) {
       if (etchMode && /^\s*;/.test(rawLine) && !/PORTA-ETCH/i.test(rawLine)) out.push(rawLine.trim());

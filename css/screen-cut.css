@@ -1201,3 +1201,18 @@ body[data-screen="cut"][data-step="4"] #showMachWrap.showmach input {
    connection stays the USB control there, so the pill steps aside. */
 body[data-screen="cut"] #connPill { display: inline-flex !important; }
 body.short-land[data-screen="cut"] #connPill { display: none !important; }
+
+/* Plasma etch amp-dial pause: same slot as runHelp so the laptop run panel doesn't grow. */
+#ampPauseMsg.amppause {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 1.35;
+  background: #F5C542;
+  color: #1a1400;
+}
+#ampPauseMsg.amppause.hidden { display: none; }
+body[data-screen="cut"] #running > #ampPauseMsg { grid-area: help; margin: 0; }
+body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }

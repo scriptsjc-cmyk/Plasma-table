@@ -10,7 +10,9 @@ export function isEtchOp(op) { return ETCH_OPS.includes(op); }
 export function defaultEtchSettings() {
   return {
     tool: "plasma",          // "plasma" | "scribe"
-    pauseAfter: false,       // M0 after etch so the operator can set cut amps
+    // Default ON: M0 before and after a plasma etch so the operator can set the amp dial.
+    // Scribe / marker never gets these pauses (no current to change).
+    ampPauses: true,
     plasma: { amps: null, feed_mm_min: null, height_mm: null }, // null = from the cut chart
     scribe: { on: "M8", off: "M9", offsetX: 0, offsetY: 0 },
   };
@@ -22,7 +24,9 @@ export function sanitizeEtchSettings(raw) {
   const d = defaultEtchSettings(), src = raw && typeof raw === "object" ? raw : {};
   const out = defaultEtchSettings();
   out.tool = src.tool === "scribe" ? "scribe" : "plasma";
-  out.pauseAfter = src.pauseAfter === true;
+  // Explicit false turns the pauses off. The old pauseAfter flag is not reused, so
+  // existing saved settings (which stored pauseAfter: false as the previous default) get the new default ON.
+  out.ampPauses = src.ampPauses !== false && src.pauseAmps !== false;
   const p = src.plasma && typeof src.plasma === "object" ? src.plasma : {};
   const amps = num(p.amps), feed = num(p.feed_mm_min), ht = num(p.height_mm);
   if (amps != null && amps >= 5 && amps <= 200) out.plasma.amps = amps;
@@ -72,7 +76,7 @@ export function resolveEtch(row, chart, settings) {
   if (st.plasma.amps != null) plasma.amps = st.plasma.amps;
   if (st.plasma.feed_mm_min != null) plasma.feed_mm_min = st.plasma.feed_mm_min;
   if (st.plasma.height_mm != null) plasma.height_mm = st.plasma.height_mm;
-  return { tool: st.tool, pauseAfter: st.pauseAfter, plasma, scribe: st.scribe };
+  return { tool: st.tool, ampPauses: st.ampPauses !== false, plasma, scribe: st.scribe };
 }
 
 export function etchConfigProblem(resolved) {
@@ -85,6 +89,33 @@ export function etchConfigProblem(resolved) {
     return "Plasma etch needs a feed rate in Settings (Etch / mark) or the cut chart.";
   }
   return "";
+}
+
+
+// On-screen / G-code wording for the two plasma amp-dial pauses (scribe never uses these).
+export function etchPauseMessage(kind, amps) {
+  const n = Math.round(Number(amps));
+  const has = Number.isFinite(n) && n > 0;
+  if (String(kind).toLowerCase() === "etch") {
+    return has
+      ? `Set the plasma to about ${n} A for etching, then press Resume`
+      : "Set the plasma to the etching current, then press Resume";
+  }
+  return has
+    ? `Set the plasma back to ${n} A for cutting, then press Resume`
+    : "Set the plasma back to the cutting current, then press Resume";
+}
+
+export function etchPausePrompts(lines) {
+  const out = [];
+  for (let i = 0; i < (lines || []).length; i++) {
+    const m = String(lines[i]).match(/PORTA-PAUSE\s+(ETCH|CUT)(?:\s+([0-9.]+))?/i);
+    if (!m) continue;
+    const kind = m[1].toLowerCase();
+    const amps = m[2] != null && Number(m[2]) > 0 ? Number(m[2]) : null;
+    out.push({ kind, amps, line: i, msg: etchPauseMessage(kind, amps) });
+  }
+  return out;
 }
 
 function fmt(v) {
@@ -109,6 +140,16 @@ export function emitEtchGcode(contours, { T = (p) => p, resolved, name = "etch" 
   const dx = scribe ? (Number(r.scribe.offsetX) || 0) : 0;
   const dy = scribe ? (Number(r.scribe.offsetY) || 0) : 0;
   const lines = [];
+  // Plasma amp pauses (default on): torch off, then M0. FluidNC $LocalFS/Run honours M0 and resumes with ~,
+  // the same realtime cycle-start as a streamed job. Scribe never pauses for amps.
+  const pauseAmps = !scribe && r.ampPauses !== false;
+  if (pauseAmps) {
+    const n = r.plasma && r.plasma.amps;
+    // Torch is already off here (the job starts with M5; the etch pass has not begun).
+    lines.push(`; PORTA-PAUSE ETCH${n != null ? " " + n : ""}`);
+    lines.push("; " + etchPauseMessage("etch", n));
+    lines.push("M0");
+  }
   lines.push(scribe ? ETCH_START_SCRIBE : ETCH_START_PLASMA);
   if (scribe) {
     lines.push(`; scribe/marker on ${r.scribe.on}, off ${r.scribe.off}` + ((dx || dy) ? `, offset ${fmt(dx)}, ${fmt(dy)} mm` : ""));
@@ -128,9 +169,11 @@ export function emitEtchGcode(contours, { T = (p) => p, resolved, name = "etch" 
     lines.push(scribe ? r.scribe.off : "M5");
   }
   lines.push(ETCH_END);
-  if (r.pauseAfter) {
-    const amps = r.plasma && r.plasma.cut_amps;
-    lines.push(amps ? `; set the plasma back to ${amps} A for cutting` : "; set the plasma back to the cutting current");
+  if (pauseAmps) {
+    const m = r.plasma && r.plasma.cut_amps;
+    // The etch paths already ended with M5, so the torch is off before this M0.
+    lines.push(`; PORTA-PAUSE CUT${m != null ? " " + m : ""}`);
+    lines.push("; " + etchPauseMessage("cut", m));
     lines.push("M0");
   } else if (!scribe && r.plasma && r.plasma.cut_amps) {
     lines.push(`; after etch, set the plasma to ${r.plasma.cut_amps} A before the cuts that follow`);

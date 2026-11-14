@@ -1070,7 +1070,8 @@
           <label>Offset Y (mm)<input id="setScribeOffY" type="number" min="-50" max="50" step="0.1" inputmode="decimal" placeholder="0"></label>
         </div>
       </div>
-      <label class="check"><input id="setEtchPause" type="checkbox"> Pause after etch (M0) so you can set the cutting current</label>
+      <label class="check" id="setEtchPauseWrap"><input id="setEtchPause" type="checkbox" checked> Pause before and after plasma etch so you can set the current on the unit</label>
+      <p class="muted small" id="setEtchPauseNote">The cut stops with the torch off. The cutting screen tells you the etch and cut currents to set, then Resume continues. Turn this off if you set the current some other way. Scribe / marker is not paused.</p>
     </div>
 
     <div class="setpane hidden" data-setpane="materials">

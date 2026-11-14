@@ -13,6 +13,7 @@ import { M, S, sketch } from "../core/state.js";
 import { $, $$, clock, esc, fmtTime, placeToast } from "../core/dom.js";
 import { formatLen } from "../core/prefs.js";
 import { blockers, overlayLive, paintZeroWarn } from "../cut/checklist.js";
+import { etchPausePrompts } from "../cut/etch.js";
 import { drawPreview, fit, wcoNow } from "../cut/preview.js";
 import { syncHeaderButtons } from "./header.js";
 import { paintConnectLock, paintWhy } from "./gate.js";
@@ -172,13 +173,23 @@ export function refresh() {
       : (linkLost && board) ? "The table is still cutting. Reconnect to watch it or to stop it."
       : linkLost ? `Link lost after ${clock(P.elapsed)}. Use the machine's own E-stop or power switch.`
       : `${clock(P.elapsed)} so far` + (pierces ? ` · cut ${Math.min(pierces, (M.runFrom || 1) - 1 + Math.max(1, P.cut))} of ${pierces}` : "");
+    const hold = S.status.state === "Hold";
+    const lostArc = !!(S.arcWatch && S.arcWatch.lost) || ($("lostArc") && !$("lostArc").classList.contains("hidden"));
+    const prompts = (S.prepared && S.prepared.lines) ? etchPausePrompts(S.prepared.lines) : [];
+    const amp = !!(j.running && hold && !linkLost && !S.userHold && !lostArc && !S.status.torch && prompts.length && (S.ampPauseConsumed || 0) < prompts.length);
+    S.ampPause = amp ? prompts[S.ampPauseConsumed || 0] : null;
+    if ($("ampPauseMsg")) {
+      $("ampPauseMsg").classList.toggle("hidden", !S.ampPause);
+      if (S.ampPause) $("ampPauseMsg").textContent = S.ampPause.msg;
+    }
+    $("running").classList.toggle("amp-pause", !!S.ampPause);
     $("runTitle").textContent = uploading ? "Sending the cut to the table…"
       : (linkLost && board) ? "Running on the table (not watched)"
       : linkLost ? "Link lost: job state unknown"
-      : S.status.state === "Hold" ? "Paused"
+      : S.ampPause ? "Paused"
+      : hold ? "Paused"
       : j.running ? "Cutting…" : "Finishing last moves…";
     $("btnPause").disabled = linkLost || uploading;
-    const hold = S.status.state === "Hold";
     const pauseLabel = hold ? "Resume" : "Pause";
     if ($("btnPause").dataset.face !== pauseLabel) {
       $("btnPause").dataset.face = pauseLabel;

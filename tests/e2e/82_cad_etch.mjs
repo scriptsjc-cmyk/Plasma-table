@@ -1,6 +1,7 @@
 // C32 / C24: etch preview colour, fold bend lines, Score accepted, etch-first G-code.
 import { T } from "../lib/t.mjs";
 import { startServer, launch, newPage } from "../lib/browser.mjs";
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 import { mkdirSync } from "node:fs";
 
 const t = new T("82_cad_etch");
@@ -89,6 +90,60 @@ const guard = await page.evaluate(() => {
   return why;
 });
 t.check("C32: stripping the etch flag is treated as a through-cut", /cut through|full power|no etch/i.test(guard) && guard !== "no-fn", guard, "C32-GUARD");
+
+// Plasma etch amp-dial pauses on the Cut screen (demo / mock only).
+{
+  const ready = await page.evaluate(() => {
+    const T = window.plasmaTest, sk = T.sketch;
+    sk.clear();
+    sk.add("foldlbr", true);
+    const it = sk.items[0];
+    if (it) { it.x = 20; it.y = 20; }
+    T.useShape && T.useShape();
+    T.sendToCutting();
+    T.goStep(3);
+    return { screen: T.screen && T.screen(), hasEtch: /PORTA-ETCH PLASMA/.test((T.S.prepared && T.S.prepared.lines || []).join("\n")) };
+  });
+  t.check("amp pause: the prepared plasma job includes an etch pass", ready.hasEtch, ready, "C32-PAUSE");
+  await page.evaluate(() => document.getElementById("btnDemo") && document.getElementById("btnDemo").click());
+  const linked = await page.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 10000 }).then(() => true).catch(() => false);
+  t.check("amp pause: practice machine links", linked, "", "C32-PAUSE");
+  await page.waitForFunction(() => window.plasmaTest.getM().state() === "Idle", null, { timeout: 10000 }).catch(() => {});
+  await sleep(400);
+  await page.evaluate(() => { const z = document.getElementById("btnZero"); if (z && !z.disabled) z.click(); });
+  await sleep(300);
+  await page.evaluate(() => document.querySelectorAll("#checklist input").forEach((c) => { if (!c.checked) c.click(); }));
+  const canStart = await page.waitForFunction(() => document.getElementById("btnStart") && !document.getElementById("btnStart").disabled, null, { timeout: 8000 }).then(() => true).catch(() => false);
+  t.check("amp pause: Start is enabled after setting the sheet corner", canStart, await page.evaluate(() => (document.getElementById("startWhy") || {}).textContent || ""), "C32-PAUSE");
+  if (canStart) await page.click("#btnStart");
+  const started = await page.waitForFunction(() => window.plasmaTest.S.cur === 4 && window.plasmaTest.S.job && window.plasmaTest.S.job.running, null, { timeout: 10000 }).then(() => true).catch(() => false);
+  t.check("amp pause: the job starts", started, "", "C32-PAUSE");
+  const prompt = await page.waitForFunction(() => {
+    const el = document.getElementById("ampPauseMsg");
+    return el && !el.classList.contains("hidden") && /Set the plasma to about \d+ A for etching, then press Resume/.test(el.textContent || "");
+  }, null, { timeout: 15000 }).then(() => true).catch(() => false);
+  const ui = await page.evaluate(() => {
+    const msg = document.getElementById("ampPauseMsg");
+    const pause = document.getElementById("btnPause");
+    const stop = document.getElementById("btnStop");
+    const pill = document.getElementById("connPill");
+    const shown = (id) => { const e = document.getElementById(id); if (!e) return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
+    return {
+      text: (msg && msg.textContent) || "",
+      hidden: !!(msg && msg.classList.contains("hidden")),
+      resume: pause && /Resume/i.test(pause.textContent || pause.innerText || ""),
+      resumeOn: pause && !pause.disabled,
+      stopOn: stop && shown("btnStop") && !stop.disabled,
+      conn: pill && shown("connPill") && !/not connected/i.test(pill.textContent || ""),
+      torch: (document.getElementById("torchBig") || {}).textContent || "",
+      title: (document.getElementById("runTitle") || {}).textContent || "",
+      state: window.plasmaTest.S.status && window.plasmaTest.S.status.state,
+    };
+  });
+  t.check("amp pause: the Cut screen shows the etch-current prompt", prompt && /etching, then press Resume/.test(ui.text), ui, "C32-PAUSE");
+  t.check("amp pause: Resume, STOP and the connection light stay usable", ui.resume && ui.resumeOn && ui.stopOn && ui.conn && /TORCH OFF/.test(ui.torch), ui, "C32-PAUSE");
+  await page.screenshot({ path: "/workspace/out/etch-pause.png" });
+}
 
 await br.close();
 srv.close();

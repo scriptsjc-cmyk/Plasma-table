@@ -198,6 +198,8 @@ function paintEtchToolFields() {
   const plasma = $("setEtchPlasmaFields"), scribe = $("setEtchScribeFields");
   if (plasma) plasma.classList.toggle("hidden", tool !== "plasma");
   if (scribe) scribe.classList.toggle("hidden", tool !== "scribe");
+  const pause = $("setEtchPauseWrap") || ($("setEtchPause") && $("setEtchPause").closest("label"));
+  if (pause) pause.classList.toggle("hidden", tool !== "plasma");
 }
 
 function showTab(id) {
@@ -272,7 +274,7 @@ function fillBasics() {
   blank("setEtchAmps", e.plasma && e.plasma.amps);
   blank("setEtchFeed", e.plasma && e.plasma.feed_mm_min);
   blank("setEtchHeight", e.plasma && e.plasma.height_mm);
-  if ($("setEtchPause")) $("setEtchPause").checked = !!e.pauseAfter;
+  if ($("setEtchPause")) $("setEtchPause").checked = e.ampPauses !== false;
   set("setScribeOn", e.scribe && e.scribe.on || "M8");
   set("setScribeOff", e.scribe && e.scribe.off || "M9");
   blank("setScribeOffX", e.scribe && e.scribe.offsetX);
@@ -306,7 +308,7 @@ function readFormIntoState() {
   const emptyNum = (id) => { const el = $(id); if (!el || el.value === "") return null; const v = Number(el.value); return Number.isFinite(v) ? v : null; };
   cand.etch = {
     tool: etchTool === "scribe" ? "scribe" : "plasma",
-    pauseAfter: !!( $("setEtchPause") && $("setEtchPause").checked ),
+    ampPauses: !($("setEtchPause") && !$("setEtchPause").checked),
     plasma: { amps: emptyNum("setEtchAmps"), feed_mm_min: emptyNum("setEtchFeed"), height_mm: emptyNum("setEtchHeight") },
     scribe: { on: $("setScribeOn") ? $("setScribeOn").value : "M8", off: $("setScribeOff") ? $("setScribeOff").value : "M9",
       offsetX: emptyNum("setScribeOffX") ?? 0, offsetY: emptyNum("setScribeOffY") ?? 0 },

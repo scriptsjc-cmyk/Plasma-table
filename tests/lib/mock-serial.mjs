@@ -76,7 +76,12 @@ export function installMockSerial(target, opts = {}) {
       }
       return s + `>`;
     }
-    setFileProgress(pct) { if (this.fileRun) this.fileRun.pct = Math.max(0, Math.min(100, pct)); }
+    setFileProgress(pct) {
+      if (!this.fileRun) return;
+      const next = Math.max(0, Math.min(100, pct));
+      if (this._tripM0(this.fileRun.pct, next)) return;
+      this.fileRun.pct = next;
+    }
     finishFile() {
       if (!this.fileRun) return;
       this.fileRun.pct = 100; this.fileRun.sent = true;
@@ -106,15 +111,26 @@ export function installMockSerial(target, opts = {}) {
       if (ch === "?") {
         if (this.answer) {
           if (this.fileRun && !this.fileRun.ended && this.state === "Run" && o.fileStep) {
-            this.fileRun.pct = Math.min(100, this.fileRun.pct + o.fileStep);
-            if (this.fileRun.pct >= 100) { this.finishFile(); return; }
+            const next = Math.min(100, this.fileRun.pct + o.fileStep);
+            if (!this._tripM0(this.fileRun.pct, next)) {
+              this.fileRun.pct = next;
+              if (this.fileRun.pct >= 100) { this.finishFile(); return; }
+            }
           }
           this.push(this.status() + "\r\n");
         }
         return;
       }
       if (ch === "!") { this.sent += ch; if (this.fileRun && this.state === "Run") this.state = "Hold:0"; return; }
-      if (ch === "~") { this.sent += ch; if (this.fileRun && String(this.state).startsWith("Hold")) this.state = "Run"; return; }
+      if (ch === "~") {
+        this.sent += ch;
+        if (this.fileRun && String(this.state).startsWith("Hold")) {
+          if (this.fileRun.pendingM0) this.fileRun.pendingM0.done = true;
+          this.fileRun.pendingM0 = null;
+          this.state = "Run";
+        }
+        return;
+      }
       if (ch === "\x18") { this._reset(); return; }
       this.sent += ch;
       if (ch !== "\n" || !this.answer) return;
@@ -134,12 +150,37 @@ export function installMockSerial(target, opts = {}) {
       const base = n.split("/").pop();
       return "/littlefs/" + (base || "job.nc");
     }
+    _isM0(line) {
+      const u = String(line || "").replace(/\(.*?\)/g, "").replace(/;.*$/, "").trim().toUpperCase();
+      return /^M0+$/.test(u);
+    }
+    _m0s(lines) {
+      const n = Math.max((lines || []).length, 1);
+      const out = [];
+      (lines || []).forEach((l, i) => { if (this._isM0(l)) out.push({ i, pct: ((i + 1) / n) * 100, done: false }); });
+      return out;
+    }
+    _tripM0(fromPct, toPct) {
+      if (!this.fileRun || this.fileRun.ended) return false;
+      if (String(this.state).startsWith("Hold") && this.fileRun.pendingM0) return true;
+      const hits = (this.fileRun.m0s || []).filter((p) => !p.done && p.pct > fromPct && p.pct <= toPct);
+      if (!hits.length) return false;
+      const hit = hits[0];
+      this.fileRun.pct = hit.pct;
+      this.fileRun.pendingM0 = hit;
+      this.state = "Hold:0";
+      return true;
+    }
     _runFile(name) {
       const path = this._canon(name);
       const body = this.fs[path] || this.fs["/" + (name || "").replace(/^\/+/, "")] || this.fs[name];
       if (body == null) { this.push("error:16\r\n"); return; }
-      this.fileRun = { path, pct: 0, sent: false };
+      const text = typeof body === "string" ? body : dec.decode(body instanceof Uint8Array ? body : new Uint8Array(body));
+      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      this.fileRun = { path, pct: 0, sent: false, m0s: this._m0s(lines), pendingM0: null };
       this.state = "Run";
+      // If the job starts with an amp-dial M0, enter Hold on the next status poll (FluidNC pauses as soon as M0 runs).
+      this._tripM0(-0.01, this.fileRun.m0s[0] ? this.fileRun.m0s[0].pct : -1);
       // Error::Deferred: no ok until finishFile()
     }
     _startXmodem(name) {

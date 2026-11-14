@@ -5,6 +5,7 @@ import { load } from "../lib/env.mjs";
 import {
   emitEtchGcode, throughCutInEtch, sanitizeMcode, resolveEtch, isEtchOp,
   ETCH_START_PLASMA, ETCH_START_SCRIBE, ETCH_END, defaultEtchSettings, sanitizeEtchSettings,
+  etchPauseMessage, etchPausePrompts,
 } from "../../js/cut/etch.js";
 
 const A = await load();
@@ -128,5 +129,47 @@ function etchBody(text) {
   const cs = sk.contours();
   t.check("C32: contours() stamps Score on the open line", cs.length === 1 && isEtchOp(cs[0].op) && cs[0].pts.length >= 2, cs, "C32-OPEN");
 }
+
+
+// ---- plasma amp-dial pauses (default on); scribe and cut-only stay unpaused ----
+{
+  t.check("C32: plasma amp pauses default on", defaultEtchSettings().ampPauses === true, defaultEtchSettings(), "C32-PAUSE");
+  t.check("C32: an explicit off is kept", sanitizeEtchSettings({ ampPauses: false }).settings.ampPauses === false, sanitizeEtchSettings({ ampPauses: false }).settings, "C32-PAUSE");
+  t.check("C32: old pauseAfter:false still defaults to on", sanitizeEtchSettings({ pauseAfter: false }).settings.ampPauses === true, sanitizeEtchSettings({ pauseAfter: false }).settings, "C32-PAUSE");
+  const line = { pts: [[0, 0], [40, 0]], closed: false, op: "score" };
+  const on = emitEtchGcode([line], { resolved: resolveEtch(null, A.chart, { tool: "plasma" }) }).lines;
+  const g = on.join("\n");
+  const start = on.findIndex((l) => /PORTA-ETCH PLASMA/.test(l));
+  const end = on.findIndex((l) => /PORTA-ETCH END/.test(l));
+  const m0s = on.map((l, i) => /(?:^|\s)M0$/.test(l.trim()) ? i : -1).filter((i) => i >= 0);
+  t.check("plasma etch (default) pauses once before and once after the pass", m0s.length === 2 && m0s[0] < start && m0s[1] > end, { m0s, start, end, g }, "C32-PAUSE");
+  t.check("pause messages name the etch and cut currents", /Set the plasma to about \d+ A for etching, then press Resume/.test(g) && /Set the plasma back to \d+ A for cutting, then press Resume/.test(g), g, "C32-PAUSE");
+  const lastCmd = (arr, i) => { for (let k = i - 1; k >= 0; k--) { const u = String(arr[k]).replace(/;.*$/, "").trim(); if (u) return u; } return ""; };
+  t.check("the torch is not on when an amp pause runs", !m0s.some((i) => /^M3\b/.test(lastCmd(on, i))), on, "C32-PAUSE");
+  t.check("no M0 inside the plasma etch block", !on.slice(start, end + 1).some((l) => /(?:^|\s)M0$/.test(l.trim())), on.slice(start, end + 1), "C32-PAUSE");
+  const prompts = etchPausePrompts(on);
+  t.check("tagged pause prompts parse in order", prompts.length === 2 && prompts[0].kind === "etch" && prompts[1].kind === "cut" && prompts[0].msg === etchPauseMessage("etch", prompts[0].amps), prompts, "C32-PAUSE");
+
+  const off = emitEtchGcode([line], { resolved: resolveEtch(null, A.chart, { tool: "plasma", ampPauses: false }) }).lines.join("\n");
+  t.check("amp pauses can be turned off", !/(?:^|\n)M0(?:\n|$)/.test(off) && !/PORTA-PAUSE/.test(off), off, "C32-PAUSE");
+
+  const scribe = emitEtchGcode([line], { resolved: resolveEtch(null, A.chart, { tool: "scribe", scribe: { on: "M8", off: "M9" } }) }).lines.join("\n");
+  t.check("scribe mode has no amp pauses", !/(?:^|\n)M0(?:\n|$)/.test(scribe) && !/PORTA-PAUSE/.test(scribe), scribe, "C32-PAUSE");
+
+  const rect = { pts: [[0, 0], [80, 0], [80, 50], [0, 50]], closed: true };
+  const only = A.designToGcode([rect], { kerf: 1.5, leadIn: 3, name: "cut-only" });
+  t.check("cut-only CAM has no program pause", !/(?:^|\n)M0(?:\n|$)/.test(only.gcode), only.gcode.slice(0, 200), "C32-PAUSE");
+  const onlyJob = A.prepareJob(only.gcode, A.cutFor(), A.machine, false);
+  t.check("cut-only prepared job has no program pause", !onlyJob.lines.some((l) => /(?:^|\s)M0$/.test(String(l).trim())), onlyJob.lines.filter((l) => /^M/.test(l)).slice(0, 12), "C32-PAUSE");
+
+  const both = A.designToGcode([rect, line], { kerf: 1.5, leadIn: 3, name: "etched", etch: resolveEtch(null, A.chart, { tool: "plasma" }) });
+  const job = A.prepareJob(both.gcode, cut(), A.machine, false);
+  const text = job.lines.join("\n");
+  const js = job.lines.map((l, i) => /(?:^|\s)M0$/.test(String(l).trim()) ? i : -1).filter((i) => i >= 0);
+  const jStart = job.lines.findIndex((l) => /PORTA-ETCH PLASMA/.test(l));
+  const jEnd = job.lines.findIndex((l) => /PORTA-ETCH END/.test(l));
+  t.check("prepared plasma job keeps both amp pauses in place", js.length === 2 && js[0] < jStart && js[1] > jEnd && /PORTA-PAUSE ETCH/.test(text) && /PORTA-PAUSE CUT/.test(text), { js, jStart, jEnd, head: job.lines.slice(0, 20) }, "C32-PAUSE");
+}
+
 
 process.exit(t.done() ? 1 : 0);

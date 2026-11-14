@@ -30,21 +30,31 @@ export function bindRun() {
         const ok = await askConfirm({ title: "Start without homing?", body: "No table edges are saved yet, so the app cannot check this job against the bed. Check the torch is clear and you are happy to start without homing.", ok: "Start anyway", cancel: "Cancel" });
         if (!ok) return;
       }
-      S.jobSeq++; S.run = null; S.streamFromCut = fromCut;
+      S.jobSeq++; S.run = null; S.streamFromCut = fromCut; S.userHold = false; S.ampPauseConsumed = 0; S.ampPause = null;
       S.jobLogId = null; S.jobLoggedEnd = false; M.startJob({ fromCut }); markFirstJobDone(); afterStart(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; keepAwake(true); goStep(4); maybeLogJob(S.job);
       $("btnSaveSpeed").classList.add("hidden");
     }
     catch (e) { toast(e.message, true); }
   };
   // step 5
-  $("btnPause").onclick = () => cmd(S.status.state === "Hold" ? "resume" : "hold");
+  $("btnPause").onclick = () => {
+    if (S.status.state === "Hold") {
+      if (S.ampPause) S.ampPauseConsumed = (S.ampPauseConsumed || 0) + 1;
+      S.ampPause = null;
+      S.userHold = false;
+      cmd("resume");
+    } else {
+      S.userHold = true;
+      cmd("hold");
+    }
+  };
   $("btnAgain").onclick = () => { S.job = null; S.zeroSet = false; goStep(3); toast("Move to the next spot and press Start here."); };
   if ($("btnRezero")) $("btnRezero").onclick = () => { S.job = null; S.zeroSet = false; goStep(3); toast("Position was lost. Set a new start point before cutting again."); };
   $("btnNewFile").onclick = () => startOver();
   if ($("btnStreamFallback")) $("btnStreamFallback").onclick = () => {
     try {
       const fromCut = S.streamFromCut || startCut() || 1;
-      S.jobSeq++; S.run = null; S.jobLogId = null; S.jobLoggedEnd = false;
+      S.jobSeq++; S.run = null; S.jobLogId = null; S.jobLoggedEnd = false; S.userHold = false; S.ampPauseConsumed = 0; S.ampPause = null;
       M.startJob({ fromCut, stream: true });
       markFirstJobDone(); afterStart(); S.job = M.grbl.jobProgress(); S.lastAlarm = null; S.needStreamFallback = false;
       keepAwake(true); goStep(4); maybeLogJob(S.job);

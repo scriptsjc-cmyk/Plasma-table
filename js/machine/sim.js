@@ -181,6 +181,14 @@ export class SimTransport {
     for (const gg of g) if ([0, 1, 2, 3].includes(gg)) this.motion = gg;
     if (m.includes(3) || m.includes(4)) { this.torch = true; this.arcLost = false; this.torchOnCount++; }
     if (m.includes(5)) { this.torch = false; this.arcLost = false; }
+    // M0 / M1 program pause: enter Hold and withhold ok until cycle start (~). Same as FluidNC $LocalFS/Run.
+    if (m.includes(0) || m.includes(1)) {
+      this.hold = true;
+      const gen = this.resetGen;
+      while (this.hold && gen === this.resetGen && !this.closed) await sleep(20);
+      if (gen !== this.resetGen || this.closed) return;
+      return this._send("ok");
+    }
     if (["X", "Y", "Z"].some((a) => a in ax)) {
       const t = [...this.mpos];
       "XYZ".split("").forEach((a, i) => { if (a in ax) t[i] = this.relative ? this.mpos[i] + ax[a] : ax[a] + this.wco[i]; });
