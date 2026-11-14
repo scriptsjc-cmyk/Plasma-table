@@ -139,6 +139,9 @@ export function parseDXF(text) {
 }
 
 // join open pieces end-to-end into chains; closed chains become outlines
+// C43 (import clean-up stage): this join can still turn two open DXF lines into four parts
+// when loose LINE/ARC pieces don't chain cleanly. C43 must stop that case — do not treat
+// this join as the complete open-path import cleanup.
 function joinPieces(pieces) {
   const out = [];
   const left = pieces.map((p) => p.map((q) => [...q]));

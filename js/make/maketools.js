@@ -41,6 +41,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
       <select id="mtKind">
         <option value="plate">Letters cut out of a plate (name plate / stencil, centres stay attached)</option>
         <option value="letters">Each letter is a part (cut the letters out)</option>
+        <option value="etch">Etch / mark the letters (don't cut through)</option>
       </select></label>
     <div class="mt-pro">
       <div class="grid2">
@@ -140,12 +141,12 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
   $("mtSize").addEventListener("input", () => { if ($("mtWeight").value === "") $("mtWeight").placeholder = String(defaultWeight(num("mtSize", 40))); });
 
   // place new parts to the right of what is already drawn, picked so they move together
-  function addParts(contours, label) {
+  function addParts(contours, label, extra = {}) {
     const e = contoursToEditable(contours);
     if (!e || !e.parts.length) { toast("Nothing to add.", true); return 0; }
     const b = sketch.allBoxExcept([]);
     const dx = b ? Math.round(b[2] + 15) : 20, dy = b ? Math.round(b[1]) : 20;
-    const n = sketch.importParts(e.parts.map((p) => ({ cs: p.cs, x: p.x + dx, y: p.y + dy })), false);
+    const n = sketch.importParts(e.parts.map((p) => ({ cs: p.cs, x: p.x + dx, y: p.y + dy, op: extra.op, name: extra.name })), false);
     sketch.pick(sketch.items.slice(-n).map((i) => i.id)); sketch.draw(); sketch.onSelect();
     sketch.ensureVisible && sketch.ensureVisible();
     afterAdd && afterAdd(n, label);
@@ -153,8 +154,9 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
   }
   $("mtAdd").onclick = () => {
     if (!tres || !tres.contours.length) return;
-    const n = addParts(tres.contours, "text");
-    if (n) { tdlg.classList.add("hidden"); toast(n === 1 ? "Text added as 1 part." : `Text added as ${n} parts, picked together.`); }
+    const etch = $("mtKind").value === "etch";
+    const n = addParts(tres.contours, "text", etch ? { op: "score", name: "Etch text" } : {});
+    if (n) { tdlg.classList.add("hidden"); toast(etch ? (n === 1 ? "Text added as an etch (it will be marked first, not cut through)." : `Text added as ${n} etch parts, picked together. They will be marked first, not cut through.`) : (n === 1 ? "Text added as 1 part." : `Text added as ${n} parts, picked together.`)); }
   };
   const closeText = () => { tdlg.classList.add("hidden"); };
   $("mtClose").onclick = closeText; $("mtCancel").onclick = closeText;

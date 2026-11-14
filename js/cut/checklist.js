@@ -7,6 +7,7 @@ import { ampsNow, row } from "./material.js";
 import { $, $$, esc } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
 import { CHECK_LINE } from "../machine/boardrun.js";
+import { isEtchOp, throughCutInEtch } from "./etch.js";
 
 // ------------------------------------------------------------------ step 3 (second half): checks
 // Round 5 (safety): the first line, "Start point set", is not a box you tick. It follows the machine's zeroConfirmed flag
@@ -45,16 +46,28 @@ export function paintZeroWarn() {
   const label = box.nextElementSibling, text = zeroLineText();
   if (label && label.textContent !== text) label.textContent = text;
 }
-// Round 5 (safety): Score and Mark are only labels. The torch here is on/off (M3 S1000 / M5) and the plasma power is set by hand at the
-// unit, so the G-code can't cut a line lighter. Rather than cut those lines through at full power, Start and Download G-code are blocked.
+// Score / Mark is a real etch pass (C32). Start and Download stay blocked only when that pass would
+// cut through the sheet (no PORTA-ETCH block, or a pierce delay / torch inside the etch).
 function scoreMarkCount() {
   if (!sketch || S.src !== "shape") return 0;
-  return sketch.items.filter((it) => (it.op === "score" || it.op === "mark") && !sketch.layerHidden(it)).length;
+  let n = 0;
+  const hidden = sketch.hiddenLayers;
+  for (const it of sketch.items) {
+    if (sketch.layerHidden(it)) continue;
+    if (isEtchOp(it.op)) { n++; continue; }
+    try {
+      for (const c of sketch.contoursOf(it)) {
+        if (isEtchOp(c.op) && !(hidden && hidden.has(c.op))) n++;
+      }
+    } catch (e) { /* ignore */ }
+  }
+  return n;
 }
-const SCORE_MARK_WHY = "can't be scored or marked: this table's torch only switches on and off (the plasma power is set at the unit), so the line would be cut right through at full power.";
 export function scoreMarkProblem() {
   const n = scoreMarkCount();
-  return n ? `${n} shape${n === 1 ? " is" : "s are"} set to Score or Mark, which ${SCORE_MARK_WHY} Change ${n === 1 ? "it" : "them"} back to Cut, or hide the Score/Mark layer, in the shape settings.` : "";
+  if (!n) return "";
+  const lines = (S.prepared && S.prepared.lines) || [];
+  return throughCutInEtch(lines, { hasEtchItems: true }) || "";
 }
 export function blockers() {
   const b = [];

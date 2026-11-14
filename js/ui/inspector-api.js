@@ -67,7 +67,7 @@ export function makeInspector(h) {
       }
       if ("operation" in p) {
         if (p.operation === "cut") delete it.op; else it.op = p.operation; sk().commit();
-        if (p.operation !== "cut" && h.note) h.note(`${p.operation === "mark" ? "Mark" : "Score"} can't be cut lighter on this table (the torch only switches on and off), so Start and Download G-code stay blocked while any shape is set to it. Change it back to Cut, or hide the layer.`);
+        if (p.operation !== "cut" && h.note) h.note(`${p.operation === "mark" ? "Mark" : "Score"} will be etched first (the Settings tool: plasma etch or a scribe / marker), then the cuts. It will not cut through the sheet.`);
       }
       if ("leadOut" in p) S.cam.leadOut = p.leadOut;
       if (tb && "count" in tb) S.cam.tabs = Math.round(tb.count);
@@ -80,7 +80,11 @@ export function makeInspector(h) {
     },
     listLayers() {
       const k = sk(); if (!k) return [];
-      const present = new Set(["cut"]); for (const it of k.items) present.add(OPS.includes(it.op) ? it.op : "cut");
+      const present = new Set(["cut"]);
+      for (const it of k.items) {
+        present.add(OPS.includes(it.op) ? it.op : "cut");
+        try { for (const c of k.contoursOf(it)) if (OPS.includes(c.op)) present.add(c.op); } catch (e) { /* ignore */ }
+      }
       const cur = sel(), curOp = cur ? (OPS.includes(cur.op) ? cur.op : "cut") : null;
       return OPS.filter((o) => present.has(o)).map((o) => ({ id: o, name: LAYERS[o].name, color: LAYERS[o].color, hidden: !!(k.hiddenLayers && k.hiddenLayers.has(o)), selected: curOp === o }));
     },
@@ -94,7 +98,9 @@ export function makeInspector(h) {
       const k = sk(); if (!k || !OPS.includes(id) || typeof hidden !== "boolean") return false;
       k.hiddenLayers = k.hiddenLayers || new Set();
       hidden ? k.hiddenLayers.add(id) : k.hiddenLayers.delete(id);
-      k.commit(); emit();
+      k.commit();
+      if (h.loadJob) h.loadJob();
+      emit();
       return true;
     },
     on(ev, fn) {

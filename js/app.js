@@ -33,6 +33,7 @@ import { initFlow, showScreen, screen, navLocked, estopOn, estopReset, estopPres
 import { CFH, M, S, inspectorApi, makeTools, setCFH, setInspectorApi, setM, setSketch, sketch } from "./core/state.js";
 import { onEvent, onSafety } from "./machine/events.js";
 import { navBusy, scoreMarkProblem } from "./cut/checklist.js";
+import { throughCutInEtch } from "./cut/etch.js";
 import { $, esc, toast } from "./core/dom.js";
 import { askConfirm } from "./core/safeprompt.js";
 import { cmd, machineAllowed, requireMachine } from "./machine/access.js";
@@ -376,7 +377,7 @@ async function init() {
   routeAuth();
   refreshPublishedPresets().then(() => { applyMatchingPreset(); renderMaterials(); }).catch(() => {});
   // Test hooks only once the app has finished starting, so a test never talks to a half-ready page.
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, importIntoMake, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, bedViewRotated, jogToMachine, isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM, openPresetBrowser, renderShapeForm, useShape };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, importIntoMake, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, bedViewRotated, jogToMachine, isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM, openPresetBrowser, renderShapeForm, useShape, scoreMarkProblem, throughCutInEtch };
   if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   if (window.plasmaTest) publishCadTestHooks();
 }

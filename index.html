@@ -1041,6 +1041,33 @@
       </div>
     </div>
 
+    <div class="setpane hidden" data-setpane="etch">
+      <h3>Etch / mark</h3>
+      <p class="muted small">Score and Mark lines, fold marks, and etched text run as a first pass, before any cuts. They must never cut through the sheet. Choose whether that pass is a light plasma etch (low current, high speed, no pierce delay) or a scribe / marker tool.</p>
+      <div class="row wrap">
+        <label class="check"><input type="radio" name="setEtchTool" value="plasma" checked> Plasma etch</label>
+        <label class="check"><input type="radio" name="setEtchTool" value="scribe"> Scribe / marker tool</label>
+      </div>
+      <div id="setEtchPlasmaFields">
+        <p class="muted small">Leave a field blank to use the cut chart for this material (a lower current, faster feed and no pierce delay). Set the plasma unit to the etch current before you start; after etch, set it back to the cutting current.</p>
+        <div class="grid3">
+          <label>Etch current (A)<input id="setEtchAmps" type="number" min="5" max="200" step="1" inputmode="decimal" placeholder="from chart"></label>
+          <label>Etch speed (mm/min)<input id="setEtchFeed" type="number" min="50" max="30000" step="10" inputmode="decimal" placeholder="from chart"></label>
+          <label>Etch height (mm)<input id="setEtchHeight" type="number" min="0" max="25" step="0.1" inputmode="decimal" placeholder="from chart"></label>
+        </div>
+      </div>
+      <div id="setEtchScribeFields" class="hidden">
+        <p class="muted small">The tool-on and tool-off M-codes are sent as written. They cannot be the torch codes M3 / M5. An optional XY offset is added to every etch move (for a marker that sits beside the torch).</p>
+        <div class="grid3">
+          <label>Tool on<input id="setScribeOn" type="text" value="M8" maxlength="5" spellcheck="false"></label>
+          <label>Tool off<input id="setScribeOff" type="text" value="M9" maxlength="5" spellcheck="false"></label>
+          <label>Offset X (mm)<input id="setScribeOffX" type="number" min="-50" max="50" step="0.1" inputmode="decimal" placeholder="0"></label>
+          <label>Offset Y (mm)<input id="setScribeOffY" type="number" min="-50" max="50" step="0.1" inputmode="decimal" placeholder="0"></label>
+        </div>
+      </div>
+      <label class="check"><input id="setEtchPause" type="checkbox"> Pause after etch (M0) so you can set the cutting current</label>
+    </div>
+
     <div class="setpane hidden" data-setpane="materials">
       <h3>Material library</h3>
       <p class="muted small">Admin-published presets are the defaults. Anything you save here stays on this device and overrides the default for that material and thickness. The Cut flow uses the selected preset.</p>

@@ -75,7 +75,7 @@ export class GeomMethods {
     if (it._key === key) return it._cs;
     let cs;
     try { cs = this.baseContours(it); } catch (e) { cs = []; }
-    cs = cs.filter((c) => c.pts.length >= 3);
+    cs = cs.filter((c) => c && c.pts && (c.pts.length >= 3 || (c.pts.length >= 2 && (c.closed === false || c.op === "score" || c.op === "mark" || c.role === "bend"))));
     if (cs.length) {
       const hs = this.holeStart(it);
       cs = cs.map((c, i) => (i >= hs && it.holes && it.holes[i] ? mapC(c, ([x, y]) => [x + it.holes[i][0], y + it.holes[i][1]]) : c));

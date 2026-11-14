@@ -100,6 +100,8 @@ export class ViewMethods {
       partLine: themeColor("--cad-part-line", "#334155"),
       sel: themeColor("--cad-sel", "#0078D4"),
       edge: themeColor("--cad-edge", "#C05621"),
+      score: themeColor("--cad-score", "#c27c0e"),
+      mark: themeColor("--cad-mark", "#6a4fc9"),
       lock: themeColor("--cad-lock", "#C05600"),
       dim: themeColor("--cad-dim", "#0078D4"),
       guide: themeColor("--cad-guide", "#0078D4"),
@@ -140,24 +142,45 @@ export class ViewMethods {
     // sheet layout (step 3): the sheet, the machine's work area, and which parts are too close / overlapping / off the sheet
     const LY = this.layout || null, LI = LY ? (this.layoutInfo = LY.analyze(this)) : null;
     if (LY) LY.drawBg(this, ctx, S, C, w, h);
-    const trace = (c) => { c.pts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); ctx.closePath(); };
+    const isEtch = (op) => op === "score" || op === "mark";
+    const trace = (c, close) => { c.pts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); if (close !== false && c.closed !== false) ctx.closePath(); };
+    const hiddenOps = this.hiddenLayers;
     for (const it of this.order()) {
       const cs = this.contoursOf(it); if (!cs.length || this.layerHidden(it)) continue;
       const hole = this.isHole(it), on = this.isPicked(it);
-      ctx.beginPath(); cs.forEach(trace);
+      const itemEtch = isEtch(it.op);
+      const body = cs.filter((c) => !isEtch(c.op) && c.closed !== false);
+      const etchCs = cs.filter((c) => isEtch(c.op) && !(hiddenOps && hiddenOps.has(c.op)));
       const bad = !!(LI && LI.bad.has(it.id));
-      ctx.fillStyle = bad ? "#f9c9c4" : hole ? C.hole : on ? C.partSel : C.partFill;
-      ctx.fill(def(it.type).multi ? "nonzero" : "evenodd");
-      ctx.setLineDash(hole ? [5, 4] : []);
-      ctx.strokeStyle = bad ? C.danger : it.lock ? C.lock : on ? C.sel : hole ? C.label : C.partLine;
-      ctx.lineWidth = on ? 2 : 1.5;
-      ctx.stroke(); ctx.setLineDash([]);
+      if (!itemEtch && body.length) {
+        ctx.beginPath(); body.forEach((c) => trace(c, true));
+        ctx.fillStyle = bad ? "#f9c9c4" : hole ? C.hole : on ? C.partSel : C.partFill;
+        ctx.fill(def(it.type).multi ? "nonzero" : "evenodd");
+        ctx.setLineDash(hole ? [5, 4] : []);
+        ctx.strokeStyle = bad ? C.danger : it.lock ? C.lock : on ? C.sel : hole ? C.label : C.partLine;
+        ctx.lineWidth = on ? 2 : 1.5;
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+      const etchStroke = (list, op) => {
+        if (!list.length) return;
+        ctx.beginPath();
+        for (const c of list) trace(c, c.closed !== false);
+        ctx.setLineDash([6, 3]);
+        ctx.strokeStyle = bad ? C.danger : (op === "mark" ? C.mark : C.score);
+        ctx.lineWidth = on ? 2.2 : 1.8;
+        ctx.stroke(); ctx.setLineDash([]);
+      };
+      if (itemEtch) etchStroke(cs.filter((c) => !(hiddenOps && hiddenOps.has(it.op))), it.op);
+      else {
+        etchStroke(etchCs.filter((c) => (c.op || "score") === "score"), "score");
+        etchStroke(etchCs.filter((c) => c.op === "mark"), "mark");
+      }
       if (it.lock && on) {
         const bb = this.boxOf(it), [lx, ly] = S(bb[0], bb[3]);
         ctx.fillStyle = C.lock; ctx.font = "14px Barlow, system-ui"; ctx.fillText("🔒", lx + 4, ly + 16);
       }
       if (on && this.sel.hole != null && cs[this.sel.hole]) {
-        ctx.beginPath(); trace(cs[this.sel.hole]); ctx.strokeStyle = C.lock; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.beginPath(); trace(cs[this.sel.hole], true); ctx.strokeStyle = C.lock; ctx.lineWidth = 2.5; ctx.stroke();
       }
     }
 

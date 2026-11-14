@@ -180,6 +180,20 @@ export function quickAction(a) {
       if (shapeDef(a)) sketch.add(a); else toast("That shape isn't available.", true); break;
     case "lib": openLibrary(); break;
     case "text": case "trace": openMakeTool(a); break;
+    case "etch": {
+      const list = sketch.picked().filter((i) => sketch.canMutate(i));
+      if (list.length) {
+        sketch.remember();
+        for (const it of list) it.op = "score";
+        sketch.commit(); sketch.draw(); sketch.onSelect && sketch.onSelect();
+        toast(list.length === 1 ? "Set to Score: it will be etched first, not cut through." : list.length + " parts set to Score: they will be etched first, not cut through.");
+      } else {
+        sketch.setTool("draw");
+        sketch.drawEtch = true;
+        toast("Draw the etch line, then Etch line (or Enter) when it has two or more points. It will be marked, not cut through.");
+      }
+      break;
+    }
     case "undo": sketch.undo(); break;
     case "redo": sketch.redo(); break;
     case "dup": sketch.duplicate(); break;

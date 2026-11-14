@@ -147,6 +147,10 @@ function drawCanvas(cv, main) {
     if (pv && Array.isArray(pv.rapids)) {
       ctx.setLineDash([4, 4]); ctx.strokeStyle = C.label; ctx.lineWidth = 1; pv.rapids.forEach(path);
     }
+    if (pv && Array.isArray(pv.etches) && pv.etches.length) {
+      ctx.setLineDash([7, 4]); ctx.strokeStyle = "#c27c0e"; ctx.lineWidth = zoom ? 2.2 : 1.8;
+      pv.etches.forEach(path);
+    }
     ctx.setLineDash([]); ctx.strokeStyle = fit().bad ? C.danger : C.lock; ctx.lineWidth = zoom ? 2.5 : 2;
     const playing = main && playActive();
     if (playing) ctx.globalAlpha = 0.22;
@@ -164,7 +168,7 @@ function drawCanvas(cv, main) {
     });
     if (zoom) {
       ctx.fillStyle = C.label; ctx.font = "12px system-ui";
-      ctx.fillText("orange: torch path   grey: your part   dots: where it pierces", 8, h - 8);
+      ctx.fillText("orange: torch path   amber dashed: etch   grey: your part   dots: where it pierces", 8, h - 8);
     }
   }
   if (!isPartPreview()) {

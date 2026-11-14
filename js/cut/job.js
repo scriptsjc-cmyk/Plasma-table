@@ -6,6 +6,8 @@
 //    torch on -> pierce delay -> drop to cut height -> set cut feed.
 //  * After every M5: lift clear for the next rapid.
 
+import { ETCH_START_PLASMA, ETCH_START_SCRIBE, ETCH_END } from "./etch.js";
+
 export class JobError extends Error {}
 const MAX_COORD_MM = 100000;   // 100 m: far beyond any table, still safe to print with toFixed()
 
@@ -57,19 +59,33 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
 
   let x = 0, y = 0, posKnown = false, motion = 0, torchOn = false, pierces = 0;
   let cutLen = 0, rapidLen = 0, current = null, sawM3 = false;
-  const cuts = [], rapids = [];
+  const cuts = [], rapids = [], etches = [];
   let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+  let etchMode = null, etchToolOn = false, sawEtch = false, etchLen = 0;
+  const etchCfg = (cut && cut.etch) || {};
+  const etchPlasma = etchCfg.plasma || {};
+  const etchHeight = Number(etchPlasma.height_mm) > 0 ? Number(etchPlasma.height_mm) : cutH;
+  const etchFeed = Number(etchPlasma.feed_mm_min) > 0 ? Number(etchPlasma.feed_mm_min) : Math.max(feed * 2, 2000);
+  const scribeOn = Number(String((etchCfg.scribe && etchCfg.scribe.on) || "M8").replace(/^[Mm]/, ""));
+  const scribeOff = Number(String((etchCfg.scribe && etchCfg.scribe.off) || "M9").replace(/^[Mm]/, ""));
 
   const startPoly = (kind) => {
     current = { kind, pts: [[x, y]] };
-    (kind === "cut" ? cuts : rapids).push(current);
+    (kind === "cut" ? cuts : kind === "etch" ? etches : rapids).push(current);
   };
 
   const lines = gcodeText.split(/\r?\n/);
   for (let idx = 0; idx < lines.length; idx++) {
     const lineno = idx + 1;
-    const line = stripComments(lines[idx]);
-    if (!line || line.startsWith("%")) continue;
+    const rawLine = lines[idx];
+    if (/PORTA-ETCH PLASMA/i.test(rawLine)) { etchMode = "plasma"; sawEtch = true; out.push(ETCH_START_PLASMA); continue; }
+    if (/PORTA-ETCH SCRIBE/i.test(rawLine)) { etchMode = "scribe"; sawEtch = true; out.push(ETCH_START_SCRIBE); continue; }
+    if (/PORTA-ETCH END/i.test(rawLine)) { etchMode = null; etchToolOn = false; out.push(ETCH_END); continue; }
+    const line = stripComments(rawLine);
+    if (!line || line.startsWith("%")) {
+      if (etchMode && /^\s*;/.test(rawLine) && !/PORTA-ETCH/i.test(rawLine)) out.push(rawLine.trim());
+      continue;
+    }
     if (line.startsWith("$")) { warnings.push(`Line ${lineno}: removed settings command '${line}'.`); continue; }
     const words = [...line.replace(/ /g, "").matchAll(WORD_RE)].map((m) => [m[1], m[2]]);
     if (!words.length) continue;
@@ -93,6 +109,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
 
     if (mcodes.includes(5) && torchOn) {
       torchOn = false;
+      etchToolOn = false;
       current = null;
       out.push(dryRun ? "; dry run: torch off" : "M5");
       if (!dryRun) out.push("G91", `G0 Z${fmt(torch.safe_lift_mm)}`, "G90");
@@ -114,14 +131,15 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
       }
       out.push(parts.join(" "));
 
-      const kind = torchOn && motion !== 0 ? "cut" : "rapid";
+      const toolOn = torchOn || etchToolOn;
+      const kind = toolOn && motion !== 0 ? (etchMode ? "etch" : "cut") : "rapid";
       if (!current || current.kind !== kind) startPoly(kind);
       let pts, length;
       if (motion === 2 || motion === 3) ({ pts, length } = arcPoints(x, y, nx, ny, axes.I ?? 0, axes.J ?? 0, motion === 2));
       else { pts = [[nx, ny]]; length = Math.hypot(nx - x, ny - y); }
       current.pts.push(...pts);
-      if (kind === "cut") {
-        cutLen += length;
+      if (kind === "cut" || kind === "etch") {
+        if (kind === "cut") cutLen += length; else etchLen += length;
         for (const [px, py] of [[x, y], ...pts]) {
           minx = Math.min(minx, px); maxx = Math.max(maxx, px);
           miny = Math.min(miny, py); maxy = Math.max(maxy, py);
@@ -133,26 +151,56 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
       if (other.length) out.push(other.map((g) => `G${fmt(g)}`).join(" "));
     }
 
-    if ((mcodes.includes(3) || mcodes.includes(4)) && !torchOn) {
-      sawM3 = true;
-      if (!posKnown) warnings.push(`Line ${lineno}: torch on before any XY move; pierce will be at the start point.`);
-      torchOn = true;
-      pierces += 1;
-      current = null;
-      cutIndex.push({ n: pierces, line: out.length, at: [Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000] });
-      out.push(`; --- pierce ${pierces} ---`);
-      if (dryRun) out.push("G4 P0.1");
-      else {
-        out.push("G91",
-          `G38.2 Z-${fmt(probe.probe_distance_mm)} F${fmt(probe.probe_feed)}`,
-          `G0 Z${fmt(probe.switch_offset_mm + pierceH)}`,
-          `M3 S${fmt(torch.spindle_s)}`,
-          `G4 P${fmt(delay)}`);
-        if (Math.abs(cutH - pierceH) > 1e-6) out.push(`G1 Z${fmt(cutH - pierceH)} F${fmt(probe.plunge_feed)}`);
-        out.push("G90");
+    if (etchMode === "scribe" && mcodes.length) {
+      for (const m of mcodes) {
+        if (m === 3 || m === 4) { warnings.push(`Line ${lineno}: torch (M${m}) inside a scribe pass was skipped so the sheet is not cut through.`); continue; }
+        if (m === 2 || m === 30) { etchMode = null; etchToolOn = false; break; }
+        if (m === 5) { etchToolOn = false; continue; }
+        out.push("M" + m);
+        if (m === scribeOn) { etchToolOn = true; current = null; }
+        if (m === scribeOff) etchToolOn = false;
       }
-      out.push(`G1 F${fmt(feed)}`);
     }
+
+    if ((mcodes.includes(3) || mcodes.includes(4)) && !torchOn && etchMode !== "scribe") {
+      if (etchMode === "plasma") {
+        sawEtch = true;
+        if (!posKnown) warnings.push(`Line ${lineno}: etch start before any XY move; it will begin at the start point.`);
+        torchOn = true;
+        etchToolOn = true;
+        current = null;
+        out.push("; --- plasma etch (no pierce delay) ---");
+        if (dryRun) out.push("G4 P0");
+        else {
+          out.push("G91",
+            `G38.2 Z-${fmt(probe.probe_distance_mm)} F${fmt(probe.probe_feed)}`,
+            `G0 Z${fmt(probe.switch_offset_mm + etchHeight)}`,
+            `M3 S${fmt(torch.spindle_s)}`,
+            "G90");
+        }
+        out.push(`G1 F${fmt(etchFeed)}`);
+      } else {
+        sawM3 = true;
+        if (!posKnown) warnings.push(`Line ${lineno}: torch on before any XY move; pierce will be at the start point.`);
+        torchOn = true;
+        pierces += 1;
+        current = null;
+        cutIndex.push({ n: pierces, line: out.length, at: [Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000] });
+        out.push(`; --- pierce ${pierces} ---`);
+        if (dryRun) out.push("G4 P0.1");
+        else {
+          out.push("G91",
+            `G38.2 Z-${fmt(probe.probe_distance_mm)} F${fmt(probe.probe_feed)}`,
+            `G0 Z${fmt(probe.switch_offset_mm + pierceH)}`,
+            `M3 S${fmt(torch.spindle_s)}`,
+            `G4 P${fmt(delay)}`);
+          if (Math.abs(cutH - pierceH) > 1e-6) out.push(`G1 Z${fmt(cutH - pierceH)} F${fmt(probe.plunge_feed)}`);
+          out.push("G90");
+        }
+        out.push(`G1 F${fmt(feed)}`);
+      }
+    }
+    if (mcodes.includes(0) && !mcodes.includes(3) && !mcodes.includes(30) && !mcodes.includes(2)) out.push("M0");
     if (mcodes.includes(2) || mcodes.includes(30)) break;
   }
 
@@ -164,7 +212,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
   out.push("M5");
   if (park !== null && park !== undefined) out.push(`G53 G0 Z${fmt(park)}`);
 
-  if (!sawM3) throw new JobError("No torch-on (M3) found. Export from your CAM with a plasma or laser post so cuts start with M3 and end with M5.");
+  if (!sawM3 && !sawEtch) throw new JobError("No torch-on (M3) found. Export from your CAM with a plasma or laser post so cuts start with M3 and end with M5.");
 
   if (minx === Infinity) minx = miny = maxx = maxy = 0;
   const travel = machine.travel_mm;
@@ -175,7 +223,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
 
   const rapidFeed = machine.rapid_feed_estimate || 6000;
   const probeTime = (probe.probe_distance_mm / Math.max(probe.probe_feed, 1)) * 60 * 0.3;
-  const est = (cutLen / feed) * 60 + (rapidLen / rapidFeed) * 60 + pierces * (delay + probeTime + 1.0);
+  const est = (cutLen / feed) * 60 + (etchLen / Math.max(etchFeed, 1)) * 60 + (rapidLen / rapidFeed) * 60 + pierces * (delay + probeTime + 1.0);
   const r2 = (v) => Math.round(v * 100) / 100;
   const simplify = (polys) => polys.filter((p) => p.pts.length > 1).map((p) => p.pts.map(([a, b]) => [r2(a), r2(b)]));
 
@@ -183,7 +231,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
     lines: out,
     headerLen,
     cutIndex,
-    preview: { cuts: simplify(cuts), rapids: simplify(rapids) },
+    preview: { cuts: simplify(cuts), rapids: simplify(rapids), etches: simplify(etches) },
     stats: {
       pierces,
       cut_length_mm: Math.round(cutLen * 10) / 10,

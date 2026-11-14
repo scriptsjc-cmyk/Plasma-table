@@ -4,6 +4,8 @@
 import { GrblLink, RT } from "./grbl.js";
 import { startBoardJob, fileRunActive } from "./boardrun.js";
 import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt, jobPlan, restartLines } from "../cut/job.js";
+import { resolveEtch } from "../cut/etch.js";
+import { currentSettings } from "./settings.js";
 import { Safety, SafetyError } from "./safety.js";
 import { filterConsoleCommand } from "./admin-machine.js";
 
@@ -138,6 +140,7 @@ export class Machine {
             cut_height_mm: row.cut_height_mm ?? this.chart.cut_height_mm, amps: row.amps,
           };
           for (const [k, v] of Object.entries(overrides || {})) if (k in cut && v !== null && v !== "" && v !== undefined) cut[k] = Number(v);
+          try { cut.etch = resolveEtch(row, this.chart, currentSettings()); } catch (e) { cut.etch = resolveEtch(row, this.chart, null); }
           return cut;
         }
       }

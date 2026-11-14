@@ -427,7 +427,7 @@ export function expandContour(c, tol = TOL) {
   const bulges = c.bulges || [];
   let any = false;
   for (let i = 0; i < n; i++) if (Math.abs(Number(bulges[i]) || 0) > 1e-9) { any = true; break; }
-  if (!any) return { pts: pts.map((p) => [p[0], p[1]]), closed, holes: c.holes, circle: c.circle };
+  if (!any) return { ...c, pts: pts.map((p) => [p[0], p[1]]), closed, holes: c.holes, circle: c.circle };
   const out = [];
   const edges = closed ? n : Math.max(0, n - 1);
   for (let i = 0; i < edges; i++) {
@@ -440,7 +440,9 @@ export function expandContour(c, tol = TOL) {
     }
   }
   if (!closed) out.push([pts[n - 1][0], pts[n - 1][1]]);
-  return { pts: cleanPts(out, closed), closed, holes: c.holes };
+  const rec = { ...c, pts: cleanPts(out, closed), closed, holes: c.holes };
+  delete rec.bulges;
+  return rec;
 }
 
 // Do two closed polylines cross each other (strictly)? Used to keep a hole inside its outline while editing.

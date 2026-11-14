@@ -130,7 +130,8 @@ export function paintDrawHud() {
       <button type="button" id="drawHudAdd" class="small">Add point</button>
       <button type="button" id="drawHudArc" class="small${arcOn ? " on" : ""}" aria-pressed="${arcOn ? "true" : "false"}">${arcOn ? "Arc on" : "Arc"}</button>
       <button type="button" id="drawHudClose" class="small go">Close</button>
-      <span class="muted small">Enter or Close finishes the outline · A or Arc starts a curve · type a length, or 100,50 for a point, or 40@90 for length@angle · Esc cancels</span>`;
+      <button type="button" id="drawHudEtch" class="small">Etch line</button>
+      <span class="muted small">Enter or Close finishes the outline · Etch line keeps it open as a mark (not cut through) · A or Arc starts a curve · type a length, or 100,50 for a point, or 40@90 for length@angle · Esc cancels</span>`;
     el.classList.remove("hidden"); el.hidden = false;
     fields = ["drawHudLen", "drawHudAng"];
   } else if (tool === "rect" && sketch.drawDraft) {
@@ -168,6 +169,10 @@ function bindHudInputs() {
   if (close) close.addEventListener("click", () => {
     if (sketch && sketch.drawPts && sketch.drawPts.length >= 3) { sketch.finishDraw(); closeDrawHud(); }
   });
+  const etch = $("drawHudEtch");
+  if (etch) etch.addEventListener("click", () => {
+    if (sketch && sketch.finishOpenDraw && sketch.drawPts && sketch.drawPts.length >= 2) { sketch.finishOpenDraw(); closeDrawHud(); }
+  });
 }
 
 function onHudInput() {
@@ -196,6 +201,9 @@ function onHudKey(e) {
   if (e.key === "Enter") {
     e.preventDefault(); e.stopPropagation();
     // Enter always finishes a started outline (3+ points), even if a length is in the box.
+    if (sketch && sketch.tool === "draw" && sketch.drawEtch && sketch.finishOpenDraw && sketch.drawPts && sketch.drawPts.length >= 2) {
+      sketch.finishOpenDraw(); closeDrawHud(); return;
+    }
     if (sketch && sketch.tool === "draw" && sketch.drawPts && sketch.drawPts.length >= 3) {
       sketch.finishDraw(); closeDrawHud(); return;
     }

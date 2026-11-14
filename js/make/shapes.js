@@ -642,7 +642,12 @@ export function makeShape(id, values) {
   }
   let cs;
   try { cs = s.make(p); } catch (e) { return []; }
-  return (cs || []).filter((c) => c && c.pts && c.pts.length >= 3 && c.pts.every((q) => Number.isFinite(q[0]) && Number.isFinite(q[1])) && Math.abs(signedArea(c.pts)) > 0.01);
+  return (cs || []).filter((c) => {
+    if (!c || !c.pts || !c.pts.every((q) => Number.isFinite(q[0]) && Number.isFinite(q[1]))) return false;
+    const etch = c.closed === false || c.op === "score" || c.op === "mark" || c.role === "bend";
+    if (etch) return c.pts.length >= 2;
+    return c.pts.length >= 3 && Math.abs(signedArea(c.pts)) > 0.01;
+  });
 }
 
 

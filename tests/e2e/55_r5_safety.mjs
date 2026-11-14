@@ -279,7 +279,7 @@ for (const view of ["laptop", "phone"]) {
   await page.context().close();
 }
 
-// ================================================================== 8 Score / Mark
+// ================================================================== 8 Score / Mark (real etch; must never become a through-cut)
 {
   const page = await open(br, "laptop", s.base, "?test=1&turn=0");
   await prime(page, ["rect", "disc"]);
@@ -287,48 +287,56 @@ for (const view of ["laptop", "phone"]) {
   ck("8 (setup) with every shape set to Cut, Start is allowed", await startable(page), await blockersText(page));
   const setOp = async (op) => { await page.evaluate(() => { const k = window.plasmaTest.sketch; k.pick([k.items[1].id]); }); const refused = await T(page, `window.ptInspector.setCut({ operation: '${op}' })`); if (refused !== false) throw new Error("the layout must refuse operation changes"); const r = await T(page, `(() => { const k = window.plasmaTest.sketch, L = k.layout; k.layout = null; try { return window.ptInspector.setCut({ operation: '${op}' }); } finally { k.layout = L; } })()`); await T(page, "window.plasmaTest.refresh()"); return r; };   // an operation is chosen in Make a part; the cutting screen's layout refuses it (tests/e2e/57_layout_lock.mjs)
   const tick = async () => { await page.evaluate(() => { document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById("checklist").dispatchEvent(new Event("change")); }); await sleep(300); };
-  // make the disc a Score line through the real inspector API
+  const jobText = async () => T(page, "(window.plasmaTest.S.prepared && window.plasmaTest.S.prepared.lines || []).join('\\n')");
   const r = await setOp("score");
   ck("8 setting Score is accepted by the inspector", r !== false, String(r));
   await sleep(300);
   const toastTxt = await T(page, "document.getElementById('toast').textContent");
-  ck("8 choosing Score tells you at once it can't be cut lighter", /Score/.test(toastTxt) && /Start and Download G-code stay blocked/.test(toastTxt), toastTxt);
+  ck("8 choosing Score tells you it will be etched first, not cut through", /Score/.test(toastTxt) && /etch/i.test(toastTxt) && /not cut through/i.test(toastTxt), toastTxt);
   await page.evaluate(() => window.plasmaTest.goStep(3)); await sleep(400);
   await T(page, "window.plasmaTest.refresh()");
+  await tick();
   const bt = await blockersText(page);
-  ck("8 Start is blocked with a clear warning naming Score/Mark and why", !(await startable(page)) && /Score or Mark/.test(bt) && /full power/.test(bt) && /back to Cut|hide/.test(bt), bt);
-  const M1 = await throws(page, "window.plasmaTest.getM().startJob()");
-  ck("8 the machine itself refuses to start it (not just the button)", /Score or Mark/.test(M1 || ""), M1);
-  await page.evaluate(() => document.getElementById("blockers").scrollIntoView({ block: "center" }));
-  await snap(page, "scoremark-blocked-laptop");
-  // Mark too
+  ck("8 Start is allowed when Score is a real etch pass", await startable(page) && !/cut through|full power/.test(bt), bt);
+  const gcode = await jobText();
+  const etchAt = gcode.indexOf("PORTA-ETCH");
+  const endAt = gcode.indexOf("PORTA-ETCH END");
+  const body = etchAt >= 0 && endAt > etchAt ? gcode.slice(etchAt, endAt) : "";
+  ck("8 G-code etches before the cuts", etchAt >= 0 && endAt > etchAt && /\bM3\b/.test(gcode.slice(endAt)), gcode.slice(0, 400));
+  ck("8 the etch pass has no pierce delay", body && !/\bG4\s*P[1-9]/.test(body) && !/\bG4\s*P0\.[1-9]/.test(body), body);
+  const stripped = await T(page, `(() => {
+    const S = window.plasmaTest.S, orig = S.prepared && S.prepared.lines;
+    if (!orig) return "no-job";
+    S.prepared.lines = orig.filter((l) => !/PORTA-ETCH/.test(l));
+    const why = window.plasmaTest.scoreMarkProblem();
+    const start = (() => { try { window.plasmaTest.getM().startJob(); return ""; } catch (e) { return e.message || String(e); } })();
+    S.prepared.lines = orig;
+    return why + " | " + start;
+  })()`);
+  ck("8 the through-cut guard still fires if the etch pass is missing", /cut through|full power|no etch/i.test(stripped), stripped);
   await setOp("mark"); await tick();
-  ck("8 Mark is blocked the same way", !(await startable(page)) && /Score or Mark/.test(await blockersText(page)));
-  // hiding the layer: not cut, so allowed
+  ck("8 Mark is also allowed once it is an etch pass", await startable(page), await blockersText(page));
   await T(page, "window.ptInspector.setLayerHidden('mark', true)"); await sleep(300); await T(page, "window.plasmaTest.refresh()"); await tick();
-  ck("8 a hidden Score/Mark layer isn't cut, so Start is allowed", await startable(page) && !/Score or Mark/.test(await blockersText(page)), await blockersText(page));
+  ck("8 a hidden Score/Mark layer isn't etched or cut, so Start is allowed", await startable(page), await blockersText(page));
   await T(page, "window.ptInspector.setLayerHidden('mark', false)"); await sleep(300); await T(page, "window.plasmaTest.refresh()");
-  ck("8 un-hiding it blocks again", !(await startable(page)));
+  ck("8 un-hiding it keeps Start allowed (etch is still configured)", await startable(page));
   await setOp("cut"); await tick();
-  ck("8 back to Cut: Start is allowed again", await startable(page), await blockersText(page));
-  // Download G-code: refused (and said why) before any file is written while a Score/Mark line is showing
+  ck("8 back to Cut: Start is allowed", await startable(page), await blockersText(page));
   const downloads = [];
   page.on("download", (d) => downloads.push(d.suggestedFilename()));
   await setOp("score");
-  await T(page, "document.getElementById('btnExport').click()"); await sleep(800);
-  const dlToast = await T(page, "document.getElementById('toast').textContent");
-  ck("8 Download G-code with a Score shape is refused: no file is saved", downloads.length === 0, JSON.stringify(downloads));
-  ck("8 ...and the reason (Score/Mark, full power, set to Cut or hide) shows at once", /Not downloaded/.test(dlToast) && /Score or Mark/.test(dlToast) && /full power/.test(dlToast) && /back to Cut|hide/.test(dlToast), dlToast);
-  await setOp("mark"); await T(page, "window.plasmaTest.exportGcode()"); await sleep(500);
-  ck("8 Mark is refused the same way", downloads.length === 0 && /Not downloaded/.test(await T(page, "document.getElementById('toast').textContent")));
-  await T(page, "window.ptInspector.setLayerHidden('mark', true)"); await sleep(300);
   await T(page, "document.getElementById('btnExport').click()"); await sleep(200);
   await T(page, "document.getElementById('exportGo').click()"); await sleep(1200);
-  ck("8 with the Score/Mark layer hidden the download goes ahead", downloads.length === 1, JSON.stringify(downloads));
-  await T(page, "window.ptInspector.setLayerHidden('mark', false)"); await sleep(300);
-  await setOp("cut"); await T(page, "document.getElementById('btnExport').click()"); await sleep(200);
+  ck("8 Download G-code with a Score shape goes ahead once it is an etch", downloads.length === 1, JSON.stringify(downloads));
+  await T(page, "window.ptInspector.setLayerHidden('score', true)"); await sleep(300);
+  await T(page, "document.getElementById('btnExport').click()"); await sleep(200);
   await T(page, "document.getElementById('exportGo').click()"); await sleep(1200);
-  ck("8 back to Cut: the download goes ahead", downloads.length === 2, JSON.stringify(downloads));
+  ck("8 with the Score/Mark layer hidden the download still goes ahead", downloads.length === 2, JSON.stringify(downloads));
+  await T(page, "window.ptInspector.setLayerHidden('score', false)"); await sleep(300);
+  await setOp("cut");
+  await T(page, "document.getElementById('btnExport').click()"); await sleep(200);
+  await T(page, "document.getElementById('exportGo').click()"); await sleep(1200);
+  ck("8 back to Cut: the download goes ahead", downloads.length === 3, JSON.stringify(downloads));
   await page.context().close();
 }
 

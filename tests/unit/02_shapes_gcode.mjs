@@ -5,7 +5,7 @@ for (const sh of A.SHAPES) {
   const it = sk.items[0]; it.x = 25; it.y = 40;
   const cs = sk.contours();
   t.check(`${sh.id}: produces contours`, cs.length > 0, "", "SHAPE-EMPTY");
-  t.check(`${sh.id}: all contours closed flag + >=3 pts`, cs.every((c) => c.closed !== false && c.pts.length >= 3), "", "PATH-OPEN");
+  t.check(`${sh.id}: all contours closed flag + >=3 pts (open Score/Mark bend lines may be 2 pts)`, cs.every((c) => (c.op === "score" || c.op === "mark" || c.role === "bend" || c.closed === false) ? c.pts.length >= 2 : (c.closed !== false && c.pts.length >= 3)), "", "PATH-OPEN");
   verifyDesign(A, t, `shape ${sh.id}`, cs);
   // with a different kerf / lead-in
   verifyDesign(A, t, `shape ${sh.id} kerf2.5 lead6`, cs, { kerf: 2.5, leadIn: 6 });

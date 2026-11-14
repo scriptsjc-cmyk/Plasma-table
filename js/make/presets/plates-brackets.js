@@ -1,5 +1,5 @@
 // Plates, mounting plates and brackets.
-import { circleContour, roundedRect, slot, holeIn, boltHoles, rectContour, poly, clamp, pos, shape, arcPoints } from "./helpers.js";
+import { circleContour, roundedRect, slot, holeIn, boltHoles, rectContour, poly, clamp, pos, shape, arcPoints, bendLine } from "./helpers.js";
 
 function plateWithHoles(w, h, r, holes) {
   const c = [roundedRect(0, 0, w, h, r || 0)];
@@ -62,7 +62,7 @@ export const PLATE_PRESETS = [
     [["a", "Horizontal leg", 100], ["b", "Vertical leg", 100], ["t", "Thickness", 25], ["hole", "Hole Ø", 10], ["inset", "Hole centre from the end", 20]],
     (p) => {
       const t = clamp(p.t, 4, Math.min(p.a, p.b) - 4);
-      const c = [poly([[0, 0], [p.a, 0], [p.a, t], [t, t], [t, p.b], [0, p.b]])];
+      const c = [poly([[0, 0], [p.a, 0], [p.a, t], [t, t], [t, p.b], [0, p.b]]), bendLine(0, t, t, t)];
       const h1 = holeIn(p.a - p.inset, t / 2, p.hole, 0, 0, p.a, t, 1);
       const h2 = holeIn(t / 2, p.b - p.inset, p.hole, 0, 0, t, p.b, 1);
       if (h1) c.push(h1); if (h2) c.push(h2);
@@ -73,7 +73,7 @@ export const PLATE_PRESETS = [
     [["a", "Horizontal leg", 140], ["b", "Vertical leg", 80], ["t", "Thickness", 28], ["hole", "Hole Ø", 10], ["inset", "Hole centre from the end", 18]],
     (p) => {
       const t = clamp(p.t, 6, Math.min(p.a, p.b) - 6);
-      const c = [poly([[0, 0], [p.a, 0], [p.a, t], [t, t], [t, p.b], [0, p.b]])];
+      const c = [poly([[0, 0], [p.a, 0], [p.a, t], [t, t], [t, p.b], [0, p.b]]), bendLine(0, t, t, t)];
       const hs = [holeIn(p.inset, t / 2, p.hole, 0, 0, p.a, t, 1),
         holeIn(p.a - p.inset, t / 2, p.hole, 0, 0, p.a, t, 1),
         holeIn(t / 2, p.b - p.inset, p.hole, 0, 0, t, p.b, 1)];
@@ -87,7 +87,7 @@ export const PLATE_PRESETS = [
       const t = clamp(p.t, 8, 80);
       const pts = [[0, 0], [p.a, 0], [p.a + p.web, p.web], [p.a + p.web + p.a, p.web],
         [p.a + p.web + p.a, p.web + t], [p.a + p.web, p.web + t], [p.a, t], [0, t]];
-      const c = [poly(pts)];
+      const c = [poly(pts), bendLine(p.a, 0, p.a, t), bendLine(p.a + p.web, p.web, p.a + p.web, p.web + t)];
       const h1 = holeIn(p.inset, t / 2, p.hole, 0, 0, p.a, t, 1);
       const h2 = holeIn(p.a + p.web + p.a - p.inset, p.web + t / 2, p.hole, p.a + p.web, p.web, p.a + p.web + p.a, p.web + t, 1);
       if (h1) c.push(h1); if (h2) c.push(h2);
@@ -98,7 +98,8 @@ export const PLATE_PRESETS = [
     [["w", "Inside width", 50], ["leg", "Leg length", 40], ["t", "Thickness", 8], ["len", "Length along the channel", 40], ["hole", "Hole Ø", 8], ["inset", "Hole centre from the tip", 14]],
     (p) => {
       const t = clamp(p.t, 3, 30), W = p.w + 2 * t, H = p.leg + t;
-      const c = [poly([[0, 0], [t, 0], [t, p.leg], [t + p.w, p.leg], [t + p.w, 0], [W, 0], [W, H], [0, H]])];
+      const c = [poly([[0, 0], [t, 0], [t, p.leg], [t + p.w, p.leg], [t + p.w, 0], [W, 0], [W, H], [0, H]]),
+        bendLine(t, p.leg, t, H), bendLine(t + p.w, p.leg, t + p.w, H)];
       const h1 = holeIn(t / 2, p.inset, p.hole, 0, 0, t, p.leg, 1);
       const h2 = holeIn(W - t / 2, p.inset, p.hole, t + p.w, 0, W, p.leg, 1);
       if (h1) c.push(h1); if (h2) c.push(h2);
@@ -109,7 +110,7 @@ export const PLATE_PRESETS = [
     [["s", "Outside size", 80], ["t", "Leg width", 22], ["hole", "Middle hole Ø (0 = none)", 16]],
     (p) => {
       const t = clamp(p.t, 6, p.s / 2 - 2);
-      const c = [poly([[0, 0], [p.s, 0], [p.s, t], [t, t], [t, p.s], [0, p.s]])];
+      const c = [poly([[0, 0], [p.s, 0], [p.s, t], [t, t], [t, p.s], [0, p.s]]), bendLine(0, t, t, t)];
       const mid = holeIn(t / 2 + (p.s - t) * 0.15, t / 2 + (p.s - t) * 0.15, p.hole, 0, 0, t, t, 0.5);
       // hole in the corner block
       const h = p.hole > 0 ? holeIn(t * 0.5, t * 0.5, Math.min(p.hole, t - 4), 0, 0, t, t, 1) : null;

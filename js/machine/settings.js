@@ -5,6 +5,7 @@
 import * as Acc from "../account/account.js";
 import { filterConsoleCommand, renderAdvancedMachine } from "./admin-machine.js";
 import { DIALECTS } from "./dialect.js";
+import { defaultEtchSettings, sanitizeEtchSettings } from "../cut/etch.js";
 
 const KEY = "plasma.settings.v1";
 
@@ -22,6 +23,7 @@ const defaultSettings = () => ({
   io: {},
   fluidnc: { host: "", port: 81 },
   firmwareWarned: false,
+  etch: defaultEtchSettings(),
 });
 
 // ---- validation: every number has a sane range; a bad value is refused (form) or dropped (stored/restored file), never half-applied
@@ -67,6 +69,9 @@ function sanitizeSettings(raw, { strict = false } = {}) {
   }
   out.io = {};
   out.firmwareWarned = false;      // the firmware warning is shown again after a restore / on a new device
+  const etch = sanitizeEtchSettings(src.etch);
+  out.etch = etch.settings;
+  if (etch.errors && etch.errors.length) errors.push(...etch.errors);
   return { settings: out, errors: strict ? errors : [] };
 }
 
@@ -166,6 +171,7 @@ const TABS = [
   { id: "speeds", name: "Speeds", beginner: true },
   { id: "torch", name: "Torch & THC", beginner: true },
   { id: "pierce", name: "Pierce & cut", beginner: true },
+  { id: "etch", name: "Etch / mark", beginner: true },
   { id: "materials", name: "Material library", beginner: true },
   { id: "homing", name: "Homing & limits", beginner: false },
   { id: "io", name: "I/O", beginner: true },
@@ -184,6 +190,14 @@ export function openSettings(tab) {
 
 export function closeSettings() {
   const dlg = $("settingsDlg"); if (dlg) dlg.classList.add("hidden");
+}
+
+
+function paintEtchToolFields() {
+  const tool = (($$("input[name=setEtchTool]") || []).find((r) => r.checked) || { value: "plasma" }).value;
+  const plasma = $("setEtchPlasmaFields"), scribe = $("setEtchScribeFields");
+  if (plasma) plasma.classList.toggle("hidden", tool !== "plasma");
+  if (scribe) scribe.classList.toggle("hidden", tool !== "scribe");
 }
 
 function showTab(id) {
@@ -251,6 +265,19 @@ function fillBasics() {
       ? "THC voltage is available on this controller."
       : "This controller has no torch-height (THC) voltage input the app can read. Pierce height, cut height and delay are still applied in the G-code. A THC add-on would be needed for automatic voltage following.";
   }
+  const e = s.etch || defaultEtchSettings();
+  const tool = e.tool === "scribe" ? "scribe" : "plasma";
+  $$("input[name=setEtchTool]").forEach((r) => { r.checked = r.value === tool; });
+  const blank = (id, v) => { const el = $(id); if (!el) return; el.value = v == null ? "" : String(v); };
+  blank("setEtchAmps", e.plasma && e.plasma.amps);
+  blank("setEtchFeed", e.plasma && e.plasma.feed_mm_min);
+  blank("setEtchHeight", e.plasma && e.plasma.height_mm);
+  if ($("setEtchPause")) $("setEtchPause").checked = !!e.pauseAfter;
+  set("setScribeOn", e.scribe && e.scribe.on || "M8");
+  set("setScribeOff", e.scribe && e.scribe.off || "M9");
+  blank("setScribeOffX", e.scribe && e.scribe.offsetX);
+  blank("setScribeOffY", e.scribe && e.scribe.offsetY);
+  paintEtchToolFields();
   const fw = $("setFirmwareHint");
   if (fw) {
     fw.textContent = (host && host.isFluidNC && host.isFluidNC())
@@ -275,6 +302,15 @@ function readFormIntoState() {
   if ($("setDialect")) cand.dialect = $("setDialect").value;
   if ($("setLineNo")) cand.lineNumbers = $("setLineNo").checked;
   if ($("setSizeCheck")) cand.sizeCheck = $("setSizeCheck").checked;
+  const etchTool = ($$("input[name=setEtchTool]").find((r) => r.checked) || {}).value;
+  const emptyNum = (id) => { const el = $(id); if (!el || el.value === "") return null; const v = Number(el.value); return Number.isFinite(v) ? v : null; };
+  cand.etch = {
+    tool: etchTool === "scribe" ? "scribe" : "plasma",
+    pauseAfter: !!( $("setEtchPause") && $("setEtchPause").checked ),
+    plasma: { amps: emptyNum("setEtchAmps"), feed_mm_min: emptyNum("setEtchFeed"), height_mm: emptyNum("setEtchHeight") },
+    scribe: { on: $("setScribeOn") ? $("setScribeOn").value : "M8", off: $("setScribeOff") ? $("setScribeOff").value : "M9",
+      offsetX: emptyNum("setScribeOffX") ?? 0, offsetY: emptyNum("setScribeOffY") ?? 0 },
+  };
   const r = sanitizeSettings(cand, { strict: true });
   if (r.errors.length) { toast(r.errors[0], true); return null; }   // nothing is saved or applied
   r.settings.firmwareWarned = state.firmwareWarned === true;
@@ -378,6 +414,7 @@ export function bindSettings() {
   $("settingsDlg") && $("settingsDlg").addEventListener("click", (e) => { if (e.target === $("settingsDlg")) closeSettings(); });
   $("settingsClose") && ($("settingsClose").onclick = closeSettings);
   $("btnSaveSettings") && ($("btnSaveSettings").onclick = () => { if (readFormIntoState()) toast("Settings saved."); });
+  $$("input[name=setEtchTool]").forEach((r) => r.addEventListener("change", paintEtchToolFields));
   $("formSetPreset") && $("formSetPreset").addEventListener("submit", (e) => {
     e.preventDefault();
     try {

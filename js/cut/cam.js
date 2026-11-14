@@ -10,6 +10,7 @@
 
 import { signedArea, pointInPoly, offsetPolygon, selfIntersects, bbox, cleanPts } from "../core/geom.js";
 import { fmt } from "./job.js";
+import { isEtchOp, emitEtchGcode } from "./etch.js";
 
 // Optional Pro extras (all off by default, so a Beginner job comes out exactly as before):
 //   order      array of cut keys: cut in this order (any cut not listed follows in the automatic order)
@@ -19,21 +20,25 @@ import { fmt } from "./job.js";
 //   tabOver    { key: { count, width, pts:[[x,y]...] } } per-outline tab settings / hand-placed tab centres
 //   leadOut    mm of run-out into scrap after the cut closes     overcut  mm of extra cut past the start along the line
 // A cut's key is its position in the `contours` list you pass in, so it stays the same while the order changes.
-export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "design", order: wantOrder = null, skip = [], starts = {}, tabs = null, tabOver = {}, leadOut = 0, overcut = 0, keepOrigin = false } = {}) {
+export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "design", order: wantOrder = null, skip = [], starts = {}, tabs = null, tabOver = {}, leadOut = 0, overcut = 0, keepOrigin = false, etch = null } = {}) {
   const warnings = [];
   const half = Math.max(0, kerf) / 2;
   const contours = contoursIn.map((c, i) => ({ ...c, _k: i }));
   const skipSet = new Set(skip || []);
   leadOut = Math.max(0, Number(leadOut) || 0); overcut = Math.max(0, Number(overcut) || 0);
 
-  // tidy + keep closed outlines; open ones are cut as drawn
-  const closed = [], open = [];
+  // tidy + keep closed outlines; open ones are cut as drawn. Score / Mark paths are etched first (never kerfed).
+  const etchCs = [], closed = [], open = [];
   for (const c of contours) {
-    const pts = cleanPts(c.pts, c.closed);
+    const pts = cleanPts(c.pts, c.closed !== false);
+    if (isEtchOp(c.op)) {
+      if (pts.length >= 2) etchCs.push({ ...c, pts });
+      continue;
+    }
     if (c.closed && pts.length >= 3 && Math.abs(signedArea(pts)) > 0.01) closed.push({ ...c, pts });
     else if (!c.closed && pts.length >= 2) open.push({ ...c, pts });
   }
-  if (!closed.length && !open.length) throw new Error("No shapes found to cut. Check the drawing has closed outlines.");
+  if (!closed.length && !open.length && !etchCs.length) throw new Error("No shapes found to cut. Check the drawing has closed outlines.");
   if (open.length) warnings.push(`${open.length} line(s) aren't closed shapes – they'll be cut exactly on the line (no kerf allowance). Close them in your CAD if they're part edges.`);
 
   // depth = how many other outlines this one sits inside. Even = part edge, odd = hole.
@@ -123,12 +128,17 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
     info.push({ key: c.key, hole: !!c.hole, open: !!c.open, depth: c.depth, start: c.start, lead: c.lead, tabs: c.tabPts, leadOut: c.leadOutPt, ring: c.pathPts || c.outline || [], runs: c.runs.length });
   }
   if (tabWarn) warnings.push("Hold-down tabs: after each tab the arc re-fires on the cut line, so each tab adds a pierce. Trim the tabs off the finished part.");
-  const [bx, by] = bbox(all);
+  if (etchCs.length) all.push(...etchCs);
+  const [bx, by] = bbox(all.length ? all : [{ pts: [[0, 0]] }]);
   // keepOrigin: the drawing's own 0,0 is the work zero (the sheet layout: the sheet's bottom-left corner), so coordinates are not moved
   const dx = keepOrigin ? 0 : -bx, dy = keepOrigin ? 0 : -by;
   const T = ([x, y]) => [x + dx, y + dy];
 
   const lines = [`(${name.replace(/[()]/g, "")} - made by plasma-operator, kerf ${fmt(kerf)} mm, lead-in ${fmt(leadIn)} mm)`, "G21 G90"];
+  if (etchCs.length) {
+    const block = emitEtchGcode(etchCs, { T, resolved: etch, name });
+    lines.push(...block.lines);
+  }
   for (const c of order) {
     for (const run of c.runs) {
       const L = T(run.lead), S = T(run.start);
@@ -143,7 +153,7 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
   }
   lines.push("M30");
 
-  const outline = closed.map((c) => c.pts.map(T)).concat(open.map((o) => o.pts.map(T)));
+  const outline = closed.map((c) => c.pts.map(T)).concat(open.map((o) => o.pts.map(T))).concat(etchCs.map((e) => e.pts.map(T)));
   const parts = closed.filter((c) => !c.hole).length;
   const holes = closed.filter((c) => c.hole).length;
   // finished-part size (circles measured exactly, not from their segments)

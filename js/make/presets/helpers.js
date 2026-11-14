@@ -66,6 +66,25 @@ export function rectContour(w, h, x = 0, y = 0) {
   return { pts: [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], closed: true };
 }
 
+// Open score line used as a fold / bend mark (etched, never cut through).
+export function bendLine(x0, y0, x1, y1) {
+  return { pts: [[x0, y0], [x1, y1]], closed: false, role: "bend", op: "score" };
+}
+
+// Developed strip: a rectangle plus a score line at each face junction.
+export function strip(len, widths) {
+  const list = Array.isArray(widths) ? widths : [];
+  const H = list.reduce((a, b) => a + b, 0);
+  const c = [rectContour(len, H)];
+  let y = 0;
+  for (let i = 0; i < list.length - 1; i++) {
+    y += list[i];
+    c.push(bendLine(0, y, len, y));
+  }
+  return c;
+}
+
+
 export function poly(pts) {
   return contour(pts);
 }

@@ -10,6 +10,8 @@ import { paintStartCut } from "./restart.js";
 import * as CF from "./cutfeatures-ui.js";
 import { $, $$, esc } from "../core/dom.js";
 import { overrides, row } from "./material.js";
+import { resolveEtch } from "./etch.js";
+import { currentSettings } from "../machine/settings.js";
 import { M, S, sketch } from "../core/state.js";
 import { refresh } from "../core/hooks.js";
 
@@ -57,11 +59,14 @@ export function renderCutCheck() {
 }
 export function loadJob() {
   if (!S.gcode && !S.design) return;
+  if (S.src === "shape" && S.design && sketch && typeof sketch.contours === "function") {
+    try { S.design.contours = sketch.contours(); } catch (e) { /* keep the last design */ }
+  }
   try { resetPreviewCam(); } catch (e) { /* ignore */ }
   try {
     let gcode = S.gcode, cam = null, pre = [];
     if (S.design) {
-      cam = designToGcode(S.design.contours, { kerf: kerfNow(), leadIn: leadNow(), name: S.fileName, keepOrigin: !!(S.sheetMode && S.src === "shape" && !S.design.straight), ...camOpts() });
+      cam = designToGcode(S.design.contours, { kerf: kerfNow(), leadIn: leadNow(), name: S.fileName, keepOrigin: !!(S.sheetMode && S.src === "shape" && !S.design.straight), etch: resolveEtch(row(), S.chart, currentSettings()), ...camOpts() });
       gcode = cam.gcode;
       pre = [...(S.design.warnings || []), ...cam.warnings];
       if (S.design.straight) pre = pre.filter((w) => !/aren't closed shapes/.test(w));

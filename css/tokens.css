@@ -55,6 +55,9 @@
   --accent-text: #004578;
   --cad-tag-text: #FFFFFF;
   --cad-danger: #C42B1C;
+  --cad-edge: #C05621;
+  --cad-score: #c27c0e;
+  --cad-mark: #6a4fc9;
 
   /* typographic scale and spacing (4/8px) */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -75,5 +78,6 @@
   --cad-part-fill: #2c3a49; --cad-part-sel: #26385a; --cad-hole: #121920;
   --cad-part-line: #c9d1d9; --cad-sel: #7aa2f0; --cad-lock: #e3a73c; --cad-dim: #4f9cf0;
   --cad-guide: #e3a73c; --cad-label: #c5d0dc; --cad-tag-text: #fff; --cad-danger: #e0342b;
+  --cad-edge: #e07a3c; --cad-score: #e0a040; --cad-mark: #b49cff;
   --accent-text: #9CC7FF;
 }

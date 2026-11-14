@@ -19,7 +19,20 @@ export function verifyDesign(A, t, label, contours, { kerf = 1.5, leadIn = 3, cu
   t.check(id("job: no safety violations"), aj.violations.length === 0, JSON.stringify(aj.violations.slice(0, 3)), "GCODE-SAFETY");
   t.check(id("job: torch off at end, M3==M5 (+1 safety M5 allowed)"), aj.m5 >= aj.m3 && aj.m3 === an.m3, `m3=${aj.m3} m5=${aj.m5}`, "GCODE-SAFETY");
   t.check(id("job: ends with M5"), job.lines.filter((l) => !l.startsWith(";")).slice(-2).some((l) => l.trim() === "M5"), job.lines.slice(-3).join("|"), "GCODE-SAFETY");
-  t.check(id("job: every M3 preceded by a probe (G38.2) and followed by pierce delay"), (() => { let ok = true; job.lines.forEach((l, i) => { if (/^M3\b/.test(l)) { if (!job.lines.slice(Math.max(0, i - 4), i).some((x) => /G38\.2/.test(x))) ok = false; if (!/^G4 P/.test(job.lines[i + 1] || "")) ok = false; } }); return ok; })(), "", "GCODE-SAFETY");
+  t.check(id("job: every M3 preceded by a probe (G38.2) and followed by pierce delay"), (() => {
+    let ok = true, etch = null;
+    job.lines.forEach((l, i) => {
+      if (/PORTA-ETCH PLASMA/i.test(l)) etch = "plasma";
+      else if (/PORTA-ETCH SCRIBE/i.test(l)) etch = "scribe";
+      else if (/PORTA-ETCH END/i.test(l)) etch = null;
+      if (!/^M3\b/.test(l)) return;
+      if (!job.lines.slice(Math.max(0, i - 4), i).some((x) => /G38\.2/.test(x))) ok = false;
+      // Plasma etch must not use a pierce delay (that would cut through). Ordinary cuts still must.
+      if (etch === "plasma") { if (/^G4 P(?!0(?:\.0*)?\b)/.test(job.lines[i + 1] || "")) ok = false; }
+      else if (!etch && !/^G4 P/.test(job.lines[i + 1] || "")) ok = false;
+    });
+    return ok;
+  })(), "", "GCODE-SAFETY");
   // 2. bounds (design coordinates after shift must be >= 0 and inside the table)
   const [x0, y0, x1, y1] = an.bounds, tr = A.machine.travel_mm;
   t.check(id("coords >= 0 (shifted to origin)"), x0 >= -1e-6 && y0 >= -1e-6, `min ${x0},${y0}`, "GCODE-BOUNDS");

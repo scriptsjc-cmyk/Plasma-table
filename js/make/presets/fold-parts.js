@@ -1,7 +1,7 @@
 // New folded / formed workshop presets. Each has a developed flat pattern (what you cut)
 // and a fold() model for the 3D view. Bend sizes follow the existing enclosure presets:
 // developed length is the sum of the face sizes (no extra k-factor deducted).
-import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour } from "./helpers.js";
+import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine } from "./helpers.js";
 import {
   foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedBox,
   foldTrayCross, foldS2r, foldHopper, addTopFlanges, foldFrustum, foldUSaddle, face, attach, assemble,
@@ -12,8 +12,6 @@ const panel = (w, h, holes = []) => {
   for (const [x, y, d] of holes) { const hole = holeIn(x, y, d, 0, 0, w, h, 1); if (hole) c.push(hole); }
   return c;
 };
-const strip = (len, widths) => [rectContour(len, widths.reduce((a, b) => a + b, 0))];
-
 function holesOn(len, wid, d, inset, count = 1) {
   const hs = [];
   if (!(d > 0)) return hs;
@@ -46,14 +44,14 @@ function crossTray(l, w, h, tab = 0) {
       [x1, h + w], [x1, h + w + h], [x0, h + w + h], [x0, h + w],
       [0, h + w], [0, h], [x0, h],
     ];
-    return [poly(pts)];
+    return [poly(pts), bendLine(x0, h, x1, h), bendLine(x0, h + w, x1, h + w), bendLine(x0, h, x0, h + w), bendLine(x1, h, x1, h + w)];
   }
   const pts = [
     [x0 - t, 0], [x1 + t, 0], [x1 + t, h], [x1 + h, h], [x1 + h, h + w],
     [x1 + t, h + w], [x1 + t, h + w + h], [x0 - t, h + w + h], [x0 - t, h + w],
     [0, h + w], [0, h], [x0 - t, h],
   ];
-  return [poly(pts)];
+  return [poly(pts), bendLine(x0, h, x1, h), bendLine(x0, h + w, x1, h + w), bendLine(x0, h, x0, h + w), bendLine(x1, h, x1, h + w)];
 }
 
 export const FOLD_PRESETS = [
@@ -61,7 +59,7 @@ export const FOLD_PRESETS = [
     "Formed L-bracket: one developed strip for both legs, with mounting holes in each leg. Bend at 90° along the mid line.",
     [["a", "Wall leg", 80], ["b", "Shelf leg", 60], ["len", "Width", 40], ["hole", "Hole Ø (0 = none)", 8], ["inset", "Hole from the end", 16]],
     (p) => {
-      const c = [rectContour(p.len, p.a + p.b)];
+      const c = [rectContour(p.len, p.a + p.b), bendLine(0, p.a, p.len, p.a)];
       for (const [x, y, d] of holesOn(p.len, p.a, p.hole, p.inset, p.len > 50 ? 2 : 1)) {
         const h = holeIn(x, y, d, 0, 0, p.len, p.a + p.b, 1); if (h) c.push(h);
       }
@@ -76,7 +74,7 @@ export const FOLD_PRESETS = [
     "Formed Z-bracket: three panels in one strip (two legs and a web), bent in opposite directions.",
     [["a", "First leg", 40], ["web", "Web (offset)", 50], ["b", "Second leg", 40], ["len", "Width", 40], ["hole", "Hole Ø (0 = none)", 7], ["inset", "Hole from the end", 14]],
     (p) => {
-      const H = p.a + p.web + p.b, c = [rectContour(p.len, H)];
+      const H = p.a + p.web + p.b, c = [rectContour(p.len, H), bendLine(0, p.a, p.len, p.a), bendLine(0, p.a + p.web, p.len, p.a + p.web)];
       for (const [x, y, d] of holesOn(p.len, p.a, p.hole, p.inset, 1)) { const h = holeIn(x, y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       for (const [x, y, d] of holesOn(p.len, p.b, p.hole, p.inset, 1)) { const h = holeIn(x, p.a + p.web + y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       return c;
@@ -87,7 +85,7 @@ export const FOLD_PRESETS = [
     "Formed U-bracket: a web and two legs in one strip, with a hole in each leg.",
     [["web", "Web width", 50], ["leg", "Leg height", 40], ["len", "Width", 40], ["hole", "Hole Ø (0 = none)", 8], ["inset", "Hole from the end", 14]],
     (p) => {
-      const H = p.leg + p.web + p.leg, c = [rectContour(p.len, H)];
+      const H = p.leg + p.web + p.leg, c = [rectContour(p.len, H), bendLine(0, p.leg, p.len, p.leg), bendLine(0, p.leg + p.web, p.len, p.leg + p.web)];
       for (const [x, y, d] of holesOn(p.len, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       for (const [x, y, d] of holesOn(p.len, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, p.leg + p.web + y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       return c;
@@ -97,7 +95,7 @@ export const FOLD_PRESETS = [
   shape("anglegus", "Angle with gusset", "∟", "folded", "angle gusset formed stiffener",
     "Formed angle (one developed strip) packed with a triangular gusset to weld into the corner.",
     [["a", "First leg", 50], ["b", "Second leg", 50], ["len", "Length", 80], ["g", "Gusset size", 40]],
-    (p) => packPieces([panel(p.len, p.a + p.b), [poly([[0, 0], [p.g, 0], [0, p.g]])]]).contours,
+    (p) => packPieces([panel(p.len, p.a + p.b).concat([bendLine(0, p.a, p.len, p.a)]), [poly([[0, 0], [p.g, 0], [0, p.g]])]]).contours,
     { sheet: true, noResize: true, fold: (p) => {
       const m = foldAngle(p.len, p.a, p.b);
       const g = Math.min(p.g, p.a, p.b);
@@ -137,7 +135,7 @@ export const FOLD_PRESETS = [
     "Shelf bracket formed from an L with a small return flange on the shelf leg, and holes in the wall leg.",
     [["wall", "Wall leg", 100], ["shelf", "Shelf leg", 80], ["flange", "Front return", 16], ["len", "Width", 30], ["hole", "Hole Ø (0 = none)", 6], ["inset", "Hole from the end", 16]],
     (p) => {
-      const H = p.wall + p.shelf + p.flange, c = [rectContour(p.len, H)];
+      const H = p.wall + p.shelf + p.flange, c = [rectContour(p.len, H), bendLine(0, p.wall, p.len, p.wall), bendLine(0, p.wall + p.shelf, p.len, p.wall + p.shelf)];
       for (const [x, y, d] of holesOn(p.len, p.wall, p.hole, p.inset, p.wall > 70 ? 2 : 1)) {
         const h = holeIn(x, y, d, 0, 0, p.len, H, 1); if (h) c.push(h);
       }
@@ -155,7 +153,8 @@ export const FOLD_PRESETS = [
     "Wall-mounted shelf: a back plate (with holes) and a shelf, formed as one L, optional front lip.",
     [["back", "Back height", 60], ["shelf", "Shelf depth", 80], ["lip", "Front lip (0 = none)", 16], ["len", "Width", 150], ["hole", "Hole Ø (0 = none)", 6], ["inset", "Hole from the edge", 16]],
     (p) => {
-      const H = p.back + p.shelf + Math.max(0, p.lip), c = [rectContour(p.len, H)];
+      const H = p.back + p.shelf + Math.max(0, p.lip), c = [rectContour(p.len, H), bendLine(0, p.back, p.len, p.back)];
+      if (p.lip > 0) c.push(bendLine(0, p.back + p.shelf, p.len, p.back + p.shelf));
       for (const [x, y, d] of holesOn(p.len, p.back, p.hole, p.inset, p.len > 80 ? 2 : 1)) {
         const h = holeIn(x, y, d, 0, 0, p.len, H, 1); if (h) c.push(h);
       }
@@ -173,7 +172,7 @@ export const FOLD_PRESETS = [
     "Hinge-style bracket: two leaves in one strip, bent 90°, with two holes in each leaf.",
     [["a", "First leaf", 50], ["b", "Second leaf", 50], ["len", "Width", 40], ["hole", "Hole Ø", 6], ["inset", "Hole from the end", 12]],
     (p) => {
-      const H = p.a + p.b, c = [rectContour(p.len, H)];
+      const H = p.a + p.b, c = [rectContour(p.len, H), bendLine(0, p.a, p.len, p.a)];
       for (const [x, y, d] of holesOn(p.len, p.a, p.hole, p.inset, 2)) { const h = holeIn(x, y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       for (const [x, y, d] of holesOn(p.len, p.b, p.hole, p.inset, 2)) { const h = holeIn(x, p.a + y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       return c;
@@ -185,7 +184,7 @@ export const FOLD_PRESETS = [
     [["d", "Pipe Ø", 50], ["leg", "Leg length", 40], ["wid", "Strap width", 24], ["hole", "Hole Ø", 8], ["inset", "Hole from the end", 12]],
     (p) => {
       const web = Math.PI * p.d / 2;          // half-wrap developed
-      const H = p.leg + web + p.leg, c = [rectContour(p.wid, H)];
+      const H = p.leg + web + p.leg, c = [rectContour(p.wid, H), bendLine(0, p.leg, p.wid, p.leg), bendLine(0, p.leg + web, p.wid, p.leg + web)];
       for (const [x, y, d] of holesOn(p.wid, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
       for (const [x, y, d] of holesOn(p.wid, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, p.leg + web + y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
       return c;
@@ -250,7 +249,7 @@ export const FOLD_PRESETS = [
     "Flag-style sign bracket: a wall plate with holes and an out-standing arm, formed as an L.",
     [["wall", "Wall plate height", 80], ["arm", "Arm length", 70], ["wid", "Width", 30], ["hole", "Hole Ø", 6], ["inset", "Hole from the end", 14]],
     (p) => {
-      const H = p.wall + p.arm, c = [rectContour(p.wid, H)];
+      const H = p.wall + p.arm, c = [rectContour(p.wid, H), bendLine(0, p.wall, p.wid, p.wall)];
       for (const [x, y, d] of holesOn(p.wid, p.wall, p.hole, p.inset, 2)) { const h = holeIn(x, y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
       return c;
     },
@@ -260,7 +259,7 @@ export const FOLD_PRESETS = [
     "One facet of a polygonal firepit: a side with a bottom inward flange and a top outward lip, plus optional air holes.",
     [["w", "Panel width", 160], ["h", "Height", 120], ["base", "Bottom flange", 20], ["lip", "Top lip", 14], ["hole", "Air-hole Ø (0 = none)", 12], ["n", "Number of air holes", 3]],
     (p) => {
-      const H = p.base + p.h + p.lip, c = [rectContour(p.w, H)];
+      const H = p.base + p.h + p.lip, c = [rectContour(p.w, H), bendLine(0, p.base, p.w, p.base), bendLine(0, p.base + p.h, p.w, p.base + p.h)];
       const n = Math.max(0, Math.round(p.n));
       if (p.hole > 0 && n > 0) {
         for (let i = 0; i < n; i++) {
@@ -281,7 +280,7 @@ export const FOLD_PRESETS = [
     "BBQ or firebowl side: a slightly taller panel with a bottom flange (to bolt to a ring) and a rolled top lip.",
     [["w", "Panel width", 180], ["h", "Height", 90], ["base", "Bottom flange", 18], ["lip", "Top lip", 12], ["hole", "Bolt hole Ø (0 = none)", 8]],
     (p) => {
-      const H = p.base + p.h + p.lip, c = [rectContour(p.w, H)];
+      const H = p.base + p.h + p.lip, c = [rectContour(p.w, H), bendLine(0, p.base, p.w, p.base), bendLine(0, p.base + p.h, p.w, p.base + p.h)];
       if (p.hole > 0) {
         const h1 = holeIn(p.w * 0.25, p.base / 2, p.hole, 0, 0, p.w, H, 1);
         const h2 = holeIn(p.w * 0.75, p.base / 2, p.hole, 0, 0, p.w, H, 1);
@@ -300,7 +299,7 @@ export const FOLD_PRESETS = [
     "Cable tray: a U with return flanges, one developed strip. Optional holes down the web.",
     [["web", "Web width", 80], ["leg", "Side height", 40], ["flange", "Return flange", 12], ["len", "Length", 400], ["hole", "Web hole Ø (0 = none)", 8]],
     (p) => {
-      const H = p.flange + p.leg + p.web + p.leg + p.flange, c = [rectContour(p.len, H)];
+      const H = p.flange + p.leg + p.web + p.leg + p.flange, c = strip(p.len, [p.flange, p.leg, p.web, p.leg, p.flange]);
       if (p.hole > 0) {
         const y = p.flange + p.leg + p.web / 2, n = Math.max(1, Math.floor(p.len / 50));
         for (let i = 0; i < n; i++) {
@@ -341,7 +340,7 @@ export const FOLD_PRESETS = [
     "Corner guard: two equal legs in one strip, with optional holes along each leg.",
     [["a", "Leg width", 50], ["len", "Length", 300], ["hole", "Hole Ø (0 = none)", 5], ["inset", "Hole from the edge", 14]],
     (p) => {
-      const c = [rectContour(p.len, p.a + p.a)];
+      const c = [rectContour(p.len, p.a + p.a), bendLine(0, p.a, p.len, p.a)];
       if (p.hole > 0) {
         const n = Math.max(1, Math.floor(p.len / 80));
         for (let i = 0; i < n; i++) {
@@ -359,7 +358,7 @@ export const FOLD_PRESETS = [
     "Three-sided machine guard: a front and two sides in one U-shaped unfold, with optional viewing window.",
     [["w", "Front width", 200], ["d", "Side depth", 80], ["h", "Height", 120], ["iw", "Window width (0 = none)", 80], ["ih", "Window height", 50]],
     (p) => {
-      const W = p.d + p.w + p.d, c = [rectContour(W, p.h)];
+      const W = p.d + p.w + p.d, c = [rectContour(W, p.h), bendLine(p.d, 0, p.d, p.h), bendLine(p.d + p.w, 0, p.d + p.w, p.h)];
       if (p.iw > 8 && p.ih > 8) {
         const iw = clamp(p.iw, 10, p.w - 16), ih = clamp(p.ih, 8, p.h - 16);
         c.push(roundedRect(p.d + (p.w - iw) / 2, (p.h - ih) / 2, iw, ih, 4));
@@ -473,7 +472,7 @@ export const FOLD_PRESETS = [
     "Light-fixture bracket: a wall plate with holes and a short shelf, formed as an L.",
     [["wall", "Wall plate", 70], ["shelf", "Shelf depth", 40], ["wid", "Width", 50], ["hole", "Hole Ø", 6], ["inset", "Hole from the end", 14]],
     (p) => {
-      const H = p.wall + p.shelf, c = [rectContour(p.wid, H)];
+      const H = p.wall + p.shelf, c = [rectContour(p.wid, H), bendLine(0, p.wall, p.wid, p.wall)];
       for (const [x, y, d] of holesOn(p.wid, p.wall, p.hole, p.inset, 2)) { const h = holeIn(x, y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
       return c;
     },

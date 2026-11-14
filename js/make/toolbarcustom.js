@@ -11,7 +11,7 @@ function refreshBar() {
 export const TOOL_GROUPS = [
   { g: "Shapes", items: [["presets", "▦", "Preset parts"], ["rect", "▭", "Rectangle"], ["disc", "◯", "Circle"], ["triangle", "△", "Triangle"], ["slot", "⊂⊃", "Slot"], ["sector", "◔", "Arc / sector"], ["lib", "⋯", "All shapes…"]] },
   { g: "Holes", items: [["hole", "◦", "Hole"], ["slothole", "⊖", "Slot hole"], ["boltcircle", "⁘", "Bolt circle"]] },
-  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"], ["dims", "↔", "Size"]] },
+  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["etch", "∽", "Etch / mark"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"], ["dims", "↔", "Size"]] },
   { g: "Snaps & constraints", items: [["snap", "⌗", "Snap"]] },
   { g: "Transform", items: [
     ["rot", "⟳", "Turn 90°"], ["mir", "⇋", "Mirror left-right"], ["mirv", "⇅", "Mirror up-down"],
@@ -40,7 +40,7 @@ for (const it of HEADER_TOOLS) TOOL_INFO.set(it[0], { icon: it[1], label: it[2],
 export const KNOWN_TOOLS = new Set(TOOL_INFO.keys());
 
 // Catalogue lists every align/distribute tool; the default rail stays compact (C25, C46).
-const DEFAULT_SKIP = new Set(["alignr", "alignt", "aligncx", "aligncy", "alignc", "distx", "disty"]);
+const DEFAULT_SKIP = new Set(["alignr", "alignt", "aligncx", "aligncy", "alignc", "distx", "disty", "etch"]);
 export const DEFAULT_TOOL_IDS = TOOL_GROUPS.flatMap((grp) => grp.items.map((it) => it[0])).filter((id) => !DEFAULT_SKIP.has(id));
 
 export function toolInfo(id) { return TOOL_INFO.get(id) || null; }

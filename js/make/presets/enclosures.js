@@ -1,5 +1,5 @@
 // Enclosure and box flat patterns (unfolded panels packed on the sheet).
-import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly } from "./helpers.js";
+import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, strip, bendLine } from "./helpers.js";
 
 function panel(w, h, holes = []) {
   const c = [rectContour(w, h)];
@@ -39,8 +39,7 @@ export const BOX_PRESETS = [
     "Flat pattern for a U-channel: a web and two legs as one developed strip, plus optional end plates packed beside it.",
     [["web", "Web width", 60], ["leg", "Leg height", 40], ["len", "Length", 200], ["ends", "End plates (1 = yes, 0 = no)", 1]],
     (p) => {
-      const strip = p.leg + p.web + p.leg;
-      const pieces = [panel(p.len, strip)];
+      const pieces = [strip(p.len, [p.leg, p.web, p.leg])];
       if (Math.round(p.ends) >= 1) pieces.push(panel(p.web, p.leg), panel(p.web, p.leg));
       return packPieces(pieces).contours;
     },
@@ -49,19 +48,24 @@ export const BOX_PRESETS = [
     "C-channel developed as one strip (leg + web + leg) with two return flanges, plus two end plates.",
     [["web", "Web width", 80], ["leg", "Leg height", 40], ["flange", "Return flange", 16], ["len", "Length", 200]],
     (p) => {
-      const strip = p.flange + p.leg + p.web + p.leg + p.flange;
-      return packPieces([panel(p.len, strip), panel(p.web, p.leg), panel(p.web, p.leg)]).contours;
+      return packPieces([strip(p.len, [p.flange, p.leg, p.web, p.leg, p.flange]), panel(p.web, p.leg), panel(p.web, p.leg)]).contours;
     },
     { sheet: true, noResize: true }),
   shape("angleiron", "Angle (flat pattern)", "∟", "enclosures", "angle iron unfold",
     "Flat pattern for a formed angle: one developed strip of both legs.",
     [["a", "First leg", 40], ["b", "Second leg", 40], ["len", "Length", 200]],
-    (p) => [rectContour(p.len, p.a + p.b)],
+    (p) => [rectContour(p.len, p.a + p.b), bendLine(0, p.a, p.len, p.a)],
     { sheet: true, noResize: true }),
   shape("cuboidwrap", "Cuboid wrap (4 sides)", "▭", "enclosures", "cuboid wrap four sides sleeve",
     "A wrap for the four walls of a cuboid (the sleeve), packed with the two ends.",
     [["len", "Length", 150], ["wid", "Width", 80], ["ht", "Height", 80]],
-    (p) => packPieces([panel(2 * (p.len + p.wid), p.ht), panel(p.len, p.wid), panel(p.len, p.wid)]).contours,
+    (p) => packPieces([
+      [rectContour(2 * (p.len + p.wid), p.ht),
+        bendLine(p.len, 0, p.len, p.ht),
+        bendLine(p.len + p.wid, 0, p.len + p.wid, p.ht),
+        bendLine(2 * p.len + p.wid, 0, 2 * p.len + p.wid, p.ht)],
+      panel(p.len, p.wid), panel(p.len, p.wid),
+    ]).contours,
     { sheet: true, noResize: true }),
   shape("fiveside", "Five-sided box", "▢", "enclosures", "five sided box open front",
     "Five-sided box (open front): a back, two sides, a top and a bottom.",

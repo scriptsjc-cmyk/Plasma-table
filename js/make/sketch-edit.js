@@ -742,6 +742,30 @@ export class EditMethods {
     else this.onMessage("Outline closed. Drag a corner to move it, or click an edge to type its length.");
     if (this.onDrawFinished) this.onDrawFinished();
   }
+  finishOpenDraw() {
+    if (!this.drawPts || this.drawPts.length < 2) { this.onMessage("Add at least two points, then Etch."); return; }
+    const pts = this.drawPts.map((p) => [r1(p[0]), r1(p[1])]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    const srcB = (this.drawBulges || []).slice();
+    const uniq = [], ub = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      const bulge = Number(srcB[i]) || 0;
+      if (!uniq.length || Math.hypot(p[0] - uniq[uniq.length - 1][0], p[1] - uniq[uniq.length - 1][1]) > 0.05) { uniq.push(p); ub.push(bulge); }
+    }
+    if (uniq.length < 2) { this.onMessage("That etch line is too short."); this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.drawEtch = false; this.tool = null; this.draw(); return; }
+    if (uniq.some((p) => Math.abs(p[0]) > this.maxMm || Math.abs(p[1]) > this.maxMm)) { this.onMessage("That line goes further than the table."); return; }
+    while (ub.length < uniq.length) ub.push(0);
+    const b = bbox([{ pts: uniq }]);
+    this.remember();
+    const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
+      name: "Etch", op: "score",
+      shape: { cs: [{ pts: uniq.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: false, op: "score", bulges: ub.slice(0, uniq.length) }] } };
+    this.items.push(it);
+    this.pick([it.id]); this.tool = null; this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.drawEtch = false;
+    this.commit(); this.onSelect();
+    this.onMessage("Etch line added. It will be marked first, then the cuts. It will not cut through the sheet.");
+    if (this.onDrawFinished) this.onDrawFinished();
+  }
   setParam(k, v) {
     const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v)) return;
     const sizeKeys = ["w", "h", "d", "a", "b", "len", "wid", "s"];

@@ -79,13 +79,21 @@ export class Sketch {
     if (it.type === "custom") {
       const cs = it.shape && Array.isArray(it.shape.cs) ? it.shape.cs : null;
       if (!cs || !cs.length) return null;
-      const ok = cs.every((c) => c && Array.isArray(c.pts) && c.pts.length >= 3 && c.pts.every((q) => Number.isFinite(q[0]) && Number.isFinite(q[1]) && Math.abs(q[0]) <= max * 2 && Math.abs(q[1]) <= max * 2));
+      const ok = cs.every((c) => {
+        if (!c || !Array.isArray(c.pts)) return false;
+        const etch = c.closed === false || c.op === "score" || c.op === "mark" || c.role === "bend";
+        const min = etch ? 2 : 3;
+        return c.pts.length >= min && c.pts.every((q) => Number.isFinite(q[0]) && Number.isFinite(q[1]) && Math.abs(q[0]) <= max * 2 && Math.abs(q[1]) <= max * 2);
+      });
       if (!ok) return null;
       out.shape = { cs: cs.map((c) => {
         const pts = c.pts.map((q) => [Number(q[0]), Number(q[1])]);
         const bulges = Array.isArray(c.bulges) ? c.bulges.map((b) => (Number.isFinite(+b) ? Math.max(-MAX_BULGE, Math.min(MAX_BULGE, +b)) : 0)) : [];
         while (bulges.length < pts.length) bulges.push(0);
-        return { pts, closed: c.closed !== false, bulges: bulges.slice(0, pts.length) };
+        const rec = { pts, closed: c.closed !== false, bulges: bulges.slice(0, pts.length) };
+        if (c.op === "score" || c.op === "mark") rec.op = c.op;
+        if (c.role) rec.role = String(c.role).slice(0, 24);
+        return rec;
       }) };
     }
     if (it.holes && typeof it.holes === "object") {
@@ -169,8 +177,15 @@ export class Sketch {
     if (!parts || !parts.length) return 0;
     this.remember();
     if (replace) { this.items = []; this.nextId = 1; this.edgeSel = null; }
-    const made = parts.map(({ cs, x, y }) => {
-      const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(x), y: r1(y), rot: 0, holes: {}, shape: { cs: cs.map((c) => ({ pts: c.pts.map((q) => [q[0], q[1]]), closed: c.closed !== false, bulges: (c.bulges || []).slice() })) } };
+    const made = parts.map(({ cs, x, y, op, name }) => {
+      const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(x), y: r1(y), rot: 0, holes: {}, shape: { cs: cs.map((c) => {
+        const rec = { pts: c.pts.map((q) => [q[0], q[1]]), closed: c.closed !== false, bulges: (c.bulges || []).slice() };
+        if (c.op === "score" || c.op === "mark") rec.op = c.op;
+        if (c.role) rec.role = c.role;
+        return rec;
+      }) } };
+      if (op === "score" || op === "mark") it.op = op;
+      if (name) it.name = String(name).slice(0, 80);
       this.items.push(it); return it;
     });
     this.pick([]); this.commit(); this.onSelect(); this.fitView();
@@ -248,7 +263,7 @@ export class Sketch {
   setPointSnap(on) { this.opts.pointSnap = !!on; this.saveOpts(); }
   setTool(name) {
     this.tool = this.tool === name ? null : (name || null);
-    this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null;
+    this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null; this.drawEtch = false;
     this.filletPick = null; this.filletHover = null;
     this.cv.style.cursor = this.tool ? "crosshair" : "";
     this.draw();
@@ -260,9 +275,12 @@ export class Sketch {
   contours() {
     const items = this.items.filter((i) => !this.layerHidden(i));
     const hosts = items.filter((i) => !this.isExplicitHole(i) && !this.isHole(i));
+    const hidden = this.hiddenLayers;
+    const vis = (c) => !((c.op === "score" || c.op === "mark") && hidden && hidden.has(c.op));
+    const stamp = (it, c) => (c.op || !it.op) ? c : { ...c, op: it.op };
     const out = [];
     for (const it of items) {
-      const cs = this.contoursOf(it);
+      const cs = this.contoursOf(it).filter(vis).map((c) => stamp(it, c));
       if (!(this.isExplicitHole(it) || this.isHole(it))) { out.push(...cs); continue; }
       // A hole on a plate that falls off the material is omitted (it must not be cut as a small part).
       // If there is no plate, the hole is the only outline, so it is kept.
