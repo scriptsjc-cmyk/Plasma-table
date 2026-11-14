@@ -81,7 +81,7 @@ body.app-shell .cutgrid.with-qb #quickBar button {
     grid-template-areas: "tools step" "preview step" !important;
   }
   body.app-shell.pro-mode .cutgrid.with-qb #quickBarWrap,
-  body.app-shell.pro-mode .cutgrid.with-qb #quickBar { grid-area: tools; height: auto !important; max-height: none !important; }
+  body.app-shell.pro-mode .cutgrid.with-qb #quickBar { grid-area: tools; height: auto !important; max-height: 56px !important; }
   body.app-shell.pro-mode .cutgrid.with-qb .previewPane { grid-area: preview !important; }
   body.app-shell.pro-mode .cutgrid.with-qb .stepPane { grid-area: step !important; }
 }
@@ -240,12 +240,12 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) #quickBar.quickbar {
     display: flex !important;
     flex-direction: row !important;
-    flex-wrap: wrap !important;
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
     width: 100% !important;
     height: auto !important;
-    max-height: none !important;
+    max-height: 56px !important;
     gap: 4px;
     padding: 4px 6px;
     align-items: stretch;
@@ -284,11 +284,13 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb .stepPane,
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.yours-toolbar-left) .stepPane {
     grid-area: props !important;
-    display: block !important;
-    overflow: auto;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden !important;
     min-width: 0 !important;
     width: auto !important;
     min-height: 0;
+    padding: 12px 14px 0;
   }
 
   /* Left: a two-column rail that fits the tools without a dedicated scroll strip. */

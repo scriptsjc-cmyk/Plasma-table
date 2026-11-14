@@ -1,5 +1,6 @@
 // Sketch: the view (fit, zoom, pan) and drawing the canvas.
 import { bbox, expandContour, offsetLoop } from "../core/geom.js";
+import { filletPreviewGeom, linearArrayShifts } from "./cadpreview.js";
 import { def, r1, themeColor } from "./sketch-util.js";
 import { clickVerb, clickVerbLower } from "../ui/laptop.js";
 import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
@@ -35,6 +36,16 @@ export class ViewMethods {
     const pad = 80;
     const s = Math.min((w - pad * 2) / bw, (h - pad * 2) / bh);
     this.view = { s, vx: (b[0] + b[2]) / 2 - w / 2 / s, vy: (b[1] + b[3]) / 2 - h / 2 / s };
+    this.draw();
+  }
+
+  setCadPreview(kind, vals) {
+    this.cadPreview = { kind, vals };
+    this.draw();
+  }
+  clearCadPreview() {
+    if (!this.cadPreview) return;
+    this.cadPreview = null;
     this.draw();
   }
   ensureVisible() {
@@ -396,6 +407,45 @@ export class ViewMethods {
       ctx.fillText(prompt, x, y + 6); ctx.textAlign = "start";
     }
 
+
+    if (this.cadPreview && this.cadPreview.vals) {
+      this._paintCadPreview(ctx, S, s, C);
+    }
+    if (this.filletPick && this.filletHover) {
+      const it = this.selected();
+      const cs = it && (this.isEditableCustom(it) ? it.shape.cs : this.contoursOf(it));
+      const c = cs && cs[this.filletHover.ci];
+      const pts = c && c.pts;
+      const i = this.filletHover.vi;
+      if (pts && pts[i]) {
+        const n = pts.length, A = pts[(i - 1 + n) % n], P = pts[i], Q = pts[(i + 1) % n];
+        const g = filletPreviewGeom(A, P, Q, this.filletPick.radius, this.filletPick.mode);
+        if (g) {
+          ctx.save();
+          ctx.strokeStyle = C.sel || "#0078d4";
+          ctx.fillStyle = "transparent";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 3]);
+          if (g.kind === "relief" && g.C) {
+            const [cx, cy] = S(g.C[0], g.C[1]);
+            ctx.beginPath(); ctx.arc(cx, cy, g.r * s, 0, Math.PI * 2); ctx.stroke();
+          } else if (g.kind === "chamfer") {
+            const [x0, y0] = S(g.T1[0], g.T1[1]), [x1, y1] = S(g.T2[0], g.T2[1]);
+            ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+          } else if (g.C) {
+            const [x0, y0] = S(g.T1[0], g.T1[1]), [x1, y1] = S(g.T2[0], g.T2[1]), [cx, cy] = S(g.C[0], g.C[1]);
+            const a0 = Math.atan2(g.T1[1] - g.C[1], g.T1[0] - g.C[0]);
+            const a1 = Math.atan2(g.T2[1] - g.C[1], g.T2[0] - g.C[0]);
+            ctx.beginPath();
+            ctx.arc(cx, cy, g.r * s, -a0, -a1, true);
+            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(...S(P[0], P[1])); ctx.lineTo(x1, y1); ctx.setLineDash([2, 3]); ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }
+    }
+
     if (this.opts && this.opts.showKerf) {
       let kerf = 1.5;
       try {
@@ -469,5 +519,72 @@ export class ViewMethods {
     ctx.fill();
     ctx.fillStyle = themeColor("--cad-tag-text", "#FFFFFF"); ctx.textAlign = "center"; ctx.fillText(text, x, y + 5); ctx.textAlign = "start";
     return { x: x - tw / 2, y: y - th / 2, w: tw, h: th };
+  }
+
+  _paintCadPreview(ctx, S, s, C) {
+    const prev = this.cadPreview;
+    if (!prev || !prev.vals) return;
+    const title = prev.kind || "";
+    const v = prev.vals;
+    const list = this.picked();
+    ctx.save();
+    ctx.strokeStyle = C.sel || "#0078d4";
+    ctx.lineWidth = 1.6;
+    ctx.setLineDash([5, 3]);
+    const strokeBox = (b, dx, dy) => {
+      const [x0, y0] = S(b[0] + dx, b[1] + dy), [x1, y1] = S(b[2] + dx, b[3] + dy);
+      ctx.strokeRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
+    };
+    const strokeLoop = (pts, dx, dy) => {
+      if (!pts || pts.length < 2) return;
+      ctx.beginPath();
+      pts.forEach((q, i) => {
+        const [x, y] = S(q[0] + (dx || 0), q[1] + (dy || 0));
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.closePath();
+      ctx.stroke();
+    };
+    if (title === "Linear array" && list.length) {
+      const box = this.pickedBox && this.pickedBox();
+      const shifts = linearArrayShifts(v.n, v.gx, v.gy, box);
+      for (const [dx, dy] of shifts) {
+        for (const it of list) strokeBox(this.boxOf(it), dx, dy);
+      }
+    } else if (title === "Circular array" && list.length) {
+      const n = Math.max(2, Math.min(50, Math.round(v.n || 2)));
+      const pivot = this.arrayPivotOf && this.arrayPivotOf(list, { mode: v.pivot || "shape" });
+      if (pivot) {
+        const [cx, cy] = pivot;
+        const it = list[0], b = this.boxOf(it);
+        const ox = (b[0] + b[2]) / 2, oy = (b[1] + b[3]) / 2;
+        let pcd = Number(v.pcd) || 0;
+        const r0 = pcd > 0 ? pcd / 2 : Math.hypot(ox - cx, oy - cy) || 20;
+        for (let k = 0; k < n; k++) {
+          const ang = (Math.PI * 2 * k) / n;
+          const nx = cx + r0 * Math.cos(ang) - (ox - (list[0].x || 0));
+          // draw boxes around the circle using centre offset
+          const dx = cx + r0 * Math.cos(ang) - ox;
+          const dy = cy + r0 * Math.sin(ang) - oy;
+          if (k === 0) continue;
+          strokeBox(b, dx, dy);
+        }
+      }
+    } else if (title === "Offset the outline") {
+      const it = this.selected();
+      if (it) {
+        const d = Number(v.d) || 0;
+        const both = !!v.both;
+        const cs = this.contoursOf(it);
+        if (cs[0] && d) {
+          const amounts = both ? [Math.abs(d), -Math.abs(d)] : [d];
+          for (const amt of amounts) {
+            const off = offsetLoop(cs[0].pts, amt, cs[0]);
+            if (off && off.ok) strokeLoop(off.pts, 0, 0);
+          }
+        }
+      }
+    }
+    ctx.restore();
   }
 }

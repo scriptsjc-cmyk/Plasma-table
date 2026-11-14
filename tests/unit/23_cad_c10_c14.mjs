@@ -76,10 +76,12 @@ const centre = (b) => [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
   const disc = mk([["disc", { d: 100 }, 0, 0]]);
   disc.pick([disc.items[0].id]);
   disc.offsetBy(8);
-  t.check("C12: offsetting a disc keeps it as a disc", disc.items[0].type === "disc", `type=${disc.items[0].type}`, "C12-OFFSET");
-  t.check("C12: disc diameter grows by twice the offset", Math.abs(disc.items[0].p.d - 116) < 0.2, `d=${disc.items[0].p.d}`, "C12-OFFSET");
-  const circ = detectCircle(disc.contoursOf(disc.items[0])[0].pts);
-  t.check("C12: the result is still a true circle", !!(circ && Math.abs(circ.r - 58) < 0.4), JSON.stringify(circ), "C12-OFFSET");
+  const offC = disc.contoursOf(disc.items[0])[0];
+  const offR = offC && offC.circle && offC.circle.r;
+  t.check("C12: offsetting a disc becomes an editable custom outline", disc.items[0].type === "custom", `type=${disc.items[0].type}`, "C12-OFFSET");
+  t.check("C12: disc diameter grows by twice the offset", Math.abs((offR != null ? offR * 2 : disc.items[0].p.d) - 116) < 0.2, `r=${offR} d=${disc.items[0].p && disc.items[0].p.d}`, "C12-OFFSET");
+  const circ = detectCircle(offC.pts);
+  t.check("C12: the result is still a true circle", !!(offC.circle && Math.abs(offC.circle.r - 58) < 0.4) || !!(circ && Math.abs(circ.r - 58) < 0.4), JSON.stringify({ circ, circle: offC.circle }), "C12-OFFSET");
 }
 
 // ---- C13 circular array pivot ----

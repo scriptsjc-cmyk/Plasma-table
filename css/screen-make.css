@@ -1235,3 +1235,211 @@ body.laptop-ui .fold3d-sum { display: none; }
   position: absolute; top: 100%; bottom: auto; left: 0; margin-top: 4px;
   z-index: 30; min-width: 260px;
 }
+
+
+/* ---- C46–C50 layout: compact tools, one home, visible Save, shortcuts, library favs ---- */
+body.pro-mode #btnSimpleSnap,
+body.advanced-mode #btnSimpleSnap { display: none !important; }
+body.beginner .skopts { display: none !important; }
+
+/* Laptop properties pane: footer stays put; the form scrolls above it. */
+@media (min-width: 900px) {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .stepPane,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane {
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column;
+    padding: 12px 14px 0;
+  }
+}
+
+/* Mid-width / phone: tools stay one scrolling row and never cover Save / Download. */
+@media (max-width: 899px) {
+  body.app-shell[data-screen="make"] .cutgrid.with-qb #quickBar.quickbar,
+  body.app-shell[data-screen="make"] #quickBar.quickbar,
+  body[data-screen="make"] #quickBar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-height: 64px;
+    align-items: stretch;
+  }
+  body[data-screen="make"] #quickBar .qb-group { display: none; }
+  body[data-screen="make"] #exportRow,
+  body[data-screen="make"] .previewDock .exportrow {
+    position: relative;
+    z-index: 24;
+    flex-wrap: nowrap;
+  }
+}
+
+/* Small-screen inspector as a bottom sheet (already used on phones); keep canvas height. */
+@media (max-width: 899px) {
+  body.app-shell.pro-mode[data-screen="make"]:not(.phone-ui):not(.short-land) .stepPane {
+    max-height: 46dvh;
+    overflow: auto;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px rgba(16, 24, 40, .14);
+  }
+}
+
+#quickBarWrap { position: relative; }
+#quickBar .qb-more-btn { flex: 0 0 auto; }
+#qbMorePop.qb-more {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  position: absolute;
+  z-index: 45;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  min-width: 220px;
+}
+#qbMorePop.qb-more.is-open { display: flex; }
+@media (min-width: 900px) {
+  body.laptop-ui.pro-mode[data-screen="make"] #qbMorePop.qb-more {
+    left: calc(100% + 6px);
+    bottom: 8px;
+    top: auto;
+  }
+}
+@media (max-width: 899px) {
+  #qbMorePop.qb-more {
+    left: auto;
+    right: 8px;
+    bottom: calc(100% + 6px);
+    max-width: min(320px, calc(100vw - 16px));
+  }
+}
+body.qb-searching #quickBar .qb-search { display: flex !important; }
+
+/* C50: Beginner phone canvas keeps a clear gap above help / footer overlap. */
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewPane,
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) canvas#preview {
+  padding-bottom: 16px;
+}
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDock {
+  margin-bottom: 8px;
+}
+
+.pb-tilewrap { position: relative; display: flex; flex-direction: column; }
+.pb-fav {
+  position: absolute; top: 4px; right: 4px;
+  min-width: 36px; min-height: 36px; padding: 0;
+  border: 0; background: color-mix(in srgb, var(--card) 85%, transparent);
+  border-radius: 999px; font-size: 16px; line-height: 1;
+}
+.pb-fav.on { color: #c05600; }
+
+.shortcut-sheet {
+  position: fixed; inset: 0; z-index: 160;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, #000 35%, transparent);
+  min-width: 0; padding: 16px;
+}
+.shortcut-sheet.hidden { display: none !important; }
+.shortcut-sheet-inner {
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  max-width: min(560px, calc(100vw - 24px));
+  max-height: min(80vh, 640px);
+  overflow: auto;
+  padding: 16px 18px 20px;
+}
+.shortcut-sheet-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.shortcut-sheet-head h2 { margin: 0; flex: 1; font-size: 18px; }
+.shortcut-table { width: 100%; border-collapse: collapse; }
+.shortcut-table th { text-align: left; white-space: nowrap; padding: 6px 12px 6px 0; width: 34%; font-weight: 700; }
+.shortcut-table td { padding: 6px 0; }
+.shortcut-table kbd { font: 650 13px ui-monospace, monospace; }
+
+
+/* C46: the left tool rail is for any wide Advanced Make screen, not only
+   pointer:fine (headless / some tablets still need the 76px column so the
+   toolbar cannot wrap over the canvas and cover Save / Download). */
+@media (min-width: 900px) {
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.editing {
+    display: grid !important;
+    grid-template-columns: 76px minmax(0, 1fr) minmax(320px, 380px) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: "tools preview props" !important;
+    column-gap: 10px;
+    min-height: 0;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #quickBarWrap,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid #quickBarWrap,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap {
+    grid-area: tools;
+    grid-column: 1 !important; grid-row: 1 !important;
+    display: block !important;
+    width: 76px !important; min-width: 76px !important; max-width: 76px !important;
+    min-height: 0; height: 100%;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #quickBar.quickbar {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    width: 76px;
+    height: 100%;
+    max-height: none;
+    gap: 4px;
+    padding: 6px 4px;
+    align-items: stretch;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-group,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search { display: none; }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    flex-direction: column;
+    font-size: 11px;
+    line-height: 1.15;
+    padding: 4px 2px;
+    gap: 1px;
+  }
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .previewPane,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .previewPane,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .previewPane {
+    grid-column: 2 !important; grid-row: 1 !important; grid-area: auto !important;
+    min-width: 0 !important; min-height: 0 !important; width: auto !important;
+  }
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .stepPane,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .stepPane {
+    grid-column: 3 !important; grid-row: 1 !important; grid-area: auto !important;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden !important;
+    min-width: 320px !important;
+    width: auto !important;
+    min-height: 0;
+    padding: 12px 14px 0;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #makeSplit { display: none !important; }
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) canvas#preview {
+    width: 100% !important; height: 100% !important; min-width: 0 !important; min-height: 200px !important;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #qbMorePop.qb-more {
+    left: calc(100% + 6px);
+    bottom: 8px;
+    top: auto;
+  }
+}

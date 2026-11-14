@@ -19,12 +19,11 @@ export function renderProTools() {
   const on = !!(sketch && sketch.opts.pro);
   box.classList.toggle("hidden", !on);
   if (!on) { $("toolBar").classList.add("hidden"); return; }
+  // C47: Draw, Measure, Auto-arrange and Snap live on the tools rail only.
+  // This side panel is for the selected part's properties (the shape form below).
+  box.innerHTML = "";
+  box.classList.add("hidden");
   const tool = sketch.tool;
-  box.innerHTML = `
-    <button data-pro="draw" class="${tool === "draw" ? "on" : ""}">✎ Draw outline</button>
-    <button data-pro="measure" class="${tool === "measure" ? "on" : ""}">📏 Measure</button>
-    <button data-pro="nest">⊞ Auto-arrange</button>
-    <button data-pro="points" class="${sketch.opts.pointSnap ? "on" : ""}">Snap to points</button>`;
   $("toolBar").classList.toggle("hidden", tool !== "draw");
   if ($("toolFinish")) $("toolFinish").textContent = "Close outline";
   if ($("toolArc")) {

@@ -84,7 +84,7 @@ export function showSource(src, opts) {
 }
 export function bindSketchBar() {
   $("skAll").onclick = () => sketch.pickAll();
-  $("skSnap").onchange = () => { sketch.setSnap(Number($("skSnap").value)); sketch.draw(); try { import("../core/prefs.js").then((m) => { const v = Number($("skSnap").value); m.savePrefs({ snap: v > 0, snapStep: v > 0 ? v : m.getPrefs().snapStep }); }).catch(() => {}); } catch (e) { /* ignore */ } };
+  $("skSnap").onchange = () => { sketch.setSnap(Number($("skSnap").value)); sketch.draw(); try { import("../core/prefs.js").then((m) => { const v = Number($("skSnap").value); m.savePrefs({ snap: v > 0, snapStep: v > 0 ? v : m.getPrefs().snapStep }); }).catch(() => {}); } catch (e) { /* ignore */ } try { import("./headertools.js").then((m) => m.paintMakeHeaderTools && m.paintMakeHeaderTools()).catch(() => {}); } catch (e) { /* ignore */ } };
   $("skGuides").onchange = () => sketch.setGuides($("skGuides").checked);
   $("skUndo").onclick = () => sketch.undo();
   $("skRedo").onclick = () => sketch.redo();

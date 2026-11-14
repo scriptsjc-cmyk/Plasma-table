@@ -57,7 +57,9 @@ function roundedRect(w, h, r, step = 8) {
   disc.pick([disc.items[0].id]);
   disc.offsetBy(5);
   const off = disc.items[0];
-  t.check("C33: offset of a circle stays a circle (diameter 90)", off.type === "disc" && Math.abs(off.p.d - 90) < 0.2, `type=${off.type} d=${off.p && off.p.d}`, "C33-OFFSET");
+  const offCs = disc.contoursOf(off)[0];
+  const offR = offCs && offCs.circle && offCs.circle.r;
+  t.check("C33: offset of a circle stays a circle (diameter 90)", off.type === "custom" && offR != null && Math.abs(offR * 2 - 90) < 0.2, `type=${off.type} r=${offR} d=${off.p && off.p.d}`, "C33-OFFSET");
 
   const customR = A.newSketch();
   customR.opts.pro = true;

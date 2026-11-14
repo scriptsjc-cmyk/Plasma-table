@@ -6,32 +6,82 @@ import { renderProTools } from "./protools.js";
 import { clickVerb } from "../ui/laptop.js";
 import { def } from "./sketch-util.js";
 import { FLANGE_STANDARDS, lookupFlange, applyFlangeDims, flangeShapeKeys } from "./flange-tables.js";
+import { getPrefs, savePrefs } from "../core/prefs.js";
 
-export function openCad(title, fields, onOk) {
+export function cadLastFor(title) {
+  try { return (getPrefs().cadLast || {})[title] || {}; } catch (e) { return {}; }
+}
+export function rememberCadLast(title, vals) {
+  if (!title || !vals) return;
+  try {
+    const all = { ...(getPrefs().cadLast || {}) };
+    all[title] = { ...vals };
+    savePrefs({ cadLast: all });
+  } catch (e) { /* headless */ }
+}
+function withLastUsed(title, fields) {
+  const last = cadLastFor(title);
+  return fields.map((f) => {
+    if (f.note || f.remember === false || last[f.id] == null) return f;
+    return { ...f, value: last[f.id] };
+  });
+}
+function readCadVals(fields, { loose } = {}) {
+  const vals = {};
+  for (const f of fields) {
+    if (f.note) continue;
+    const el = $("cad_" + f.id);
+    if (f.type === "checkbox") { vals[f.id] = !!(el && el.checked); continue; }
+    const raw = el ? el.value : "";
+    if (f.type === "select" || f.type === "textarea" || f.text) { vals[f.id] = raw; continue; }
+    const n = evalExpr(raw);
+    if (!Number.isFinite(n)) {
+      if (loose) { vals[f.id] = f.value; continue; }
+      return { error: f.label };
+    }
+    vals[f.id] = n;
+  }
+  return { vals };
+}
+
+export function openCad(title, fields, onOk, onPreview) {
+  const used = withLastUsed(title, fields);
   $("cadTitle").textContent = title;
-  $("cadFields").innerHTML = fields.map((f) => {
+  $("cadFields").innerHTML = used.map((f) => {
     if (f.note) return `<p class="muted small">${esc(f.note)}</p>`;
     if (f.type === "checkbox") return `<label class="check"><input id="cad_${f.id}" type="checkbox"${f.value ? " checked" : ""}> ${esc(f.label)}</label>`;
-    if (f.type === "select") return `<label>${esc(f.label)}<select id="cad_${f.id}">${(f.options || []).map((o) => `<option value="${esc(o.v)}"${o.v === f.value ? " selected" : ""}>${esc(o.l)}</option>`).join("")}</select></label>`;
+    if (f.type === "select") return `<label>${esc(f.label)}<select id="cad_${f.id}">${(f.options || []).map((o) => `<option value="${esc(o.v)}"${String(o.v) === String(f.value) ? " selected" : ""}>${esc(o.l)}</option>`).join("")}</select></label>`;
     if (f.type === "textarea") return `<label>${esc(f.label)}<textarea id="cad_${f.id}" rows="${f.rows || 8}" style="width:100%;font:inherit">${esc(String(f.value ?? ""))}</textarea></label>`;
     return `<label>${esc(f.label)}<input id="cad_${f.id}" type="${f.type || "number"}" inputmode="${f.text ? "text" : "decimal"}" step="any" value="${esc(String(f.value ?? ""))}"></label>`;
   }).join("");
-  $("cadDialog").classList.remove("hidden");
-  $("cadDialog")._ok = () => {
-    const vals = {};
-    for (const f of fields) {
-      if (f.note) continue;
-      if (f.type === "checkbox") { vals[f.id] = !!($("cad_" + f.id) && $("cad_" + f.id).checked); continue; }
-      const raw = $("cad_" + f.id).value;
-      if (f.type === "select" || f.type === "textarea" || f.text) { vals[f.id] = raw; continue; }
-      vals[f.id] = evalExpr(raw);
-      if (!Number.isFinite(vals[f.id])) { toast("Check the number in " + f.label, true); return; }
-    }
-    $("cadDialog").classList.add("hidden");
-    onOk(vals);
+  const dlg = $("cadDialog");
+  dlg.classList.remove("hidden");
+  dlg._preview = onPreview || null;
+  const runPreview = () => {
+    const got = readCadVals(used, { loose: true });
+    if (!got.vals) return;
+    if (sketch && sketch.setCadPreview) sketch.setCadPreview(title, got.vals);
+    if (dlg._preview) dlg._preview(got.vals);
   };
+  dlg._runPreview = runPreview;
+  dlg._ok = () => {
+    const got = readCadVals(used);
+    if (got.error) { toast("Check the number in " + got.error, true); return; }
+    rememberCadLast(title, got.vals);
+    dlg.classList.add("hidden");
+    dlg._ok = null;
+    dlg._preview = null;
+    dlg._runPreview = null;
+    if (sketch && sketch.clearCadPreview) sketch.clearCadPreview();
+    onOk(got.vals);
+  };
+  runPreview();
 }
-export function closeCad() { $("cadDialog").classList.add("hidden"); $("cadDialog")._ok = null; }
+export function closeCad() {
+  const dlg = $("cadDialog");
+  if (dlg) { dlg.classList.add("hidden"); dlg._ok = null; dlg._preview = null; dlg._runPreview = null; }
+  if (sketch && sketch.clearCadPreview) sketch.clearCadPreview();
+}
 export function runPro(cmd) {
   const sheet = S.cfg && S.cfg.travel_mm ? S.cfg.travel_mm : { x: 1300, y: 800 };
   if (cmd === "draw") { sketch.setTool("draw"); renderProTools(); toast(clickVerb() + " points on the drawing, then Close outline."); return; }
@@ -47,7 +97,7 @@ export function runPro(cmd) {
       { id: "gx", label: "Gap across (mm)", value: 10 },
       { id: "gy", label: "Gap up (mm)", value: 0 },
       { note: "The array is limited to 50 copies, including this one. A larger number is clipped to 50." },
-    ], (v) => sketch.linearArray(v.n, v.gx, v.gy));
+    ], (v) => sketch.linearArray(v.n, v.gx, v.gy), (v) => sketch.setCadPreview && sketch.setCadPreview("Linear array", v));
     return;
   }
   if (cmd === "polar") {
@@ -62,7 +112,7 @@ export function runPro(cmd) {
         { v: "click", l: "Click a point on the drawing" },
       ] },
       { note: "For a ring of holes on a plate, pick the hole and use the plate centre. Or click the centre yourself." },
-    ], (v) => sketch.polarArray(v.n, v.pcd, { mode: v.pivot }));
+    ], (v) => sketch.polarArray(v.n, v.pcd, { mode: v.pivot }), (v) => sketch.setCadPreview && sketch.setCadPreview("Circular array", v));
     return;
   }
   if (cmd === "offset") {
@@ -71,7 +121,7 @@ export function runPro(cmd) {
       { id: "keep", type: "checkbox", label: "Keep the original part" },
       { id: "both", type: "checkbox", label: "Both sides (a strip of this width)" },
       { note: "A shrink that would invert, spike or leave a sliver is refused. Circles stay circles." },
-    ], (v) => sketch.offsetBy(v.d, { keepOriginal: v.keep, bothSides: v.both }));
+    ], (v) => sketch.offsetBy(v.d, { keepOriginal: v.keep, bothSides: v.both }), (v) => sketch.setCadPreview && sketch.setCadPreview("Offset the outline", v));
     return;
   }
   if (cmd === "nest") {
@@ -192,4 +242,11 @@ export function bindCad() {
   $("cadOk").onclick = () => { if ($("cadDialog")._ok) $("cadDialog")._ok(); };
   $("cadCancel").onclick = closeCad;
   $("cadDialog").addEventListener("click", (e) => { if (e.target === $("cadDialog")) closeCad(); });
+  const fields = $("cadFields");
+  if (fields && !fields.dataset.previewBound) {
+    fields.dataset.previewBound = "1";
+    const kick = () => { const dlg = $("cadDialog"); if (dlg && dlg._runPreview) dlg._runPreview(); };
+    fields.addEventListener("input", kick);
+    fields.addEventListener("change", kick);
+  }
 }

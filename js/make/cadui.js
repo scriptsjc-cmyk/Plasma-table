@@ -7,7 +7,8 @@ import { bindPresetBrowser } from "./presetbrowser.js";
 import { bindToolbarCustom } from "./toolbarcustom.js";
 import { bindSheetSize, paintSheetSize } from "./sheetsize.js";
 import { sketch } from "../core/state.js";
-import { renderQuickBar } from "./quickbar.js";
+import { renderQuickBar, focusToolSearch } from "./quickbar.js";
+import { bindShortcuts, openShortcutSheet, closeShortcutSheet } from "./shortcuts.js";
 
 export { isLaptopUi, syncLaptopUi, paintSidewaysHint, paintLayers };
 
@@ -19,6 +20,7 @@ export function bindCadUi() {
   bindPresetBrowser();
   bindToolbarCustom();
   bindSheetSize();
+  bindShortcuts();
   if (sketch) {
     const prevSel = sketch.onSelect;
     sketch.onSelect = (...a) => { try { if (prevSel) prevSel(...a); } finally { paintLayers(); paintSheetSize(); } };
@@ -32,7 +34,7 @@ export function bindCadUi() {
 
 export function publishCadTestHooks() {
   if (typeof window !== "undefined" && window.plasmaTest) {
-    Object.assign(window.plasmaTest, { startRectAt, startDiscAt, applyHudPoint, cancelDrawHud, paintDrawHud });
+    Object.assign(window.plasmaTest, { startRectAt, startDiscAt, applyHudPoint, cancelDrawHud, paintDrawHud, openShortcutSheet, closeShortcutSheet, focusToolSearch });
   }
 }
 

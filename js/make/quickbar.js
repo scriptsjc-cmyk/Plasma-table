@@ -22,6 +22,37 @@ function sizeDimForSelection() {
   return sketch.dimHits.find((h) => h.kind === "w") || sketch.dimHits.find((h) => h.kind === "d") || null;
 }
 let paletteQ = "";
+let moreOpen = false;
+// Most-used tools stay on the rail; the rest live under More (C46).
+export const PRIMARY_TOOL_IDS = ["undo", "redo", "snap", "presets", "rect", "disc", "draw", "measure", "join", "subtract", "offset", "fillet", "trim", "fit", "dup", "del"];
+
+export function moreToolsOpen() { return moreOpen; }
+export function toggleMore(force) {
+  moreOpen = force == null ? !moreOpen : !!force;
+  const pop = document.getElementById("qbMorePop");
+  const btn = document.querySelector('#quickBar [data-qb="more"]');
+  if (pop) {
+    pop.classList.toggle("is-open", moreOpen);
+    pop.classList.toggle("hidden", !moreOpen);
+    pop.setAttribute("aria-hidden", moreOpen ? "false" : "true");
+  }
+  if (btn) {
+    btn.classList.toggle("on", moreOpen);
+    btn.setAttribute("aria-expanded", moreOpen ? "true" : "false");
+  }
+  document.body.classList.toggle("qb-more-open", moreOpen);
+  if (!moreOpen) document.body.classList.remove("qb-searching");
+  return moreOpen;
+}
+export function focusToolSearch() {
+  moreOpen = true;
+  document.body.classList.add("qb-searching", "qb-more-open");
+  try { renderQuickBar(); } catch (e) { /* not ready */ }
+  const s = document.getElementById("qbSearch") || document.getElementById("qbMoreSearch");
+  if (s) { s.focus(); if (s.select) s.select(); }
+  toggleMore(true);
+}
+
 // Undo, Redo, Fit and Delete sit in the Make a part header, not over the canvas.
 // In the full-screen editor the same four move to the tool bar under the picture.
 function paintPinnedTools(B, wrap, qb) {
@@ -103,7 +134,8 @@ export function renderQuickBar() {
   paintPinnedTools(B, wrap, qb);
   if (!on) { qb.innerHTML = ""; refreshScrollRows(); return; }
   const q = paletteQ;
-  const parts = [`<div class="qb-search"><button type="button" id="qbSearchBtn" class="qb-search-btn" aria-label="Search tools" title="Search tools">🔍</button><input id="qbSearch" type="search" placeholder="Search" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`];
+  const searchHtml = `<div class="qb-search"><button type="button" id="qbSearchBtn" class="qb-search-btn" aria-label="Search tools" title="Search tools (Ctrl+K or /)">🔍</button><input id="qbSearch" type="search" placeholder="Search tools" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`;
+  const parts = [searchHtml];
   const chosen = getToolIds();
   const chosenSet = new Set(chosen);
   const grouped = [];
@@ -111,30 +143,38 @@ export function renderQuickBar() {
     const items = grp.items.filter(([id, , lab]) => chosenSet.has(id) && (!q || matchesQuery(lab + " " + id + " " + grp.g, q)));
     if (items.length) grouped.push({ g: grp.g, items });
   }
-  // Keep the user's order, and put a group heading wherever the group changes.
-  if (!q) {
-    const infoOf = (id) => toolInfo(id) || { icon: "", label: id, group: "Tools" };
-    let lastG = null;
-    for (const id of chosen) {
-      const n = infoOf(id);
-      const g = n.group || "Tools";
-      if (g !== lastG) {
-        parts.push(`<div class="qb-group" role="heading" aria-level="3">${esc(g)}</div>`);
-        lastG = g;
-      }
-      parts.push(B(id, n.icon, n.label));
-    }
-  } else {
+  const infoOf = (id) => toolInfo(id) || { icon: "", label: id, group: "Tools" };
+  const addId = (id) => { const n = infoOf(id); parts.push(B(id, n.icon, n.label)); };
+  if (q) {
     for (const grp of grouped) {
       parts.push(`<div class="qb-group" role="heading" aria-level="3">${esc(grp.g)}</div>`);
       parts.push(...grp.items.map(([id, ic, lab]) => B(id, ic, lab)));
     }
+    if (parts.length === 1) parts.push(`<p class="muted small">No tool matches “${esc(q)}”.</p>`);
+    parts.push(B("customise", "⚙", "Customise toolbar"));
+  } else {
+    const primary = chosen.filter((id) => PRIMARY_TOOL_IDS.includes(id));
+    const overflow = chosen.filter((id) => !PRIMARY_TOOL_IDS.includes(id));
+    for (const id of primary) addId(id);
+    parts.push(`<button type="button" data-qb="more" class="qb-more-btn${moreOpen ? " on" : ""}" aria-expanded="${moreOpen ? "true" : "false"}" aria-controls="qbMorePop" title="More tools" aria-label="More tools"><i>⋯</i><span>More</span></button>`);
+    const extra = [];
+    let lastG = null;
+    for (const id of overflow) {
+      const n = infoOf(id);
+      const g = n.group || "Tools";
+      if (g !== lastG) { extra.push(`<div class="qb-group" role="heading" aria-level="3">${esc(g)}</div>`); lastG = g; }
+      extra.push(B(id, n.icon, n.label));
+    }
+    extra.push(B("customise", "⚙", "Customise toolbar"));
+    parts.push(`<div id="qbMorePop" class="qb-more${moreOpen ? " is-open" : " hidden"}" role="menu" aria-hidden="${moreOpen ? "false" : "true"}">${searchHtml.replace('id="qbSearch"', 'id="qbMoreSearch"').replace('id="qbSearchBtn"', 'id="qbMoreSearchBtn"')}${extra.join("")}</div>`);
   }
-  if (parts.length === 1) parts.push(`<p class="muted small">No tool matches “${esc(q)}”.</p>`);
-  parts.push(B("customise", "⚙", "Customise toolbar"));
-  const hadFocus = document.activeElement && document.activeElement.id === "qbSearch";
+  const hadFocus = document.activeElement && (document.activeElement.id === "qbSearch" || document.activeElement.id === "qbMoreSearch");
+  const focusId = hadFocus ? document.activeElement.id : "";
   qb.innerHTML = parts.join("");
-  if (hadFocus) { const s = $("qbSearch"); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  if (hadFocus) {
+    const s = $(focusId) || $("qbSearch") || $("qbMoreSearch");
+    if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  }
   mountScrollRow(qb);
   refreshScrollRows();
   syncQbRoving();
@@ -175,7 +215,8 @@ function bindQbRoving() {
 export function quickAction(a) {
   switch (a) {
     case "presets": openPresetBrowser(); break;
-    case "customise": openToolbarCustom(); break;
+    case "more": toggleMore(); break;
+    case "customise": openToolbarCustom(); toggleMore(false); break;
     case "rect": case "disc": case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
       if (shapeDef(a)) sketch.add(a); else toast("That shape isn't available.", true); break;
     case "lib": openLibrary(); break;
@@ -332,15 +373,20 @@ export function quickAction(a) {
 export function bindQuickBar() {
   if ($("qbSearch") || $("quickBar")) {
     $("quickBar").addEventListener("input", (e) => {
-      if (e.target && e.target.id === "qbSearch") { paletteQ = e.target.value; renderQuickBar(); }
+      if (e.target && (e.target.id === "qbSearch" || e.target.id === "qbMoreSearch")) {
+        paletteQ = e.target.value;
+        moreOpen = true;
+        renderQuickBar();
+      }
     });
     $("quickBar").addEventListener("click", (e) => {
-      const s = e.target.closest && e.target.closest("#qbSearchBtn");
+      const s = e.target.closest && e.target.closest("#qbSearchBtn, #qbMoreSearchBtn");
       if (!s) return;
       e.preventDefault();
       const wrap = $("quickBarWrap") || $("quickBar").closest(".scrollrow-wrap");
       if (wrap) wrap.classList.toggle("search-open");
-      const inp = $("qbSearch"); if (inp && wrap && wrap.classList.contains("search-open")) inp.focus();
+      const inp = $("qbSearch") || $("qbMoreSearch");
+      if (inp) inp.focus();
     });
   }
   $("quickBar").addEventListener("click", (e) => {
@@ -349,6 +395,13 @@ export function bindQuickBar() {
     const id = b.dataset.qb;
     if (Date.now() < (S.uiBlockUntil || 0) && id !== "undo" && id !== "redo") return;
     if (!b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(id);
+    if (id !== "more") toggleMore(false);
+  });
+  document.addEventListener("click", (e) => {
+    if (!moreOpen) return;
+    const wrap = $("quickBarWrap") || $("quickBar");
+    if (wrap && wrap.contains(e.target)) return;
+    toggleMore(false);
   });
   bindQbRoving();
 }

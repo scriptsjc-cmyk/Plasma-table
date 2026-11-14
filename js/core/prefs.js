@@ -54,6 +54,9 @@ export function defaultPrefs() {
     sheetH: 0,
     tools: null,
     cutLayout: null,
+    cadLast: {},
+    pbFavs: [],
+    pbRecent: [],
     updatedAt: 0,
   };
 }
@@ -96,8 +99,37 @@ export function sanitizePrefs(raw) {
     }
   }
   out.cutLayout = sanitizeCutLayout(src.cutLayout);
+  out.cadLast = sanitizeCadLast(src.cadLast);
+  out.pbFavs = sanitizeIdList(src.pbFavs, 40);
+  out.pbRecent = sanitizeIdList(src.pbRecent, 20);
   const at = Number(src.updatedAt);
   out.updatedAt = Number.isFinite(at) && at > 0 && at < 1e15 ? Math.round(at) : 0;
+  return out;
+}
+
+function sanitizeCadLast(raw) {
+  if (!isObj(raw)) return {};
+  const out = {};
+  for (const [title, vals] of Object.entries(raw)) {
+    if (typeof title !== "string" || !title || title.length > 80 || !isObj(vals)) continue;
+    const row = {};
+    for (const [k, v] of Object.entries(vals)) {
+      if (typeof k !== "string" || !k || k.length > 40) continue;
+      if (typeof v === "boolean" || (typeof v === "string" && v.length <= 200) || (typeof v === "number" && Number.isFinite(v))) row[k] = v;
+    }
+    out[title] = row;
+  }
+  return out;
+}
+function sanitizeIdList(raw, cap) {
+  if (!Array.isArray(raw)) return [];
+  const out = [], seen = new Set();
+  for (const id of raw) {
+    if (typeof id !== "string" || !id || id.length > 40 || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    if (out.length >= cap) break;
+  }
   return out;
 }
 

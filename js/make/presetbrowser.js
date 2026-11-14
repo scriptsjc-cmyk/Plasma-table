@@ -5,6 +5,7 @@ import { addShapeId } from "./shapeform.js";
 import { $ , esc } from "../core/dom.js";
 import { S } from "../core/state.js";
 import { showSource } from "./useshape.js";
+import { getPrefs, savePrefs } from "../core/prefs.js";
 
 let cat = "all";
 
@@ -41,18 +42,45 @@ function renderPresetBrowser() {
   if (!catsEl || !grid) return;
   const q = (qEl && qEl.value || "").trim();
   const groups = allGroups();
-  const cats = [{ id: "all", name: "All" }, ...groups];
+  const cats = [{ id: "favs", name: "Favourites" }, { id: "recent", name: "Recent" }, { id: "all", name: "All" }, ...groups];
   catsEl.innerHTML = cats.map((c) => `<button type="button" role="tab" aria-selected="${c.id === cat ? "true" : "false"}" data-pbcat="${esc(c.id)}" class="${c.id === cat ? "on" : ""}">${esc(c.name)}</button>`).join("");
   let ids;
-  if (cat === "all" || q) {
+  const favs = listFavs(), recent = listRecent();
+  if (cat === "favs") ids = favs.slice();
+  else if (cat === "recent") ids = recent.slice();
+  else if (cat === "all" || q) {
     const seen = new Set();
     ids = groups.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id));
   } else ids = (groups.find((g) => g.id === cat) || { ids: [] }).ids;
   const list = ids.map((id) => presetOrShape(id) || PRESET_SHAPES.find((s) => s.id === id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
+  const empty = cat === "favs" ? "Star parts to keep them here." : cat === "recent" ? "Parts you pick will show up here." : `No parts match “${esc(q)}”.`;
   grid.innerHTML = list.length
-    ? list.map((s) => `<button type="button" class="pb-tile" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 96, 72)}<span class="pb-name">${esc(s.name)}</span></button>`).join("")
-    : `<p class="muted">No parts match “${esc(q)}”.</p>`;
+    ? list.map((s) => {
+        const on = favs.includes(s.id);
+        return `<div class="pb-tilewrap"><button type="button" class="pb-tile" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 96, 72)}<span class="pb-name">${esc(s.name)}</span></button><button type="button" class="pb-fav${on ? " on" : ""}" data-pbfav="${esc(s.id)}" aria-pressed="${on ? "true" : "false"}" title="${on ? "Remove from favourites" : "Add to favourites"}" aria-label="${on ? "Remove from favourites" : "Add to favourites"}">${on ? "★" : "☆"}</button></div>`;
+      }).join("")
+    : `<p class="muted">${q && cat !== "favs" && cat !== "recent" ? empty : empty}</p>`;
+}
+
+export function listFavs() {
+  try { return [...(getPrefs().pbFavs || [])]; } catch (e) { return []; }
+}
+export function listRecent() {
+  try { return [...(getPrefs().pbRecent || [])]; } catch (e) { return []; }
+}
+export function toggleFav(id) {
+  if (!id) return listFavs();
+  const cur = listFavs();
+  const next = cur.includes(id) ? cur.filter((x) => x !== id) : [id, ...cur].slice(0, 40);
+  try { savePrefs({ pbFavs: next }); } catch (e) { /* headless */ }
+  return next;
+}
+export function rememberRecent(id) {
+  if (!id) return listRecent();
+  const next = [id, ...listRecent().filter((x) => x !== id)].slice(0, 20);
+  try { savePrefs({ pbRecent: next }); } catch (e) { /* headless */ }
+  return next;
 }
 
 export function bindPresetBrowser() {
@@ -66,7 +94,10 @@ export function bindPresetBrowser() {
     cat = b.dataset.pbcat; renderPresetBrowser();
   });
   if ($("pbGrid")) $("pbGrid").addEventListener("click", (e) => {
+    const fav = e.target.closest("[data-pbfav]");
+    if (fav) { e.preventDefault(); e.stopPropagation(); toggleFav(fav.dataset.pbfav); renderPresetBrowser(); return; }
     const b = e.target.closest("[data-shape]"); if (!b) return;
+    rememberRecent(b.dataset.shape);
     closePresetBrowser();
     if (S.src !== "shape") showSource("shape");
     addShapeId(b.dataset.shape);

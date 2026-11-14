@@ -794,15 +794,44 @@ body.header-hidden[data-screen="cut"] .banner {
 }
 #btnShowEmail { padding: 6px 10px; }
 
-/* Make and Cut step 1: leave room above the sticky Next so thickness buttons are not covered (1366x768). */
-body[data-screen="make"] .step[data-step="1"],
+/* Cut step 1: leave room above the sticky Next so thickness buttons are not covered (1366x768). */
 body[data-screen="cut"] .step[data-step="1"] { padding-bottom: 96px; }
-body[data-screen="make"] .step[data-step="1"] .nav,
 body[data-screen="cut"] .step[data-step="1"] .nav {
   position: sticky; bottom: 0; z-index: 3;
   background: var(--card);
   padding: 10px 0 calc(8px + env(safe-area-inset-bottom, 0px));
   margin-top: 12px;
+}
+/* C48: on Make, Cut this part sits in the panel footer — not a floating bar over the fields. */
+body[data-screen="make"] .stepPane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+body[data-screen="make"] .step[data-step="1"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+body[data-screen="make"] .step[data-step="1"] > [hidden] { display: none !important; flex: none; }
+body[data-screen="make"] .step[data-step="1"] > #slot-make-bg,
+body[data-screen="make"] .step[data-step="1"] > #slot-make-editor {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+body[data-screen="make"] .step[data-step="1"] > .nav {
+  position: static;
+  flex: 0 0 auto;
+  z-index: 1;
+  margin-top: 0;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding: 10px 0 calc(8px + env(safe-area-inset-bottom, 0px));
 }
 #next1, .nav .next { white-space: nowrap; }
 @media (orientation: landscape) {

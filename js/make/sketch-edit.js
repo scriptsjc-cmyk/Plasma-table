@@ -510,37 +510,9 @@ export class EditMethods {
     if (Math.abs(d) > this.maxMm) { this.onMessage("That offset is bigger than the table."); return; }
     const keep = !!opts.keepOriginal, both = !!opts.bothSides;
     const dist = both ? Math.abs(d) : d;
-    // A disc (or ring) stays a true circle: change the diameter(s) rather than tessellating.
-    if (!both && (it.type === "disc" || it.type === "hole") && Number(it.p && it.p.d) > 0 && !(it.rot)) {
-      const oldD = Number(it.p.d), newD = oldD + 2 * dist;
-      const reason = newD <= 0.4 ? "That offset would collapse the circle. Use a smaller shrink distance."
-        : (dist < 0 && newD < 2 ? "That offset would leave a sliver too thin to cut cleanly. Use a smaller distance." : null);
-      if (reason) { this.onMessage(reason); return; }
-      this.remember();
-      const cx = it.x + oldD / 2, cy = it.y + oldD / 2;
-      const target = keep ? { ...clone(it), id: this.nextId++, lock: false } : it;
-      target.p = { ...target.p, d: r1(newD) };
-      target.x = r1(cx - newD / 2); target.y = r1(cy - newD / 2);
-      if (keep) this.items.push(target);
-      this.pick([target.id]); this.commit(); this.onSelect();
-      return;
-    }
-    if (!both && it.type === "ring" && Number(it.p && it.p.d) > 0 && !(it.rot)) {
-      const oldD = Number(it.p.d), oldId = Number(it.p.id) || 0;
-      const newD = oldD + 2 * dist, newId = Math.max(0, oldId - 2 * dist);
-      const reason = newD <= 0.4 ? "That offset would collapse the ring. Use a smaller shrink distance."
-        : (newId >= newD - 0.4 ? "That offset would leave a sliver too thin to cut cleanly. Use a smaller distance."
-        : (dist < 0 && newD < 2 ? "That offset would leave a sliver too thin to cut cleanly. Use a smaller distance." : null));
-      if (reason) { this.onMessage(reason); return; }
-      this.remember();
-      const cx = it.x + oldD / 2, cy = it.y + oldD / 2;
-      const target = keep ? { ...clone(it), id: this.nextId++, lock: false } : it;
-      target.p = { ...target.p, d: r1(newD), id: r1(newId) };
-      target.x = r1(cx - newD / 2); target.y = r1(cy - newD / 2);
-      if (keep) this.items.push(target);
-      this.pick([target.id]); this.commit(); this.onSelect();
-      return;
-    }
+    // Circles stay true circles via offsetLoop's circle branch (the result is a custom
+    // outline with .circle, so G-code is still G2/G3). Do not keep type "disc"/"ring":
+    // 04_pro_tools expects Offset to convert the part to an editable custom outline.
     const cs = this.contoursOf(it); if (!cs.length) return;
     const offOne = (c, amount) => offsetLoop(c.pts, amount, c);
     let outerRes, holeCs;
