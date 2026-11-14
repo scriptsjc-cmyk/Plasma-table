@@ -7,11 +7,17 @@ import { clickVerb } from "../ui/laptop.js";
 
 export function openCad(title, fields, onOk) {
   $("cadTitle").textContent = title;
-  $("cadFields").innerHTML = fields.map((f) => `<label>${esc(f.label)}<input id="cad_${f.id}" type="${f.type || "number"}" inputmode="decimal" step="any" value="${esc(String(f.value ?? ""))}"></label>`).join("");
+  $("cadFields").innerHTML = fields.map((f) => {
+    if (f.note) return `<p class="muted small">${esc(f.note)}</p>`;
+    if (f.type === "checkbox") return `<label class="check"><input id="cad_${f.id}" type="checkbox"${f.value ? " checked" : ""}> ${esc(f.label)}</label>`;
+    return `<label>${esc(f.label)}<input id="cad_${f.id}" type="${f.type || "number"}" inputmode="${f.text ? "text" : "decimal"}" step="any" value="${esc(String(f.value ?? ""))}"></label>`;
+  }).join("");
   $("cadDialog").classList.remove("hidden");
   $("cadDialog")._ok = () => {
     const vals = {};
     for (const f of fields) {
+      if (f.note) continue;
+      if (f.type === "checkbox") { vals[f.id] = !!($("cad_" + f.id) && $("cad_" + f.id).checked); continue; }
       const raw = $("cad_" + f.id).value;
       vals[f.id] = f.text ? raw : evalExpr(raw);
       if (!f.text && !Number.isFinite(vals[f.id])) { toast("Check the number in " + f.label, true); return; }

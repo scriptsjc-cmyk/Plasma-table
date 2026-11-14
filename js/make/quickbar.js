@@ -185,14 +185,32 @@ export function quickAction(a) {
     case "edge": { const ep = $("edgePanel"); if (ep) { ep.classList.remove("hidden"); ep.hidden = false; ep.scrollIntoView({ block: "nearest" }); } toast(clickVerb() + " an edge on the outline, then change its length, angle or curve."); break; }
     case "fs": setShapeFs(false); toast("The full-screen editor was removed. The tools stay in this header."); break;
     case "dims": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast(clickVerb() + " a blue size on the drawing, then type the new number."); break; }
-    case "fillet":
-      openCad("Fillet a corner", [{ id: "r", label: "Radius (mm)", value: 5 }], (v) => {
+    case "fillet": {
+      const it = sketch.selected();
+      if (!it) { toast(clickVerb() + " a part first, then Fillet."); break; }
+      if (sketch.layout) { toast("Open the part to fillet its corners."); break; }
+      const info = sketch.edgeInfo && sketch.edgeInfo();
+      const hasCorner = !!(info && info.vi != null);
+      openCad("Fillet a corner", [
+        { id: "r", label: "Radius (mm)", value: (sketch.filletPick && sketch.filletPick.radius) || 5 },
+        { id: "inside", label: "All inside corners", type: "checkbox", value: false },
+        { note: hasCorner
+          ? "Do it rounds the corner you clicked. Tick All inside corners to round every inside corner at once."
+          : "Type the radius, then Do it and click each corner you want to round. Tick All inside corners to do every inside corner at once." },
+      ], (v) => {
         if (!(v.r > 0)) { toast("Enter a radius.", true); return; }
-        if (sketch.edgeInfo && sketch.edgeInfo()) {
+        if (v.inside) {
+          const n = sketch.filletInsideCorners(v.r);
+          if (n > 0) toast(n === 1 ? "Inside corner rounded." : n + " inside corners rounded.");
+        } else if (hasCorner) {
           if (sketch.filletCorner(v.r)) toast("Corner filleted.");
-        } else toast(clickVerb() + " the corner on a custom outline first (Draw outline, then click the corner), then Fillet.");
+        } else {
+          sketch.startFilletPick(v.r);
+          toast("Click each corner you want to round. Inside corners get a smooth inner radius.");
+        }
       });
       break;
+    }
     case "chamfer":
       openCad("Chamfer / flatten an edge", [{ id: "none", label: clickVerb() + " an edge first. This makes that edge straight. Use a chamfered rectangle from the library for a ready-made chamfer.", value: "", text: true }], () => {
         if (sketch.edgeInfo && sketch.edgeInfo()) { sketch.setEdgeCurve({}); toast("Edge flattened. Adjust the corners by dragging."); }

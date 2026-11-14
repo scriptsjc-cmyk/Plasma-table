@@ -1,6 +1,6 @@
 // Sketch: editing the corners and edges of a custom outline (length, angle, curve, add / delete / move a corner) and drawing its handles.
 import { bbox, bulgeFromPoint, bulgeFromRadius, bulgeFromSagitta, bulgeMidpoint, bulgeRadius, expandContour, polysCross, selfIntersects, signedArea, splitBulge } from "../core/geom.js";
-import { clampBulge, distToEdge, r1, wholeSet } from "./sketch-util.js";
+import { cleanContour, clampBulge, distToEdge, r1, wholeSet } from "./sketch-util.js";
 
 export class EdgeMethods {
   isEditableCustom(it) { return !!(it && it.type === "custom" && this.canMutate(it) && it.shape && it.shape.cs && it.shape.cs.length); }
@@ -216,53 +216,164 @@ export class EdgeMethods {
       c.bulges[info.ei] = clampBulge(b);
     });
   }
+  // Turn a library shape into an editable custom outline so its corners can be filleted.
+  toEditableCustom(it) {
+    if (!it || !this.canMutate(it)) return false;
+    if (this.isEditableCustom(it)) { this.tidyCustom(it); return true; }
+    const cs = this.contoursOf(it);
+    if (!cs.length) { this.onMessage("That part has no outline to fillet."); return false; }
+    this.remember();
+    const b = bbox(cs);
+    it.type = "custom"; it.p = { scale: 100 }; it.rot = 0; it.fx = false; it.fy = false; it.holes = {};
+    it.shape = { cs: cs.map((c) => cleanContour({ pts: c.pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: c.closed !== false })) };
+    it.x = r1(b[0]); it.y = r1(b[1]); it._key = null;
+    this.commit(); this.onSelect();
+    return true;
+  }
+  tidyCustom(it) {
+    if (!this.isEditableCustom(it)) return false;
+    let changed = false;
+    for (const c of it.shape.cs) {
+      const n0 = c.pts.length;
+      const tidy = cleanContour(c);
+      if (tidy.pts.length !== n0) changed = true;
+      c.pts = tidy.pts; c.bulges = tidy.bulges;
+    }
+    if (changed) it._key = null;
+    return changed;
+  }
+  prepareFillet() {
+    const it = this.selected() || (this.picked().length === 1 ? this.picked()[0] : null);
+    if (!it) { this.onMessage("Pick a part first, then Fillet."); return false; }
+    if (this.layout) { this.onMessage("Open the part to fillet its corners. The sheet layout only places parts."); return false; }
+    if (!this.canMutate(it)) return false;
+    this.pick([it.id]);
+    if (it.type !== "custom") return this.toEditableCustom(it);
+    const dirty = it.shape.cs.some((c) => cleanContour(c).pts.length !== c.pts.length);
+    if (dirty) { this.remember(); this.tidyCustom(it); this._renorm(it); this.commit(); this.onSelect(); }
+    return true;
+  }
+  startFilletPick(radius) {
+    const r = Number(radius);
+    if (!(r > 0)) { this.onMessage("Enter a radius."); return false; }
+    if (!this.prepareFillet()) return false;
+    this.filletPick = { radius: r };
+    this.filletHover = null;
+    this.draw();
+    this.onSelect();
+    this.onEdgeChange && this.onEdgeChange();
+    return true;
+  }
+  endFilletPick() {
+    if (!this.filletPick && !this.filletHover) return;
+    this.filletPick = null;
+    this.filletHover = null;
+    this.draw();
+    this.onSelect();
+    this.onEdgeChange && this.onEdgeChange();
+  }
+  // Inside (concave / re-entrant) corners of a closed outline. CCW path, a right turn is inside.
+  insideCornerIndices(c) {
+    const pts = c && c.pts || [];
+    const n = pts.length, out = [];
+    if (n < 3) return out;
+    const ccw = signedArea(pts) > 0;
+    const bs = c.bulges || [];
+    for (let i = 0; i < n; i++) {
+      if (Math.abs(Number(bs[(i - 1 + n) % n]) || 0) > 1e-6 || Math.abs(Number(bs[i]) || 0) > 1e-6) continue;
+      const A = pts[(i - 1 + n) % n], P = pts[i], Q = pts[(i + 1) % n];
+      const v1 = [A[0] - P[0], A[1] - P[1]], v2 = [Q[0] - P[0], Q[1] - P[1]];
+      const l1 = Math.hypot(v1[0], v1[1]), l2 = Math.hypot(v2[0], v2[1]);
+      if (l1 < 0.05 || l2 < 0.05) continue;
+      const cross = v1[0] * v2[1] - v1[1] * v2[0];
+      const ang = Math.acos(Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2))));
+      if (!(ang > 1e-3) || ang > Math.PI - 1e-3) continue;
+      const inside = ccw ? cross > 1e-9 : cross < -1e-9;
+      if (inside) out.push(i);
+    }
+    return out;
+  }
   // True corner fillet: trim the two edges at the picked corner and insert an arc
   // of the given radius. (setEdgeCurve still bends a whole edge into an arc, which
   // cannot use a radius smaller than half that edge — so Fillet a corner of a long
   // L would wrongly refuse an 8 mm radius.)
-  filletCorner(radius) {
+  // Concave (inside) corners get a tangent arc that adds material; convex corners
+  // are rounded off as before.
+  filletCorner(radius, vi) {
     const r = Number(radius);
     if (!(r > 0)) { this.onMessage("Enter a radius."); return false; }
     const info = this.edgeInfo();
     if (!info) { this.onMessage("Click the corner you want to fillet, then Fillet."); return false; }
-    return this._guarded(info.it, () => {
-      const c = info.it.shape.cs[info.ci], pts = c.pts, n = pts.length;
-      if (n < 3) return false;
-      let vi = info.vi;
-      if (vi == null) {
-        this.onMessage("Click the corner you want to fillet, then Fillet.");
-        return false;
-      }
+    const v = vi != null ? vi : info.vi;
+    if (v == null) {
+      this.onMessage("Click the corner you want to fillet, then Fillet.");
+      return false;
+    }
+    return this._filletCornerAt(info.it, info.ci, v, r);
+  }
+  _filletCornerAt(it, ci, vi, r, quiet) {
+    return this._guarded(it, () => {
+      const c = it.shape.cs[ci], pts = c.pts, n = pts.length;
+      if (n < 3 || vi == null || vi < 0 || vi >= n) return false;
       const A = pts[(vi - 1 + n) % n], P = pts[vi], Q = pts[(vi + 1) % n];
       const bs = c.bulges || [];
       if (Math.abs(Number(bs[(vi - 1 + n) % n]) || 0) > 1e-6 || Math.abs(Number(bs[vi]) || 0) > 1e-6) {
-        this.onMessage("Fillet needs two straight edges at the corner. Flatten a curve first, or pick another corner.");
+        if (!quiet) this.onMessage("Fillet needs two straight edges at the corner. Flatten a curve first, or pick another corner.");
         return false;
       }
       const v1 = [A[0] - P[0], A[1] - P[1]], v2 = [Q[0] - P[0], Q[1] - P[1]];
       const l1 = Math.hypot(v1[0], v1[1]), l2 = Math.hypot(v2[0], v2[1]);
-      if (l1 < 0.05 || l2 < 0.05) return false;
+      if (l1 < 0.05 || l2 < 0.05) {
+        if (!quiet) this.onMessage("That corner is too tight to fillet (the sides are too short).");
+        return false;
+      }
       const i1 = [v1[0] / l1, v1[1] / l1], i2 = [v2[0] / l2, v2[1] / l2];
       const ang = Math.acos(Math.max(-1, Math.min(1, i1[0] * i2[0] + i1[1] * i2[1])));
-      if (!(ang > 1e-3) || ang > Math.PI - 1e-3) { this.onMessage("That corner is too flat or too sharp to fillet."); return false; }
+      if (!(ang > 1e-3) || ang > Math.PI - 1e-3) {
+        if (!quiet) this.onMessage("That corner is too flat or too sharp to fillet.");
+        return false;
+      }
       const d = r / Math.tan(ang / 2);
       if (!(d > 0.05) || d > l1 - 0.05 || d > l2 - 0.05) {
         const maxR = r1(Math.min(l1, l2) * Math.tan(ang / 2) - 0.05);
-        this.onMessage("That radius is too big for this corner. Use " + Math.max(0.1, maxR).toFixed(1) + " mm or less.");
+        if (!quiet) this.onMessage("That radius is too big for this corner. Use " + Math.max(0.1, maxR).toFixed(1) + " mm or less.");
         return false;
       }
       const T1 = [P[0] + i1[0] * d, P[1] + i1[1] * d], T2 = [P[0] + i2[0] * d, P[1] + i2[1] * d];
       const left = (T2[0] - T1[0]) * (P[1] - T1[1]) - (T2[1] - T1[1]) * (P[0] - T1[0]) > 0;
       const b = bulgeFromRadius(T1, T2, r, left);
-      if (!(Math.abs(b) > 1e-6)) { this.onMessage("That radius does not make a corner fillet."); return false; }
+      if (!(Math.abs(b) > 1e-6)) {
+        if (!quiet) this.onMessage("That radius does not make a corner fillet.");
+        return false;
+      }
       c.pts[vi] = [r1(T1[0]), r1(T1[1])];
       c.pts.splice(vi + 1, 0, [r1(T2[0]), r1(T2[1])]);
       c.bulges = (c.bulges || []).slice();
       while (c.bulges.length < n) c.bulges.push(0);
       c.bulges.splice(vi + 1, 0, Number(c.bulges[vi]) || 0);
       c.bulges[vi] = clampBulge(b);
-      this.edgeSel = { id: info.it.id, ci: info.ci, ei: vi, vi: null };
+      this.edgeSel = { id: it.id, ci, ei: vi, vi: null };
     });
+  }
+  filletInsideCorners(radius, it) {
+    const r = Number(radius);
+    if (!(r > 0)) { this.onMessage("Enter a radius."); return 0; }
+    const host = it || this.selected();
+    if (!this.prepareFillet()) return 0;
+    const part = host && this.item(host.id) || this.selected();
+    if (!this.isEditableCustom(part)) return 0;
+    let n = 0, skipped = 0;
+    for (let ci = 0; ci < part.shape.cs.length; ci++) {
+      const idxs = this.insideCornerIndices(part.shape.cs[ci]).sort((a, b) => b - a);
+      for (const vi of idxs) {
+        if (this._filletCornerAt(part, ci, vi, r, true)) n++;
+        else skipped++;
+      }
+    }
+    if (!n && skipped) this.onMessage("That radius is too big for the inside corners, or they are already rounded.");
+    else if (!n) this.onMessage("This part has no sharp inside corners to round.");
+    else if (skipped) this.onMessage(n + " inside corner" + (n === 1 ? "" : "s") + " rounded. " + skipped + " could not use that radius.");
+    return n;
   }
   straightenEdge() {
     return this._withEdge((it, info) => {
@@ -415,12 +526,16 @@ export class EdgeMethods {
         }
       }
       // vertices
+      const insides = this.filletPick ? new Set(this.insideCornerIndices({ pts, bulges: bs })) : null;
       for (let i = 0; i < n; i++) {
         const [X, Y] = S(pts[i][0], pts[i][1]);
         const on = e && e.ci === ci && e.vi === i;
-        ctx.beginPath(); ctx.arc(X, Y, on ? 6 : 4.5, 0, 7);
-        ctx.fillStyle = on ? C.sel : C.canvas;
-        ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
+        const hover = this.filletHover && this.filletHover.ci === ci && this.filletHover.vi === i;
+        const inside = insides && insides.has(i);
+        const rad = hover ? 8 : (on || (this.filletPick && inside) ? 6.5 : 4.5);
+        ctx.beginPath(); ctx.arc(X, Y, rad, 0, 7);
+        ctx.fillStyle = hover ? C.sel : (on ? C.sel : C.canvas);
+        ctx.strokeStyle = hover ? (C.accent || C.sel) : C.sel; ctx.lineWidth = hover ? 3 : 2;
         ctx.fill(); ctx.stroke();
       }
       // bulge mid handles

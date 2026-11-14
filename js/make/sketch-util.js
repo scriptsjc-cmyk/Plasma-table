@@ -22,6 +22,41 @@ export const themeColor = (name, fallback) => {
 export const clone = (o) => JSON.parse(JSON.stringify(o));
 export const MAX_BULGE = 4;   // tan(1/4 of the included angle): 4 is a 304 degree arc; anything bigger is a hostile / corrupt value
 export const clampBulge = (b) => (Number.isFinite(+b) ? Math.max(-MAX_BULGE, Math.min(MAX_BULGE, +b)) : 0);
+
+// Drop coincident vertices and straight mid-edge points left behind by join / offset rounding.
+export function cleanContour(c, min = 0.05) {
+  const pts = c && c.pts || [];
+  const bs = (c && c.bulges || []).slice();
+  while (bs.length < pts.length) bs.push(0);
+  const outP = [], outB = [];
+  for (let i = 0; i < pts.length; i++) {
+    const q = pts[i], last = outP[outP.length - 1];
+    if (last && Math.hypot(q[0] - last[0], q[1] - last[1]) < min) continue;
+    outP.push([q[0], q[1]]);
+    outB.push(Number(bs[i]) || 0);
+  }
+  const closed = !c || c.closed !== false;
+  if (closed && outP.length > 1) {
+    const a = outP[0], b = outP[outP.length - 1];
+    if (Math.hypot(a[0] - b[0], a[1] - b[1]) < min) { outP.pop(); outB.pop(); }
+  }
+  if (closed && outP.length > 3) {
+    for (let i = 0; i < outP.length && outP.length > 3; ) {
+      const n = outP.length, A = outP[(i - 1 + n) % n], P = outP[i], Q = outP[(i + 1) % n];
+      const bIn = Number(outB[(i - 1 + n) % n]) || 0, bOut = Number(outB[i]) || 0;
+      if (Math.abs(bIn) > 1e-9 || Math.abs(bOut) > 1e-9) { i++; continue; }
+      const v1 = [P[0] - A[0], P[1] - A[1]], v2 = [Q[0] - P[0], Q[1] - P[1]];
+      const l1 = Math.hypot(v1[0], v1[1]), l2 = Math.hypot(v2[0], v2[1]);
+      if (l1 < min || l2 < min) { outP.splice(i, 1); outB.splice(i, 1); continue; }
+      const cross = v1[0] * v2[1] - v1[1] * v2[0], dot = v1[0] * v2[0] + v1[1] * v2[1];
+      if (Math.abs(cross) < 0.05 * l1 * l2 && dot > 0) { outP.splice(i, 1); outB.splice(i, 1); continue; }
+      i++;
+    }
+  }
+  const o = { ...c, pts: outP, bulges: outB };
+  return o;
+}
+
 export function mapC(c, f) {
   const o = { ...c, pts: c.pts.map(f) };
   if (c.circle) { const [cx, cy] = f([c.circle.cx, c.circle.cy]); o.circle = { ...c.circle, cx, cy }; }

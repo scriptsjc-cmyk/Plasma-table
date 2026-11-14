@@ -15,7 +15,7 @@ export function fillEdgePanel() {
   const box = $("edgePanel");
   if (!box || !sketch) return;
   const info = sketch.edgeInfo && sketch.edgeInfo();
-  const show = !!(info && sketch.isEditableCustom && sketch.isEditableCustom(info.it));
+  const show = !!(info && sketch.isEditableCustom && sketch.isEditableCustom(info.it) && !sketch.filletPick);
   box.classList.toggle("hidden", !show);
   if (show) box.removeAttribute("hidden"); else box.setAttribute("hidden", "");
   if (!show) return;
@@ -26,6 +26,17 @@ export function fillEdgePanel() {
   if ($("edgeHint")) $("edgeHint").textContent = info.vi != null
     ? "Corner selected. Drag it, or press Delete to remove it (an outline needs at least three corners)."
     : "Edge selected. Set a length, square it up, type an angle, or turn it into a curve. Double-click to add a corner.";
+  fillFilletPanel();
+}
+export function fillFilletPanel() {
+  const box = $("filletPanel");
+  if (!box || !sketch) return;
+  const on = !!(sketch.filletPick);
+  box.classList.toggle("hidden", !on);
+  if (on) box.removeAttribute("hidden"); else box.setAttribute("hidden", "");
+  if (!on) return;
+  if ($("filletRad") && document.activeElement !== $("filletRad")) $("filletRad").value = String(sketch.filletPick.radius);
+  if ($("filletHint")) $("filletHint").textContent = "Click a corner to give it a " + sketch.filletPick.radius + " mm radius. Inside corners get a smooth inner radius. Hover a corner to highlight it.";
 }
 function bindEdgePanel() {
   if (!$("edgePanel") || $("edgePanel")._bound) return;
@@ -44,6 +55,24 @@ function bindEdgePanel() {
   $("edgeStraight") && ($("edgeStraight").onclick = () => { sketch.straightenEdge(); fillEdgePanel(); });
   $("edgeAddV") && ($("edgeAddV").onclick = () => { const e = sketch.edgeSel; if (e) sketch.addVertexOnEdge(e.ci, e.ei); fillEdgePanel(); });
   $("edgeDelV") && ($("edgeDelV").onclick = () => { sketch.deleteVertex(); fillEdgePanel(); });
+  bindFilletPanel();
+}
+function bindFilletPanel() {
+  if (!$("filletPanel") || $("filletPanel")._bound) return;
+  $("filletPanel")._bound = true;
+  $("filletRad") && $("filletRad").addEventListener("change", () => {
+    const r = Number($("filletRad").value);
+    if (r > 0 && sketch.filletPick) sketch.filletPick.radius = r;
+    fillFilletPanel();
+  });
+  $("filletAllInside") && ($("filletAllInside").onclick = () => {
+    const r = Number($("filletRad") && $("filletRad").value) || (sketch.filletPick && sketch.filletPick.radius);
+    const n = sketch.filletInsideCorners(r);
+    if (n > 0) toast(n === 1 ? "Inside corner rounded." : n + " inside corners rounded.");
+    if (sketch.filletPick && r > 0) sketch.filletPick.radius = r;
+    fillFilletPanel();
+  });
+  $("filletDone") && ($("filletDone").onclick = () => { sketch.endFilletPick(); fillFilletPanel(); });
 }
 // Admin console / settings: never while a job is cutting (a G-code line or $ write must not interleave with the job),
 // and anything that moves the machine or writes a setting only when it is Idle.

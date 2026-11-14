@@ -1,5 +1,5 @@
 // Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...).
-import { MIN, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
+import { MIN, cleanContour, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { bbox, bulgeMidpoint, differenceOutlines, offsetPolygon, pointInPoly, selfIntersects, signedArea, unionOutlines } from "../core/geom.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
@@ -101,7 +101,7 @@ export class EditMethods {
     for (const hi of swallowedIn) holes.push(...this.contoursOf(hi));
     const kept = holes.filter((h) => pointInPoly(h.pts[0], u.outer));
     const b = bbox([{ pts: u.outer }]);
-    const local = (c) => mapC(c, ([x, y]) => [r1(x - b[0] + 1e-9), r1(y - b[1] + 1e-9)]);
+    const local = (c) => cleanContour(mapC(c, ([x, y]) => [r1(x - b[0] + 1e-9), r1(y - b[1] + 1e-9)]));
     this.remember();
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
       shape: { cs: [local({ pts: u.outer, closed: true }), ...kept.map(local)] } };
@@ -394,7 +394,7 @@ export class EditMethods {
       }
     }
     const b = bbox([{ pts: cur.outer }]);
-    const local = (pts) => ({ pts: pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true });
+    const local = (pts) => cleanContour({ pts: pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true });
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
       shape: { cs: [local(cur.outer), ...cur.holes.filter((h) => h && h.length >= 3).map(local)] } };
     const drop = new Set(list);

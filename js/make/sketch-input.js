@@ -169,6 +169,19 @@ export class InputMethods {
         const eh = this.hitCentreEdge ? this.hitCentreEdge(sx, sy, touch) : this.hit(sx, sy, touch);
         if (this.takeCentreEdge && this.takeCentreEdge(eh)) { this.draw(); return; }
       }
+      if (this.filletPick && !panBtn) {
+        const ch = this.hitCustomHandles(sx, sy, touch, true);
+        if (ch && ch.kind === "vertex") {
+          this.pick([ch.it.id]);
+          this.edgeSel = { id: ch.it.id, ci: ch.ci, ei: ch.vi, vi: ch.vi };
+          const ok = this._filletCornerAt(ch.it, ch.ci, ch.vi, this.filletPick.radius);
+          if (ok) this.onMessage("Corner rounded. Click another, or press Done.");
+          this.draw(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+          return;
+        }
+        // ignore other hits so a miss does not drag the part mid-fillet
+        return;
+      }
       if ((this.tool === "draw" || this.tool === "rect" || this.tool === "disc") && !panBtn) {
         let px = wx, py = wy;
         const sn = snapWorld(this, wx, wy);
@@ -250,8 +263,17 @@ export class InputMethods {
       if (this.pointers.has(e.pointerId)) this.pointers.set(e.pointerId, [sx, sy]);
       const d = this.drag;
       if (!d) {                                                 // hover cursor
+        if (this.filletPick && !this.spaceDown) {
+          const ch = this.hitCustomHandles(sx, sy, false, true);
+          const next = (ch && ch.kind === "vertex") ? { ci: ch.ci, vi: ch.vi } : null;
+          const prev = this.filletHover;
+          const same = !!(prev && next && prev.ci === next.ci && prev.vi === next.vi) || (!prev && !next);
+          this.filletHover = next;
+          cv.style.cursor = next ? "pointer" : "crosshair";
+          if (!same) this.draw();
+        }
         const h = this.spaceDown ? null : this.hit(sx, sy, false);
-        cv.style.cursor = !h ? (getPrefs().emptyDragPan ? "grab" : "crosshair") : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
+        if (!this.filletPick) cv.style.cursor = !h ? (getPrefs().emptyDragPan ? "grab" : "crosshair") : h.kind === "resize" ? ((h.corner[0] < h.anchor[0]) === (h.corner[1] > h.anchor[1]) ? "nwse-resize" : "nesw-resize") : (h.kind === "vertex" || h.kind === "bulge") ? "grab" : h.kind === "edge" ? "pointer" : "move";
         if (this.centrePick && this.hitCentreEdge) {
           const next = this.hitCentreEdge(sx, sy, false);
           const prev = this.centreHover;
@@ -498,6 +520,11 @@ export class InputMethods {
       if (e.key === "Escape") {
         // Cancel an in-progress line / rect / disc first; otherwise leave Escape
         // for the full-screen editor (dialogs.js) and other dialogs.
+        if (this.filletPick) {
+          e.stopImmediatePropagation(); e.preventDefault();
+          this.endFilletPick();
+          return;
+        }
         if (this.centrePick) {
           e.stopImmediatePropagation(); e.preventDefault();
           this.cancelCentrePick && this.cancelCentrePick();
