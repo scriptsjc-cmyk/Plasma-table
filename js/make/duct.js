@@ -71,9 +71,76 @@ function selfCross(pts) {
   return false;
 }
 
+// Unroll one (possibly asymmetric) side of an eccentric square-to-round:
+// base corners p0, p1 and circle points mid, right[1..n] (towards p1's seam), left[1..n] (towards p0's seam).
+function developSide3(p0, p1, mid, rightArc, leftArc) {
+  const L = dist3(p0, p1);
+  if (!(L > 1e-6)) return null;
+  const b0 = [0, 0], b1 = [L, 0];
+  let mid2 = placeByDistances(b0, dist3(p0, mid), b1, dist3(p1, mid), 1);
+  if (!mid2 || !Number.isFinite(mid2[0])) return null;
+  if (mid2[1] < -1e-6) mid2 = placeByDistances(b0, dist3(p0, mid), b1, dist3(p1, mid), -1);
+  if (!mid2 || mid2[1] < -1e-6) return null;
+  const placeFan = (corner2, corner3, prev2, prev3, q, preferUp) => {
+    let p = placeByDistances(corner2, dist3(corner3, q), prev2, dist3(prev3, q), preferUp);
+    if (!p || !Number.isFinite(p[0])) p = placeByDistances(corner2, dist3(corner3, q), prev2, dist3(prev3, q), -preferUp);
+    return p;
+  };
+  const right = [];
+  let prev2 = mid2, prev3 = mid;
+  for (const q of rightArc) {
+    const p = placeFan(b1, p1, prev2, prev3, q, 1);
+    if (!p || !Number.isFinite(p[0])) return null;
+    right.push(p);
+    prev2 = p; prev3 = q;
+  }
+  const left = [];
+  prev2 = mid2; prev3 = mid;
+  for (const q of leftArc) {
+    const p = placeFan(b0, p0, prev2, prev3, q, 1);
+    if (!p || !Number.isFinite(p[0])) return null;
+    left.push(p);
+    prev2 = p; prev3 = q;
+  }
+  const pts = [b0, b1, ...right.slice().reverse(), mid2, ...left];
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; area += a[0] * b[1] - b[0] * a[1]; }
+  if (!(area > 1e-6) || selfCross(pts)) return null;
+  return { pts, apex: mid2, seamLength: dist3(p1, rightArc[rightArc.length - 1] || mid) };
+}
+
+function squareToRoundOffset(A, B, D, H, ox, oy) {
+  const R = D / 2, n = segmentsFor(R);
+  const C = [ox, oy, H];
+  const circ = (th) => [C[0] + R * Math.cos(th), C[1] + R * Math.sin(th), H];
+  const corners = [
+    [-A / 2, -B / 2, 0], [A / 2, -B / 2, 0], [A / 2, B / 2, 0], [-A / 2, B / 2, 0],
+  ];
+  // Mid-side angles (south, east, north, west) and the seam halfway to the next mid.
+  const midTh = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+  const sides = [];
+  for (let s = 0; s < 4; s++) {
+    const p0 = corners[s], p1 = corners[(s + 1) % 4];
+    const thMid = midTh[s], thRight = midTh[s] + Math.PI / 4, thLeft = midTh[s] - Math.PI / 4;
+    const mid = circ(thMid);
+    const right = [], left = [];
+    for (let j = 1; j <= n; j++) {
+      right.push(circ(thMid + (j * (thRight - thMid)) / n));
+      left.push(circ(thMid + (j * (thLeft - thMid)) / n));
+    }
+    const d = developSide3(p0, p1, mid, right, left);
+    if (!d) return null;
+    sides.push(d);
+  }
+  return { A: sides[0], A2: sides[2], B: sides[1], B2: sides[3], n, R, offset: true, ox, oy };
+}
+
 // The whole transition: A = width, B = depth (rectangular end), D = round diameter, H = height between the two ends.
-// Returns { A: panel for the Width edges (make 2), B: panel for the Depth edges (make 2) } or null.
-export function squareToRound(A, B, D, H) {
+// ox, oy offset the round end from the rectangle centre (eccentric / offset square-to-round).
+// Concentric (ox = oy = 0): { A: panel for the Width edges (make 2), B: panel for the Depth edges (make 2) }.
+// Offset: four unique panels A, A2, B, B2 and offset: true.
+export function squareToRound(A, B, D, H, ox = 0, oy = 0) {
+  if (Math.abs(ox) > 1e-9 || Math.abs(oy) > 1e-9) return squareToRoundOffset(A, B, D, H, ox, oy);
   const R = D / 2, n = segmentsFor(R);
   const pa = developSide(A / 2, B / 2, R, H, n);     // the edge of length A sits B/2 from the middle
   const pb = developSide(B / 2, A / 2, R, H, n);

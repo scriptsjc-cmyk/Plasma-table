@@ -93,22 +93,64 @@ export function coneSector(d1, d2, h) {
   return { pts: shiftToOrigin(pts), closed: true };
 }
 
-// Two facing cosine waves with a straight band between them (elbow gore / lobster-back segment).
-export function sineGore(d, amp, band = 12, n = 48) {
-  const w = Math.PI * d, A = Math.max(4, amp), gap = Math.max(8, band);
-  // Two facing waves kept apart by `gap`, so they never cross (amp can be large).
+export function shape(id, name, icon, group, aka, tip, params, make, extra = {}) {
+  return { id, name, icon, group, aka, tip, params, make, ...extra };
+}
+
+// True mitre-plane development of a gored (lobster-back) elbow.
+// α = θ / 2(n−1). Wave height of each mitre edge is d·tan(α).
+// End gores have one square (pipe) end; middle gores have two in-phase mitre edges
+// (long at the extrados, short at the throat). CLR is the centreline radius.
+export function mitreHalfAngle(bendRad, pieces) {
+  const n = Math.max(2, Math.round(Number(pieces) || 2));
+  return (Number(bendRad) || 0) / (2 * (n - 1));
+}
+export function goreWaveHeight(d, bendDeg, pieces) {
+  const a = mitreHalfAngle((Number(bendDeg) || 0) * Math.PI / 180, pieces);
+  return Math.abs(d) * Math.tan(a);
+}
+export function mitreGore(d, bendDeg, pieces, clr, kind = "end", samples = 64) {
+  const dia = Number(d) || 0, R = dia / 2;
+  const n = Math.max(2, Math.round(Number(pieces) || 2));
+  const a = mitreHalfAngle((Number(bendDeg) || 0) * Math.PI / 180, n);
+  if (!(R > 0.5) || !(a > 1e-6) || a >= Math.PI / 2 - 1e-3) return null;
+  const tanA = Math.tan(a);
+  const amp = R * tanA;
+  let rad = Number(clr);
+  if (!Number.isFinite(rad) || rad <= 0) rad = 1.5 * dia;
+  if (rad < R + 1) rad = R + 1;
+  const L = rad * tanA;                     // centreline length of an end gore (half of a middle gore)
+  const steps = Math.max(24, Math.min(96, Math.round(samples) || 64));
+  const circ = Math.PI * dia;
   const top = [], bot = [];
-  for (let i = 0; i <= n; i++) {
-    const x = (w * i) / n;
-    const wave = A * (1 + Math.cos((2 * Math.PI * i) / n));
-    top.push([x, gap + wave]);
-    bot.push([x, -wave]);
+  for (let i = 0; i <= steps; i++) {
+    const x = (circ * i) / steps;
+    const c = Math.cos((2 * Math.PI * i) / steps);    // +1 at the extrados (x=0 and x=circ)
+    if (kind === "mid") {
+      // Both edges wavy and in phase: wide at the back, narrow at the throat.
+      bot.push([x, amp * (1 - c)]);
+      top.push([x, 2 * L + amp * (1 + c)]);
+    } else {
+      bot.push([x, 0]);
+      top.push([x, L + amp * c]);
+    }
   }
+  if (top.some((p) => p[1] <= bot[top.indexOf(p)][1] + 0.2)) return null;
   const pts = [...top, ...bot.reverse()];
   if (selfIntersects(pts) || Math.abs(signedArea(pts)) < 1) return null;
   return { pts: shiftToOrigin(pts), closed: true };
 }
-
-export function shape(id, name, icon, group, aka, tip, params, make, extra = {}) {
-  return { id, name, icon, group, aka, tip, params, make, ...extra };
+export function elbowGores(d, bendDeg, pieces, clr) {
+  const n = Math.max(2, Math.min(12, Math.round(Number(pieces) || 2)));
+  const end = mitreGore(d, bendDeg, n, clr, "end");
+  if (!end) return [];
+  const piecesOut = [[end]];
+  if (n >= 3) {
+    const mid = mitreGore(d, bendDeg, n, clr, "mid");
+    if (!mid) return [];
+    for (let i = 0; i < n - 2; i++) piecesOut.push([mid]);
+  }
+  piecesOut.push([end]);
+  return packPieces(piecesOut).contours;
 }
+

@@ -1,5 +1,5 @@
 // Sketch: where a shape really is (base and world outlines, bounding boxes) and which holes belong to which part.
-import { bbox, expandContour, pointInPoly } from "../core/geom.js";
+import { bbox, classifyContainment, classifyLoops, expandContour, pointInPoly } from "../core/geom.js";
 import { contoursToEditable } from "./editable.js";
 import { def, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { makeShape } from "./shapes.js";
@@ -38,7 +38,7 @@ export class GeomMethods {
     if (it.fy) cs = cs.map((c) => flip(c, false));
     if (it.rot) cs = cs.map((c) => mapC(c, (pt) => rot(pt, it.rot)));
     if (!cs.length) return cs;
-    const b = wholeSet(it.type) ? bbox(cs) : bbox([cs[0]]);
+    const b = bbox(cs);
     return cs.map((c) => mapC(c, ([x, y]) => [x - b[0] + it.x, y - b[1] + it.y]));
   }
   reverseBulges(n, closed, bulges) {
@@ -62,7 +62,14 @@ export class GeomMethods {
     }
     return out;
   }
-  holeStart(it) { return wholeSet(it.type) ? Infinity : 1; }
+  holeStart(it) {
+    if (wholeSet(it.type)) return Infinity;
+    if (it.type === "custom" && it.shape && it.shape.cs) {
+      const n = classifyLoops(it.shape.cs).outers.length;
+      return Math.max(1, n);
+    }
+    return 1;
+  }
   contoursOf(it) {
     const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0]);
     if (it._key === key) return it._cs;
@@ -75,7 +82,7 @@ export class GeomMethods {
       if (it.fx) cs = cs.map((c) => { const m = mapC(c, ([x, y]) => [-x, y]); m.pts.reverse(); return m; });
       if (it.fy) cs = cs.map((c) => { const m = mapC(c, ([x, y]) => [x, -y]); m.pts.reverse(); return m; });
       if (it.rot) cs = cs.map((c) => mapC(c, (p) => rot(p, it.rot)));
-      const b = wholeSet(it.type) ? bbox(cs) : bbox([cs[0]]);
+      const b = bbox(cs);
       cs = cs.map((c) => mapC(c, ([x, y]) => [x - b[0] + it.x, y - b[1] + it.y]));
     }
     Object.defineProperty(it, "_cs", { value: cs, writable: true, enumerable: false, configurable: true });
@@ -93,17 +100,21 @@ export class GeomMethods {
     const cs = this.items.filter((i) => !skip.includes(i)).flatMap((i) => this.contoursOf(i));
     return cs.length ? bbox(cs) : null;
   }
-  // parts inside another part's outline are cut as holes
+  // An item is a hole if it is an explicit hole type, or its whole outline sits
+  // in another part's material. A first vertex that merely falls inside (or on)
+  // another outline is not enough — overlapping lobes and corner-sharing L's stay parts.
+  isExplicitHole(it) {
+    const d = def(it.type);
+    return !!(d && (d.hole || d.multi));
+  }
   isHole(it) {
-    if (def(it.type).multi) return true;
-    const c = this.contoursOf(it)[0];
-    if (!c) return false;
-    let n = 0;
-    for (const o of this.items) {
-      if (o === it) continue;
-      for (const oc of this.contoursOf(o)) if (pointInPoly(c.pts[0], oc.pts)) n++;
-    }
-    return n % 2 === 1;
+    if (this.isExplicitHole(it)) return true;
+    return !!this.hostOf(it);
+  }
+  loopsOf(it) {
+    const cs = this.contoursOf(it);
+    if (wholeSet(it.type) || (def(it.type) && def(it.type).sheet)) return { outers: cs, holes: [] };
+    return classifyLoops(cs);
   }
   order() { return [...this.items].sort((a, b) => (this.isHole(a) ? 1 : 0) - (this.isHole(b) ? 1 : 0)); }
   hostOfBox(it, among) {
@@ -111,8 +122,19 @@ export class GeomMethods {
     return among.find((o) => this.contoursOf(o)[0] && pointInPoly(c, this.contoursOf(o)[0].pts)) || null;
   }
   hostOf(it) {
-    const c = this.contoursOf(it)[0]; if (!c) return null;
-    return this.items.find((o) => o !== it && !this.isHole(o) && this.contoursOf(o)[0] && pointInPoly(c.pts[0], this.contoursOf(o)[0].pts));
+    const loops = this.loopsOf(it);
+    const pts = loops.outers[0] && loops.outers[0].pts;
+    if (!pts) return null;
+    let best = null, bestA = Infinity;
+    for (const o of this.items) {
+      if (o === it || this.isExplicitHole(o)) continue;
+      const rel = classifyContainment(pts, this.contoursOf(o));
+      if (rel !== "inside") continue;
+      const b = this.boxOf(o);
+      const a = Math.max(0, (b[2] - b[0]) * (b[3] - b[1]));
+      if (a < bestA) { best = o; bestA = a; }
+    }
+    return best;
   }
   // the part a picked hole (or hole pattern) sits in
   hostPart(it) {

@@ -160,11 +160,11 @@ export class InputMethods {
       if (this.pointers.size > 2) return;
       const touch = e.pointerType === "touch";
       const panBtn = e.button === 1;
+      const [wx, wy] = this.toWorld(sx, sy);
       if (e.button === 2 && !this.spaceDown) {
         this.drag = { kind: "ctx", sx, sy, wx, wy, moved: false };
         return;
       }
-      const [wx, wy] = this.toWorld(sx, sy);
       if (this.centrePick && !panBtn) {
         const eh = this.hitCentreEdge ? this.hitCentreEdge(sx, sy, touch) : this.hit(sx, sy, touch);
         if (this.takeCentreEdge && this.takeCentreEdge(eh)) { this.draw(); return; }
@@ -174,11 +174,13 @@ export class InputMethods {
         if (ch && ch.kind === "vertex") {
           this.pick([ch.it.id]);
           this.edgeSel = { id: ch.it.id, ci: ch.ci, ei: ch.vi, vi: ch.vi };
-          const relief = this.filletPick.mode === "relief";
-          const ok = relief
+          const mode = this.filletPick.mode;
+          const ok = mode === "relief"
             ? this._reliefCornerAt(ch.it, ch.ci, ch.vi, this.filletPick.radius)
-            : this._filletCornerAt(ch.it, ch.ci, ch.vi, this.filletPick.radius);
-          if (ok) this.onMessage(relief ? "Relief cut added. Click another inside corner, or press Done." : "Corner rounded. Click another, or press Done.");
+            : mode === "chamfer"
+              ? this._chamferCornerAt(ch.it, ch.ci, ch.vi, this.filletPick.radius, this.filletPick.angle || 45)
+              : this._filletCornerAt(ch.it, ch.ci, ch.vi, this.filletPick.radius);
+          if (ok) this.onMessage(mode === "relief" ? "Relief cut added. Click another inside corner, or press Done." : mode === "chamfer" ? "Corner chamfered. Click another, or press Done." : "Corner rounded. Click another, or press Done.");
           this.draw(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
           return;
         }

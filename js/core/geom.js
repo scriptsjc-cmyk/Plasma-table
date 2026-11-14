@@ -177,8 +177,8 @@ function ghUnion(A, B) {
     }
   }
   if (!count) {
-    if (pointInPoly(A[0], B)) return { loops: [B] };
-    if (pointInPoly(B[0], A)) return { loops: [A] };
+    if (classifyContainment(A, [{ pts: B }]) === "inside") return { loops: [B] };
+    if (classifyContainment(B, [{ pts: A }]) === "inside") return { loops: [A] };
     return null;
   }
   const mark = (start, other) => {
@@ -229,8 +229,8 @@ export function unionOutlines(list) {
 export function differenceOutlines(A, B) {
   A = ccw(cleanPts(A, true)); B = ccw(cleanPts(B, true));
   if (A.length < 3 || B.length < 3) return null;
-  const aInB = pointInPoly(A[0], B) && pointInPoly(A[Math.floor(A.length / 2)], B);
-  const bInA = pointInPoly(B[0], A) && pointInPoly(B[Math.floor(B.length / 2)], A);
+  const aInB = classifyContainment(A, [{ pts: B }]) === "inside";
+  const bInA = classifyContainment(B, [{ pts: A }]) === "inside";
   const r = ghUnion(A, B);
   if (!r) {
     if (bInA && !aInB) return { outer: A, holes: [signedArea(B) > 0 ? [...B].reverse() : B] };
@@ -426,3 +426,137 @@ export function splitBulge(p, q, bulge, near) {
   const t1 = f * A.theta, t2 = (1 - f) * A.theta;
   return { mid, b1: Math.tan(t1 / 4), b2: Math.tan(t2 / 4) };
 }
+
+// ---- containment / boolean helpers (shared by Join, holes, and cut-contour filtering) ----
+const ON_EPS = 1e-6;
+
+export function pointOnSeg(pt, a, b, eps = ON_EPS) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy;
+  if (l2 < eps * eps) return Math.hypot(pt[0] - a[0], pt[1] - a[1]) <= eps;
+  let t = ((pt[0] - a[0]) * dx + (pt[1] - a[1]) * dy) / l2;
+  if (t < -1e-12 || t > 1 + 1e-12) return false;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(pt[0] - (a[0] + t * dx), pt[1] - (a[1] + t * dy)) <= eps;
+}
+
+export function pointOnPolyBoundary(pt, pts, eps = ON_EPS) {
+  if (!pts || pts.length < 2) return false;
+  for (let i = 0; i < pts.length; i++) if (pointOnSeg(pt, pts[i], pts[(i + 1) % pts.length], eps)) return true;
+  return false;
+}
+
+// Even-odd winding through a list of loops (outers and holes). A point on a boundary is not “in”.
+export function inMaterial(pt, contours) {
+  if (!contours || !contours.length) return false;
+  let n = 0;
+  for (const c of contours) {
+    const pts = c.pts || c;
+    if (pts && pts.length >= 3 && pointInPoly(pt, pts)) n++;
+  }
+  return n % 2 === 1;
+}
+
+export function onAnyBoundary(pt, contours, eps = ON_EPS) {
+  if (!contours) return false;
+  for (const c of contours) if (pointOnPolyBoundary(pt, c.pts || c, eps)) return true;
+  return false;
+}
+
+// How polygon `pts` sits against a host made of loops (outer + holes).
+// "inside" = fully in the host material (vertices may sit on the outline).
+// "outside" = no interior overlap (a shared corner or edge is still outside).
+// "overlap" = crosses the outline or has points both in and out of the material.
+export function classifyContainment(pts, hostCs, eps = 0.05) {
+  if (!pts || pts.length < 3 || !hostCs || !hostCs.length) return "outside";
+  for (const h of hostCs) {
+    const hp = h.pts || h;
+    if (hp && hp.length >= 3 && polysCross(pts, hp)) return "overlap";
+  }
+  let inC = 0, outC = 0;
+  const consider = (p) => {
+    if (onAnyBoundary(p, hostCs, eps)) return;
+    if (inMaterial(p, hostCs)) inC++; else outC++;
+  };
+  for (let i = 0; i < pts.length; i++) {
+    consider(pts[i]);
+    const q = pts[(i + 1) % pts.length];
+    consider([(pts[i][0] + q[0]) / 2, (pts[i][1] + q[1]) / 2]);
+  }
+  if (inC > 0 && outC > 0) return "overlap";
+  if (inC > 0) return "inside";
+  return "outside";
+}
+
+// Split a part's loops into outers and holes by nesting (not “first loop is the outer”).
+export function classifyLoops(contours) {
+  const list = (contours || []).filter((c) => ((c && c.pts) || c || []).length >= 3);
+  const outers = [], holes = [];
+  for (let i = 0; i < list.length; i++) {
+    const pts = list[i].pts || list[i];
+    let n = 0;
+    for (let j = 0; j < list.length; j++) {
+      if (i === j) continue;
+      if (classifyContainment(pts, [list[j]]) === "inside") n++;
+    }
+    if (n % 2 === 1) holes.push(list[i]);
+    else outers.push(list[i]);
+  }
+  return { outers, holes };
+}
+
+// True if two outlines share a stretch of edge (not just a vertex) long enough to weld.
+export function shareEdge(A, B, minLen = 0.5) {
+  const edges = (pts) => pts.map((p, i) => [p, pts[(i + 1) % pts.length]]);
+  const on = (p, a, b) => pointOnSeg(p, a, b, 0.05);
+  const len = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+  for (const [a1, a2] of edges(A)) {
+    if (len(a1, a2) < minLen) continue;
+    for (const [b1, b2] of edges(B)) {
+      if (len(b1, b2) < minLen) continue;
+      // colinear-ish overlap: both ends of the shorter projection sit on the other
+      const hits = [on(b1, a1, a2), on(b2, a1, a2), on(a1, b1, b2), on(a2, b1, b2)];
+      if (hits.filter(Boolean).length < 2) continue;
+      // length of the overlapping span
+      const ux = a2[0] - a1[0], uy = a2[1] - a1[1], L = Math.hypot(ux, uy) || 1;
+      const ts = [a1, a2, b1, b2].map((p) => ((p[0] - a1[0]) * ux + (p[1] - a1[1]) * uy) / (L * L));
+      const lo = Math.max(Math.min(ts[0], ts[1]), Math.min(ts[2], ts[3]));
+      const hi = Math.min(Math.max(ts[0], ts[1]), Math.max(ts[2], ts[3]));
+      if ((hi - lo) * L >= minLen) return true;
+    }
+  }
+  return false;
+}
+
+function canWeld(A, B) {
+  const rel = classifyContainment(A, [{ pts: B }]);
+  if (rel === "overlap" || rel === "inside") return true;
+  return shareEdge(A, B, 0.5);
+}
+
+// Union every outline that overlaps or shares an edge; a shared corner is not enough.
+// Disjoint outlines stay as separate outers.
+export function unionMany(outers) {
+  let remaining = (outers || []).map((o) => (o && o.pts) || o).filter((p) => p && p.length >= 3);
+  const resultOuters = [], resultHoles = [];
+  while (remaining.length) {
+    let cur = remaining.shift();
+    let progressed = true;
+    while (progressed) {
+      progressed = false;
+      const next = [];
+      for (const b of remaining) {
+        if (!canWeld(cur, b)) { next.push(b); continue; }
+        const r = unionOutlines([cur, b]);
+        if (r) {
+          cur = r.outer;
+          if (r.holes && r.holes.length) resultHoles.push(...r.holes);
+          progressed = true;
+        } else next.push(b);
+      }
+      remaining = next;
+    }
+    resultOuters.push(cur);
+  }
+  return { outers: resultOuters, holes: resultHoles };
+}
+

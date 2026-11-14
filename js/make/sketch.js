@@ -7,6 +7,7 @@
 // The layout is kept in the browser so it's still there after a reload. Everything is undoable.
 import { KEY, KEY_OPTS, MAX_BULGE, MIN, clone, def, mixin, r1 } from "./sketch-util.js";
 import { GeomMethods } from "./sketch-geom.js";
+import { classifyContainment } from "../core/geom.js";
 import { EditMethods } from "./sketch-edit.js";
 import { ViewMethods } from "./sketch-view.js";
 import { EdgeMethods } from "./sketch-edge.js";
@@ -219,7 +220,22 @@ export class Sketch {
   setHeight(v) { const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v) || v < MIN || v > this.maxMm) { if (this.canMutate(it) && Number.isFinite(v)) this.onMessage("Size must be between 2 mm and the table limit."); return; } const b = this.boxOf(it); this.remember(); this.resizeTo(it, b[2] - b[0], v); this.commit(); this.onSelect(); }
   setDiameter(v) { const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v) || v < MIN || v > this.maxMm) { if (this.canMutate(it) && Number.isFinite(v)) this.onMessage("Size must be between 2 mm and the table limit."); return; } this.remember(); this.resizeTo(it, v, v); this.commit(); this.onSelect(); }
   canResize(it) { return it && !this.layout && !it.lock && (it.rot || 0) % 90 === 0 && !(def(it.type) && def(it.type).noResize) && !!(def(it.type).fit || it.type === "custom"); }
-  contours() { return this.items.filter((i) => !this.layerHidden(i)).flatMap((i) => this.contoursOf(i)); }
+  contours() {
+    const items = this.items.filter((i) => !this.layerHidden(i));
+    const hosts = items.filter((i) => !this.isExplicitHole(i) && !this.isHole(i));
+    const out = [];
+    for (const it of items) {
+      const cs = this.contoursOf(it);
+      if (!(this.isExplicitHole(it) || this.isHole(it))) { out.push(...cs); continue; }
+      // A hole on a plate that falls off the material is omitted (it must not be cut as a small part).
+      // If there is no plate, the hole is the only outline, so it is kept.
+      if (!hosts.length) { out.push(...cs); continue; }
+      for (const c of cs) {
+        if (hosts.some((h) => classifyContainment(c.pts, this.contoursOf(h)) === "inside")) out.push(c);
+      }
+    }
+    return out;
+  }
   // layers = the operation label of a shape (cut / score / mark). A hidden layer is neither drawn nor cut.
   layerHidden(it) { return !!(it && (it.hide || (this.hiddenLayers && this.hiddenLayers.has(it.op || "cut")))); }
   // how many separate parts are on the bed (holes don't count): the app sets partCounter so every screen uses the one count

@@ -253,12 +253,15 @@ export class EdgeMethods {
     if (dirty) { this.remember(); this.tidyCustom(it); this._renorm(it); this.commit(); this.onSelect(); }
     return true;
   }
-  startFilletPick(size, mode) {
+  startFilletPick(size, mode, angle) {
     const r = Number(size);
-    const kind = mode === "relief" ? "relief" : "round";
-    if (!(r > 0)) { this.onMessage(kind === "relief" ? "Enter a diameter." : "Enter a radius."); return false; }
+    const kind = mode === "relief" ? "relief" : mode === "chamfer" ? "chamfer" : "round";
+    if (!(r > 0)) {
+      this.onMessage(kind === "relief" ? "Enter a diameter." : kind === "chamfer" ? "Enter a distance." : "Enter a radius.");
+      return false;
+    }
     if (!this.prepareFillet()) return false;
-    this.filletPick = { radius: r, mode: kind };
+    this.filletPick = { radius: r, mode: kind, angle: Number(angle) > 0 ? Number(angle) : 45 };
     this.filletHover = null;
     this.draw();
     this.onSelect();
@@ -474,6 +477,100 @@ export class EdgeMethods {
     if (!n && skipped) this.onMessage("That circle is too big for the inside corners, or they already have a relief.");
     else if (!n) this.onMessage("This part has no sharp inside corners for a relief cut.");
     else if (skipped) this.onMessage(n + " inside corner" + (n === 1 ? "" : "s") + " relieved. " + skipped + " could not use that diameter.");
+    return n;
+  }
+  // Sharp corners of a closed outline (straight edges, not already filleted), inside or outside.
+  sharpCornerIndices(c) {
+    const pts = c && c.pts || [];
+    const n = pts.length, out = [];
+    if (n < 3) return out;
+    const bs = c.bulges || [];
+    for (let i = 0; i < n; i++) {
+      if (Math.abs(Number(bs[(i - 1 + n) % n]) || 0) > 1e-6 || Math.abs(Number(bs[i]) || 0) > 1e-6) continue;
+      const A = pts[(i - 1 + n) % n], P = pts[i], Q = pts[(i + 1) % n];
+      const l1 = Math.hypot(A[0] - P[0], A[1] - P[1]), l2 = Math.hypot(Q[0] - P[0], Q[1] - P[1]);
+      if (l1 < 0.05 || l2 < 0.05) continue;
+      const v1 = [A[0] - P[0], A[1] - P[1]], v2 = [Q[0] - P[0], Q[1] - P[1]];
+      const ang = Math.acos(Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2))));
+      if (!(ang > 1e-3) || ang > Math.PI - 1e-3) continue;
+      out.push(i);
+    }
+    return out;
+  }
+  chamferCorner(dist, angle, vi) {
+    const d = Number(dist);
+    if (!(d > 0)) { this.onMessage("Enter a distance."); return false; }
+    const info = this.edgeInfo();
+    if (!info) { this.onMessage("Click the corner you want to chamfer, then Chamfer."); return false; }
+    const v = vi != null ? vi : info.vi;
+    if (v == null) { this.onMessage("Click the corner you want to chamfer, then Chamfer."); return false; }
+    return this._chamferCornerAt(info.it, info.ci, v, d, Number(angle) > 0 ? Number(angle) : 45);
+  }
+  _chamferCornerAt(it, ci, vi, dist, angleDeg, quiet) {
+    const d1 = Number(dist);
+    const phi = (Number(angleDeg) > 0 ? Number(angleDeg) : 45) * Math.PI / 180;
+    if (!(d1 > 0)) { if (!quiet) this.onMessage("Enter a distance."); return false; }
+    return this._guarded(it, () => {
+      const c = it.shape.cs[ci], pts = c.pts, n = pts.length;
+      if (n < 3 || vi == null || vi < 0 || vi >= n) return false;
+      const A = pts[(vi - 1 + n) % n], P = pts[vi], Q = pts[(vi + 1) % n];
+      const bs = c.bulges || [];
+      if (Math.abs(Number(bs[(vi - 1 + n) % n]) || 0) > 1e-6 || Math.abs(Number(bs[vi]) || 0) > 1e-6) {
+        if (!quiet) this.onMessage("Chamfer needs two straight edges at the corner. Flatten a curve first, or pick another corner.");
+        return false;
+      }
+      const v1 = [A[0] - P[0], A[1] - P[1]], v2 = [Q[0] - P[0], Q[1] - P[1]];
+      const l1 = Math.hypot(v1[0], v1[1]), l2 = Math.hypot(v2[0], v2[1]);
+      if (l1 < 0.05 || l2 < 0.05) {
+        if (!quiet) this.onMessage("That corner is too tight to chamfer (the sides are too short).");
+        return false;
+      }
+      const i1 = [v1[0] / l1, v1[1] / l1], i2 = [v2[0] / l2, v2[1] / l2];
+      const ang = Math.acos(Math.max(-1, Math.min(1, i1[0] * i2[0] + i1[1] * i2[1])));
+      if (!(ang > 1e-3) || ang > Math.PI - 1e-3) {
+        if (!quiet) this.onMessage("That corner is too flat or too sharp to chamfer.");
+        return false;
+      }
+      const den = Math.sin(Math.PI - ang - phi);
+      if (!(phi > 1e-3) || !(den > 1e-6)) {
+        if (!quiet) this.onMessage("That angle is too sharp for this corner. Use a smaller angle.");
+        return false;
+      }
+      const d2 = d1 * Math.sin(phi) / den;
+      if (!(d2 > 0.05) || d1 > l1 - 0.05 || d2 > l2 - 0.05) {
+        const maxD = r1(Math.min(l1 - 0.05, (l2 - 0.05) * den / Math.sin(phi)));
+        if (!quiet) this.onMessage("That distance is too big for this corner. Use " + Math.max(0.1, maxD).toFixed(1) + " mm or less.");
+        return false;
+      }
+      const T1 = [P[0] + i1[0] * d1, P[1] + i1[1] * d1], T2 = [P[0] + i2[0] * d2, P[1] + i2[1] * d2];
+      c.pts[vi] = [r1(T1[0]), r1(T1[1])];
+      c.pts.splice(vi + 1, 0, [r1(T2[0]), r1(T2[1])]);
+      c.bulges = (c.bulges || []).slice();
+      while (c.bulges.length < n) c.bulges.push(0);
+      c.bulges.splice(vi + 1, 0, Number(c.bulges[vi]) || 0);
+      c.bulges[vi] = 0;
+      this.edgeSel = { id: it.id, ci, ei: vi, vi: null };
+    });
+  }
+  chamferCorners(dist, angle, it) {
+    const d = Number(dist);
+    if (!(d > 0)) { this.onMessage("Enter a distance."); return 0; }
+    const ang = Number(angle) > 0 ? Number(angle) : 45;
+    const host = it || this.selected();
+    if (!this.prepareFillet()) return 0;
+    const part = host && this.item(host.id) || this.selected();
+    if (!this.isEditableCustom(part)) return 0;
+    let n = 0, skipped = 0;
+    for (let ci = 0; ci < part.shape.cs.length; ci++) {
+      const idxs = this.sharpCornerIndices(part.shape.cs[ci]).sort((a, b) => b - a);
+      for (const vi of idxs) {
+        if (this._chamferCornerAt(part, ci, vi, d, ang, true)) n++;
+        else skipped++;
+      }
+    }
+    if (!n && skipped) this.onMessage("That distance is too big for the corners, or they are already chamfered.");
+    else if (!n) this.onMessage("This part has no sharp corners to chamfer.");
+    else if (skipped) this.onMessage(n + " corner" + (n === 1 ? "" : "s") + " chamfered. " + skipped + " could not use that distance.");
     return n;
   }
   straightenEdge() {

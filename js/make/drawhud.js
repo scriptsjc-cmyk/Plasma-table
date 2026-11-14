@@ -31,6 +31,15 @@ function lastPt() {
   return pts.length ? pts[pts.length - 1] : null;
 }
 
+
+export function toggleDrawArc() {
+  if (!sketch || sketch.tool !== "draw") return false;
+  sketch.drawArc = !sketch.drawArc;
+  sketch.onMessage(sketch.drawArc ? "Next segment will be a curve. Press A or Arc again for a straight line." : "Next segment will be a straight line.");
+  paintDrawHud();
+  return sketch.drawArc;
+}
+
 export function applyHudPoint() {
   if (!sketch || !hudOpen()) return false;
   const tool = sketch.tool;
@@ -104,9 +113,13 @@ export function paintDrawHud() {
     const draft = sketch.drawDraft;
     const len = draft && draft.len != null ? draft.len : "";
     const ang = draft && draft.ang != null ? draft.ang : 0;
+    const arcOn = !!(sketch.drawArc);
     el.innerHTML = `<span class="drawhud-lab">Length</span><input id="drawHudLen" type="text" inputmode="decimal" value="${len}" aria-label="Length in millimetres">
       <span class="drawhud-lab">Angle</span><input id="drawHudAng" type="text" inputmode="decimal" value="${ang}" aria-label="Angle in degrees">
-      <span class="muted small">Enter adds a point, or closes if the box is empty · Esc cancels</span>`;
+      <button type="button" id="drawHudAdd" class="small">Add point</button>
+      <button type="button" id="drawHudArc" class="small${arcOn ? " on" : ""}" aria-pressed="${arcOn ? "true" : "false"}">${arcOn ? "Arc on" : "Arc"}</button>
+      <button type="button" id="drawHudClose" class="small go">Close</button>
+      <span class="muted small">Enter or Close finishes the outline · A or Arc starts a curve · type a length and click Add for the next point · Esc cancels</span>`;
     el.classList.remove("hidden"); el.hidden = false;
     fields = ["drawHudLen", "drawHudAng"];
   } else if (tool === "rect" && sketch.drawDraft) {
@@ -136,6 +149,14 @@ function bindHudInputs() {
     el.addEventListener("keydown", onHudKey);
     el.addEventListener("input", onHudInput);
   }
+  const add = $("drawHudAdd");
+  if (add) add.addEventListener("click", () => applyHudPoint());
+  const arc = $("drawHudArc");
+  if (arc) arc.addEventListener("click", () => toggleDrawArc());
+  const close = $("drawHudClose");
+  if (close) close.addEventListener("click", () => {
+    if (sketch && sketch.drawPts && sketch.drawPts.length >= 3) { sketch.finishDraw(); closeDrawHud(); }
+  });
 }
 
 function onHudInput() {
@@ -156,10 +177,15 @@ function onHudInput() {
 }
 
 function onHudKey(e) {
+  if ((e.key === "a" || e.key === "A") && !(e.ctrlKey || e.metaKey) && sketch && sketch.tool === "draw") {
+    e.preventDefault(); e.stopPropagation();
+    toggleDrawArc();
+    return;
+  }
   if (e.key === "Enter") {
     e.preventDefault(); e.stopPropagation();
-    // Empty length box + at least 3 points: close the outline (item 17). A typed length still adds a point.
-    if (sketch && sketch.tool === "draw" && sketch.drawPts && sketch.drawPts.length >= 3 && !(num($("drawHudLen"), 0) >= 0.5)) {
+    // Enter always finishes a started outline (3+ points), even if a length is in the box.
+    if (sketch && sketch.tool === "draw" && sketch.drawPts && sketch.drawPts.length >= 3) {
       sketch.finishDraw(); closeDrawHud(); return;
     }
     applyHudPoint(); return;
@@ -198,7 +224,7 @@ export function afterDrawPoint() {
   const a = lastPt(); if (!a) return;
   sketch.drawDraft = { kind: "line", len: 40, ang: 0, x: a[0] + 40, y: a[1] };
   paintDrawHud();
-  focusHud("drawHudLen");
+  // Do not steal focus: A and Enter must stay as drawing keys, and the phone keyboard would cover the canvas.
 }
 
 export function bindDrawHud() {

@@ -1,6 +1,6 @@
 // Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...).
 import { MIN, cleanContour, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
-import { bbox, bulgeMidpoint, differenceOutlines, offsetPolygon, pointInPoly, selfIntersects, signedArea, unionOutlines } from "../core/geom.js";
+import { bbox, bulgeMidpoint, classifyContainment, differenceOutlines, offsetPolygon, pointInPoly, selfIntersects, signedArea, unionMany, unionOutlines } from "../core/geom.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
 
@@ -81,35 +81,79 @@ export class EditMethods {
   join() {
     const list = this.picked();
     if (list.length < 2) { this.onMessage("Pick two or more shapes to join (Shift-click, or drag a box round them)."); return; }
-    const parts = list.filter((it) => !this.isHole(it) && !def(it.type).hole);
-    const holeItems = list.filter((it) => !parts.includes(it));
-    if (!parts.length) { this.onMessage("Those are all holes – pick the part they sit on too."); return; }
-    const outers = parts.map((it) => this.contoursOf(it)[0].pts);
-    const u = parts.length > 1 ? unionOutlines(outers) : { outer: outers[0], holes: [] };
-    if (!u) { this.onMessage("Those shapes don't touch – move them so they overlap or touch, then join."); return; }
-    // holes: gaps closed in by the join, holes on the parts (unless another part covers them),
-    // and hole shapes sitting on the parts (picked or not)
-    const onParts = this.items.filter((o) => !list.includes(o) && this.isHole(o) && parts.includes(this.hostOf(o) || (def(o.type).multi ? this.hostOfBox(o, parts) : null)));
-    const swallowed = [...holeItems, ...onParts];
-    const holes = u.holes.map((pts) => ({ pts, closed: true }));
-    for (const p of parts) for (const h of this.contoursOf(p).slice(1)) {
-      if (parts.some((q) => q !== p && pointInPoly(h.pts[0], this.contoursOf(q)[0].pts))) continue;
-      holes.push(h);
+    const explicit = (it) => this.isExplicitHole(it) || !!(def(it.type) && def(it.type).hole);
+    const solids = list.filter((it) => !explicit(it) && !this.hostOf(it));
+    const holeItems = list.filter((it) => !solids.includes(it));
+    // A shape that overlaps both a part and a hole (a keyway) is treated as a hole to merge, not as material.
+    const keyways = [];
+    const parts = [];
+    for (const it of solids) {
+      const loops = this.loopsOf(it);
+      const pts = loops.outers[0] && loops.outers[0].pts;
+      let key = false;
+      if (pts) {
+        for (const p of [...solids, ...this.items.filter((o) => !list.includes(o) && !explicit(o) && !this.hostOf(o))]) {
+          if (p === it) continue;
+          const rel = classifyContainment(pts, this.loopsOf(p).outers);
+          if (rel !== "overlap") continue;
+          const holes = [...this.loopsOf(p).holes, ...this.items.filter((h) => h !== it && (explicit(h) || this.hostOf(h) === p)).flatMap((h) => this.contoursOf(h))];
+          if (holes.some((h) => classifyContainment(pts, [h]) !== "outside")) { key = true; break; }
+        }
+      }
+      if (key) keyways.push(it);
+      else parts.push(it);
     }
-    const sits = (hi) => this.contoursOf(hi).every((c) => pointInPoly(c.pts[0], u.outer));
-    const swallowedIn = swallowed.filter(sits);
-    for (const hi of swallowedIn) holes.push(...this.contoursOf(hi));
-    const kept = holes.filter((h) => pointInPoly(h.pts[0], u.outer));
-    const b = bbox([{ pts: u.outer }]);
+    if (!parts.length) { this.onMessage("Those are all holes – pick the part they sit on too."); return; }
+    const outers = [];
+    const ownHoles = [];
+    for (const p of parts) {
+      const L = this.loopsOf(p);
+      outers.push(...L.outers);
+      ownHoles.push(...L.holes);
+    }
+    const u = unionMany(outers);
+    if (!u.outers.length) { this.onMessage("Those shapes don't touch – move them so they overlap or touch, then join."); return; }
+    if (parts.length > 1 && u.outers.length === outers.length) {
+      // nothing actually fused (each outer stayed disjoint) — only refuse if they were supposed to become one body
+      const anyFused = u.outers.length < outers.length;
+      if (!anyFused && outers.length > 1 && parts.every((p) => this.loopsOf(p).outers.length <= 1)) {
+        this.onMessage("Those shapes don't touch – move them so they overlap or touch, then join.");
+        return;
+      }
+    }
+    const onParts = this.items.filter((o) => !list.includes(o) && (explicit(o) || this.isHole(o)) && parts.includes(this.hostOf(o) || (def(o.type).multi ? this.hostOfBox(o, parts) : null)));
+    const holePts = [];
+    for (const src of [...ownHoles, ...u.holes.map((pts) => ({ pts, closed: true }))]) holePts.push(src);
+    const swallowed = [...holeItems, ...keyways, ...onParts];
+    const sitsIn = (c, hostOuters) => hostOuters.some((o) => classifyContainment(c.pts, [o]) === "inside");
+    const swallowedIn = swallowed.filter((hi) => this.contoursOf(hi).every((c) => sitsIn(c, u.outers)));
+    const stray = swallowed.filter((hi) => !swallowedIn.includes(hi) && (explicit(hi) || this.isHole(hi)));
+    for (const hi of swallowedIn) holePts.push(...this.contoursOf(hi));
+    // Overlapping holes merge into one opening (they must not cancel into a cuttable part).
+    const mergedHoles = unionMany(holePts.map((h) => h.pts || h));
+    let holeWarn = false;
+    if (holePts.length >= 2 && mergedHoles.outers.length < holePts.length) holeWarn = true;
+    const kept = [];
+    for (const h of [...mergedHoles.outers, ...mergedHoles.holes]) {
+      const c = { pts: h.pts || h, closed: true };
+      if (sitsIn(c, u.outers)) kept.push(c);
+    }
+    const allLoops = [...u.outers.map((pts) => ({ pts, closed: true })), ...kept];
+    const b = bbox(allLoops);
     const local = (c) => cleanContour(mapC(c, ([x, y]) => [r1(x - b[0] + 1e-9), r1(y - b[1] + 1e-9)]));
     this.remember();
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
-      shape: { cs: [local({ pts: u.outer, closed: true }), ...kept.map(local)] } };
-    this.items = this.items.filter((i) => (!list.includes(i) || (holeItems.includes(i) && !swallowedIn.includes(i))) && !swallowedIn.includes(i));
+      shape: { cs: allLoops.map(local) } };
+    const drop = new Set([...list.filter((i) => !stray.includes(i) || swallowedIn.includes(i)), ...swallowedIn]);
+    this.items = this.items.filter((i) => !drop.has(i));
     this.items.push(it);
     this.pick([it.id]);
     this.commit(); this.onSelect();
-    this.onMessage(`Joined into one part${kept.length ? ` with ${kept.length} hole${kept.length > 1 ? "s" : ""}` : ""}. Copy it, resize it or turn it as one.`);
+    const notes = [];
+    notes.push(`Joined into one part${kept.length ? ` with ${kept.length} hole${kept.length > 1 ? "s" : ""}` : ""}.`);
+    if (holeWarn) notes.push("Overlapping holes were merged into one opening.");
+    if (stray.length) notes.push(stray.length === 1 ? "One hole sits off the part, so it was left out." : stray.length + " holes sit off the part, so they were left out.");
+    this.onMessage(notes.join(" "));
   }
   // switch the selected part to a related version, keeping its size and place
   applyVariant(spec) {
@@ -309,7 +353,9 @@ export class EditMethods {
     if (!Number.isFinite(gapX)) gapX = 10; if (!Number.isFinite(gapY)) gapY = 0;
     if (Math.abs(gapX) > this.maxMm || Math.abs(gapY) > this.maxMm) { this.onMessage("That array gap is bigger than the table."); return; }
     const box = this.pickedBox();
-    const dx = (box[2] - box[0]) + gapX, dy = (box[3] - box[1]) + gapY;
+    // Gap 0 means no step on that axis (a row or a column). A non-zero gap is the clearance between bounding boxes.
+    const dx = gapX === 0 ? 0 : (box[2] - box[0]) + gapX;
+    const dy = gapY === 0 ? 0 : (box[3] - box[1]) + gapY;
     if (Math.abs((n - 1) * dx) > this.maxMm || Math.abs((n - 1) * dy) > this.maxMm) { this.onMessage("That array wouldn't fit on the table."); return; }
     this.remember();
     const ids = [...this.sel.ids];
@@ -379,10 +425,9 @@ export class EditMethods {
   }
   subtract() {
     const list = this.picked();
-    if (list.length < 2) { this.onMessage("Pick the part, then the shape to cut out of it (Shift-click)."); return; }
-    const area = (it) => { const b = this.boxOf(it); return (b[2] - b[0]) * (b[3] - b[1]); };
-    const parts = [...list].sort((a, b) => area(b) - area(a));
-    const host = parts[0], cutters = parts.slice(1);
+    if (list.length < 2) { this.onMessage("Pick the part first, then Shift-click each shape to cut out of it."); return; }
+    // First-picked shape is the host (Fusion-style target body); later picks are cutters.
+    const host = list[0], cutters = list.slice(1);
     const outer = this.contoursOf(host)[0]; if (!outer) return;
     this.remember();
     let cur = { outer: outer.pts, holes: this.contoursOf(host).slice(1).map((h) => h.pts) };
@@ -415,24 +460,68 @@ export class EditMethods {
     this.remember();
     const boxes = parts.map((it) => {
       const b = this.boxOf(it);
-      return { it, w: b[2] - b[0], h: b[3] - b[1], hostHoles: holes.filter((h) => this.hostOf(h) === it || this.hostOfBox(h, [it])) };
+      return { it, w: b[2] - b[0], h: b[3] - b[1], hostHoles: holes.filter((h) => (this.hostPart(h) || this.hostOf(h)) === it) };
     }).sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
+    const origin = new Map();
+    for (const p of boxes) {
+      origin.set(p.it.id, { x: p.it.x, y: p.it.y, rot: p.it.rot || 0, holes: p.hostHoles.map((h) => ({ h, x: h.x, y: h.y })) });
+    }
     let x = 0, y = 0, rowH = 0, usedW = 0, usedH = 0;
     const maxW = sheetW > 0 ? sheetW : Infinity;
+    const maxH = sheetH > 0 ? sheetH : Infinity;
+    const placed = [];
+    const leftover = [];
+    const overlapBox = (a, b) => a[0] < b[2] - 0.05 && b[0] < a[2] - 0.05 && a[1] < b[3] - 0.05 && b[1] < a[3] - 0.05;
+    const fits = (px, py, w, h) =>
+      px >= -0.05 && py >= -0.05 && px + w <= maxW + 0.05 && py + h <= maxH + 0.05
+      && !placed.some((q) => overlapBox([px, py, px + w, py + h], q));
     for (const p of boxes) {
       let w = p.w, h = p.h, rot90 = false;
       if (sheetW > 0 && w > maxW && h <= maxW) { rot90 = true; [w, h] = [h, w]; }
-      if (x > 0 && x + w > maxW) { x = 0; y += rowH + gap; rowH = 0; }
+      if (x > 0 && x + w > maxW + 0.05) { x = 0; y += rowH + gap; rowH = 0; }
+      if (!fits(x, y, w, h)) {
+        // try the start of a new row, then give up and leave this part where it was
+        if (x > 0) { x = 0; y += rowH + gap; rowH = 0; }
+        if (!fits(x, y, w, h)) { leftover.push(p); continue; }
+      }
       if (rot90) p.it.rot = (((p.it.rot || 0) + 90) % 360);
       const nb = this.boxOf(p.it);
       const dx = x - nb[0], dy = y - nb[1];
       p.it.x = r1(p.it.x + dx); p.it.y = r1(p.it.y + dy);
-      for (const h of p.hostHoles) { h.x = r1(h.x + dx); h.y = r1(h.y + dy); }
-      x += w + gap; rowH = Math.max(rowH, h); usedW = Math.max(usedW, x - gap); usedH = Math.max(usedH, y + h);
+      for (const ho of p.hostHoles) { ho.x = r1(ho.x + dx); ho.y = r1(ho.y + dy); }
+      const placedBox = this.boxOf(p.it);
+      // If rotation or an odd outline didn't land on the planned cell, snap the recorded box and reject on overlap/overflow.
+      if (placedBox[0] < -0.05 || placedBox[1] < -0.05 || placedBox[2] > maxW + 0.05 || placedBox[3] > maxH + 0.05
+          || placed.some((q) => overlapBox(placedBox, q))) {
+        const o = origin.get(p.it.id);
+        if (o) {
+          p.it.x = o.x; p.it.y = o.y; p.it.rot = o.rot;
+          for (const rec of o.holes) { rec.h.x = rec.x; rec.h.y = rec.y; }
+        }
+        leftover.push(p);
+        continue;
+      }
+      placed.push(placedBox);
+      x = placedBox[2] + gap; rowH = Math.max(rowH, placedBox[3] - placedBox[1]); usedW = Math.max(usedW, placedBox[2]); usedH = Math.max(usedH, placedBox[3]);
+    }
+    // Park parts that would not fit just to the right of the sheet (or the packed block),
+    // so they stay visible, do not overlap the nest, and the toast can tell the truth.
+    let parkX = (sheetW > 0 ? sheetW : usedW) + Math.max(gap, 20), parkY = 0, parkH = 0;
+    for (const p of leftover) {
+      const o = origin.get(p.it.id);
+      if (o) { p.it.rot = o.rot; for (const rec of o.holes) { rec.h.x = rec.x; rec.h.y = rec.y; } }
+      const pb = this.boxOf(p.it), w = pb[2] - pb[0], h = pb[3] - pb[1];
+      const dx = parkX - pb[0], dy = parkY - pb[1];
+      p.it.x = r1(p.it.x + dx); p.it.y = r1(p.it.y + dy);
+      for (const ho of p.hostHoles) { ho.x = r1(ho.x + dx); ho.y = r1(ho.y + dy); }
+      parkY += h + gap; parkH = Math.max(parkH, parkY);
     }
     this.commit(); this.onSelect();
-    const msg = sheetW ? `Arranged on a ${sheetW} × ${sheetH || "–"} mm sheet.` : `Packed in a ${r1(usedW)} × ${r1(usedH)} mm block, ${gap} mm gaps.`;
-    this.onMessage(msg);
+    const n = boxes.length, k = placed.length;
+    if (!sheetW) this.onMessage(`Packed in a ${r1(usedW)} × ${r1(usedH)} mm block, ${gap} mm gaps.`);
+    else if (k === n) this.onMessage(`Arranged ${n} part${n === 1 ? "" : "s"} on a ${sheetW} × ${sheetH || "–"} mm sheet, ${gap} mm gaps.`);
+    else if (k === 0) this.onMessage(`These parts will not fit on a ${sheetW} × ${sheetH || "–"} mm sheet. Nothing was arranged.`);
+    else this.onMessage(`${k} of ${n} parts fitted on a ${sheetW} × ${sheetH || "–"} mm sheet. The rest would not fit.`);
   }
 
   // 90° bulge (DXF tan(sweep/4)); sign is chosen so the arc sits outside the points already placed.

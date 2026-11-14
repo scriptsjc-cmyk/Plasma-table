@@ -350,7 +350,9 @@ export class ViewMethods {
       const tool = this.filletPick
         ? (this.filletPick.mode === "relief"
           ? " · RELIEF: click an inside corner to cut a Ø" + this.filletPick.radius + " mm circle into it · inside corners are the bigger dots"
-          : " · FILLET: click a corner to round it (R " + this.filletPick.radius + " mm) · inside corners are the bigger dots")
+          : this.filletPick.mode === "chamfer"
+            ? " · CHAMFER: click a corner to cut a " + this.filletPick.radius + " mm × " + (this.filletPick.angle || 45) + "° chamfer"
+            : " · FILLET: click a corner to round it (R " + this.filletPick.radius + " mm) · inside corners are the bigger dots")
         : this.tool === "draw" ? " · DRAW: " + clickVerbLower() + " points, then Close" : this.tool === "measure" ? " · MEASURE: " + clickVerbLower() + " two points" : "";
       const np = this.partTotal();
       if (!hideFoot) ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${formatLen(b[2] - b[0], 1)} × ${formatLen(b[3] - b[1], 1)}${tool}`, 8, h - 8);

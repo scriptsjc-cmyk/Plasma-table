@@ -81,7 +81,8 @@ export function renderQuickBar() {
   const HINTS = { rot: "", mir: "", undo: "Ctrl+Z", redo: "Ctrl+Y", del: "Del", dup: "Ctrl+D", fit: "F", fs: "Esc", join: "Ctrl+J", snap: "S", rect: "R", disc: "C", draw: "L", measure: "D", select: "M", presets: "" };
   const B = (id, icon, label) => {
     const hint = (sketch.opts.pro && HINTS[id]) ? HINTS[id] : "";
-    const title = hint ? `${label} (${hint})` : label;
+    const long = id === "subtract" ? "Cut out — later-picked shapes are cut from the first-picked part" : label;
+    const title = hint ? `${long} (${hint})` : long;
     const kbd = hint ? ` <kbd>${esc(hint)}</kbd>` : "";
     const why = dis[id] ? ` – ${whyOff(id)}` : "";
     return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" ? " danger" : ""}" ${dis[id] ? 'aria-disabled="true"' : ""} data-why="${esc(dis[id] ? whyOff(id) : "")}" data-label="${esc(label)}" title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
@@ -231,12 +232,35 @@ export function quickAction(a) {
       if (modeEl) modeEl.addEventListener("change", syncKind);
       break;
     }
-    case "chamfer":
-      openCad("Chamfer / flatten an edge", [{ id: "none", label: clickVerb() + " an edge first. This makes that edge straight. Use a chamfered rectangle from the library for a ready-made chamfer.", value: "", text: true }], () => {
-        if (sketch.edgeInfo && sketch.edgeInfo()) { sketch.setEdgeCurve({}); toast("Edge flattened. Adjust the corners by dragging."); }
-        else toast(clickVerb() + " an edge first, or add a Chamfer rectangle from All shapes.");
+    case "chamfer": {
+      const it = sketch.selected();
+      if (!it) { toast(clickVerb() + " a part first, then Chamfer."); break; }
+      if (sketch.layout) { toast("Open the part to chamfer its corners."); break; }
+      const info = sketch.edgeInfo && sketch.edgeInfo();
+      const hasCorner = !!(info && info.vi != null);
+      const prev = sketch.filletPick || {};
+      openCad("Chamfer a corner", [
+        { id: "d", label: "Distance (mm)", value: prev.mode === "chamfer" ? (prev.radius || 5) : 5 },
+        { id: "ang", label: "Angle (degrees)", value: prev.angle || 45 },
+        { id: "all", label: "All corners", type: "checkbox", value: false },
+        { note: hasCorner
+          ? "Do it applies to the corner you clicked. Tick All corners to chamfer every sharp corner. The default 45° trims both edges equally on a square corner."
+          : "Type a distance and an angle (45° is a true 45° on a square corner), then Do it and click the corners, or tick All corners." },
+      ], (v) => {
+        if (!(v.d > 0)) { toast("Enter a distance.", true); return; }
+        const ang = v.ang > 0 ? v.ang : 45;
+        if (v.all) {
+          const n = sketch.chamferCorners(v.d, ang);
+          if (n > 0) toast(n === 1 ? "Corner chamfered." : n + " corners chamfered.");
+        } else if (hasCorner) {
+          if (sketch.chamferCorner(v.d, ang)) toast("Corner chamfered.");
+        } else {
+          sketch.startFilletPick(v.d, "chamfer", ang);
+          toast("Click each corner you want to chamfer.");
+        }
       });
       break;
+    }
   }
   renderQuickBar();
 }

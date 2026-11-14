@@ -204,15 +204,15 @@ function outwardN(pts, centre) {
 // True triangulation development (same as js/make/duct.js): four flat mid-side
 // triangles plus a corner fan from each rectangle corner to the quarter-arc, using
 // the same segment count (and seam at mid-arc) as the flat pattern.
-export function foldS2r(a, b, d, h, segs) {
+export function foldS2r(a, b, d, h, segs, ox = 0, oy = 0) {
   const R = d / 2, H = h;
   const n = segs || segmentsFor(R);
   const faces = [];
-  const centre = V(0, H / 2, 0);
+  const centre = V(ox, H / 2, oy);
   const corners = [V(-a / 2, 0, -b / 2), V(a / 2, 0, -b / 2), V(a / 2, 0, b / 2), V(-a / 2, 0, b / 2)];
   // Mid-side circle points, in the same order as the sides (front −Z, right +X, back +Z, left −X).
   const midTh = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
-  const circ = (th) => V(R * Math.cos(th), H, R * Math.sin(th));
+  const circ = (th) => V(ox + R * Math.cos(th), H, oy + R * Math.sin(th));
   const push = (pts, extra) => {
     const area = triArea(pts);
     faces.push({ pts, n: outwardN(pts, centre), holes: [], w: Math.sqrt(area), h: Math.sqrt(area), ...extra });
@@ -234,11 +234,11 @@ export function foldS2r(a, b, d, h, segs) {
   const area = faces.reduce((s, f) => s + f.w * f.h, 0);
   return { faces, panels: [{ w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)) }], n };
 }
-export function foldElbow(d, bendDeg, pieces, segs = 16) {
+export function foldElbow(d, bendDeg, pieces, segs = 16, clr) {
   const faces = [];
   const R = d / 2;
   const bend = (bendDeg * Math.PI) / 180;
-  const rad = Math.max(d, 1.2 * d);             // centre-line radius
+  const rad = (Number(clr) > 0 ? Number(clr) : 1.5 * d);
   const steps = Math.max(2, pieces) * 4;
   for (let i = 0; i < steps; i++) {
     const a0 = (i / steps) * bend, a1 = ((i + 1) / steps) * bend;
@@ -389,7 +389,7 @@ function flangeFrame3(a, b, lip, z = 0) {
 // ------------------------------------------------------------------ registry for existing fold / formed presets (make() is not touched)
 
 function coneOf(p) { return foldFrustum(p.d, p.d2 || p.d, p.h); }
-function s2rOf(p) { return foldS2r(p.a, p.b, p.d, p.h); }
+function s2rOf(p) { return foldS2r(p.a, p.b, p.d, p.h, undefined, p.ox || 0, p.oy || 0); }
 
 export const FOLD_MODELS = {
   openbox: (p) => foldOpenBox(p.len, p.wid, p.ht),
@@ -466,12 +466,12 @@ export const FOLD_MODELS = {
   recttransoff: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h),
   hopperrect: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h),
   sqrpyramid: (p) => foldHopper(p.a, p.a, Math.max(4, p.a2), Math.max(4, p.a2), p.h),
-  elbow2: (p) => foldElbow(p.d, p.bend, 2),
-  elbow3: (p) => foldElbow(p.d, p.bend, 3),
-  elbow4: (p) => foldElbow(p.d, p.bend, 4),
-  elbow5: (p) => foldElbow(p.d, p.bend, 5),
-  elbow45: (p) => foldElbow(p.d, p.bend, 3),
-  redelbow: (p) => foldElbow((p.d + p.d2) / 2, p.bend, 4),
+  elbow2: (p) => foldElbow(p.d, p.bend, p.n || 2, 16, p.clr),
+  elbow3: (p) => foldElbow(p.d, p.bend, p.n || 3, 16, p.clr),
+  elbow4: (p) => foldElbow(p.d, p.bend, p.n || 4, 16, p.clr),
+  elbow5: (p) => foldElbow(p.d, p.bend, p.n || 5, 16, p.clr),
+  elbow45: (p) => foldElbow(p.d, p.bend, p.n || 3, 16, p.clr),
+  redelbow: (p) => foldElbow((p.d + p.d2) / 2, p.bend, 3, 16, p.clr),
   rectelbow: (p) => foldRectElbow(p.w, p.h, p.r, p.bend),
   dustpan: (p) => foldDustpan(p.w, p.front, p.d, p.h),
   scoop: (p) => foldScoop(p.w, p.d, p.h, p.r),

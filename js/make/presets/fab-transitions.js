@@ -1,6 +1,6 @@
 // Sheet-metal fabrication flat patterns (cones, saddles, elbows, hoppers, flashings…).
 import {
-  circleContour, roundedRect, holeIn, rectContour, packPieces, coneSector, sineGore,
+  circleContour, roundedRect, holeIn, rectContour, packPieces, coneSector, elbowGores, mitreGore,
   clamp, pos, shape, poly, shiftToOrigin, signedArea, selfIntersects, dedupe, boltHoles,
 } from "./helpers.js";
 import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment } from "../duct.js";
@@ -99,14 +99,15 @@ export const FAB_PRESETS = [
     },
     { sheet: true, noResize: true }),
   shape("s2roffset", "Offset square-to-round", "⏢", "sheetmetal", "offset square to round transition",
-    "Square-to-round transition packed like the standard one (four side panels plus flanges). Use a modest offset by making one side longer — for a true offset, widen A or B.",
-    [["a", "Width A (rectangular end)", 260], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 120], ["h", "Height between the ends", 160], ["lip", "Flange lip width (0 = none)", 20]],
+    "Eccentric square-to-round: the round end is offset from the rectangle centre. The four side panels are each developed from the true 3D lengths, so opposite sides are no longer a matching pair.",
+    [["a", "Width A (rectangular end)", 260], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 120], ["h", "Height between the ends", 160], ["ox", "X offset of the round end", 40], ["oy", "Y offset of the round end", 0], ["lip", "Flange lip width (0 = none)", 20]],
     (p) => {
       if (!(p.a >= 10 && p.b >= 10 && p.d >= 10 && p.h >= 5)) return [];
-      const t = squareToRound(p.a, p.b, p.d, p.h);
+      const t = squareToRound(p.a, p.b, p.d, p.h, p.ox || 0, p.oy || 0);
       if (!t) return [];
       const panel = (d) => [{ pts: d.pts.map((q) => [q[0], q[1]]), closed: true }];
-      const pieces = [panel(t.A), panel(t.A), panel(t.B), panel(t.B)];
+      const sides = t.offset ? [t.A, t.A2, t.B, t.B2] : [t.A, t.A, t.B, t.B];
+      const pieces = sides.filter(Boolean).map(panel);
       if (p.lip > 0.5) {
         const f = flangeFrame(p.a, p.b, p.lip); if (f) pieces.push(f);
         const r = flangeRing(p.d + 2 * p.lip, p.d); if (r) pieces.push(r);
@@ -155,64 +156,38 @@ export const FAB_PRESETS = [
     },
     { noResize: true }),
   shape("elbow2", "2-piece 90° elbow", "⌢", "sheetmetal", "two piece elbow mitre",
-    "Two mitred gored segments for a 90° elbow (a simple mitre bend).",
-    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90]],
-    (p) => {
-      const ang = clamp(p.bend, 20, 180) * Math.PI / 180;
-      const amp = (p.d / 2) * Math.tan(ang / 4) + 4;
-      const g = sineGore(p.d, amp, 16);
-      return g ? packPieces([[g], [g]]).contours : [];
-    },
+    "Two mitred gores for a 90° elbow (one square end and one mitre cut on each piece). Type the centreline radius and the number of pieces.",
+    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 2]],
+    (p) => elbowGores(p.d, p.bend, p.n || 2, p.clr > 0 ? p.clr : 1.5 * p.d),
     { sheet: true, noResize: true }),
   shape("elbow3", "3-piece 90° elbow (lobster-back)", "⌢", "sheetmetal", "three piece elbow lobster",
-    "Three gored segments for a 90° lobster-back elbow (two ends and one middle).",
-    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90]],
-    (p) => {
-      const ang = clamp(p.bend, 20, 180) * Math.PI / 180;
-      const amp = (p.d / 2) * Math.tan(ang / 6) + 4;
-      const end = sineGore(p.d, amp, 14);
-      const mid = sineGore(p.d, amp * 1.05, 16);
-      return end && mid ? packPieces([[end], [mid], [end]]).contours : [];
-    },
+    "True mitre-plane lobster-back: two end gores (square pipe end, one mitre) and a middle gore. Type the centreline radius and the number of pieces.",
+    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 3]],
+    (p) => elbowGores(p.d, p.bend, p.n || 3, p.clr > 0 ? p.clr : 1.5 * p.d),
     { sheet: true, noResize: true }),
   shape("elbow4", "4-piece 90° elbow (lobster-back)", "⌢", "sheetmetal", "four piece elbow lobster-back",
-    "Four gored segments for a 90° lobster-back elbow.",
-    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90]],
-    (p) => {
-      const ang = clamp(p.bend, 20, 180) * Math.PI / 180;
-      const amp = (p.d / 2) * Math.tan(ang / 8) + 3;
-      const g = sineGore(p.d, amp, 14);
-      return g ? packPieces([[g], [g], [g], [g]]).contours : [];
-    },
+    "True mitre-plane lobster-back (two end gores and two middle gores). Type the centreline radius and the number of pieces.",
+    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 4]],
+    (p) => elbowGores(p.d, p.bend, p.n || 4, p.clr > 0 ? p.clr : 1.5 * p.d),
     { sheet: true, noResize: true }),
   shape("elbow5", "5-piece 90° elbow (lobster-back)", "⌢", "sheetmetal", "five piece elbow lobster-back",
-    "Five gored segments for a smoother 90° lobster-back elbow.",
-    [["d", "Pipe Ø", 90], ["bend", "Bend angle (degrees)", 90]],
-    (p) => {
-      const ang = clamp(p.bend, 20, 180) * Math.PI / 180;
-      const amp = (p.d / 2) * Math.tan(ang / 10) + 3;
-      const g = sineGore(p.d, amp, 12);
-      return g ? packPieces(Array.from({ length: 5 }, () => [g])).contours : [];
-    },
+    "True mitre-plane lobster-back for a smoother bend. Type the centreline radius and the number of pieces.",
+    [["d", "Pipe Ø", 90], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 135], ["n", "Number of pieces", 5]],
+    (p) => elbowGores(p.d, p.bend, p.n || 5, p.clr > 0 ? p.clr : 1.5 * p.d),
     { sheet: true, noResize: true }),
   shape("elbow45", "3-piece 45° elbow", "⌢", "sheetmetal", "45 degree elbow lobster",
-    "Three gored segments for a 45° elbow.",
-    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 45]],
-    (p) => {
-      const ang = clamp(p.bend, 15, 90) * Math.PI / 180;
-      const amp = (p.d / 2) * Math.tan(ang / 6) + 3;
-      const g = sineGore(p.d, amp, 14);
-      return g ? packPieces([[g], [g], [g]]).contours : [];
-    },
+    "True mitre-plane 45° elbow (two end gores and one middle gore). Type the centreline radius and the number of pieces.",
+    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 45], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 3]],
+    (p) => elbowGores(p.d, p.bend, p.n || 3, p.clr > 0 ? p.clr : 1.5 * p.d),
     { sheet: true, noResize: true }),
   shape("redelbow", "Reducing elbow gores", "⌢", "sheetmetal", "reducing elbow",
-    "Reducing elbow: a cone-sector plus two gored end pieces.",
-    [["d", "Big end Ø", 120], ["d2", "Small end Ø", 80], ["h", "Length along the cone", 80], ["bend", "Bend angle (degrees)", 90]],
+    "Reducing elbow: a cone-sector plus two mitred end gores (square pipe end, one mitre cut).",
+    [["d", "Big end Ø", 120], ["d2", "Small end Ø", 80], ["h", "Length along the cone", 80], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 180]],
     (p) => {
       const c = coneSector(p.d, p.d2, p.h);
-      const ang = clamp(p.bend, 20, 180) * Math.PI / 180;
-      const g1 = sineGore(p.d, (p.d / 2) * Math.tan(ang / 6) + 3, 12);
-      const g2 = sineGore(p.d2, (p.d2 / 2) * Math.tan(ang / 6) + 3, 12);
+      const clr = p.clr > 0 ? p.clr : 1.5 * p.d;
+      const g1 = mitreGore(p.d, p.bend, 3, clr, "end");
+      const g2 = mitreGore(p.d2, p.bend, 3, clr, "end");
       const pieces = [];
       if (c) pieces.push([c]);
       if (g1) pieces.push([g1]);

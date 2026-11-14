@@ -92,9 +92,9 @@
             </div>
           </div>
           <div id="filletPanel" class="edgepanel hidden" hidden>
-            <h3>Fillet corners</h3>
+            <h3 id="filletTitle">Fillet corners</h3>
             <p class="muted small" id="filletHint">Click a corner to give it a radius. Inside (re-entrant) corners get a smooth inner radius; outside corners are rounded off. Hover a corner to highlight it.</p>
-            <label>Kind
+            <label id="filletKindLab">Kind
               <select id="filletMode">
                 <option value="round">Round corner</option>
                 <option value="relief">Relief cut (circle into corner)</option>
@@ -103,6 +103,9 @@
             <div class="row wrap">
               <label id="filletSizeLab">Radius (mm)
                 <input id="filletRad" type="number" min="0.1" step="0.1" inputmode="decimal" value="5">
+              </label>
+              <label id="filletAngLab" class="hidden" hidden>Angle (degrees)
+                <input id="filletAng" type="number" min="1" max="89" step="0.1" inputmode="decimal" value="45">
               </label>
               <button type="button" id="filletAllInside" class="small">All inside corners</button>
               <button type="button" id="filletDone" class="small">Done</button>

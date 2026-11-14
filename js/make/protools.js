@@ -3,7 +3,7 @@ import { S, sketch } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { drawPreview } from "../cut/preview.js";
 import { goStep, renderQuickBar, runPro, showSource } from "../core/hooks.js";
-import { closeDrawHud, cancelDrawHud } from "./drawhud.js";
+import { closeDrawHud, cancelDrawHud, toggleDrawArc } from "./drawhud.js";
 
 // ---- full-screen "Make a shape" editor
 // r8 item 10: the full-screen editor is gone. Callers still exist; keep a no-op that always turns it off.
@@ -26,7 +26,13 @@ export function renderProTools() {
     <button data-pro="nest">⊞ Auto-arrange</button>
     <button data-pro="points" class="${sketch.opts.pointSnap ? "on" : ""}">Snap to points</button>`;
   $("toolBar").classList.toggle("hidden", tool !== "draw");
-  $("toolFinish").textContent = "Close outline";
+  if ($("toolFinish")) $("toolFinish").textContent = "Close outline";
+  if ($("toolArc")) {
+    $("toolArc").textContent = "Arc";
+    $("toolArc").classList.toggle("on", !!(sketch && sketch.drawArc));
+    $("toolArc").setAttribute("aria-pressed", sketch && sketch.drawArc ? "true" : "false");
+    $("toolArc").title = sketch && sketch.drawArc ? "Next segment is a curve. Click again for a straight line." : "Next segment will be a curve (A)";
+  }
 }
 export function bindProTools() {
   $("proTools").addEventListener("click", (e) => {
@@ -34,4 +40,5 @@ export function bindProTools() {
   });
   $("toolFinish").onclick = () => { sketch.finishDraw(); closeDrawHud(); renderProTools(); };
   $("toolCancel").onclick = () => { sketch.setTool(null); cancelDrawHud(); renderProTools(); };
+  if ($("toolArc")) $("toolArc").onclick = () => { toggleDrawArc(); renderProTools(); };
 }
