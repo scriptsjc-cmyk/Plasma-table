@@ -161,8 +161,8 @@ export const FAB_PRESETS = [
     [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 2], ...SHEET_PARAMS],
     (p) => elbowGores(p.d, p.bend, p.n || 2, p.clr > 0 ? p.clr : 1.5 * p.d, sheetFrom(p)),
     { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
-  shape("elbow3", "3-piece 90° elbow (lobster-back)", "⌢", "sheetmetal", "three piece elbow lobster",
-    "True mitre-plane lobster-back: two end gores (square pipe end, one mitre) and a middle gore. Type the centreline radius and the number of pieces.",
+  shape("elbow3", "Lobster-back elbow", "⌢", "sheetmetal", "three piece elbow lobster 2 4 5 45",
+    "True mitre-plane lobster-back elbow: end gores (square pipe end, one mitre) and middle gores. Type the number of pieces, the bend angle and the centreline radius.",
     [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 3], ...SHEET_PARAMS],
     (p) => elbowGores(p.d, p.bend, p.n || 3, p.clr > 0 ? p.clr : 1.5 * p.d, sheetFrom(p)),
     { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
@@ -432,3 +432,36 @@ export const FAB_PRESETS = [
     },
     { sheet: true, noResize: true }),
 ];
+
+const FAB_HIDDEN = new Set([
+  "conesteep", "coneshallow", "conecentric", "silocone", "cyclonehop", "coneadapter",
+  "r2roffset",
+  "s2roffset", "r2s",
+  "recttransoff", "hopperrect", "sqrpyramid",
+  "elbow2", "elbow4", "elbow5", "elbow45",
+]);
+const FAB_ALIAS = {
+  conesteep: "cone", coneshallow: "cone", conecentric: "cone", silocone: "cone",
+  cyclonehop: "cone", coneadapter: "cone",
+  r2roffset: "coneecc",
+  s2roffset: "s2r", r2s: "s2r",
+  recttransoff: "recttrans", hopperrect: "recttrans", sqrpyramid: "recttrans",
+  elbow2: "elbow3", elbow4: "elbow3", elbow5: "elbow3", elbow45: "elbow3",
+};
+const FAB_NOTES = {
+  elbow2: "Lobster-back elbows are cut as separate gores — they cannot be one connected folding blank.",
+  elbow3: "Lobster-back elbows are cut as separate gores — they cannot be one connected folding blank.",
+  elbow4: "Lobster-back elbows are cut as separate gores — they cannot be one connected folding blank.",
+  elbow5: "Lobster-back elbows are cut as separate gores — they cannot be one connected folding blank.",
+  elbow45: "Lobster-back elbows are cut as separate gores — they cannot be one connected folding blank.",
+  redelbow: "A reducing elbow is cut as a cone sector plus two mitred end gores — they cannot be one connected folding blank.",
+  rectelbow: "A rectangular duct elbow is cut as two cheek plates plus throat and back wrappers — they cannot be one connected folding blank.",
+  britches: "A britches piece is developed as separate pipe templates, not one folding blank.",
+  ybranch: "A Y-branch is developed as separate saddle templates, not one folding blank.",
+  teetemp: "A tee is developed as a header wrap plus a branch saddle, not one folding blank.",
+};
+for (const s of FAB_PRESETS) {
+  if (FAB_HIDDEN.has(s.id)) { s.hidden = true; s.aliasOf = FAB_ALIAS[s.id] || s.id; }
+  if (FAB_NOTES[s.id]) s.note = FAB_NOTES[s.id];
+}
+

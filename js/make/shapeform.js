@@ -121,6 +121,7 @@ function paramField(it, param) {
 }
 function extraFormHtml(it, sh) {
   let html = "";
+  if (sh && sh.note) html += `<p class="tip fold-note">${esc(sh.note)}</p>`;
   if (sh && sh.table) {
     html += `<div class="skbtns"><button type="button" data-sheet-table="1">Print true-length / marking-out table</button></div>`;
   }

@@ -1,5 +1,5 @@
 {
-  "commit": "40f1eee",
+  "commit": "one-piece-blanks-2026-11-14",
   "rows": [
     {
       "id": "oblplate",
@@ -424,27 +424,27 @@
     {
       "id": "openbox",
       "n": 5,
-      "hash": "d037d2897599d15a"
+      "hash": "1b63cf700c7c2cfc"
     },
     {
       "id": "liddedbox",
       "n": 6,
-      "hash": "07924234aa23ad29"
+      "hash": "65acf456597504b5"
     },
     {
       "id": "trayflat",
       "n": 5,
-      "hash": "c80d9b0e0fc5d6f6"
+      "hash": "102c3af84612c8dd"
     },
     {
       "id": "uchannel",
       "n": 3,
-      "hash": "7cdf847770d4099f"
+      "hash": "a6207478e5f9f8fd"
     },
     {
       "id": "cchannel",
       "n": 3,
-      "hash": "6df1e78a97c10c2e"
+      "hash": "f454575610b6e58a"
     },
     {
       "id": "angleiron",
@@ -454,42 +454,42 @@
     {
       "id": "cuboidwrap",
       "n": 3,
-      "hash": "462cbc8bb259642b"
+      "hash": "e29da4be08a2d664"
     },
     {
       "id": "fiveside",
       "n": 5,
-      "hash": "77a57430edbc6dc5"
+      "hash": "2ae1743ba23a57c4"
     },
     {
       "id": "totebox",
       "n": 5,
-      "hash": "d190fce74c7183d5"
+      "hash": "e53e3af0995d5c22"
     },
     {
       "id": "enclfront",
       "n": 7,
-      "hash": "c5257742a769a155"
+      "hash": "529e475097e6acca"
     },
     {
       "id": "jbox",
       "n": 10,
-      "hash": "e2d9798214ee867a"
+      "hash": "37383df0f9c05b34"
     },
     {
       "id": "drawerbox",
       "n": 5,
-      "hash": "4249a93d036487e1"
+      "hash": "0295ab214a37f7dc"
     },
     {
       "id": "shoebox",
       "n": 10,
-      "hash": "917283b0726f52ef"
+      "hash": "370ff52a75597a8a"
     },
     {
       "id": "crateflaps",
       "n": 6,
-      "hash": "74eb44588003bd69"
+      "hash": "2a82e9353c25becb"
     },
     {
       "id": "pcpanel",
@@ -499,7 +499,7 @@
     {
       "id": "lidonly",
       "n": 5,
-      "hash": "a7ce88850e4f91d5"
+      "hash": "cd30b06f356a72d4"
     },
     {
       "id": "conesteep",
@@ -1276,5 +1276,6 @@
       "n": 4,
       "hash": "b54f57b93d7e89e3"
     }
-  ]
+  ],
+  "note": "Updated hashes for enclosure / folding presets whose default flat pattern is now one connected folding blank (openbox, trays, channels with end flaps, cuboid wrap, five-sided, tote, electronics enclosure, junction box, drawer, shoe-box as two pluses, crate, lid). Intentionally different cut layout; G-code for unchanged presets is untouched."
 }

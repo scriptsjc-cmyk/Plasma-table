@@ -1,9 +1,9 @@
 // New folded / formed workshop presets. Each has a developed flat pattern (what you cut)
 // and a fold() model for the 3D view. Bend sizes follow the existing enclosure presets:
 // developed length is the sum of the face sizes (no extra k-factor deducted).
-import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine } from "./helpers.js";
+import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM } from "./helpers.js";
 import {
-  foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedBox,
+  foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedCross,
   foldTrayCross, foldS2r, foldHopper, addTopFlanges, foldFrustum, foldUSaddle, face, attach, assemble,
 } from "../fold3d.js";
 
@@ -104,10 +104,21 @@ export const FOLD_PRESETS = [
       return { faces: m.faces.concat([tri]), panels: m.panels.concat([{ w: g, h: g }]) };
     } }),
 
-  shape("hatsect", "Hat section", "⊓", "folded", "hat channel section furring",
-    "Hat section: a web, two legs and two return flanges in one developed strip.",
-    [["web", "Web width", 60], ["leg", "Leg height", 30], ["flange", "Return flange", 16], ["len", "Length", 300]],
-    (p) => strip(p.len, [p.flange, p.leg, p.web, p.leg, p.flange]),
+  shape("hatsect", "Hat section", "⊓", "folded", "hat channel section furring cable tray",
+    "Hat section (or cable tray): a web, two legs and two return flanges in one developed strip. Optional holes down the web.",
+    [["web", "Web width", 60], ["leg", "Leg height", 30], ["flange", "Return flange", 16], ["len", "Length", 300], ["hole", "Web hole Ø (0 = none)", 0]],
+    (p) => {
+      const c = strip(p.len, [p.flange, p.leg, p.web, p.leg, p.flange]);
+      if (p.hole > 0) {
+        const H = p.flange + p.leg + p.web + p.leg + p.flange;
+        const y = p.flange + p.leg + p.web / 2, n = Math.max(1, Math.floor(p.len / 50));
+        for (let i = 0; i < n; i++) {
+          const x = (p.len * (i + 1)) / (n + 1);
+          const h = holeIn(x, y, p.hole, 0, 0, p.len, H, 1); if (h) c.push(h);
+        }
+      }
+      return c;
+    },
     { noResize: true, fold: (p) => foldHat(p.len, p.web, p.leg, p.flange) }),
 
   shape("opentabbox", "Open box with tabs", "▢", "folded", "open box tabs folded tray",
@@ -117,13 +128,10 @@ export const FOLD_PRESETS = [
     { noResize: true, fold: (p) => foldTrayCross(p.len, p.wid, p.ht, p.tab) }),
 
   shape("closedtabbox", "Closed box with tabs", "▣", "folded", "closed box tabs lid folded",
-    "Closed box: a plus-shaped unfold with corner tabs attached to the long walls, plus a separate lid.",
-    [["len", "Inside length", 120], ["wid", "Inside width", 80], ["ht", "Height", 50], ["tab", "Tab width", 12]],
-    (p) => packPieces([
-      crossTray(p.len, p.wid, p.ht, p.tab),
-      panel(p.len, p.wid),
-    ]).contours,
-    { sheet: true, noResize: true, fold: (p) => foldLiddedBox(p.len, p.wid, p.ht) }),
+    "Closed box: a plus-shaped unfold with corner tabs and the lid as a flap on one wall. Tick Separate pieces to cut the lid (and walls) apart.",
+    [["len", "Inside length", 120], ["wid", "Inside width", 80], ["ht", "Height", 50], ["tab", "Tab width", 12], SPLIT_PARAM],
+    (p) => boxBlank(p.len, p.wid, p.ht, { tab: p.tab, lid: true, split: p.split }),
+    { sheet: true, noResize: true, fold: (p) => foldLiddedCross(p.len, p.wid, p.ht, p.tab) }),
 
   shape("traytabs", "Tray with tabs", "▭", "folded", "tray tabs hem folded",
     "Shallow one-piece tray (plus-shaped unfold) with corner tabs attached to the long walls.",
@@ -390,22 +398,18 @@ export const FOLD_PRESETS = [
     } }),
 
   shape("postcap", "Post cap", "▣", "folded", "post cap folded box lid",
-    "Post cap: a top and four shallow sides, packed like the existing box-lid pattern, sized for a square post.",
-    [["s", "Post size (inside)", 90], ["ht", "Side height", 25], ["over", "Overhang each side", 6]],
+    "Post cap: a top and four shallow sides as one plus-shaped blank, sized for a square post. Tick Separate pieces to cut the panels apart.",
+    [["s", "Post size (inside)", 90], ["ht", "Side height", 25], ["over", "Overhang each side", 6], SPLIT_PARAM],
     (p) => {
       const top = p.s + 2 * p.over;
-      return packPieces([panel(top, top), panel(top, p.ht), panel(top, p.ht), panel(top, p.ht), panel(top, p.ht)]).contours;
+      return boxBlank(top, top, p.ht, { split: p.split });
     },
     { sheet: true, noResize: true, fold: (p) => foldOpenBox(p.s + 2 * p.over, p.s + 2 * p.over, p.ht) }),
 
   shape("planterbox", "Planter box", "▢", "folded", "planter box folded hem",
-    "Planter / trough: an open box with a small outward hem on each side.",
-    [["len", "Inside length", 300], ["wid", "Inside width", 120], ["ht", "Height", 80], ["hem", "Top hem", 12]],
-    (p) => packPieces([
-      panel(p.len, p.wid),
-      panel(p.len, p.ht + p.hem), panel(p.len, p.ht + p.hem),
-      panel(p.wid, p.ht + p.hem), panel(p.wid, p.ht + p.hem),
-    ]).contours,
+    "Planter / trough: an open box with a small outward hem on each side, as one plus-shaped blank.",
+    [["len", "Inside length", 300], ["wid", "Inside width", 120], ["ht", "Height", 80], ["hem", "Top hem", 12], SPLIT_PARAM],
+    (p) => boxBlank(p.len, p.wid, p.ht, { hem: p.hem, split: p.split }),
     { sheet: true, noResize: true, fold: (p) => {
       const bot = face(p.len, p.wid);
       const L = face(p.len, p.ht); attach(L, 2, 90, face(p.len, p.hem));    // edge 0: outward normal
@@ -423,12 +427,21 @@ export const FOLD_PRESETS = [
     { noResize: true, fold: (p) => foldTrayCross(p.len, p.wid, p.ht) }),
 
   shape("rainhood", "Rain hood", "⌂", "folded", "rain hood weather cap folded",
-    "Rain hood / weather cap: a sloped top, a back and two sides, packed on the sheet.",
-    [["w", "Width", 160], ["d", "Depth", 100], ["front", "Front height", 40], ["back", "Back height", 90]],
+    "Rain hood / weather cap: a sloped top, a back and two sides as one folding blank. Tick Separate pieces to cut the panels apart.",
+    [["w", "Width", 160], ["d", "Depth", 100], ["front", "Front height", 40], ["back", "Back height", 90], SPLIT_PARAM],
     (p) => {
       const slant = Math.hypot(p.d, p.back - p.front);
-      const side = [poly([[0, 0], [p.d, 0], [p.d, p.back], [0, p.front]])];
-      return packPieces([panel(p.w, slant), panel(p.w, p.back), side, side]).contours;
+      const sidePts = [[0, 0], [p.d, 0], [p.d, p.back], [0, p.front]];
+      if (Math.round(Number(p.split) || 0) >= 1) {
+        const side = [poly(sidePts)];
+        return packPieces([panel(p.w, slant), panel(p.w, p.back), side, side]).contours;
+      }
+      const d = p.d, w = p.w, b = p.back, f = p.front;
+      const outline = [
+        [0, 0], [d, 0], [d + w, 0], [d + w + d, 0],
+        [d + w + d, f], [d + w, b], [d + w, b + slant], [d, b + slant], [d, b], [0, f],
+      ];
+      return [poly(outline), bendLine(d, 0, d, b), bendLine(d + w, 0, d + w, b), bendLine(d, b, d + w, b)];
     },
     { sheet: true, noResize: true, fold: (p) => {
       const faces = [];
@@ -441,12 +454,9 @@ export const FOLD_PRESETS = [
     } }),
 
   shape("venthood", "Vent hood", "⌂", "folded", "vent hood extractor folded",
-    "Extractor / vent hood: a rectangular canopy with four sides and an optional top outlet hole.",
-    [["w", "Width", 220], ["d", "Depth", 160], ["h", "Side height", 50], ["hole", "Outlet Ø (0 = none)", 80]],
-    (p) => {
-      const top = panel(p.w, p.d, p.hole > 8 ? [[p.w / 2, p.d / 2, p.hole]] : []);
-      return packPieces([top, panel(p.w, p.h), panel(p.w, p.h), panel(p.d, p.h), panel(p.d, p.h)]).contours;
-    },
+    "Extractor / vent hood: a rectangular canopy with four sides and an optional top outlet hole, as one plus-shaped blank. Tick Separate pieces to cut the panels apart.",
+    [["w", "Width", 220], ["d", "Depth", 160], ["h", "Side height", 50], ["hole", "Outlet Ø (0 = none)", 80], SPLIT_PARAM],
+    (p) => boxBlank(p.w, p.d, p.h, { split: p.split, botHoles: p.hole > 8 ? [[p.w / 2, p.d / 2, p.hole]] : [] }),
     { sheet: true, noResize: true, fold: (p) => {
       const top = face(p.w, p.d, p.hole > 8 ? [{ cx: p.w / 2, cy: p.d / 2, r: p.hole / 2 }] : []);
       attach(top, 0, -90, face(p.w, p.h));
@@ -457,16 +467,16 @@ export const FOLD_PRESETS = [
     } }),
 
   shape("battbox", "Battery box", "▣", "folded", "battery box tabs folded enclosure",
-    "Small battery / project box: a plus-shaped open box, a lid with holes, and corner tabs.",
-    [["len", "Inside length", 100], ["wid", "Inside width", 70], ["ht", "Height", 40], ["tab", "Tab width", 10], ["hole", "Lid hole Ø (0 = none)", 5], ["inset", "Lid hole from the edge", 10]],
-    (p) => {
-      const lid = panel(p.len, p.wid, p.hole > 0 ? [
-        [p.inset, p.inset, p.hole], [p.len - p.inset, p.inset, p.hole],
-        [p.len - p.inset, p.wid - p.inset, p.hole], [p.inset, p.wid - p.inset, p.hole],
-      ] : []);
-      return packPieces([crossTray(p.len, p.wid, p.ht, p.tab), lid]).contours;
-    },
-    { sheet: true, noResize: true, fold: (p) => foldLiddedBox(p.len, p.wid, p.ht) }),
+    "Small battery / project box: a plus-shaped open box with corner tabs and a lid flap (optional holes). Tick Separate pieces to cut the lid apart.",
+    [["len", "Inside length", 100], ["wid", "Inside width", 70], ["ht", "Height", 40], ["tab", "Tab width", 10], ["hole", "Lid hole Ø (0 = none)", 5], ["inset", "Lid hole from the edge", 10], SPLIT_PARAM],
+    (p) => boxBlank(p.len, p.wid, p.ht, { tab: p.tab, lid: true, split: p.split, lidHoles: p.hole > 0 ? [
+      [p.inset, p.inset, p.hole], [p.len - p.inset, p.inset, p.hole],
+      [p.len - p.inset, p.wid - p.inset, p.hole], [p.inset, p.wid - p.inset, p.hole],
+    ] : [] }),
+    { sheet: true, noResize: true, fold: (p) => foldLiddedCross(p.len, p.wid, p.ht, p.tab, p.hole > 0 ? [
+      { cx: p.inset, cy: p.inset, r: p.hole / 2 }, { cx: p.len - p.inset, cy: p.inset, r: p.hole / 2 },
+      { cx: p.len - p.inset, cy: p.wid - p.inset, r: p.hole / 2 }, { cx: p.inset, cy: p.wid - p.inset, r: p.hole / 2 },
+    ] : []) }),
 
   shape("lightbr", "Light-fixture bracket", "⌐", "folded", "light fixture bracket folded",
     "Light-fixture bracket: a wall plate with holes and a short shelf, formed as an L.",
@@ -506,3 +516,27 @@ export const FOLD_PRESETS = [
       return assemble(S);
     } }),
 ];
+
+const FOLD_HIDDEN = new Set([
+  "hingebr", "signbr", "lightbr", "cornerguard", "foldubr",
+  "furring", "cabletray",
+  "wallmount", "bookend", "kickplate",
+  "bbqside", "windowsill",
+  "traytabs", "opentabbox", "oilpan", "planterbox",
+  "battbox", "closedtabbox",
+]);
+const FOLD_NOTES = {
+  anglegus: "The triangular gusset is a separate piece, welded into the corner of the angle.",
+};
+for (const s of FOLD_PRESETS) {
+  if (FOLD_HIDDEN.has(s.id)) { s.hidden = true; if (!s.aliasOf) s.aliasOf = (
+    { foldubr: "uchannel", hingebr: "foldlbr", signbr: "foldlbr", lightbr: "foldlbr", cornerguard: "foldlbr",
+      furring: "hatsect", cabletray: "hatsect",
+      wallmount: "foldshelf", bookend: "foldshelf", kickplate: "foldshelf",
+      bbqside: "firepit", windowsill: "dripedge",
+      traytabs: "openbox", opentabbox: "openbox", oilpan: "openbox", planterbox: "openbox",
+      battbox: "liddedbox", closedtabbox: "liddedbox",
+    }[s.id] || s.id); }
+  if (FOLD_NOTES[s.id]) s.note = FOLD_NOTES[s.id];
+}
+

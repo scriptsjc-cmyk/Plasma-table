@@ -99,13 +99,17 @@ export function foldAngle(len, a, b, hs = []) {
   attach(A, 2, 90, face(len, b, hs.filter((h) => h.leg === 1)));
   return assemble(A);
 }
-export function foldU(len, web, leg, hs = []) {
+export function foldU(len, web, leg, hs = [], ends = 0) {
   const W = face(len, web, hs);
   attach(W, 0, 90, face(len, leg));
   attach(W, 2, 90, face(len, leg));
+  if (Math.round(ends) >= 1) {
+    attach(W, 3, 90, face(web, leg));
+    attach(W, 1, 90, face(web, leg));
+  }
   return assemble(W);
 }
-export function foldC(len, web, leg, fl) {
+export function foldC(len, web, leg, fl, ends = 0) {
   // C-channel: legs fold up, return flanges fold inward.
   // Walls on parent edges 0 and 1 have an outward normal, so inward is a negative angle.
   const W = face(len, web);
@@ -114,6 +118,10 @@ export function foldC(len, web, leg, fl) {
   attach(L2, 2, 90, face(len, fl));
   attach(W, 0, 90, L1);
   attach(W, 2, 90, L2);
+  if (Math.round(ends) >= 1) {
+    attach(W, 3, 90, face(web, leg));
+    attach(W, 1, 90, face(web, leg));
+  }
   return assemble(W);
 }
 export function foldHat(len, web, leg, fl) {
@@ -169,6 +177,85 @@ export function foldTrayCross(l, w, h, tab = 0) {
   attach(bot, 3, 90, face(w, h));
   attach(bot, 1, 90, face(w, h));
   return assemble(bot);
+}
+function wallWithHem(len, h, hem, inwardSign) {
+  const w = face(len, h);
+  if (hem > 0) attach(w, 2, 90 * inwardSign, face(len, hem));
+  return w;
+}
+export function foldOpenHem(l, w, h, hem = 0, tab = 0, frontH = h) {
+  if (!(hem > 0) && !(Math.abs(frontH - h) > 0.05) && !(tab > 0)) return foldTrayCross(l, w, h, tab);
+  const bot = face(l, w);
+  const long = wallWithHem(l, frontH, hem, -1);
+  if (tab > 0) { attach(long, 3, -90, face(frontH, tab)); attach(long, 1, -90, face(frontH, tab)); }
+  const long2 = wallWithHem(l, h, hem, 1);
+  if (tab > 0) { attach(long2, 3, 90, face(h, tab)); attach(long2, 1, 90, face(h, tab)); }
+  attach(bot, 0, 90, long);
+  attach(bot, 2, 90, long2);
+  attach(bot, 3, 90, wallWithHem(w, h, hem, 1));
+  attach(bot, 1, 90, wallWithHem(w, h, hem, -1));
+  return assemble(bot);
+}
+export function foldLiddedCross(l, w, h, tab = 0, lidHoles = []) {
+  const bot = face(l, w);
+  const long = face(l, h);
+  if (tab > 0) { attach(long, 3, -90, face(h, tab)); attach(long, 1, -90, face(h, tab)); }
+  const long2 = face(l, h);
+  if (tab > 0) { attach(long2, 3, 90, face(h, tab)); attach(long2, 1, 90, face(h, tab)); }
+  attach(long2, 2, 70, face(l, w, lidHoles));
+  attach(bot, 0, 90, long);
+  attach(bot, 2, 90, long2);
+  attach(bot, 3, 90, face(w, h));
+  attach(bot, 1, 90, face(w, h));
+  return assemble(bot);
+}
+export function foldCuboid(l, w, h) {
+  const bot = face(l, w);
+  const back = face(l, h);
+  attach(back, 2, 90, face(l, w));
+  attach(bot, 0, 90, face(l, h));
+  attach(bot, 2, 90, back);
+  attach(bot, 3, 90, face(w, h));
+  attach(bot, 1, 90, face(w, h));
+  return assemble(bot);
+}
+
+export function displayThickness(p) {
+  const t = Number(p && (p.thick != null ? p.thick : p.t));
+  return (Number.isFinite(t) && t > 0.05) ? t : 3;
+}
+export function thicken(model, t) {
+  if (!(t > 0.05) || !model || !model.faces || !model.faces.length || model.thick) return model;
+  const faces = [];
+  for (const f of model.faces) {
+    const nrm = norm(f.n);
+    const half = t / 2;
+    const off = (pts, s) => (pts || []).map((p) => add(p, scl(nrm, s)));
+    const front = off(f.pts, half), back = off(f.pts, -half);
+    const fHoles = (f.holes || []).map((ring) => off(ring, half));
+    const bHoles = (f.holes || []).map((ring) => off(ring, -half).reverse());
+    faces.push({ ...f, pts: front, n: nrm, holes: fHoles });
+    faces.push({ ...f, pts: back.slice().reverse(), n: scl(nrm, -1), holes: bHoles, edge: true });
+    const npts = f.pts.length;
+    for (let i = 0; i < npts; i++) {
+      const j = (i + 1) % npts;
+      const a = back[i], b = back[j], c = front[j], d = front[i];
+      faces.push({ pts: [a, b, c, d], n: norm(cross(sub(b, a), sub(d, a))), holes: [], w: 0, h: 0, edge: true });
+    }
+    for (const ring of f.holes || []) {
+      const rh = off(ring, half), rb = off(ring, -half), nh = ring.length;
+      for (let i = 0; i < nh; i++) {
+        const j = (i + 1) % nh;
+        const a = rb[i], b = rb[j], c = rh[j], d = rh[i];
+        faces.push({ pts: [a, b, c, d], n: norm(cross(sub(b, a), sub(d, a))), holes: [], w: 0, h: 0, edge: true });
+      }
+    }
+  }
+  sitOnTable(faces);
+  return { faces, panels: model.panels, thick: t };
+}
+function viewModel(model, p) {
+  return model ? thicken(model, displayThickness(p)) : null;
 }
 export function foldFrustum(d1, d2, h, segs = 24) {
   const faces = [], R = d1 / 2, r = d2 / 2;
@@ -392,25 +479,13 @@ function coneOf(p) { return foldFrustum(p.d, p.d2 || p.d, p.h); }
 function s2rOf(p) { return foldS2r(p.a, p.b, p.d, p.h, undefined, p.ox || 0, p.oy || 0); }
 
 export const FOLD_MODELS = {
-  openbox: (p) => foldOpenBox(p.len, p.wid, p.ht),
-  liddedbox: (p) => foldLiddedBox(p.len, p.wid, p.ht),
-  trayflat: (p) => foldOpenBox(p.len, p.wid, p.ht),
-  uchannel: (p) => {
-    const m = foldU(p.len, p.web, p.leg);
-    if (Math.round(p.ends) >= 1) {
-      const e1 = face(p.web, p.leg), e2 = face(p.web, p.leg);
-      const extra = assemble(e1, [e1, e2]);
-      // stand the ends at each end of the channel
-      return { faces: m.faces.concat(extra.faces), panels: m.panels.concat([{ w: p.web, h: p.leg }, { w: p.web, h: p.leg }]) };
-    }
-    return m;
-  },
-  cchannel: (p) => {
-    const m = foldC(p.len, p.web, p.leg, p.flange);
-    return { faces: m.faces, panels: m.panels.concat([{ w: p.web, h: p.leg }, { w: p.web, h: p.leg }]) };
-  },
+  openbox: (p) => foldOpenHem(p.len, p.wid, p.ht, p.hem || 0, p.tab || 0),
+  liddedbox: (p) => foldLiddedCross(p.len, p.wid, p.ht, p.tab || 0),
+  trayflat: (p) => foldOpenHem(p.len, p.wid, p.ht, 0, p.tab || 0),
+  uchannel: (p) => foldU(p.len, p.web, p.leg, [], p.ends),
+  cchannel: (p) => foldC(p.len, p.web, p.leg, p.flange, p.ends),
   angleiron: (p) => foldAngle(p.len, p.a, p.b),
-  cuboidwrap: (p) => foldLiddedBox(p.len, p.wid, p.ht),
+  cuboidwrap: (p) => foldCuboid(p.len, p.wid, p.ht),
   fiveside: (p) => {
     const bot = face(p.wid, p.dep);
     attach(bot, 3, 90, face(p.dep, p.ht));
@@ -420,9 +495,27 @@ export const FOLD_MODELS = {
     attach(bot, 2, 90, back);
     return assemble(bot);
   },
-  totebox: (p) => foldOpenBox(p.len, p.wid, p.ht),
-  enclfront: (p) => foldLiddedBox(p.w, p.d, p.h),
-  jbox: (p) => foldLiddedBox(p.s, p.s, p.ht),
+  totebox: (p) => foldOpenHem(p.len, p.wid, p.ht, 0, 0),
+  enclfront: (p) => {
+    const iw = p.iw, ih = p.ih;
+    const holes = (iw > 8 && ih > 8) ? [{ pts: [[(p.w - iw) / 2, (p.h - ih) / 2], [(p.w + iw) / 2, (p.h - ih) / 2], [(p.w + iw) / 2, (p.h + ih) / 2], [(p.w - iw) / 2, (p.h + ih) / 2]] }] : [];
+    const bot = face(p.w, p.d);
+    const front = face(p.w, p.h, holes);
+    const back = face(p.w, p.h);
+    attach(back, 2, 70, face(p.w, p.d));
+    attach(bot, 0, 90, front);
+    attach(bot, 2, 90, back);
+    attach(bot, 3, 90, face(p.d, p.h));
+    attach(bot, 1, 90, face(p.d, p.h));
+    return assemble(bot);
+  },
+  jbox: (p) => {
+    const hs = p.hole > 0 ? [
+      { cx: p.inset, cy: p.inset, r: p.hole / 2 }, { cx: p.s - p.inset, cy: p.inset, r: p.hole / 2 },
+      { cx: p.s - p.inset, cy: p.s - p.inset, r: p.hole / 2 }, { cx: p.inset, cy: p.s - p.inset, r: p.hole / 2 },
+    ] : [];
+    return foldLiddedCross(p.s, p.s, p.ht, 0, hs);
+  },
   drawerbox: (p) => {
     const bot = face(p.w, p.d);
     attach(bot, 3, 90, face(p.d, p.h));
@@ -453,7 +546,7 @@ export const FOLD_MODELS = {
     attach(bot, 1, 90, side2);
     return assemble(bot);
   },
-  lidonly: (p) => foldOpenBox(p.len, p.wid, p.ht),
+  lidonly: (p) => foldOpenHem(p.len, p.wid, p.ht, 0, 0),
   s2r: s2rOf, s2roffset: s2rOf, r2s: s2rOf,
   cone: coneOf, conesteep: coneOf, coneshallow: coneOf, silocone: coneOf,
   conecentric: (p) => foldFrustum(p.d, p.d2, p.h),
@@ -626,7 +719,8 @@ function isPhoneFold() {
 
 export function mountFoldView(host, sh, params) {
   if (!host) return;
-  const model = foldModel(sh, params);
+  const mid = foldModel(sh, params);
+  const model = viewModel(mid, params);
   if (!model || !model.faces.length) { host.replaceChildren(); host.hidden = true; return; }
   host.hidden = false;
   const key = sh && sh.id;
@@ -678,7 +772,7 @@ function bindOrbit(canvas) {
 
 // Combined tile: 3D as the main picture, with a small flat-pattern inset so both are visible.
 export function foldTileSvg(sh, flatSvg, w = 96, h = 72, params) {
-  const model = foldModel(sh, params);
+  const model = viewModel(foldModel(sh, params), params);
   if (!model) return flatSvg || "";
   const main = foldThumbSvg(model, w, h);
   if (!flatSvg) return main;

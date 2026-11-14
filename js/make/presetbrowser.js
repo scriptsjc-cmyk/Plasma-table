@@ -51,6 +51,7 @@ function renderPresetBrowser() {
   else if (cat === "all" || q) {
     const seen = new Set();
     ids = groups.flatMap((g) => g.ids).filter((id) => !seen.has(id) && seen.add(id));
+    if (q) for (const s of PRESET_SHAPES) if (s.hidden && !seen.has(s.id) && seen.add(s.id)) ids.push(s.id);
   } else ids = (groups.find((g) => g.id === cat) || { ids: [] }).ids;
   const list = ids.map((id) => presetOrShape(id) || PRESET_SHAPES.find((s) => s.id === id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));

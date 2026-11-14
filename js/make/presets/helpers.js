@@ -189,3 +189,184 @@ export function elbowGores(d, bendDeg, pieces, clr, opts = {}) {
   return packPieces(piecesOut).contours;
 }
 
+
+// --- one-piece folding blanks and the "Separate pieces" option ---
+
+export const SPLIT_PARAM = ["split", "Blank", 0, { type: "select", options: [
+  { v: 0, l: "One folding blank" },
+  { v: 1, l: "Separate pieces" },
+] }];
+export const wantsSplit = (p) => Math.round(Number(p && p.split) || 0) >= 1;
+
+export function panel(w, h, holes = []) {
+  const c = [rectContour(w, h)];
+  for (const [x, y, d] of holes) {
+    const hole = holeIn(x, y, d, 0, 0, w, h, 1);
+    if (hole) c.push(hole);
+  }
+  return c;
+}
+
+// Plus-shaped tray / box blank: bottom L×W, four walls, optional corner tabs on
+// the long walls, optional top hems, optional lid flap on the far length wall.
+// hole lists are [x, y, d] in the bottom or lid's own coordinates.
+export function boxBlank(L, W, H, opts = {}) {
+  const tab = Math.max(0, Number(opts.tab) || 0);
+  const hem = Math.max(0, Number(opts.hem) || 0);
+  const lid = !!opts.lid;
+  const frontH = opts.frontH != null ? Math.max(0, opts.frontH) : H;
+  const botHoles = opts.botHoles || [];
+  const lidHoles = opts.lidHoles || [];
+  const win = opts.window; // { w, h, r } cut in the front (+Y? front is the near length wall at y < arm)
+  if (wantsSplit(opts)) {
+    const pieces = [
+      panel(L, W, botHoles),
+      panel(L, frontH + hem),
+      panel(L, H + hem),
+      panel(W, H + hem),
+      panel(W, H + hem),
+    ];
+    if (lid) pieces.push(panel(L, W, lidHoles));
+    if (win && win.w > 8 && win.h > 8) {
+      const iw = Math.min(win.w, L - 16), ih = Math.min(win.h, frontH - 10);
+      if (iw > 8 && ih > 8) pieces[1].push(roundedRect((L - iw) / 2, (frontH - ih) / 2, iw, ih, win.r || 3));
+    }
+    return packPieces(pieces).contours;
+  }
+  const t = Math.max(0, Math.min(tab, Math.min(H, L / 2)));
+  const armF = frontH + hem, armB = H + hem, armS = H + hem;
+  const x0 = armS, y0 = armF;
+  const x1 = x0 + L, y1 = y0 + W;
+  const pts = [];
+  // walk clockwise from the near-left corner of the front wall (including tab / hem)
+  const yFront = 0;
+  const yBackOuter = y1 + armB + (lid ? W : 0);
+  // front edge (possibly with tabs)
+  pts.push([x0 - t, yFront], [x1 + t, yFront]);
+  if (t > 0) pts.push([x1 + t, y0], [x1, y0]);
+  else pts.push([x1, y0]);
+  // right side wall
+  pts.push([x1 + armS, y0], [x1 + armS, y1], [x1, y1]);
+  if (t > 0) pts.push([x1 + t, y1]);
+  // back wall, then optional lid
+  if (lid) {
+    pts.push([x1 + t, y1 + armB], [x1, y1 + armB], [x1, yBackOuter], [x0, yBackOuter], [x0, y1 + armB], [x0 - t, y1 + armB]);
+  } else {
+    pts.push([x1 + t, y1 + armB], [x0 - t, y1 + armB]);
+  }
+  if (t > 0) pts.push([x0 - t, y1], [x0, y1]);
+  else pts.push([x0, y1]);
+  // left side wall
+  pts.push([x0 - armS, y1], [x0 - armS, y0], [x0, y0]);
+  if (t > 0) pts.push([x0 - t, y0]);
+  const c = [poly(pts)];
+  // wall / bottom bends
+  c.push(bendLine(x0, y0, x1, y0));
+  c.push(bendLine(x0, y1, x1, y1));
+  c.push(bendLine(x0, y0, x0, y1));
+  c.push(bendLine(x1, y0, x1, y1));
+  if (hem > 0) {
+    c.push(bendLine(x0, hem, x1, hem));                 // front hem
+    c.push(bendLine(x0, y1 + H, x1, y1 + H));           // back hem
+    c.push(bendLine(x0 - H, y0, x0 - H, y1));           // left hem
+    c.push(bendLine(x1 + H, y0, x1 + H, y1));           // right hem
+  }
+  if (lid) c.push(bendLine(x0, y1 + armB, x1, y1 + armB));
+  if (t > 0) {
+    c.push(bendLine(x0, yFront, x0, y0));
+    c.push(bendLine(x1, yFront, x1, y0));
+    c.push(bendLine(x0, y1, x0, y1 + (hem > 0 ? H : armB)));
+    c.push(bendLine(x1, y1, x1, y1 + (hem > 0 ? H : armB)));
+  }
+  for (const [x, y, d] of botHoles) {
+    const h = holeIn(x0 + x, y0 + y, d, 0, 0, x1 + armS, yBackOuter || y1 + armB, 1);
+    if (h) c.push(h);
+  }
+  if (lid) {
+    for (const [x, y, d] of lidHoles) {
+      const h = holeIn(x0 + x, y1 + armB + y, d, 0, 0, x1 + armS, yBackOuter, 1);
+      if (h) c.push(h);
+    }
+  }
+  if (win && win.w > 8 && win.h > 8) {
+    const iw = Math.min(win.w, L - 16), ih = Math.min(win.h, frontH - 8);
+    if (iw > 8 && ih > 8) c.push(roundedRect(x0 + (L - iw) / 2, (frontH - ih) / 2, iw, ih, win.r || 3));
+  }
+  return c;
+}
+
+// U / C channel: one developed strip, with optional end flaps attached to the web.
+// widths is the list of face sizes across the profile; webIndex picks the web.
+export function channelBlank(len, widths, webIndex, endH, split) {
+  const body = strip(len, widths);
+  if (!(endH > 0)) return body;
+  if (wantsSplit({ split })) {
+    const web = widths[webIndex] || 0;
+    return packPieces([body, panel(web, endH), panel(web, endH)]).contours;
+  }
+  const web = widths[webIndex] || 0;
+  const before = widths.slice(0, webIndex).reduce((a, b) => a + b, 0);
+  const after = before + web;
+  const Htot = widths.reduce((a, b) => a + b, 0);
+  const outline = [
+    [0, 0], [len, 0], [len, before], [len + endH, before], [len + endH, after],
+    [len, after], [len, Htot], [0, Htot], [0, after], [-endH, after], [-endH, before], [0, before],
+  ];
+  const c = [poly(outline)];
+  let y = 0;
+  for (let i = 0; i < widths.length - 1; i++) {
+    y += widths[i];
+    c.push(bendLine(0, y, len, y));
+  }
+  c.push(bendLine(0, before, 0, after));
+  c.push(bendLine(len, before, len, after));
+  return c;
+}
+
+// Cuboid sleeve (four walls in a row) with the two ends as flaps on one length wall, or packed separate.
+export function cuboidBlank(L, W, H, split) {
+  const sleeve = [rectContour(2 * (L + W), H),
+    bendLine(L, 0, L, H),
+    bendLine(L + W, 0, L + W, H),
+    bendLine(2 * L + W, 0, 2 * L + W, H)];
+  if (wantsSplit({ split })) return packPieces([sleeve, panel(L, W), panel(L, W)]).contours;
+  // Ends attach above and below the first length wall (x=0..L).
+  const outline = [
+    [0, -W], [L, -W], [L, 0], [2 * (L + W), 0], [2 * (L + W), H],
+    [L, H], [L, H + W], [0, H + W], [0, H],
+  ];
+  return [poly(outline),
+    bendLine(L, 0, L, H),
+    bendLine(L + W, 0, L + W, H),
+    bendLine(2 * L + W, 0, 2 * L + W, H),
+    bendLine(0, 0, L, 0),
+    bendLine(0, H, L, H)];
+}
+
+// Crate / carton: bottom, four walls and four outer flaps, one piece (or packed).
+export function crateBlank(L, W, H, split) {
+  if (wantsSplit({ split })) {
+    return packPieces([
+      panel(2 * (L + W), H),
+      panel(L, W),
+      panel(L, W / 2), panel(L, W / 2),
+      panel(W, L / 2), panel(W, L / 2),
+    ]).contours;
+  }
+  const fl = W / 2, fs = L / 2;
+  const x0 = H, y0 = H;
+  const x1 = x0 + L, y1 = y0 + W;
+  const outline = [
+    [x0, y0 - H - fl], [x1, y0 - H - fl], [x1, y0],
+    [x1 + H, y0], [x1 + H + fs, y0], [x1 + H + fs, y1], [x1 + H, y1], [x1, y1],
+    [x1, y1 + H + fl], [x0, y1 + H + fl], [x0, y1],
+    [x0 - H, y1], [x0 - H - fs, y1], [x0 - H - fs, y0], [x0 - H, y0], [x0, y0],
+  ];
+  return [poly(outline),
+    bendLine(x0, y0, x1, y0), bendLine(x0, y1, x1, y1),
+    bendLine(x0, y0, x0, y1), bendLine(x1, y0, x1, y1),
+    bendLine(x0, y0 - H, x1, y0 - H),
+    bendLine(x0, y1 + H, x1, y1 + H),
+    bendLine(x0 - H, y0, x0 - H, y1),
+    bendLine(x1 + H, y0, x1 + H, y1)];
+}
