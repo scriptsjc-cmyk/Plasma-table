@@ -14,6 +14,8 @@ import { SHAPES, makeShape } from "../../js/make/shapes.js";
 import { textToContours, TEXT_FONTS } from "../../js/make/textshape.js";
 import { DEFAULT_TOOL_IDS, toolInfo, KNOWN_TOOLS } from "../../js/make/toolbarcustom.js";
 import { turnAngles } from "../../js/cut/nest.js";
+import { designToGcode } from "../../js/cut/cam.js";
+import { mitreGore } from "../../js/make/presets/helpers.js";
 
 const A = await load();
 const t = new T("27_cad_c35_c45");
@@ -31,13 +33,20 @@ const r1 = (v) => Math.round(v * 10) / 10;
   const a = elbowGores(100, 90, 3, 150);
   const b = elbowGores(100, 90, 3, 150, { t: 0, allow: 1, seam: 0, seamAt: 0 });
   t.check("C35: zero thickness leaves the development unchanged", JSON.stringify(a) === JSON.stringify(b) && a.length === 3, `n=${a.length}`, "C35-SHEET");
-  const c = elbowGores(100, 90, 3, 150, sheetFrom({ t: 3, allow: 1, seam: 10 }));
+  const gore = mitreGore(100, 90, 3, 150, "end");
+  const xs = (gore && gore.pts || []).map((p) => p[0]);
+  const span = xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+  t.check("C35: at t=0 a gore still spans the full circumference (not wrapped to 0)",
+    !!(gore && Math.abs(span - Math.PI * 100) < 0.05), `span=${span}`, "C35-SHEET");
+  const seamOnly = elbowGores(100, 90, 3, 150, sheetFrom({ t: 0, allow: 1, seam: 10 }));
+  const mid = elbowGores(100, 90, 3, 150, sheetFrom({ t: 3, allow: 1, seam: 0 }));
   const width = (cs) => {
     let x0 = Infinity, x1 = -Infinity;
     for (const q of cs[0].pts) { x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); }
     return x1 - x0;
   };
-  t.check("C35: mean thickness plus a seam widens the wrap", width(c) > width(a) + 5, `was ${r1(width(a))} now ${r1(width(c))}`, "C35-SHEET");
+  t.check("C35: a seam widens the wrap", width(seamOnly) > width(a) + 5, `was ${r1(width(a))} now ${r1(width(seamOnly))}`, "C35-SHEET");
+  t.check("C35: mean thickness narrows the wrap", width(mid) < width(a) - 5, `was ${r1(width(a))} now ${r1(width(mid))}`, "C35-SHEET");
   t.check("C35: inside / mean / outside diameters", developedDia(100, 4, 0) === 92 && developedDia(100, 4, 1) === 96 && developedDia(100, 4, 2) === 100, "", "C35-SHEET");
   const tab = elbowTable(100, 90, 3, 150, sheetFrom({ t: 0 }));
   t.check("C35: true-length table has two end gores and one middle", tab.gores.length === 3 && tab.gores[1].name.includes("Middle") && tab.triangulation.length >= 8, JSON.stringify(tab.gores.map((g) => g.name)), "C35-SHEET");
@@ -195,6 +204,47 @@ function circlePts(cx, cy, r, n = 24) {
     pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
   }
   return pts;
+}
+
+
+// ---- C39: lead type / side are applied in CAM; auto is byte-identical ----
+{
+  const rect = [{ pts: [[0, 0], [80, 0], [80, 50], [0, 50]], closed: true }];
+  const base = { kerf: 1.5, leadIn: 5, name: "lead", keepOrigin: true };
+  const defG = designToGcode(rect, base);
+  const autoG = designToGcode(rect, { ...base, leadType: "auto", leadSide: "auto" });
+  t.check("C39: default and explicit auto lead settings are byte-identical", defG.gcode === autoG.gcode, "", "C39-LEAD");
+  const outG = designToGcode(rect, { ...base, leadType: "straight", leadSide: "outside" });
+  const inG = designToGcode(rect, { ...base, leadType: "straight", leadSide: "inside" });
+  const inPoly = (p) => p[0] > 1 && p[0] < 79 && p[1] > 1 && p[1] < 49;
+  const Lout = outG.cutInfo[0].lead, Linn = inG.cutInfo[0].lead;
+  t.check("C39: an outside lead-in starts outside the outline", !inPoly(Lout), JSON.stringify(Lout), "C39-LEAD");
+  t.check("C39: an inside lead-in starts inside the outline", inPoly(Linn), JSON.stringify(Linn), "C39-LEAD");
+  t.check("C39: inside and outside leads are not the same point", Lout[0] !== Linn[0] || Lout[1] !== Linn[1], JSON.stringify({ Lout, Linn }), "C39-LEAD");
+  const arcG = designToGcode(rect, { ...base, leadType: "arc", leadSide: "outside" });
+  const leadMove = (g) => {
+    const lines = g.gcode.split("\n");
+    const i = lines.indexOf("M3");
+    return i >= 0 ? lines[i + 1] : "";
+  };
+  t.check("C39: auto lead-in onto the line is still G1", leadMove(defG).startsWith("G1 "), leadMove(defG), "C39-LEAD");
+  t.check("C39: an arc lead-in is a G2/G3 onto the line", /^G[23] /.test(leadMove(arcG)) && /I/.test(leadMove(arcG)), leadMove(arcG), "C39-LEAD");
+  const holePts = (cx, cy, r, n = 24) => {
+    const pts = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 2 * Math.PI;
+      pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+    }
+    return pts;
+  };
+  const plate = { pts: holePts(50, 50, 40), closed: true, circle: { cx: 50, cy: 50, r: 40 } };
+  const hole = { pts: holePts(50, 50, 12), closed: true, circle: { cx: 50, cy: 50, r: 12 } };
+  const ring = designToGcode([plate, hole], { ...base, leadType: "auto", leadSide: "auto" });
+  const holeCut = ring.cutInfo.find((c) => c.hole);
+  const dLead = holeCut && Math.hypot(holeCut.lead[0] - 50, holeCut.lead[1] - 50);
+  t.check("C39: auto lead on a hole is on the scrap (inside) side", !!(holeCut && dLead < 12), JSON.stringify(holeCut && { lead: holeCut.lead, dLead }), "C39-LEAD");
+  const tabG = designToGcode(rect, { ...base, tabs: { count: 2, width: 4 } });
+  t.check("C39: stored tabs are applied on part edges", tabG.summary.tabs === 2, JSON.stringify(tabG.summary), "C39-LEAD");
 }
 
 process.exit(t.done() ? 1 : 0);

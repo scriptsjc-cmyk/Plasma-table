@@ -20,8 +20,15 @@ import { isEtchOp, emitEtchGcode } from "./etch.js";
 //   tabs       { count, width }  hold-down tabs on part edges (not holes): the arc stops for `width` mm, the sheet keeps the part
 //   tabOver    { key: { count, width, pts:[[x,y]...] } } per-outline tab settings / hand-placed tab centres
 //   leadOut    mm of run-out into scrap after the cut closes     overcut  mm of extra cut past the start along the line
+//   leadType   "auto" (default, same as today) | "straight" | "arc"
+//   leadSide   "auto" (default, scrap side) | "outside" | "inside"
+//              Auto type + auto side is byte-identical to the previous G-code.
 // A cut's key is its position in the `contours` list you pass in, so it stays the same while the order changes.
-export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "design", order: wantOrder = null, skip = [], starts = {}, tabs = null, tabOver = {}, leadOut = 0, overcut = 0, keepOrigin = false, etch = null } = {}) {
+export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "design", order: wantOrder = null, skip = [], starts = {}, tabs = null, tabOver = {}, leadOut = 0, overcut = 0, keepOrigin = false, etch = null, leadType = "auto", leadSide = "auto" } = {}) {
+  const leadOpt = {
+    type: (leadType === "straight" || leadType === "arc") ? leadType : "auto",
+    side: (leadSide === "inside" || leadSide === "outside") ? leadSide : "auto",
+  };
   const warnings = [];
   const half = Math.max(0, kerf) / 2;
   const contours = contoursIn.map((c, i) => ({ ...c, _k: i }));
@@ -75,7 +82,7 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
       if (pts.length < 3 || (c.hole && signedArea(pts) <= 0.01)) { tooSmall++; continue; }
       if (selfIntersects(pts)) pinched++;
     }
-    cuts.push({ ...makeCut(c, pts, circle, leadIn, warnings, inMaterial, starts[c._k]), src: c, key: c._k, hole: c.hole });
+    cuts.push({ ...makeCut(c, pts, circle, leadIn, warnings, inMaterial, starts[c._k], leadOpt), src: c, key: c._k, hole: c.hole });
   }
   if (tooSmall) warnings.push(`${tooSmall} hole(s) are smaller than the cut width and were left out.`);
   if (pinched) warnings.push(`${pinched} shape(s) have details narrower than the cut width – those bits won't cut cleanly.`);
@@ -144,7 +151,14 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
     for (const run of c.runs) {
       const L = T(run.lead), S = T(run.start);
       lines.push(`G0 X${fmt(L[0])} Y${fmt(L[1])}`, "M3");
-      if (Math.hypot(L[0] - S[0], L[1] - S[1]) > 1e-6) lines.push(`G1 X${fmt(S[0])} Y${fmt(S[1])}`);
+      if (Math.hypot(L[0] - S[0], L[1] - S[1]) > 1e-6) {
+        if (run.leadArc && run.leadArc.ij) {
+          const ij2 = ijOnRounded(L, S, run.leadArc.ij);
+          lines.push(`${run.leadArc.g === "G2" ? "G2" : "G3"} X${fmt(S[0])} Y${fmt(S[1])} I${fmtIJ(ij2[0])} J${fmtIJ(ij2[1])}`);
+        } else {
+          lines.push(`G1 X${fmt(S[0])} Y${fmt(S[1])}`);
+        }
+      }
       let curX = +fmt(S[0]), curY = +fmt(S[1]);
       for (const [g, p, ij] of run.path) {
         const q = T(p);
@@ -184,41 +198,91 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
   };
 }
 
-function makeCut(c, pts, circle, leadIn, warnings, inMaterial, startAt) {
+function makeCut(c, pts, circle, leadIn, warnings, inMaterial, startAt, leadOpt = {}) {
   const scrap = (p) => (inMaterial ? !inMaterial(p) : (c.hole ? pointInPoly(p, pts) : !pointInPoly(p, pts)));
+  const type = leadOpt.type || "auto";
+  const side = leadOpt.side || "auto";
+  const autoLead = type === "auto" && side === "auto";
+  const leadDirOut = () => (side === "auto" ? !c.hole : side === "outside");
+  // Quarter-circle lead-in arriving at `start` along unit tangent T, from side N (unit, start→pierce).
+  const arcLead = (start, N, T, L) => {
+    const C = [start[0] + N[0] * L, start[1] + N[1] * L];
+    const P = [C[0] - T[0] * L, C[1] - T[1] * L];
+    return { lead: P, leadArc: { g: "G3", ij: [C[0] - P[0], C[1] - P[1]] } };
+  };
   if (circle) {
     const { cx, cy, r } = circle;
+    const pathOf = (start, lead, leadArc) => ({
+      depth: c.depth, start, lead, leadArc: leadArc || null,
+      path: [[c.hole ? "G3" : "G2", start, [cx - start[0], cy - start[1]]]],
+      pathPts: circlePts(cx, cy, r), scrap,
+    });
+    if (autoLead) {
+      let best = null;
+      const angles = [];
+      if (startAt) angles.push(Math.atan2(startAt[1] - cy, startAt[0] - cx));
+      else for (let k = 0; k < 24; k++) angles.push((k / 24) * 2 * Math.PI);
+      for (const ang of angles) {
+        const start = [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
+        const inward = [-Math.cos(ang), -Math.sin(ang)], outward = [Math.cos(ang), Math.sin(ang)];
+        const dir = c.hole ? inward : outward;
+        if (c.hole && r < leadIn * 1.25 && scrap([cx, cy])) {
+          best = { start, lead: [cx, cy] };
+          break;
+        }
+        for (let L = leadIn; L > 0.3; L /= 2) {
+          const cand = [start[0] + dir[0] * L, start[1] + dir[1] * L];
+          const inside = Math.hypot(cand[0] - cx, cand[1] - cy) < r;
+          if ((c.hole ? inside : !inside) && scrap(cand)) { best = { start, lead: cand }; break; }
+        }
+        if (best) break;
+      }
+      if (!best && startAt) {
+        const ang = angles[0], start = [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
+        best = { start, lead: start };
+        warnings.push("A hand-placed start point has no room for a lead-in – it will pierce on the line.");
+      }
+      if (!best) {
+        const start = [cx + r, cy];
+        best = { start, lead: c.hole ? (r < leadIn * 1.25 ? [cx, cy] : [cx + r - Math.min(leadIn, r * 0.8), cy]) : [cx + r + leadIn, cy] };
+      }
+      return pathOf(best.start, best.lead, null);
+    }
     let best = null;
     const angles = [];
     if (startAt) angles.push(Math.atan2(startAt[1] - cy, startAt[0] - cx));
     else for (let k = 0; k < 24; k++) angles.push((k / 24) * 2 * Math.PI);
+    const out = leadDirOut();
     for (const ang of angles) {
       const start = [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
-      const inward = [-Math.cos(ang), -Math.sin(ang)], outward = [Math.cos(ang), Math.sin(ang)];
-      const dir = c.hole ? inward : outward;
-      if (c.hole && r < leadIn * 1.25 && scrap([cx, cy])) {
-        best = { start, lead: [cx, cy] };
-        break;
-      }
+      const outward = [Math.cos(ang), Math.sin(ang)];
+      const N = out ? outward : [-outward[0], -outward[1]];
+      const T = c.hole ? [-Math.sin(ang), Math.cos(ang)] : [Math.sin(ang), -Math.cos(ang)];
       for (let L = leadIn; L > 0.3; L /= 2) {
-        const cand = [start[0] + dir[0] * L, start[1] + dir[1] * L];
-        const inside = Math.hypot(cand[0] - cx, cand[1] - cy) < r;
-        if ((c.hole ? inside : !inside) && scrap(cand)) { best = { start, lead: cand }; break; }
+        if (type === "arc") {
+          const a = arcLead(start, N, T, L);
+          if (side !== "auto" || scrap(a.lead)) { best = { start, ...a }; break; }
+        } else {
+          const cand = [start[0] + N[0] * L, start[1] + N[1] * L];
+          if (side !== "auto" || scrap(cand)) { best = { start, lead: cand }; break; }
+        }
       }
       if (best) break;
     }
-    if (!best && startAt) {
-      const ang = angles[0], start = [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
-      best = { start, lead: start };
-      warnings.push("A hand-placed start point has no room for a lead-in – it will pierce on the line.");
-    }
     if (!best) {
-      const start = [cx + r, cy];
-      best = { start, lead: c.hole ? (r < leadIn * 1.25 ? [cx, cy] : [cx + r - Math.min(leadIn, r * 0.8), cy]) : [cx + r + leadIn, cy] };
+      const ang = angles[0] || 0;
+      const start = [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
+      const outward = [Math.cos(ang), Math.sin(ang)];
+      const N = out ? outward : [-outward[0], -outward[1]];
+      const T = c.hole ? [-Math.sin(ang), Math.cos(ang)] : [Math.sin(ang), -Math.cos(ang)];
+      if (type === "arc" && leadIn > 0.3) {
+        best = { start, ...arcLead(start, N, T, leadIn) };
+      } else {
+        best = { start, lead: [start[0] + N[0] * leadIn, start[1] + N[1] * leadIn] };
+      }
+      if (leadIn > 0 && !scrap(best.lead)) warnings.push("A lead-in was placed on the requested side, which may not be scrap.");
     }
-    const { start, lead } = best;
-    return { depth: c.depth, start, lead, path: [[c.hole ? "G3" : "G2", start, [cx - start[0], cy - start[1]]]],
-      pathPts: circlePts(cx, cy, r), scrap };
+    return pathOf(best.start, best.lead, best.leadArc || null);
   }
   // polygon: try every edge, longest first, and pick a lead that lands in scrap
   const edges = [];
@@ -245,11 +309,25 @@ function makeCut(c, pts, circle, leadIn, warnings, inMaterial, startAt) {
       const start = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
       const ex = (b[0] - a[0]) / l, ey = (b[1] - a[1]) / l;
       const outward = [ey, -ex];
-      const dir = c.hole ? [-outward[0], -outward[1]] : outward;
-      for (let L = leadIn; L > 0.3; L /= 2) {
-        const cand = [start[0] + dir[0] * L, start[1] + dir[1] * L];
-        const inside = pointInPoly(cand, pts);
-        if ((c.hole ? inside : !inside) && scrap(cand)) { chosen = { start, lead: cand, bi, a, b }; break; }
+      if (autoLead) {
+        const dir = c.hole ? [-outward[0], -outward[1]] : outward;
+        for (let L = leadIn; L > 0.3; L /= 2) {
+          const cand = [start[0] + dir[0] * L, start[1] + dir[1] * L];
+          const inside = pointInPoly(cand, pts);
+          if ((c.hole ? inside : !inside) && scrap(cand)) { chosen = { start, lead: cand, bi, a, b }; break; }
+        }
+      } else {
+        const N0 = leadDirOut() ? outward : [-outward[0], -outward[1]];
+        const T0 = c.hole ? [ex, ey] : [-ex, -ey];
+        for (let L = leadIn; L > 0.3; L /= 2) {
+          if (type === "arc") {
+            const aL = arcLead(start, N0, T0, L);
+            if (side !== "auto" || scrap(aL.lead)) { chosen = { start, lead: aL.lead, leadArc: aL.leadArc, bi, a, b }; break; }
+          } else {
+            const cand = [start[0] + N0[0] * L, start[1] + N0[1] * L];
+            if (side !== "auto" || scrap(cand)) { chosen = { start, lead: cand, bi, a, b }; break; }
+          }
+        }
       }
       if (chosen) break;
     }
@@ -269,7 +347,7 @@ function makeCut(c, pts, circle, leadIn, warnings, inMaterial, startAt) {
   if (c.hole) seq = [...ring];
   else seq = [a, ...[...ring].reverse().slice(1)];
   seq.push(start);
-  return { depth: c.depth, start, lead, path: pathFromFittedRing(start, pts, seq, !!c.hole, lead), pathPts: [start, ...seq], scrap };
+  return { depth: c.depth, start, lead, leadArc: chosen.leadArc || null, path: pathFromFittedRing(start, pts, seq, !!c.hole, lead), pathPts: [start, ...seq], scrap };
 }
 
 // Fit the already-kerfed closed ring, then walk it from the lead-in so a mid-edge
@@ -443,7 +521,7 @@ export function nearestOnRing(ring, P) {          // for dragging a handle along
 }
 
 function buildRuns(c, { tabs, tabOver, leadOut, overcut, leadIn, warnings }) {
-  const plain = { runs: [{ lead: c.lead, start: c.start, path: c.path }], tabPts: [], leadOutPt: null };
+  const plain = { runs: [{ lead: c.lead, start: c.start, path: c.path, leadArc: c.leadArc || null }], tabPts: [], leadOutPt: null };
   const closedPart = !c.open && !c.hole;
   const ov = tabOver || {};
   const wantTabs = closedPart ? ((ov.pts && ov.pts.length) ? ov.pts.length : Number(ov.count ?? (tabs && tabs.count) ?? 0)) : 0;
@@ -479,7 +557,7 @@ function buildRuns(c, { tabs, tabOver, leadOut, overcut, leadIn, warnings }) {
     const path = sliceSegs(segs, a, b);
     if (i === cuts.length - 1 && oc > 1e-6) path.push(...sliceSegs(segs, 0, oc));
     const st = pointAt(segs, a);
-    runs.push(i === 0 ? { lead: c.lead, start: c.start, path } : { lead: st, start: st, path });
+    runs.push(i === 0 ? { lead: c.lead, start: c.start, path, leadArc: c.leadArc || null } : { lead: st, start: st, path });
   });
   // lead-out: from where the last run ends, run off into scrap
   let leadOutPt = null;

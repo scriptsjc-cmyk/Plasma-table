@@ -49,6 +49,8 @@ export function makeInspector(h) {
         speed: Number(S.speed) || 0,
         leadIn: Number(h.leadNow()) || 0,
         leadOut: Number(S.cam.leadOut) || 0,
+        leadType: S.cam.leadType || "auto",
+        leadSide: S.cam.leadSide || "auto",
         tabs: { count: Number(S.cam.tabs) || 0, width: Number(S.cam.tabW) || 0 },
       };
     },
@@ -61,6 +63,8 @@ export function makeInspector(h) {
       if ("amps" in p) return false;                 // amps are set at the plasma unit: not a per-shape (or any) app setting
       if ("leadIn" in p && !(num(p.leadIn) && p.leadIn >= 0 && p.leadIn <= 50)) return false;
       if ("leadOut" in p && !(num(p.leadOut) && p.leadOut >= 0 && p.leadOut <= 50)) return false;
+      if ("leadType" in p && !["auto", "straight", "arc"].includes(p.leadType)) return false;
+      if ("leadSide" in p && !["auto", "inside", "outside"].includes(p.leadSide)) return false;
       if (tb) {
         if ("count" in tb && !(num(tb.count) && tb.count >= 0 && tb.count <= 20)) return false;
         if ("width" in tb && !(num(tb.width) && tb.width >= 0.5 && tb.width <= 20)) return false;
@@ -70,6 +74,8 @@ export function makeInspector(h) {
         if (p.operation !== "cut" && h.note) h.note(`${p.operation === "mark" ? "Mark" : "Score"} will be etched first (the Settings tool: plasma etch or a scribe / marker), then the cuts. It will not cut through the sheet.`);
       }
       if ("leadOut" in p) S.cam.leadOut = p.leadOut;
+      if ("leadType" in p) S.cam.leadType = p.leadType;
+      if ("leadSide" in p) S.cam.leadSide = p.leadSide;
       if (tb && "count" in tb) S.cam.tabs = Math.round(tb.count);
       if (tb && "width" in tb) S.cam.tabW = tb.width;
       if ("leadIn" in p) h.setLead(p.leadIn);

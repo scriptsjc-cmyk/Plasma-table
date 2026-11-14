@@ -148,8 +148,10 @@ export function mitreGore(d, bendDeg, pieces, clr, kind = "end", samples = 64, o
   const shift = seamShift(circ, sheet.seamAt);
   const top = [], bot = [];
   for (let i = 0; i <= steps; i++) {
-    let x = (circ * i) / steps - shift;
-    x = ((x % circ) + circ) % circ;
+    // Do not wrap x with % circ: the last sample is x=circ, and circ%circ is 0.
+    // Subtracting the seam shift keeps the strip a continuous length-circ run,
+    // so t=0 / seamAt=0 still produces x = 0..circ (the original development).
+    const x = (circ * i) / steps - shift;
     const c = Math.cos((2 * Math.PI * i) / steps);    // +1 at the extrados (x=0 and x=circ)
     if (kind === "mid") {
       bot.push([x, amp * (1 - c)]);
@@ -159,11 +161,12 @@ export function mitreGore(d, bendDeg, pieces, clr, kind = "end", samples = 64, o
       top.push([x, L + amp * c]);
     }
   }
-  // seam allowance is a straight strip added at x = circ
+  // seam allowance is a straight strip on the far edge of the unwrap
   if (sheet.seam > 0) {
-    const yb0 = bot[0][1], yt0 = top[0][1];
-    bot.push([circ + sheet.seam, yb0]);
-    top.push([circ + sheet.seam, yt0]);
+    const xEnd = Math.max(...top.map((p) => p[0]));
+    const yAt = (arr) => arr.reduce((a, p) => (p[0] >= a[0] ? p : a))[1];
+    bot.push([xEnd + sheet.seam, yAt(bot)]);
+    top.push([xEnd + sheet.seam, yAt(top)]);
   }
   top.sort((p, q) => p[0] - q[0]);
   bot.sort((p, q) => p[0] - q[0]);

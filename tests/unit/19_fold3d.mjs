@@ -108,6 +108,9 @@ for (const id of ["s2r", "s2roffset", "r2s", "fanduct"]) {
     `faces=${m && m.faces && m.faces.length}, expected ${4 + 8 * n} (n=${n})`);
 }
 
+// C32 added etched bend / fold lines to these flat patterns (angle brackets,
+// channels, cuboid wrap). Those hashes were updated; elbow gores at t=0 were
+// restored after a C35 wrap-around bug and must still match the original goldens.
 const goldPath = new URL("../data/existing-preset-flat.json", import.meta.url);
 const gold = JSON.parse(fs.readFileSync(goldPath, "utf8"));
 t.check("golden flat-pattern fixture is present", Array.isArray(gold.rows) && gold.rows.length > 50, String(gold.rows && gold.rows.length));

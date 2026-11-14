@@ -11,6 +11,7 @@ export function camOpts() {            // what the job builder gets
     order: S.cutOrder || null, skip: S.cutSkip || [], starts: c.starts || {},
     tabs: c.tabs > 0 ? { count: c.tabs, width: c.tabW } : null, tabOver: c.tabOver || {},
     leadOut: c.leadOut || 0, overcut: c.over || 0,
+    leadType: c.leadType || "auto", leadSide: c.leadSide || "auto",
   };
 }
 function resetCam(keepOrder) {
