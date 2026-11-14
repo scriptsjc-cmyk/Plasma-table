@@ -253,11 +253,12 @@ export class EdgeMethods {
     if (dirty) { this.remember(); this.tidyCustom(it); this._renorm(it); this.commit(); this.onSelect(); }
     return true;
   }
-  startFilletPick(radius) {
-    const r = Number(radius);
-    if (!(r > 0)) { this.onMessage("Enter a radius."); return false; }
+  startFilletPick(size, mode) {
+    const r = Number(size);
+    const kind = mode === "relief" ? "relief" : "round";
+    if (!(r > 0)) { this.onMessage(kind === "relief" ? "Enter a diameter." : "Enter a radius."); return false; }
     if (!this.prepareFillet()) return false;
-    this.filletPick = { radius: r };
+    this.filletPick = { radius: r, mode: kind };
     this.filletHover = null;
     this.draw();
     this.onSelect();
@@ -373,6 +374,106 @@ export class EdgeMethods {
     if (!n && skipped) this.onMessage("That radius is too big for the inside corners, or they are already rounded.");
     else if (!n) this.onMessage("This part has no sharp inside corners to round.");
     else if (skipped) this.onMessage(n + " inside corner" + (n === 1 ? "" : "s") + " rounded. " + skipped + " could not use that radius.");
+    return n;
+  }
+  // Corner relief / dog-bone: a circle of the given diameter centred on an inside
+  // corner, taking a major-arc notch out of the material so a square-cornered
+  // mating part can sit fully into the corner. One continuous outline, not a hole.
+  isInsideCorner(c, vi) {
+    return this.insideCornerIndices(c).includes(vi);
+  }
+  reliefCorner(diameter, vi) {
+    const d = Number(diameter);
+    if (!(d > 0)) { this.onMessage("Enter a diameter."); return false; }
+    const info = this.edgeInfo();
+    if (!info) { this.onMessage("Click the inside corner you want to relieve, then Fillet."); return false; }
+    const v = vi != null ? vi : info.vi;
+    if (v == null) { this.onMessage("Click the inside corner you want to relieve, then Fillet."); return false; }
+    return this._reliefCornerAt(info.it, info.ci, v, d);
+  }
+  _reliefCornerAt(it, ci, vi, diameter, quiet) {
+    const R = Number(diameter) / 2;
+    if (!(R > 0)) { if (!quiet) this.onMessage("Enter a diameter."); return false; }
+    return this._guarded(it, () => {
+      const c = it.shape.cs[ci], pts = c.pts, n = pts.length;
+      if (n < 3 || vi == null || vi < 0 || vi >= n) return false;
+      if (!this.isInsideCorner(c, vi)) {
+        if (!quiet) this.onMessage("A relief cut is only for inside corners, so a square corner can sit into them. Use Round corner for an outside corner.");
+        return false;
+      }
+      const A = pts[(vi - 1 + n) % n], P = pts[vi], Q = pts[(vi + 1) % n];
+      const bs = c.bulges || [];
+      if (Math.abs(Number(bs[(vi - 1 + n) % n]) || 0) > 1e-6 || Math.abs(Number(bs[vi]) || 0) > 1e-6) {
+        if (!quiet) this.onMessage("Relief needs two straight edges at the corner. Flatten a curve first, or pick another corner.");
+        return false;
+      }
+      const v1 = [A[0] - P[0], A[1] - P[1]], v2 = [Q[0] - P[0], Q[1] - P[1]];
+      const l1 = Math.hypot(v1[0], v1[1]), l2 = Math.hypot(v2[0], v2[1]);
+      if (l1 < 0.05 || l2 < 0.05) {
+        if (!quiet) this.onMessage("That corner is too tight for a relief cut (the sides are too short).");
+        return false;
+      }
+      if (!(R > 0.05) || R > l1 - 0.05 || R > l2 - 0.05) {
+        const maxD = r1(2 * Math.min(l1, l2) - 0.1);
+        if (!quiet) this.onMessage("That circle is too big for this corner. Use " + Math.max(0.2, maxD).toFixed(1) + " mm diameter or less.");
+        return false;
+      }
+      const i1 = [v1[0] / l1, v1[1] / l1], i2 = [v2[0] / l2, v2[1] / l2];
+      const T1 = [P[0] + i1[0] * R, P[1] + i1[1] * R], T2 = [P[0] + i2[0] * R, P[1] + i2[1] * R];
+      // Major-arc mid-point: into the material, opposite the empty-side bisector, radius R from the corner (circle centred on the corner).
+      const bis = [i1[0] + i2[0], i1[1] + i2[1]], bl = Math.hypot(bis[0], bis[1]);
+      if (!(bl > 1e-9)) { if (!quiet) this.onMessage("That corner is too flat for a relief cut."); return false; }
+      const mid = [P[0] - (bis[0] / bl) * R, P[1] - (bis[1] / bl) * R];
+      // Included angle is the reflex (material) side. Pick the bulge sign whose mid-arc lands in the material
+      // (2s/chord is the wrong sign for a major arc, so do not use bulgeFromPoint here).
+      const ang = Math.acos(Math.max(-1, Math.min(1, i1[0] * i2[0] + i1[1] * i2[1])));
+      const sweep = 2 * Math.PI - ang;
+      if (!(sweep > Math.PI + 1e-3) || sweep >= 2 * Math.PI - 1e-3) {
+        if (!quiet) this.onMessage("That corner is too flat or too sharp for a relief cut.");
+        return false;
+      }
+      const mag = Math.tan(sweep / 4);
+      if (!(mag > 0) || mag > 4) {
+        if (!quiet) this.onMessage("That corner is too sharp for a single relief cut.");
+        return false;
+      }
+      const pick = (b) => {
+        const m = bulgeMidpoint(T1, T2, b);
+        return Math.hypot(m[0] - mid[0], m[1] - mid[1]);
+      };
+      const b = pick(mag) <= pick(-mag) ? mag : -mag;
+      const got = bulgeRadius(T1, T2, b);
+      if (!(Math.abs(b) > 1e-6) || !(Math.abs(got - R) < 0.2)) {
+        if (!quiet) this.onMessage("That diameter does not make a relief cut.");
+        return false;
+      }
+      c.pts[vi] = [r1(T1[0]), r1(T1[1])];
+      c.pts.splice(vi + 1, 0, [r1(T2[0]), r1(T2[1])]);
+      c.bulges = (c.bulges || []).slice();
+      while (c.bulges.length < n) c.bulges.push(0);
+      c.bulges.splice(vi + 1, 0, Number(c.bulges[vi]) || 0);
+      c.bulges[vi] = clampBulge(b);
+      this.edgeSel = { id: it.id, ci, ei: vi, vi: null };
+    });
+  }
+  reliefInsideCorners(diameter, it) {
+    const d = Number(diameter);
+    if (!(d > 0)) { this.onMessage("Enter a diameter."); return 0; }
+    const host = it || this.selected();
+    if (!this.prepareFillet()) return 0;
+    const part = host && this.item(host.id) || this.selected();
+    if (!this.isEditableCustom(part)) return 0;
+    let n = 0, skipped = 0;
+    for (let ci = 0; ci < part.shape.cs.length; ci++) {
+      const idxs = this.insideCornerIndices(part.shape.cs[ci]).sort((a, b) => b - a);
+      for (const vi of idxs) {
+        if (this._reliefCornerAt(part, ci, vi, d, true)) n++;
+        else skipped++;
+      }
+    }
+    if (!n && skipped) this.onMessage("That circle is too big for the inside corners, or they already have a relief.");
+    else if (!n) this.onMessage("This part has no sharp inside corners for a relief cut.");
+    else if (skipped) this.onMessage(n + " inside corner" + (n === 1 ? "" : "s") + " relieved. " + skipped + " could not use that diameter.");
     return n;
   }
   straightenEdge() {

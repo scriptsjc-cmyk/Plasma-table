@@ -10,6 +10,7 @@ export function openCad(title, fields, onOk) {
   $("cadFields").innerHTML = fields.map((f) => {
     if (f.note) return `<p class="muted small">${esc(f.note)}</p>`;
     if (f.type === "checkbox") return `<label class="check"><input id="cad_${f.id}" type="checkbox"${f.value ? " checked" : ""}> ${esc(f.label)}</label>`;
+    if (f.type === "select") return `<label>${esc(f.label)}<select id="cad_${f.id}">${(f.options || []).map((o) => `<option value="${esc(o.v)}"${o.v === f.value ? " selected" : ""}>${esc(o.l)}</option>`).join("")}</select></label>`;
     return `<label>${esc(f.label)}<input id="cad_${f.id}" type="${f.type || "number"}" inputmode="${f.text ? "text" : "decimal"}" step="any" value="${esc(String(f.value ?? ""))}"></label>`;
   }).join("");
   $("cadDialog").classList.remove("hidden");
@@ -19,8 +20,9 @@ export function openCad(title, fields, onOk) {
       if (f.note) continue;
       if (f.type === "checkbox") { vals[f.id] = !!($("cad_" + f.id) && $("cad_" + f.id).checked); continue; }
       const raw = $("cad_" + f.id).value;
-      vals[f.id] = f.text ? raw : evalExpr(raw);
-      if (!f.text && !Number.isFinite(vals[f.id])) { toast("Check the number in " + f.label, true); return; }
+      if (f.type === "select" || f.text) { vals[f.id] = raw; continue; }
+      vals[f.id] = evalExpr(raw);
+      if (!Number.isFinite(vals[f.id])) { toast("Check the number in " + f.label, true); return; }
     }
     $("cadDialog").classList.add("hidden");
     onOk(vals);

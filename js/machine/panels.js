@@ -35,8 +35,14 @@ export function fillFilletPanel() {
   box.classList.toggle("hidden", !on);
   if (on) box.removeAttribute("hidden"); else box.setAttribute("hidden", "");
   if (!on) return;
+  const relief = sketch.filletPick.mode === "relief";
+  if ($("filletMode") && document.activeElement !== $("filletMode")) $("filletMode").value = relief ? "relief" : "round";
   if ($("filletRad") && document.activeElement !== $("filletRad")) $("filletRad").value = String(sketch.filletPick.radius);
-  if ($("filletHint")) $("filletHint").textContent = "Click a corner to give it a " + sketch.filletPick.radius + " mm radius. Inside corners get a smooth inner radius. Hover a corner to highlight it.";
+  const lab = $("filletSizeLab");
+  if (lab && lab.childNodes[0] && lab.childNodes[0].nodeType === 3) lab.childNodes[0].textContent = relief ? "Diameter (mm)" : "Radius (mm)";
+  if ($("filletHint")) $("filletHint").textContent = relief
+    ? "Click an inside corner to cut a " + sketch.filletPick.radius + " mm circle into the material, so a square corner can sit fully in. Hover a corner to highlight it."
+    : "Click a corner to give it a " + sketch.filletPick.radius + " mm radius. Inside corners get a smooth inner radius. Hover a corner to highlight it.";
 }
 function bindEdgePanel() {
   if (!$("edgePanel") || $("edgePanel")._bound) return;
@@ -60,6 +66,10 @@ function bindEdgePanel() {
 function bindFilletPanel() {
   if (!$("filletPanel") || $("filletPanel")._bound) return;
   $("filletPanel")._bound = true;
+  $("filletMode") && $("filletMode").addEventListener("change", () => {
+    if (sketch.filletPick) sketch.filletPick.mode = $("filletMode").value === "relief" ? "relief" : "round";
+    fillFilletPanel();
+  });
   $("filletRad") && $("filletRad").addEventListener("change", () => {
     const r = Number($("filletRad").value);
     if (r > 0 && sketch.filletPick) sketch.filletPick.radius = r;
@@ -67,9 +77,10 @@ function bindFilletPanel() {
   });
   $("filletAllInside") && ($("filletAllInside").onclick = () => {
     const r = Number($("filletRad") && $("filletRad").value) || (sketch.filletPick && sketch.filletPick.radius);
-    const n = sketch.filletInsideCorners(r);
-    if (n > 0) toast(n === 1 ? "Inside corner rounded." : n + " inside corners rounded.");
-    if (sketch.filletPick && r > 0) sketch.filletPick.radius = r;
+    const relief = (sketch.filletPick && sketch.filletPick.mode) === "relief" || ($("filletMode") && $("filletMode").value === "relief");
+    const n = relief ? sketch.reliefInsideCorners(r) : sketch.filletInsideCorners(r);
+    if (n > 0) toast(n === 1 ? (relief ? "Inside corner relieved." : "Inside corner rounded.") : n + (relief ? " inside corners relieved." : " inside corners rounded."));
+    if (sketch.filletPick && r > 0) { sketch.filletPick.radius = r; if (relief) sketch.filletPick.mode = "relief"; }
     fillFilletPanel();
   });
   $("filletDone") && ($("filletDone").onclick = () => { sketch.endFilletPick(); fillFilletPanel(); });

@@ -174,8 +174,11 @@ export class InputMethods {
         if (ch && ch.kind === "vertex") {
           this.pick([ch.it.id]);
           this.edgeSel = { id: ch.it.id, ci: ch.ci, ei: ch.vi, vi: ch.vi };
-          const ok = this._filletCornerAt(ch.it, ch.ci, ch.vi, this.filletPick.radius);
-          if (ok) this.onMessage("Corner rounded. Click another, or press Done.");
+          const relief = this.filletPick.mode === "relief";
+          const ok = relief
+            ? this._reliefCornerAt(ch.it, ch.ci, ch.vi, this.filletPick.radius)
+            : this._filletCornerAt(ch.it, ch.ci, ch.vi, this.filletPick.radius);
+          if (ok) this.onMessage(relief ? "Relief cut added. Click another inside corner, or press Done." : "Corner rounded. Click another, or press Done.");
           this.draw(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
           return;
         }

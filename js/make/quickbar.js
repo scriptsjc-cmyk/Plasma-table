@@ -191,24 +191,44 @@ export function quickAction(a) {
       if (sketch.layout) { toast("Open the part to fillet its corners."); break; }
       const info = sketch.edgeInfo && sketch.edgeInfo();
       const hasCorner = !!(info && info.vi != null);
+      const prev = sketch.filletPick || {};
+      const kind0 = prev.mode === "relief" ? "relief" : "round";
       openCad("Fillet a corner", [
-        { id: "r", label: "Radius (mm)", value: (sketch.filletPick && sketch.filletPick.radius) || 5 },
+        { id: "r", label: kind0 === "relief" ? "Diameter (mm)" : "Radius (mm)", value: prev.radius || 5 },
+        { id: "mode", type: "select", label: "Kind", value: kind0, options: [
+          { v: "round", l: "Round corner" },
+          { v: "relief", l: "Relief cut (circle into corner)" },
+        ] },
         { id: "inside", label: "All inside corners", type: "checkbox", value: false },
         { note: hasCorner
-          ? "Do it rounds the corner you clicked. Tick All inside corners to round every inside corner at once."
-          : "Type the radius, then Do it and click each corner you want to round. Tick All inside corners to do every inside corner at once." },
+          ? "Do it applies to the corner you clicked. Tick All inside corners to do every inside corner at once. A relief cut is only for inside corners."
+          : "Choose Round corner (smooth radius) or Relief cut (a circle into the inside corner so a square corner can sit in). Then Do it and click the corners, or tick All inside corners." },
       ], (v) => {
-        if (!(v.r > 0)) { toast("Enter a radius.", true); return; }
+        if (!(v.r > 0)) { toast(v.mode === "relief" ? "Enter a diameter." : "Enter a radius.", true); return; }
+        const relief = v.mode === "relief";
         if (v.inside) {
-          const n = sketch.filletInsideCorners(v.r);
-          if (n > 0) toast(n === 1 ? "Inside corner rounded." : n + " inside corners rounded.");
+          const n = relief ? sketch.reliefInsideCorners(v.r) : sketch.filletInsideCorners(v.r);
+          if (n > 0) toast(n === 1 ? (relief ? "Inside corner relieved." : "Inside corner rounded.") : n + (relief ? " inside corners relieved." : " inside corners rounded."));
+        } else if (hasCorner && relief) {
+          if (sketch.reliefCorner(v.r)) toast("Relief cut added.");
         } else if (hasCorner) {
           if (sketch.filletCorner(v.r)) toast("Corner filleted.");
         } else {
-          sketch.startFilletPick(v.r);
-          toast("Click each corner you want to round. Inside corners get a smooth inner radius.");
+          sketch.startFilletPick(v.r, relief ? "relief" : "round");
+          toast(relief
+            ? "Click each inside corner to cut a circle into it. Outside corners cannot take a relief."
+            : "Click each corner you want to round. Inside corners get a smooth inner radius.");
         }
       });
+      // Switch the size label when the kind changes (radius vs diameter).
+      const modeEl = document.getElementById("cad_mode"), sizeEl = document.getElementById("cad_r");
+      const sizeLab = sizeEl && sizeEl.closest("label");
+      const syncKind = () => {
+        if (!modeEl || !sizeLab) return;
+        const text = modeEl.value === "relief" ? "Diameter (mm)" : "Radius (mm)";
+        if (sizeLab.childNodes[0] && sizeLab.childNodes[0].nodeType === 3) sizeLab.childNodes[0].textContent = text;
+      };
+      if (modeEl) modeEl.addEventListener("change", syncKind);
       break;
     }
     case "chamfer":
