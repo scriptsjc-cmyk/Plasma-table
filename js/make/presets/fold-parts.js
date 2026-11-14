@@ -373,7 +373,15 @@ export const FOLD_PRESETS = [
       }
       return c;
     },
-    { noResize: true, fold: (p) => foldU(p.h, p.w, p.d) }),
+    { noResize: true, fold: (p) => {
+      const holes = [];
+      if (p.iw > 8 && p.ih > 8) {
+        const iw = clamp(p.iw, 10, p.w - 16), ih = clamp(p.ih, 8, p.h - 16);
+        const x0 = (p.h - ih) / 2, y0 = (p.w - iw) / 2;
+        holes.push({ pts: [[x0, y0], [x0 + ih, y0], [x0 + ih, y0 + iw], [x0, y0 + iw]] });
+      }
+      return foldU(p.h, p.w, p.d, holes);
+    } }),
 
   shape("bookend", "Bookend", "L", "folded", "bookend folded",
     "Bookend: a base and an upright in one L, with a small front return so it stands firmly.",

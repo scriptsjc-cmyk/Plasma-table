@@ -4,6 +4,7 @@ import { roundedRect, chamferRect, slot, roundCorners, dedupe } from "./shape-he
 import { FAB_SHAPES } from "./shapes-fab.js";
 import { PRESET_SHAPES, PRESET_GROUPS } from "./presets/index.js";
 import { isFoldPart, foldTileSvg, foldModel, FOLD_MODELS } from "./fold3d.js";
+import { attachPipeFlanges } from "./pipeflanges.js";
 export { isFoldPart, foldModel, FOLD_MODELS };
 export { PRESET_SHAPES, PRESET_GROUPS, PRESET_IDS, R8_PRESETS, FOLD_PRESETS, WORKSHOP_IDS } from "./presets/index.js";
 
@@ -609,6 +610,8 @@ export const SHAPES = [
 ].concat(FAB_SHAPES, PRESET_SHAPES);
 
 // several copies in a grid
+for (const sh of SHAPES) attachPipeFlanges(sh);
+
 export function copies(contours, cols, rows, gap) {
   cols = Math.max(1, Math.min(50, Math.round(cols) || 1)); rows = Math.max(1, Math.min(50, Math.round(rows) || 1));
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;

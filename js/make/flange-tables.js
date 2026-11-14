@@ -160,3 +160,23 @@ export function flangeShapeKeys(type) {
   }
   return null;
 }
+
+// Nearest EN 1092-1 PN16 plate flange to a bore (pipe / duct Ø), keeping the
+// standard bolt pattern and widening the OD if the bore would not fit.
+export function nearestPn16(bore) {
+  const rows = EN1092.PN16 || {};
+  let best = null, bestErr = Infinity;
+  for (const [dn, row] of Object.entries(rows)) {
+    const err = Math.abs(row.id - bore);
+    if (err < bestErr) { bestErr = err; best = { dn: Number(dn), ...row }; }
+  }
+  if (!best) return null;
+  const thk = best.dn <= 80 ? 8 : best.dn <= 150 ? 10 : 12;
+  let od = best.od, pcd = best.pcd, hole = best.hole, n = best.n;
+  if (bore + hole + 8 >= pcd) {
+    const lip = Math.max(pcd - best.id, hole + 16);
+    od = Math.max(od, bore + 2 * lip);
+    pcd = (bore + od) / 2;
+  }
+  return { od, pcd, n, hole, thk };
+}

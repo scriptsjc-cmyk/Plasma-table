@@ -2,6 +2,7 @@
 // The flat pattern from shape.make() is still what gets cut. This only visualises the folded result.
 // No external library: painter's-algorithm polygons on canvas (and the same projection as SVG thumbs).
 import { segmentsFor } from "./duct.js";
+import { pipeEnds, flangeOn, flangeDims } from "./pipeflanges.js";
 
 const V = (x, y, z) => [x, y, z];
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -229,7 +230,7 @@ export function thicken(model, t) {
   const faces = [];
   for (const f of model.faces) {
     const nrm = norm(f.n);
-    const half = t / 2;
+    const half = ((Number(f.thk) > 0.05 ? Number(f.thk) : t) / 2);
     const off = (pts, s) => (pts || []).map((p) => add(p, scl(nrm, s)));
     const front = off(f.pts, half), back = off(f.pts, -half);
     const fHoles = (f.holes || []).map((ring) => off(ring, half));
@@ -595,9 +596,180 @@ export const FOLD_MODELS = {
     br.faces.forEach((f) => f.pts.forEach((q) => { q[0] += p.d; q[1] += p.rise || 0; }));
     return { faces: main.faces.concat(br.faces), panels: main.panels.concat(br.panels) };
   },
-  ductcap: (p) => foldFrustum(p.d + 2 * (p.lip || 0), p.d + 2 * (p.lip || 0), 2),
+  ductcap: (p) => foldDisc(p.d, p.hole > 8 ? p.hole : 0),
   rectcap: (p) => flangeFrame3(p.w, p.h, p.lip),
 };
+
+
+function circleRing(origin, xA, yA, rad, segs = 32) {
+  const pts = [];
+  for (let i = 0; i < segs; i++) {
+    const a = (i * 2 * Math.PI) / segs;
+    pts.push(add(origin, add(scl(xA, rad * Math.cos(a)), scl(yA, rad * Math.sin(a)))));
+  }
+  return pts;
+}
+export function foldDisc(d, hole = 0, segs = 32) {
+  const R = Math.max(0, d) / 2;
+  const origin = V(0, 0, 0), xA = V(1, 0, 0), yA = V(0, 0, 1);
+  const pts = circleRing(origin, xA, yA, R, segs);
+  const holes = hole > 0 ? [circleRing(origin, xA, yA, hole / 2, 16)] : [];
+  const area = Math.PI * (R * R - (hole / 2) * (hole / 2));
+  const faces = [{ pts, n: V(0, 1, 0), holes, w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)) }];
+  return { faces, panels: [{ w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)) }] };
+}
+function existingLip(id, p, end) {
+  const lip = Number(p && p.lip) || 0;
+  if (!(lip > 0.5)) return 0;
+  if (id === "s2r" || id === "s2roffset" || id === "r2s") {
+    if (end.key === "fl1") return lip;
+    if (end.key === "fl2") return Math.round(p.ring == null ? 1 : p.ring) >= 1 ? lip : 0;
+    return 0;
+  }
+  if (id === "fanduct") return end.key === "fl1" ? lip : 0;
+  if (id === "takeoff" || id === "ductcap" || id === "rectcap") return end.key === "fl1" ? lip : 0;
+  if (id === "conecentric" || id === "coneadapter" || id === "cyclonehop") return lip;
+  return 0;
+}
+function endFrames(id, p) {
+  const h = Number(p && (p.h != null ? p.h : p.len)) || 0;
+  const x = V(1, 0, 0), z = V(0, 0, 1), up = V(0, 1, 0), dn = V(0, -1, 0);
+  const pairY = (o2, ox = 0, oy = 0) => ([
+    { origin: V(ox, 0, oy), xA: x, yA: z, outward: dn },
+    { origin: V(ox, o2, oy), xA: x, yA: z, outward: up },
+  ]);
+  switch (id) {
+    case "tube":
+    case "cone":
+    case "conesteep":
+    case "coneshallow":
+    case "conecentric":
+    case "coneecc":
+    case "r2roffset":
+    case "silocone":
+    case "cyclonehop":
+    case "coneadapter":
+    case "recttrans":
+    case "recttransoff":
+    case "hopperrect":
+    case "hopflange":
+    case "sqrpyramid":
+      return pairY(h);
+    case "s2r":
+    case "s2roffset":
+    case "r2s":
+    case "fanduct":
+      return pairY(h, p.ox || 0, p.oy || 0);
+    case "takeoff":
+      return [{ origin: V(0, p.len || 0, 0), xA: x, yA: z, outward: up }];
+    case "ductcap":
+    case "rectcap":
+      return [{ origin: V(0, 0, 0), xA: x, yA: z, outward: dn }];
+    case "elbow2":
+    case "elbow3":
+    case "elbow4":
+    case "elbow5":
+    case "elbow45":
+    case "redelbow": {
+      const bend = ((p.bend || 90) * Math.PI) / 180;
+      const rad = (Number(p.clr) > 0 ? Number(p.clr) : 1.5 * p.d);
+      const o2 = V(rad * Math.sin(bend), rad * (1 - Math.cos(bend)), 0);
+      const ax = V(Math.cos(bend), Math.sin(bend), 0);
+      const yA2 = V(Math.sin(bend), -Math.cos(bend), 0);
+      return [
+        { origin: V(0, 0, 0), xA: V(0, 0, 1), yA: V(0, 1, 0), outward: V(-1, 0, 0) },
+        { origin: o2, xA: V(0, 0, 1), yA: yA2, outward: ax },
+      ];
+    }
+    case "rectelbow": {
+      const bend = (Math.max(15, p.bend || 90) * Math.PI) / 180;
+      const hw = (p.w || 0) / 2;
+      const rad = Math.max(p.r || 0, 8) + hw;
+      const stub = Math.max(p.h || 0, 50);
+      const tan = (ang) => V(Math.sin(ang), 0, Math.cos(ang));
+      const centre = (ang) => V(rad * (1 - Math.cos(ang)), 0, rad * Math.sin(ang));
+      const nrm = (ang) => V(Math.cos(ang), 0, -Math.sin(ang));
+      const o1 = add(centre(0), scl(tan(0), -stub));
+      const o2 = add(centre(bend), scl(tan(bend), stub));
+      return [
+        { origin: o1, xA: nrm(0), yA: V(0, 1, 0), outward: scl(tan(0), -1) },
+        { origin: o2, xA: nrm(bend), yA: V(0, 1, 0), outward: tan(bend) },
+      ];
+    }
+    case "britches":
+    case "ybranch":
+    case "teetemp":
+      return pairY(p.len || h);
+    default:
+      return [];
+  }
+}
+function flangeFace(end, p, bolts, lip, frame) {
+  const outward = norm(frame.outward);
+  const midOf = (thk) => add(frame.origin, scl(outward, thk / 2));
+  if (end.kind === "round") {
+    const dim = bolts ? flangeDims(end.d, p) : { od: end.d + 2 * lip, bore: end.d, pcd: 0, n: 0, hole: 0, thk: (Number(p.flthk) > 0.05 ? Number(p.flthk) : 8), lip };
+    const mid = midOf(dim.thk);
+    const outer = circleRing(mid, frame.xA, frame.yA, dim.od / 2);
+    const holes = [circleRing(mid, frame.xA, frame.yA, dim.bore / 2)];
+    if (bolts) {
+      for (let i = 0; i < dim.n; i++) {
+        const a = Math.PI / 2 + (i * 2 * Math.PI) / dim.n;
+        const c = add(mid, add(scl(frame.xA, (dim.pcd / 2) * Math.cos(a)), scl(frame.yA, (dim.pcd / 2) * Math.sin(a))));
+        holes.push(circleRing(c, frame.xA, frame.yA, dim.hole / 2, 16));
+      }
+    }
+    const area = Math.PI * ((dim.od / 2) ** 2 - (dim.bore / 2) ** 2);
+    return { face: { pts: outer, n: outward, holes, w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)), flange: true, thk: dim.thk },
+      panel: { w: Math.PI * ((dim.od + dim.bore) / 2), h: (dim.od - dim.bore) / 2 } };
+  }
+  const dim = bolts ? flangeDims(Math.min(end.w, end.h), p) : { lip, thk: (Number(p.flthk) > 0.05 ? Number(p.flthk) : 8) };
+  const L = dim.lip, thk = dim.thk, mid = midOf(thk);
+  const pt = (u, v) => add(mid, add(scl(frame.xA, u), scl(frame.yA, v)));
+  const hw = end.w / 2 + L, hh = end.h / 2 + L, iw = end.w / 2, ih = end.h / 2;
+  const outer = [pt(-hw, -hh), pt(hw, -hh), pt(hw, hh), pt(-hw, hh)];
+  const inner = [pt(-iw, -ih), pt(-iw, ih), pt(iw, ih), pt(iw, -ih)];
+  const holes = [inner];
+  if (bolts) {
+    const n = dim.n, hole = dim.hole;
+    const x0 = -(end.w / 2 + L / 2), y0 = -(end.h / 2 + L / 2);
+    const x1 = end.w / 2 + L / 2, y1 = end.h / 2 + L / 2;
+    const pw = x1 - x0, ph = y1 - y0, peri = 2 * (pw + ph);
+    for (let i = 0; i < n; i++) {
+      let s = (i / n) * peri, u, v;
+      if (s <= pw) { u = x0 + s; v = y0; }
+      else if ((s -= pw) <= ph) { u = x1; v = y0 + s; }
+      else if ((s -= ph) <= pw) { u = x1 - s; v = y1; }
+      else { s -= pw; u = x0; v = y1 - s; }
+      holes.push(circleRing(pt(u, v), frame.xA, frame.yA, hole / 2, 16));
+    }
+  }
+  const area = (end.w + 2 * L) * (end.h + 2 * L) - end.w * end.h;
+  return { face: { pts: outer, n: outward, holes, w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)), flange: true, thk },
+    panel: { w: 2 * (end.w + end.h) + 4 * L, h: L } };
+}
+export function addPipeFlanges3d(sh, model, p) {
+  if (!model || !sh) return model;
+  const ends = pipeEnds(sh.id, p);
+  if (!ends || !ends.length) return model;
+  const frames = endFrames(sh.id, p);
+  const faces = model.faces.slice();
+  const panels = (model.panels || []).slice();
+  ends.forEach((end, i) => {
+    const frame = frames[i] || frames[0];
+    if (!frame) return;
+    const bolts = flangeOn(p, end.key);
+    const lip = bolts ? 0 : existingLip(sh.id, p, end);
+    if (!bolts && !(lip > 0.5)) return;
+    if ((end.kind === "round" && !(end.d > 8)) || (end.kind === "rect" && !(end.w > 8 && end.h > 8))) return;
+    const built = flangeFace(end, p, bolts, lip, frame);
+    if (!built) return;
+    faces.push(built.face);
+    panels.push(built.panel);
+  });
+  sitOnTable(faces);
+  return { faces, panels };
+}
 
 export function isFoldPart(sh) {
   return !!(sh && (typeof sh.fold === "function" || FOLD_MODELS[sh.id]));
@@ -605,9 +777,8 @@ export function isFoldPart(sh) {
 export function foldModel(sh, p) {
   if (!sh) return null;
   try {
-    if (typeof sh.fold === "function") return sh.fold(p);
-    const fn = FOLD_MODELS[sh.id];
-    return fn ? fn(p) : null;
+    const mid = typeof sh.fold === "function" ? sh.fold(p) : (FOLD_MODELS[sh.id] ? FOLD_MODELS[sh.id](p) : null);
+    return mid ? addPipeFlanges3d(sh, mid, p) : null;
   } catch (e) { return null; }
 }
 

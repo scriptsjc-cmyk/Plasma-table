@@ -99,12 +99,13 @@ for (const id of ["s2r", "s2roffset", "r2s", "fanduct"]) {
   for (const [k, , d] of sh.params) p[k] = d;
   const m = foldModel(sh, p);
   const n = segmentsFor((p.d || 0) / 2);
-  const flats = (m && m.faces || []).filter((f) => f.flat);
+  const body = (m && m.faces || []).filter((f) => !f.flange);
+  const flats = body.filter((f) => f.flat);
   t.check(`${id}: 3D has 4 flat mid-side triangles`, flats.length === 4, `flat=${flats.length}`);
   t.check(`${id}: each flat face is a triangle`, flats.every((f) => (f.pts || []).length === 3));
   t.check(`${id}: corner fans use the flat-pattern division (${n} per half-corner)`,
-    !!(m && m.faces && m.faces.length === 4 + 8 * n),
-    `faces=${m && m.faces && m.faces.length}, expected ${4 + 8 * n} (n=${n})`);
+    body.length === 4 + 8 * n,
+    `faces=${body.length}, expected ${4 + 8 * n} (n=${n})`);
 }
 
 // New preset tabs, one-piece defaults, and "Separate pieces".
@@ -158,6 +159,79 @@ t.check("lobster-back elbow stays multi-piece and says so", (() => {
 t.check("angle gusset stays two pieces and says so", (() => {
   const sh = A.SHAPES.find((s) => s.id === "anglegus");
   return !!(sh && sh.note) && outersFromMake("anglegus").length === 2;
+})());
+
+
+// Bolt-on pipe-end flanges: off by default (goldens unchanged); when on, a ring
+// with bolt holes is added to the cut pattern and a matching plate appears in 3D.
+for (const id of ["tube", "cone", "s2r", "elbow3"]) {
+  const sh = A.SHAPES.find((s) => s.id === id);
+  t.check(`${id}: has per-end flange options`, !!(sh && sh.params.some((q) => q[0] === "fl1") && sh.params.some((q) => q[0] === "fl2")));
+}
+const tubeOff = outersFromMake("tube");
+const tubeOn = outersFromMake("tube", { fl1: 1, fl2: 1 });
+t.check("rolled tube with flanges off is still one blank", tubeOff.length === 1, String(tubeOff.length));
+t.check("rolled tube with both end flanges adds two ring blanks", tubeOn.length === 3, String(tubeOn.length));
+t.check("a tube flange ring has a bore and bolt holes", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "tube");
+  const p = {};
+  for (const [k, , d] of sh.params) p[k] = d;
+  Object.assign(p, { fl1: 1, fl2: 0 });
+  const cs = sh.make(p) || [];
+  const items = cs.filter((c) => c.closed !== false).map((c) => ({ a: Math.abs(A.signedArea(c.pts || [])), b: bb(c.pts || []), c }));
+  const isHole = (x) => items.some((y) => y !== x && y.a >= x.a && contains(y.b, x.b));
+  const rings = items.filter((x) => !isHole(x) && items.some((y) => y !== x && isHole(y) === false ? false : contains(x.b, y.b) && y.a < x.a));
+  // the flange outer contains the bore plus several bolt holes
+  const flange = items.filter((x) => !isHole(x)).sort((a, b) => b.a - a.a)[0];
+  // actually get the ring (not the tube rectangle): the one that contains holes
+  const outers = items.filter((x) => !isHole(x));
+  const ring = outers.find((o) => items.filter((h) => h !== o && contains(o.b, h.b)).length >= 5);
+  return !!(ring && items.filter((h) => h !== ring && contains(ring.b, h.b)).length >= 5);
+})());
+t.check("tube 3D shows both bolt-on flanges when they are on", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "tube");
+  const p = {};
+  for (const [k, , d] of sh.params) p[k] = d;
+  const off = foldModel(sh, p);
+  const on = foldModel(sh, { ...p, fl1: 1, fl2: 1 });
+  const nOff = (off && off.faces || []).filter((f) => f.flange).length;
+  const nOn = (on && on.faces || []).filter((f) => f.flange).length;
+  return nOff === 0 && nOn >= 2;
+})());
+t.check("s2r 3D already shows the default lip frame and ring", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "s2r");
+  const p = {};
+  for (const [k, , d] of sh.params) p[k] = d;
+  const m = foldModel(sh, p);
+  return ((m && m.faces) || []).filter((f) => f.flange).length >= 2;
+})());
+t.check("open box with tabs and a hem keeps 3D faces matching the blank", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "openbox");
+  const p = {};
+  for (const [k, , d] of sh.params) p[k] = d;
+  Object.assign(p, { tab: 12, hem: 10, split: 0 });
+  const m = foldModel(sh, p);
+  const panelArea = (m.panels || []).reduce((s, q) => s + Math.max(0, q.w) * Math.max(0, q.h), 0);
+  const cs = sh.make(p);
+  const items = (cs || []).map((c) => ({ a: Math.abs(A.signedArea(c.pts || [])), b: bb(c.pts || []) }));
+  const isHole = (x) => items.some((y) => y !== x && y.a >= x.a && contains(y.b, x.b));
+  const flat = items.filter((x) => !isHole(x)).reduce((s, x) => s + x.a, 0);
+  const ratio = Math.abs(panelArea - flat) / Math.max(flat, panelArea);
+  return ratio <= 0.22 && (m.faces || []).length >= 9;
+})());
+t.check("hat section / C-channel return flanges are in the 3D model", (() => {
+  const hat = A.SHAPES.find((s) => s.id === "hatsect");
+  const p = {};
+  for (const [k, , d] of hat.params) p[k] = d;
+  const m = foldModel(hat, p);
+  return (m.faces || []).length >= 5 && (m.panels || []).some((q) => Math.abs(q.h - (p.flange || 0)) < 0.2 || Math.abs(q.w - (p.flange || 0)) < 0.2);
+})());
+t.check("machine guard window is cut in the 3D front", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "machineguard");
+  const p = {};
+  for (const [k, , d] of sh.params) p[k] = d;
+  const m = foldModel(sh, p);
+  return ((m && m.faces) || []).some((f) => (f.holes || []).length >= 1);
 })());
 
 // C32 added etched bend / fold lines to these flat patterns (angle brackets,
