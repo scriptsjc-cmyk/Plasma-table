@@ -13,7 +13,7 @@
 const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
 // number of straight segments for each half corner cone (more = rounder top edge)
-function segmentsFor(R) { return Math.max(4, Math.min(16, Math.ceil(R / 12))); }
+export function segmentsFor(R) { return Math.max(4, Math.min(16, Math.ceil(R / 12))); }
 
 // 3D model of one side of the transition, in the side's own frame:
 // edge half-length u (the straight base edge runs from (-u,-v,0) to (u,-v,0)), v = distance from the middle to that edge,

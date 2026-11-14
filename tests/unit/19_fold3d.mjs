@@ -5,6 +5,7 @@ import { load } from "../lib/env.mjs";
 import { bb } from "../lib/analyze.mjs";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import { segmentsFor } from "../../js/make/duct.js";
 
 const A = await load();
 const t = new T("19_fold3d");
@@ -57,7 +58,7 @@ for (const sh of foldShapes) {
   const flat = outlineArea(cs);
   // Approximated developments (faceted cones, gores, saddles, flashing) must still build a 3D model;
   // their declared panel area can differ from the packed templates. Strict match for folded boxes, channels and new folded parts.
-  const loose = /^(cone|elbow|fish|saddle|chim|cricket|roof|sky|takeoff|ductcap|rectcap|ybranch|britches|teetemp|coneadapter|conecentric|coneecc|cyclone|hopper|hopflange|gusflange|rectelbow|recttrans|sqrpyramid|s2r|r2s|panflash|valley|silocone)/;
+  const loose = /^(cone|elbow|fish|saddle|chim|cricket|roof|sky|takeoff|ductcap|rectcap|ybranch|britches|teetemp|coneadapter|conecentric|coneecc|cyclone|hopper|hopflange|gusflange|rectelbow|recttrans|sqrpyramid|s2r|r2s|fanduct|panflash|valley|silocone)/;
   const skipArea = /^(ductcap)$/;
   const tol = loose.test(sh.id) ? 0.85 : 0.22;
   if (flat > 10 && panelArea > 10 && !skipArea.test(sh.id)) {
@@ -88,6 +89,23 @@ for (const id of TAB_IDS) {
   t.check(`${id}: corner tabs are attached to the walls, not loose rectangles`, loose.length === 0, `${loose.length} loose tab-sized outlines`);
   const expectMin = id === "opentabbox" || id === "traytabs" ? 1 : 2;
   t.check(`${id}: flat pattern is one connected box (plus a lid if closed)`, outers.length <= expectMin + 0.1 && outers.length >= 1, `${outers.length} outer outlines`);
+}
+
+// Square-to-round 3D must follow the flat pattern's triangulation (4 flats + corner fans).
+for (const id of ["s2r", "s2roffset", "r2s", "fanduct"]) {
+  const sh = A.SHAPES.find((s) => s.id === id);
+  t.check(`${id}: is a fold part`, !!(sh && isFold(sh)));
+  if (!sh) continue;
+  const p = {};
+  for (const [k, , d] of sh.params) p[k] = d;
+  const m = foldModel(sh, p);
+  const n = segmentsFor((p.d || 0) / 2);
+  const flats = (m && m.faces || []).filter((f) => f.flat);
+  t.check(`${id}: 3D has 4 flat mid-side triangles`, flats.length === 4, `flat=${flats.length}`);
+  t.check(`${id}: each flat face is a triangle`, flats.every((f) => (f.pts || []).length === 3));
+  t.check(`${id}: corner fans use the flat-pattern division (${n} per half-corner)`,
+    !!(m && m.faces && m.faces.length === 4 + 8 * n),
+    `faces=${m && m.faces && m.faces.length}, expected ${4 + 8 * n} (n=${n})`);
 }
 
 const goldPath = new URL("../data/existing-preset-flat.json", import.meta.url);

@@ -1,6 +1,7 @@
 // Fold models and a small offline 3D viewer for formed / bent preset parts.
 // The flat pattern from shape.make() is still what gets cut. This only visualises the folded result.
 // No external library: painter's-algorithm polygons on canvas (and the same projection as SVG thumbs).
+import { segmentsFor } from "./duct.js";
 
 const V = (x, y, z) => [x, y, z];
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -190,29 +191,48 @@ export function foldFrustum(d1, d2, h, segs = 24) {
 export function foldTube(d, h, segs = 24) {
   return foldFrustum(d, d, h, segs);
 }
-export function foldS2r(a, b, d, h, segs = 16) {
+function triArea(pts) {
+  const nrm = cross(sub(pts[1], pts[0]), sub(pts[2], pts[0]));
+  return mag(nrm) / 2;
+}
+function outwardN(pts, centre) {
+  let n = norm(cross(sub(pts[1], pts[0]), sub(pts[2], pts[0])));
+  const mid = [(pts[0][0] + pts[1][0] + pts[2][0]) / 3, (pts[0][1] + pts[1][1] + pts[2][1]) / 3, (pts[0][2] + pts[1][2] + pts[2][2]) / 3];
+  if (dot(n, sub(mid, centre)) < 0) n = scl(n, -1);
+  return n;
+}
+// True triangulation development (same as js/make/duct.js): four flat mid-side
+// triangles plus a corner fan from each rectangle corner to the quarter-arc, using
+// the same segment count (and seam at mid-arc) as the flat pattern.
+export function foldS2r(a, b, d, h, segs) {
+  const R = d / 2, H = h;
+  const n = segs || segmentsFor(R);
   const faces = [];
-  const corners = [[-a / 2, 0, -b / 2], [a / 2, 0, -b / 2], [a / 2, 0, b / 2], [-a / 2, 0, b / 2]];
-  const r = d / 2;
+  const centre = V(0, H / 2, 0);
+  const corners = [V(-a / 2, 0, -b / 2), V(a / 2, 0, -b / 2), V(a / 2, 0, b / 2), V(-a / 2, 0, b / 2)];
+  // Mid-side circle points, in the same order as the sides (front −Z, right +X, back +Z, left −X).
+  const midTh = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+  const circ = (th) => V(R * Math.cos(th), H, R * Math.sin(th));
+  const push = (pts, extra) => {
+    const area = triArea(pts);
+    faces.push({ pts, n: outwardN(pts, centre), holes: [], w: Math.sqrt(area), h: Math.sqrt(area), ...extra });
+  };
   for (let s = 0; s < 4; s++) {
-    const p0 = corners[s], p1 = corners[(s + 1) % 4];
-    const nSeg = segs / 4;
-    for (let i = 0; i < nSeg; i++) {
-      const t0 = (s + i / nSeg) * 2 * Math.PI / 4 - Math.PI / 4 - Math.PI / 2;
-      const t1 = (s + (i + 1) / nSeg) * 2 * Math.PI / 4 - Math.PI / 4 - Math.PI / 2;
-      // map side parameter to circle (circle centred above origin)
-      const aa0 = ((s * nSeg + i) / segs) * 2 * Math.PI - Math.PI / 2;
-      const aa1 = ((s * nSeg + i + 1) / segs) * 2 * Math.PI - Math.PI / 2;
-      const q0 = [p0[0] + (p1[0] - p0[0]) * (i / nSeg), 0, p0[2] + (p1[2] - p0[2]) * (i / nSeg)];
-      const q1 = [p0[0] + (p1[0] - p0[0]) * ((i + 1) / nSeg), 0, p0[2] + (p1[2] - p0[2]) * ((i + 1) / nSeg)];
-      const r0 = V(r * Math.cos(aa0), h, r * Math.sin(aa0));
-      const r1 = V(r * Math.cos(aa1), h, r * Math.sin(aa1));
-      const pts = [q0, q1, r1, r0];
-      const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
-      faces.push({ pts, n, holes: [], w: mag(sub(q1, q0)), h: mag(sub(r0, q0)) });
+    push([corners[s], corners[(s + 1) % 4], circ(midTh[s])], { flat: true });
+  }
+  // Each quarter-arc is split into 2n triangles (n per half, meeting at the seam).
+  const steps = 2 * n;
+  for (let s = 0; s < 4; s++) {
+    const apex = corners[(s + 1) % 4];
+    const th0 = midTh[s], th1 = midTh[s] + Math.PI / 2;
+    for (let i = 0; i < steps; i++) {
+      const a0 = th0 + (i / steps) * (th1 - th0);
+      const a1 = th0 + ((i + 1) / steps) * (th1 - th0);
+      push([apex, circ(a0), circ(a1)], { flat: false });
     }
   }
-  return { faces, panels: faces.map((f) => ({ w: f.w, h: f.h })) };
+  const area = faces.reduce((s, f) => s + f.w * f.h, 0);
+  return { faces, panels: [{ w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)) }], n };
 }
 export function foldElbow(d, bendDeg, pieces, segs = 16) {
   const faces = [];
