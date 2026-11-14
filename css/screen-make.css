@@ -1140,6 +1140,7 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
   background: #e8edf2;
   overflow: hidden;
 }
+.fold3d-wrap { position: relative; }
 .fold3d-wrap canvas.fold3d {
   display: block;
   width: 100%;
@@ -1147,6 +1148,51 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
   touch-action: none;
   cursor: grab;
   background: #e8edf2;
+}
+.fold3d-expand {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 650;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  color: var(--text);
+  cursor: pointer;
+}
+body.phone-ui .fold3d-expand,
+body:not(.laptop-ui) .fold3d-expand { display: none !important; }
+.fold3d-lb {
+  position: fixed; inset: 0; z-index: 180;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, #000 45%, transparent);
+  padding: 16px;
+}
+.fold3d-lb[hidden] { display: none !important; }
+.fold3d-lb-inner {
+  position: relative;
+  width: min(80vw, 1100px);
+  height: min(70vh, 720px);
+  background: #e8edf2;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.fold3d-lb-inner canvas.fold3d {
+  display: block; width: 100%; height: 100%;
+  touch-action: none; cursor: grab; background: #e8edf2;
+}
+.fold3d-lb-close {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  min-width: 36px; min-height: 36px; padding: 0;
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  cursor: pointer; font-size: 18px;
 }
 .fold3d-cap {
   margin: 0;
@@ -1207,6 +1253,7 @@ body:not(.laptop-ui) .fold3d-cap {
 /* Laptop: the disclosure chrome is hidden; the 3D view stays open in the form. */
 body.laptop-ui .fold3d-box { border: 0; background: transparent; }
 body.laptop-ui .fold3d-sum { display: none; }
+body.laptop-ui .fold3d-wrap canvas.fold3d { height: 300px; }
 .pb-tile { position: relative; }
 .pb-tile svg.fold-thumb { width: 96px; height: 72px; }
 
@@ -1250,7 +1297,24 @@ body.beginner .skopts { display: none !important; }
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column;
+    min-height: 0;
     padding: 12px 14px 0;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .stepPane > .step[data-step="1"],
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane > .step[data-step="1"] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  /* The include slot is replaced by #srcShape at boot; that element must be the scroller. */
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .stepPane #srcShape,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto !important;
+    overscroll-behavior: contain;
   }
 }
 

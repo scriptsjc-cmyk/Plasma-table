@@ -819,10 +819,14 @@ body[data-screen="make"] .step[data-step="1"] {
 }
 body[data-screen="make"] .step[data-step="1"] > [hidden] { display: none !important; flex: none; }
 body[data-screen="make"] .step[data-step="1"] > #slot-make-bg,
-body[data-screen="make"] .step[data-step="1"] > #slot-make-editor {
+body[data-screen="make"] .step[data-step="1"] > #slot-make-editor,
+body[data-screen="make"] .step[data-step="1"] > #srcShape,
+body[data-screen="make"] .step[data-step="1"] > #bgPick {
+  /* #slot-make-editor / #slot-make-bg are replaced at boot by #srcShape / #bgPick. */
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 body[data-screen="make"] .step[data-step="1"] > .nav {
   position: static;

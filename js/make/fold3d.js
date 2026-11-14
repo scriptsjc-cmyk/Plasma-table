@@ -44,8 +44,8 @@ function poseFace(face, o, xA, yA, out) {
   const holes = (face.holes || []).map((q) => {
     if (q.r) {
       const ring = [];
-      for (let i = 0; i < 16; i++) {
-        const a = (i * 2 * Math.PI) / 16;
+      for (let i = 0; i < 48; i++) {
+        const a = (i * 2 * Math.PI) / 48;
         ring.push(mapPt(o, xA, yA, q.cx + q.r * Math.cos(a), q.cy + q.r * Math.sin(a)));
       }
       return ring;
@@ -227,28 +227,45 @@ export function displayThickness(p) {
 }
 export function thicken(model, t) {
   if (!(t > 0.05) || !model || !model.faces || !model.faces.length || model.thick) return model;
+  attachSmoothNormals(model.faces);
+  const midEdges = new Map();
+  for (const f of model.faces) {
+    const pts = f.pts, n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const k = edgeKey(pts[i], pts[(i + 1) % n]);
+      let e = midEdges.get(k);
+      if (!e) midEdges.set(k, e = { faces: [] });
+      e.faces.push(f);
+    }
+  }
   const faces = [];
   for (const f of model.faces) {
     const nrm = norm(f.n);
     const half = ((Number(f.thk) > 0.05 ? Number(f.thk) : t) / 2);
-    const off = (pts, s) => (pts || []).map((p) => add(p, scl(nrm, s)));
-    const front = off(f.pts, half), back = off(f.pts, -half);
-    const fHoles = (f.holes || []).map((ring) => off(ring, half));
-    const bHoles = (f.holes || []).map((ring) => off(ring, -half).reverse());
+    const vns = (f.vn && f.vn.length === f.pts.length) ? f.vn.map(norm) : f.pts.map(() => nrm);
+    const offV = (pts, s) => (pts || []).map((p, i) => add(p, scl(vns[i] || nrm, s)));
+    const offN = (pts, s) => (pts || []).map((p) => add(p, scl(nrm, s)));
+    const front = offV(f.pts, half), back = offV(f.pts, -half);
+    const fHoles = (f.holes || []).map((ring) => offN(ring, half));
+    const bHoles = (f.holes || []).map((ring) => offN(ring, -half).reverse());
     faces.push({ ...f, pts: front, n: nrm, holes: fHoles });
     faces.push({ ...f, pts: back.slice().reverse(), n: scl(nrm, -1), holes: bHoles, edge: true });
     const npts = f.pts.length;
     for (let i = 0; i < npts; i++) {
       const j = (i + 1) % npts;
+      // Skip thickness caps on smooth shared meridians so a tube is a shell, not a cage of fins.
+      const midE = midEdges.get(edgeKey(f.pts[i], f.pts[j]));
+      const midFaces = midE ? midE.faces : [f];
+      if (midFaces.length === 2 && !isSharpPair(midFaces[0], midFaces[1])) continue;
       const a = back[i], b = back[j], c = front[j], d = front[i];
       faces.push({ pts: [a, b, c, d], n: norm(cross(sub(b, a), sub(d, a))), holes: [], w: 0, h: 0, edge: true });
     }
     for (const ring of f.holes || []) {
-      const rh = off(ring, half), rb = off(ring, -half), nh = ring.length;
+      const rh = offN(ring, half), rb = offN(ring, -half), nh = ring.length;
       for (let i = 0; i < nh; i++) {
         const j = (i + 1) % nh;
         const a = rb[i], b = rb[j], c = rh[j], d = rh[i];
-        faces.push({ pts: [a, b, c, d], n: norm(cross(sub(b, a), sub(d, a))), holes: [], w: 0, h: 0, edge: true });
+        faces.push({ pts: [a, b, c, d], n: norm(cross(sub(b, a), sub(d, a))), holes: [], w: 0, h: 0, edge: true, holeWall: true });
       }
     }
   }
@@ -258,7 +275,7 @@ export function thicken(model, t) {
 function viewModel(model, p) {
   return model ? thicken(model, displayThickness(p)) : null;
 }
-export function foldFrustum(d1, d2, h, segs = 24) {
+export function foldFrustum(d1, d2, h, segs = 72) {
   const faces = [], R = d1 / 2, r = d2 / 2;
   const slant = Math.hypot(h, R - r);
   // approximate each facet width at mid
@@ -272,11 +289,11 @@ export function foldFrustum(d1, d2, h, segs = 24) {
     ];
     const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
     const w = (Math.PI * (d1 + d2) / 2) / segs;
-    faces.push({ pts, n, holes: [], w, h: slant });
+    faces.push({ pts, n, holes: [], w, h: slant, smooth: true });
   }
   return { faces, panels: [{ w: Math.PI * ((d1 + d2) / 2), h: slant }] };
 }
-export function foldTube(d, h, segs = 24) {
+export function foldTube(d, h, segs = 72) {
   return foldFrustum(d, d, h, segs);
 }
 function triArea(pts) {
@@ -303,7 +320,7 @@ export function foldS2r(a, b, d, h, segs, ox = 0, oy = 0) {
   const circ = (th) => V(ox + R * Math.cos(th), H, oy + R * Math.sin(th));
   const push = (pts, extra) => {
     const area = triArea(pts);
-    faces.push({ pts, n: outwardN(pts, centre), holes: [], w: Math.sqrt(area), h: Math.sqrt(area), ...extra });
+    faces.push({ pts, n: outwardN(pts, centre), holes: [], w: Math.sqrt(area), h: Math.sqrt(area), smooth: true, ...extra });
   };
   for (let s = 0; s < 4; s++) {
     push([corners[s], corners[(s + 1) % 4], circ(midTh[s])], { flat: true });
@@ -322,7 +339,7 @@ export function foldS2r(a, b, d, h, segs, ox = 0, oy = 0) {
   const area = faces.reduce((s, f) => s + f.w * f.h, 0);
   return { faces, panels: [{ w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)) }], n };
 }
-export function foldElbow(d, bendDeg, pieces, segs = 16, clr) {
+export function foldElbow(d, bendDeg, pieces, segs = 48, clr) {
   const faces = [];
   const R = d / 2;
   const bend = (bendDeg * Math.PI) / 180;
@@ -339,7 +356,7 @@ export function foldElbow(d, bendDeg, pieces, segs = 16, clr) {
       };
       const pts = [ring(a0, t0), ring(a0, t1), ring(a1, t1), ring(a1, t0)];
       const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
-      faces.push({ pts, n, holes: [], w: (2 * Math.PI * R) / segs, h: rad * (a1 - a0) });
+      faces.push({ pts, n, holes: [], w: (2 * Math.PI * R) / segs, h: rad * (a1 - a0), smooth: true });
     }
   }
   return { faces, panels: [{ w: Math.PI * d, h: rad * bend }] };
@@ -560,12 +577,12 @@ export const FOLD_MODELS = {
   recttransoff: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h),
   hopperrect: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h),
   sqrpyramid: (p) => foldHopper(p.a, p.a, Math.max(4, p.a2), Math.max(4, p.a2), p.h),
-  elbow2: (p) => foldElbow(p.d, p.bend, p.n || 2, 16, p.clr),
-  elbow3: (p) => foldElbow(p.d, p.bend, p.n || 3, 16, p.clr),
-  elbow4: (p) => foldElbow(p.d, p.bend, p.n || 4, 16, p.clr),
-  elbow5: (p) => foldElbow(p.d, p.bend, p.n || 5, 16, p.clr),
-  elbow45: (p) => foldElbow(p.d, p.bend, p.n || 3, 16, p.clr),
-  redelbow: (p) => foldElbow((p.d + p.d2) / 2, p.bend, 3, 16, p.clr),
+  elbow2: (p) => foldElbow(p.d, p.bend, p.n || 2, 48, p.clr),
+  elbow3: (p) => foldElbow(p.d, p.bend, p.n || 3, 48, p.clr),
+  elbow4: (p) => foldElbow(p.d, p.bend, p.n || 4, 48, p.clr),
+  elbow5: (p) => foldElbow(p.d, p.bend, p.n || 5, 48, p.clr),
+  elbow45: (p) => foldElbow(p.d, p.bend, p.n || 3, 48, p.clr),
+  redelbow: (p) => foldElbow((p.d + p.d2) / 2, p.bend, 3, 48, p.clr),
   rectelbow: (p) => foldRectElbow(p.w, p.h, p.r, p.bend),
   dustpan: (p) => foldDustpan(p.w, p.front, p.d, p.h),
   scoop: (p) => foldScoop(p.w, p.d, p.h, p.r),
@@ -601,7 +618,7 @@ export const FOLD_MODELS = {
 };
 
 
-function circleRing(origin, xA, yA, rad, segs = 32) {
+function circleRing(origin, xA, yA, rad, segs = 64) {
   const pts = [];
   for (let i = 0; i < segs; i++) {
     const a = (i * 2 * Math.PI) / segs;
@@ -609,11 +626,11 @@ function circleRing(origin, xA, yA, rad, segs = 32) {
   }
   return pts;
 }
-export function foldDisc(d, hole = 0, segs = 32) {
+export function foldDisc(d, hole = 0, segs = 64) {
   const R = Math.max(0, d) / 2;
   const origin = V(0, 0, 0), xA = V(1, 0, 0), yA = V(0, 0, 1);
   const pts = circleRing(origin, xA, yA, R, segs);
-  const holes = hole > 0 ? [circleRing(origin, xA, yA, hole / 2, 16)] : [];
+  const holes = hole > 0 ? [circleRing(origin, xA, yA, hole / 2, 48)] : [];
   const area = Math.PI * (R * R - (hole / 2) * (hole / 2));
   const faces = [{ pts, n: V(0, 1, 0), holes, w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)) }];
   return { faces, panels: [{ w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)) }] };
@@ -716,7 +733,7 @@ function flangeFace(end, p, bolts, lip, frame) {
       for (let i = 0; i < dim.n; i++) {
         const a = Math.PI / 2 + (i * 2 * Math.PI) / dim.n;
         const c = add(mid, add(scl(frame.xA, (dim.pcd / 2) * Math.cos(a)), scl(frame.yA, (dim.pcd / 2) * Math.sin(a))));
-        holes.push(circleRing(c, frame.xA, frame.yA, dim.hole / 2, 16));
+        holes.push(circleRing(c, frame.xA, frame.yA, dim.hole / 2, 48));
       }
     }
     const area = Math.PI * ((dim.od / 2) ** 2 - (dim.bore / 2) ** 2);
@@ -741,7 +758,7 @@ function flangeFace(end, p, bolts, lip, frame) {
       else if ((s -= pw) <= ph) { u = x1; v = y0 + s; }
       else if ((s -= ph) <= pw) { u = x1 - s; v = y1; }
       else { s -= pw; u = x0; v = y1 - s; }
-      holes.push(circleRing(pt(u, v), frame.xA, frame.yA, hole / 2, 16));
+      holes.push(circleRing(pt(u, v), frame.xA, frame.yA, hole / 2, 48));
     }
   }
   const area = (end.w + 2 * L) * (end.h + 2 * L) - end.w * end.h;
@@ -767,7 +784,6 @@ export function addPipeFlanges3d(sh, model, p) {
     faces.push(built.face);
     panels.push(built.panel);
   });
-  sitOnTable(faces);
   return { faces, panels };
 }
 
@@ -785,6 +801,21 @@ export function foldModel(sh, p) {
 // ------------------------------------------------------------------ projection / drawing
 
 export const DEFAULT_CAM = { yaw: 0.85, pitch: 0.52 };
+
+const KEY_L = norm(V(0.42, 0.78, 0.48));
+const FILL_L = norm(V(-0.55, 0.28, 0.22));
+const SHARP_COS = Math.cos((35 * Math.PI) / 180);   // dihedral >= 35° is a sharp edge
+const SMOOTH_COS = Math.cos((75 * Math.PI) / 180);  // curved shells keep facets unstroken
+const STEEL = [188, 196, 204], EDGE = "#2c333c";
+
+function wrinkleLimit(f, g) {
+  if (f && g && f.smooth && g.smooth) return -1;
+  return (f && g && (f.smooth || g.smooth)) ? SMOOTH_COS : SHARP_COS;
+}
+function isSharpPair(f, g) {
+  if (f && g && f.smooth && g.smooth) return false;
+  return dot(f.n, g.n) < wrinkleLimit(f, g);
+}
 
 function rotCam(p, cam) {
   const y = cam.yaw, x = cam.pitch;
@@ -806,74 +837,233 @@ function boundsOf(faces, cam) {
   return [x0, y0, x1, y1, z0, z1];
 }
 
-function projectFaces(faces, cam, w, h, pad = 10) {
+function qk(n) {
+  const v = Math.round(Number(n) * 1e4) / 1e4;
+  return Object.is(v, -0) ? 0 : v;
+}
+function vertKey(p) {
+  return `${qk(p[0])},${qk(p[1])},${qk(p[2])}`;
+}
+
+function shadeN(n) {
+  const nd = n[2] < 0 ? scl(n, -1) : n;
+  const key = Math.max(0, dot(nd, KEY_L));
+  const fill = Math.max(0, dot(nd, FILL_L));
+  const half = norm(add(KEY_L, V(0, 0, 1)));
+  const spec = Math.pow(Math.max(0, dot(nd, half)), 28);
+  return Math.max(0.2, Math.min(1.18, 0.24 + 0.66 * key + 0.22 * fill + 0.26 * spec));
+}
+
+function steelRgb(c) {
+  const k = Math.max(0.18, Math.min(1.15, c));
+  return `rgb(${Math.round(STEEL[0] * k)},${Math.round(STEEL[1] * k)},${Math.round(STEEL[2] * k)})`;
+}
+
+function attachSmoothNormals(faces) {
+  const buckets = new Map();
+  for (const f of faces) {
+    f.vn = f.pts.map(() => f.n);
+    for (const p of f.pts) {
+      const k = vertKey(p);
+      let list = buckets.get(k);
+      if (!list) buckets.set(k, list = []);
+      list.push(f);
+    }
+  }
+  for (const f of faces) {
+    const fn = f.n;
+    f.vn = f.pts.map((p) => {
+      const neigh = buckets.get(vertKey(p)) || [f];
+      let ax = 0, ay = 0, az = 0, n = 0;
+      for (const g of neigh) {
+        if (dot(fn, g.n) >= wrinkleLimit(f, g)) { ax += g.n[0]; ay += g.n[1]; az += g.n[2]; n++; }
+      }
+      if (n < 2) return fn;
+      return norm(V(ax, ay, az));
+    });
+  }
+}
+
+function edgeKey(a, b) {
+  const ka = vertKey(a), kb = vertKey(b);
+  return ka < kb ? ka + "|" + kb : kb + "|" + ka;
+}
+
+function collectEdges(faces) {
+  const map = new Map();
+  for (const f of faces) {
+    const pts = f.pts, n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const a = pts[i], b = pts[(i + 1) % n];
+      const k = edgeKey(a, b);
+      let e = map.get(k);
+      if (!e) map.set(k, e = { a, b, faces: [] });
+      e.faces.push(f);
+    }
+  }
+  return [...map.values()];
+}
+
+function projector(faces, cam, w, h, pad = 10) {
   const [x0, y0, x1, y1] = boundsOf(faces, cam);
   const bw = Math.max(1e-6, x1 - x0), bh = Math.max(1e-6, y1 - y0);
   const s = Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh);
   const ox = (w - bw * s) / 2 - x0 * s, oy = (h + bh * s) / 2 + y0 * s;
-  const light = norm(V(0.35, 0.7, 0.55));
+  const xy = (p) => {
+    const q = rotCam(p, cam);
+    return [ox + q[0] * s, oy - q[1] * s, q[2]];
+  };
+  return { xy, s, ox, oy };
+}
+
+function projectFaces(faces, cam, w, h, pad = 10) {
+  attachSmoothNormals(faces);
+  const { xy } = projector(faces, cam, w, h, pad);
   const out = faces.map((f) => {
     const qs = f.pts.map((p) => rotCam(p, cam));
     const depth = qs.reduce((a, p) => a + p[2], 0) / qs.length;
-    const n = rotCam(f.n, cam);
-    const nd = dot(norm(n), light);
-    const lit = Math.max(0.32, Math.min(1, 0.46 + 0.42 * nd + 0.22 * Math.abs(nd)));
-    const path = qs.map((p) => [ox + p[0] * s, oy - p[1] * s]);
+    const nCam = rotCam(f.n, cam);
+    const vnCam = (f.vn || f.pts.map(() => f.n)).map((v) => rotCam(v, cam));
+    const lits = vnCam.map(shadeN);
+    const lit = lits.reduce((a, v) => a + v, 0) / lits.length;
+    const path = qs.map((p, i) => {
+      const q = xy(f.pts[i]);
+      return [q[0], q[1]];
+    });
     const holes = (f.holes || []).map((ring) => ring.map((p) => {
-      const q = rotCam(p, cam);
-      return [ox + q[0] * s, oy - q[1] * s];
+      const q = xy(p);
+      return [q[0], q[1]];
     }));
-    return { path, holes, depth, lit, back: n[2] < -0.02 };
+    return { path, holes, depth, lit, lits, back: nCam[2] < -0.02, nCam, src: f };
   });
-  out.sort((a, b) => a.depth - b.depth);         // far first
+  out.sort((a, b) => a.depth - b.depth);
   return out;
 }
 
-const STEEL = [170, 178, 186], EDGE = "#3d4650";
+function fillShaded(ctx, path, holes, lits, back) {
+  if (path.length < 3) return;
+  ctx.beginPath();
+  path.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])));
+  ctx.closePath();
+  for (const hole of holes || []) {
+    if (hole.length < 3) continue;
+    hole.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])));
+    ctx.closePath();
+  }
+  const cols = (lits && lits.length) ? lits : [1];
+  let lo = 0, hi = 0;
+  for (let i = 1; i < cols.length; i++) {
+    if (cols[i] < cols[lo]) lo = i;
+    if (cols[i] > cols[hi]) hi = i;
+  }
+  const spread = cols[hi] - cols[lo];
+  if (!back && spread > 0.04 && path[lo] && path[hi]) {
+    const g = ctx.createLinearGradient(path[lo][0], path[lo][1], path[hi][0], path[hi][1]);
+    g.addColorStop(0, steelRgb(cols[lo]));
+    g.addColorStop(1, steelRgb(cols[hi]));
+    ctx.fillStyle = g;
+  } else {
+    ctx.fillStyle = steelRgb(back ? Math.min(0.5, (cols[0] || 0.5) * 0.72) : (cols.reduce((a, v) => a + v, 0) / cols.length));
+  }
+  ctx.fill("evenodd");
+}
+
+function drawGroundShadow(ctx, faces, cam, w, h, pad) {
+  const { xy } = projector(faces, cam, w, h, pad);
+  let minx = Infinity, maxx = -Infinity, minz = Infinity, maxz = -Infinity;
+  for (const f of faces) for (const p of f.pts) {
+    minx = Math.min(minx, p[0]); maxx = Math.max(maxx, p[0]);
+    minz = Math.min(minz, p[2]); maxz = Math.max(maxz, p[2]);
+  }
+  const cx = (minx + maxx) / 2, cz = (minz + maxz) / 2;
+  const rx = Math.max(4, (maxx - minx) / 2) * 1.18, rz = Math.max(4, (maxz - minz) / 2) * 1.18;
+  ctx.save();
+  ctx.filter = "blur(7px)";
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "#1a222c";
+  ctx.beginPath();
+  for (let i = 0; i <= 32; i++) {
+    const a = (i / 32) * Math.PI * 2;
+    const q = xy(V(cx + rx * Math.cos(a), 0, cz + rz * Math.sin(a)));
+    i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSharpEdges(ctx, faces, cam, w, h, pad, strokeW) {
+  const { xy } = projector(faces, cam, w, h, pad);
+  ctx.save();
+  ctx.strokeStyle = EDGE;
+  ctx.lineWidth = strokeW;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  for (const e of collectEdges(faces)) {
+    const walls = e.faces.filter((f) => f.holeWall);
+    if (walls.length === e.faces.length) continue;
+    const ncs = e.faces.map((f) => rotCam(f.n, cam));
+    let sharp = e.faces.length !== 2;
+    if (e.faces.length === 2) sharp = isSharpPair(e.faces[0], e.faces[1]);
+    const front = ncs.map((n) => n[2] > 0.0);
+    const sil = e.faces.length === 1 ? front[0] : (front[0] !== front[1]);
+    if (!sharp && !sil) continue;
+    if (front.every((v) => !v) && !sil) continue;
+    const a = xy(e.a), b = xy(e.b);
+    ctx.moveTo(a[0], a[1]);
+    ctx.lineTo(b[0], b[1]);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
 
 export function drawFoldCanvas(cv, model, cam = DEFAULT_CAM) {
   if (!cv || !model || !model.faces || !model.faces.length) return;
-  const dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
+  const dpr = Math.max(2, (typeof window !== "undefined" && window.devicePixelRatio) || 1);
   const w = cv.clientWidth || cv.width || 320, h = cv.clientHeight || cv.height || 180;
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   const ctx = cv.getContext("2d");
   if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#e8edf2"; ctx.fillRect(0, 0, w, h);
-  const polys = projectFaces(model.faces, cam, w, h, 16);
-  for (const p of polys) {
-    if (p.path.length < 3) continue;
-    ctx.beginPath();
-    p.path.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])));
-    ctx.closePath();
-    for (const hole of p.holes) {
-      if (hole.length < 3) continue;
-      hole.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])));
-      ctx.closePath();
-    }
-    const c = p.back ? 0.55 : p.lit;
-    ctx.fillStyle = `rgb(${Math.round(STEEL[0] * c)},${Math.round(STEEL[1] * c)},${Math.round(STEEL[2] * c)})`;
-    ctx.fill("evenodd");
-    ctx.strokeStyle = EDGE; ctx.lineWidth = 0.9; ctx.stroke();
-  }
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, "#eef3f7");
+  bg.addColorStop(1, "#cfd8e2");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+  const pad = Math.max(16, Math.round(Math.min(w, h) * 0.06));
+  drawGroundShadow(ctx, model.faces, cam, w, h, pad);
+  const polys = projectFaces(model.faces, cam, w, h, pad);
+  for (const p of polys) fillShaded(ctx, p.path, p.holes, p.lits, p.back);
+  drawSharpEdges(ctx, model.faces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280));
 }
 
 export function foldThumbSvg(model, w = 96, h = 72, cam = DEFAULT_CAM) {
   if (!model || !model.faces || !model.faces.length) return "";
-  const polys = projectFaces(model.faces, cam, w, h, 6);
-  const d = polys.map((p) => {
-    const ring = (pts) => pts.map((q, i) => `${i ? "L" : "M"}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(" ") + " Z";
-    return ring(p.path) + p.holes.map(ring).join("");
-  }).join(" ");
-  // a soft average fill; individual lighting is approximated by overlapping paths with evenodd
+  const pad = 6;
+  const polys = projectFaces(model.faces, cam, w, h, pad);
+  const { xy } = projector(model.faces, cam, w, h, pad);
   let body = "";
   for (const p of polys) {
     const ring = (pts) => pts.map((q, i) => `${i ? "L" : "M"}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(" ") + "Z";
-    const c = p.back ? 0.55 : p.lit;
-    const fill = `rgb(${Math.round(STEEL[0] * c)},${Math.round(STEEL[1] * c)},${Math.round(STEEL[2] * c)})`;
-    body += `<path d="${ring(p.path)}${p.holes.map(ring).join("")}" fill="${fill}" fill-rule="evenodd" stroke="#3d4650" stroke-width="0.7"/>`;
+    const fill = steelRgb(p.back ? 0.5 : p.lit);
+    body += `<path d="${ring(p.path)}${p.holes.map(ring).join("")}" fill="${fill}" fill-rule="evenodd"/>`;
   }
+  let edges = "";
+  for (const e of collectEdges(model.faces)) {
+    if (e.faces.every((f) => f.holeWall)) continue;
+    const ncs = e.faces.map((f) => rotCam(f.n, cam));
+    let sharp = e.faces.length !== 2;
+    if (e.faces.length === 2) sharp = isSharpPair(e.faces[0], e.faces[1]);
+    const front = ncs.map((n) => n[2] > 0);
+    const sil = e.faces.length === 1 ? front[0] : (front[0] !== front[1]);
+    if (!sharp && !sil) continue;
+    if (front.every((v) => !v) && !sil) continue;
+    const a = xy(e.a), b = xy(e.b);
+    edges += `M${a[0].toFixed(1)},${a[1].toFixed(1)}L${b[0].toFixed(1)},${b[1].toFixed(1)}`;
+  }
+  if (edges) body += `<path d="${edges}" fill="none" stroke="#2c333c" stroke-width="0.7" stroke-linejoin="round"/>`;
   return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">${body}</svg>`;
 }
 
@@ -886,6 +1076,49 @@ function isPhoneFold() {
   return typeof document !== "undefined" && (
     document.body.classList.contains("phone-ui") || !document.body.classList.contains("laptop-ui")
   );
+}
+
+function modelForCanvas(canvas) {
+  const lb = canvas && canvas.closest("#fold3dLightbox");
+  if (lb && lb._model) return lb._model;
+  const h = canvas && canvas.closest(".fold3d-host");
+  return h && h._model;
+}
+
+function redrawFoldCanvases(model) {
+  if (!model || typeof document === "undefined") return;
+  for (const cv of document.querySelectorAll("canvas.fold3d")) {
+    const m = modelForCanvas(cv) || model;
+    if (m) drawFoldCanvas(cv, m, orbit);
+  }
+}
+
+function closeFoldLightbox() {
+  const ov = typeof document !== "undefined" && document.getElementById("fold3dLightbox");
+  if (ov) { ov.hidden = true; ov._model = null; }
+}
+
+function openFoldLightbox(host) {
+  if (typeof document === "undefined" || !host || !host._model || isPhoneFold()) return;
+  let ov = document.getElementById("fold3dLightbox");
+  if (!ov) {
+    ov = document.createElement("div");
+    ov.id = "fold3dLightbox";
+    ov.className = "fold3d-lb";
+    ov.innerHTML = `<div class="fold3d-lb-inner" role="dialog" aria-label="Enlarged folded 3D view"><button type="button" class="fold3d-lb-close" aria-label="Close">✕</button><canvas class="fold3d fold3d-lb-canvas" width="1280" height="800" aria-label="Folded 3D view, drag to turn"></canvas></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener("click", (e) => { if (e.target === ov) closeFoldLightbox(); });
+    ov.querySelector(".fold3d-lb-close").addEventListener("click", closeFoldLightbox);
+    bindOrbit(ov.querySelector("canvas.fold3d"));
+    if (!window.__fold3dEsc) {
+      window.__fold3dEsc = true;
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeFoldLightbox(); });
+    }
+  }
+  ov._model = host._model;
+  ov.hidden = false;
+  const cv = ov.querySelector("canvas.fold3d");
+  requestAnimationFrame(() => drawFoldCanvas(cv, ov._model, orbit));
 }
 
 export function mountFoldView(host, sh, params) {
@@ -901,7 +1134,7 @@ export function mountFoldView(host, sh, params) {
   if (!canvas) {
     const thumb = foldThumbSvg(model, 56, 40);
     const open = phone ? (phoneFold.open ? " open" : "") : " open";
-    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="360" height="200" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><p class="fold3d-cap">Folded view — drag to turn. The drawing is the flat pattern you cut.</p></div></details>`;
+    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="720" height="480" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><button type="button" class="fold3d-expand">Expand</button><p class="fold3d-cap">Folded view — drag to turn. The drawing is the flat pattern you cut.</p></div></details>`;
     canvas = host.querySelector("canvas.fold3d");
     bindOrbit(canvas);
     const box = host.querySelector("details.fold3d-box");
@@ -909,6 +1142,18 @@ export function mountFoldView(host, sh, params) {
       if (isPhoneFold()) phoneFold.open = box.open;
       if (box.open && host._model) drawFoldCanvas(canvas, host._model, orbit);
     });
+    const exp = host.querySelector(".fold3d-expand");
+    if (exp) exp.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openFoldLightbox(host); });
+    if (typeof ResizeObserver !== "undefined" && !host._foldRo) {
+      host._foldRo = new ResizeObserver(() => {
+        if (host._model) {
+          const cv = host.querySelector("canvas.fold3d");
+          if (cv && cv.getClientRects().length) drawFoldCanvas(cv, host._model, orbit);
+        }
+      });
+      const wrap = host.querySelector(".fold3d-wrap");
+      if (wrap) host._foldRo.observe(wrap);
+    }
   } else {
     const mini = host.querySelector(".fold3d-mini");
     if (mini) mini.innerHTML = foldThumbSvg(model, 56, 40);
@@ -917,14 +1162,17 @@ export function mountFoldView(host, sh, params) {
   host._model = model;
   host._sh = sh;
   host._params = params;
+  const lb = typeof document !== "undefined" && document.getElementById("fold3dLightbox");
+  if (lb && !lb.hidden) { lb._model = model; const lbc = lb.querySelector("canvas.fold3d"); if (lbc) drawFoldCanvas(lbc, model, orbit); }
 }
 
 function bindOrbit(canvas) {
+  if (!canvas || canvas._foldOrbit) return;
+  canvas._foldOrbit = true;
   let dragging = false, lx = 0, ly = 0;
-  const host = () => canvas.closest(".fold3d-host");
   const redraw = () => {
-    const h = host();
-    if (h && h._model) drawFoldCanvas(canvas, h._model, orbit);
+    const m = modelForCanvas(canvas);
+    if (m) redrawFoldCanvases(m);
   };
   const down = (x, y) => { dragging = true; lx = x; ly = y; canvas.style.cursor = "grabbing"; };
   const move = (x, y) => {
