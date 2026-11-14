@@ -285,7 +285,7 @@ export class ViewMethods {
     }
     if (this.label) this.tag(ctx, this.label.text, this.label.x, this.label.y - 28, C.partLine);
 
-    if (this.tool === "draw" && this.drawPts.length) {
+    if ((this.tool === "draw" || this.tool === "spline" || this.tool === "arc3") && this.drawPts.length) {
       ctx.strokeStyle = C.sel; ctx.fillStyle = C.sel; ctx.lineWidth = 2;
       const dPts = this.drawPts.map((p) => [p[0], p[1]]);
       const dB = (this.drawBulges || []).slice();

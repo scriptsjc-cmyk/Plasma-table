@@ -12,6 +12,7 @@ import { EditMethods } from "./sketch-edit.js";
 import { ViewMethods } from "./sketch-view.js";
 import { EdgeMethods } from "./sketch-edge.js";
 import { InputMethods } from "./sketch-input.js";
+import { TrimMethods } from "./sketch-trim.js";
 import { installLayoutLock } from "./sketch-lock.js";
 import { clickVerb } from "../ui/laptop.js";
 export { LAYOUT_LOCK_MSG } from "./sketch-lock.js";
@@ -265,6 +266,7 @@ export class Sketch {
     this.tool = this.tool === name ? null : (name || null);
     this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null; this.drawEtch = false;
     this.filletPick = null; this.filletHover = null;
+    this.trimMode = null; this.tanPick = null;
     this.cv.style.cursor = this.tool ? "crosshair" : "";
     this.draw();
   }
@@ -322,5 +324,5 @@ export class Sketch {
   }
 }
 
-mixin(Sketch, GeomMethods, EditMethods, ViewMethods, EdgeMethods, InputMethods);
+mixin(Sketch, GeomMethods, EditMethods, ViewMethods, EdgeMethods, TrimMethods, InputMethods);
 installLayoutLock(Sketch);

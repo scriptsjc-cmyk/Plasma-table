@@ -7,6 +7,18 @@
     <button type="button" id="btnDragPan" class="small dragpan" aria-pressed="false" title="Drag selects: drag a box on empty canvas to pick every part it covers. Click to switch to pan. Space never pans — Space is STOP.">Drag selects</button>
     <button type="button" id="btnMakeImport" class="small makeimp" title="Open a DXF or SVG drawing and add its parts to this sheet">Open DXF / SVG</button>
     <input type="file" id="makeImpFiles" accept=".dxf,.svg" multiple hidden>
+    <span class="makeexp-wrap">
+      <button type="button" id="btnMakeExport" class="small makeexp" title="Save the current drawing as DXF or SVG (the design, not the cut path)">Export DXF / SVG</button>
+      <div id="makeExportPop" class="exportpop hidden" hidden role="dialog" aria-labelledby="makeExportTitle">
+        <p id="makeExportTitle" class="exportpop-title">Save the drawing</p>
+        <p class="muted small">This is the design geometry, not the kerfed toolpath. Arcs stay as arcs.</p>
+        <div class="row wrap exportpop-actions">
+          <button type="button" id="makeExpDxf" class="accent">DXF (R12)</button>
+          <button type="button" id="makeExpSvg">SVG</button>
+          <button type="button" id="makeExpCancel">Cancel</button>
+        </div>
+      </div>
+    </span>
     <button type="button" id="btnMakeCheckCut" class="small makecheck" title="Check whether this drawing will cut cleanly" aria-label="Check cut">Check cut</button>
     <button type="button" id="btnViewParts" class="small viewparts">Parts</button>
     <div id="editorSwitch" class="editorsw" role="group" aria-label="Drawing tools">

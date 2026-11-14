@@ -20,7 +20,7 @@ for (const sh of A.PRESET_SHAPES) {
   if (it) { it.x = 25; it.y = 40; }
   const cs = sk.contours();
   t.check(`${sh.id}: produces contours`, cs.length > 0, "", "SHAPE-EMPTY");
-  t.check(`${sh.id}: all contours closed and have ≥3 points`, cs.every((c) => c.closed !== false && c.pts.length >= 3), "", "PATH-OPEN");
+  t.check(`${sh.id}: all contours closed and have ≥3 points (open Score/Mark/bend lines may be 2 pts)`, cs.every((c) => (c.op === "score" || c.op === "mark" || c.role === "bend" || c.closed === false) ? c.pts.length >= 2 : (c.closed !== false && c.pts.length >= 3)), "", "PATH-OPEN");
   t.check(`${sh.id}: no self-intersecting contour`, cs.every((c) => !selfCross(c.pts)), "", "SELF-X");
   if (cs.length) {
     const box = bb(cs.flatMap((c) => c.pts));

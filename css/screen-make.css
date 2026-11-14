@@ -1228,3 +1228,10 @@ body.laptop-ui .fold3d-sum { display: none; }
 .cc-error { color: var(--cad-danger, #C42B1C); }
 .cc-warn { color: var(--cad-lock, #C05600); }
 #makeCheckOut li[data-gi]:hover { text-decoration: underline; }
+
+/* C34: drawing export drops below the Make header button, not above it off the screen. */
+.makeexp-wrap { position: relative; display: inline-flex; align-items: center; flex: 0 0 auto; }
+#makeExportPop {
+  position: absolute; top: 100%; bottom: auto; left: 0; margin-top: 4px;
+  z-index: 30; min-width: 260px;
+}

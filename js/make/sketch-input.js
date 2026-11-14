@@ -227,6 +227,19 @@ export class InputMethods {
         // ignore other hits so a miss does not drag the part mid-fillet
         return;
       }
+      if (this.onCurveToolDown && ["trim", "arc3", "arctan", "spline", "maketan", "makeconc"].includes(this.tool) && !panBtn) {
+        let px = wx, py = wy;
+        const sn = snapWorld(this, wx, wy);
+        if (sn) { px = sn.x; py = sn.y; this.snapMark = sn; }
+        else if (this.opts.snap) {
+          const step = this.opts.snap || 0.1;
+          px = Math.round(wx / step) * step; py = Math.round(wy / step) * step;
+        }
+        if (!Number.isFinite(px) || !Number.isFinite(py)) return;
+        if (Math.abs(px) > this.maxMm || Math.abs(py) > this.maxMm) { this.onMessage("That point is off the table."); return; }
+        this.onCurveToolDown(px, py, sx, sy);
+        return;
+      }
       if ((this.tool === "draw" || this.tool === "rect" || this.tool === "disc") && !panBtn) {
         let px = wx, py = wy;
         const sn = snapWorld(this, wx, wy);
@@ -515,6 +528,11 @@ export class InputMethods {
         closeDrawHud();
         return;
       }
+      if (this.tool === "spline" && this.drawPts && this.drawPts.length >= 2) {
+        e.preventDefault();
+        this.finishSpline && this.finishSpline(false);
+        return;
+      }
       const [sx, sy] = pos(e);
       const h = this.hit(sx, sy, e.pointerType === "touch");
       if (this.layout) { if (!h) this.fitView(); return; }       // the sheet layout: double-click never edits a part
@@ -553,6 +571,10 @@ export class InputMethods {
         if (e.key === "Enter" && this.drawPts.length >= 3) { stop(); this.finishDraw && this.finishDraw(); closeDrawHud(); return; }
         if (k === "a") { stop(); this.drawArc = !this.drawArc; this.onMessage(this.drawArc ? "Next segment will be a curve. Press A again for a straight line." : "Next segment will be a straight line."); return; }
       }
+      if (this.tool === "spline" && this.drawPts && this.drawPts.length) {
+        if (e.key === "Backspace") { stop(); this.drawPts.pop(); this.draw(); return; }
+        if (e.key === "Enter" && this.drawPts.length >= 2) { stop(); this.finishSpline && this.finishSpline(false); return; }
+      }
       if (!ctrl && !this.layout) {
         if (k === "l") { stop(); this.setTool("draw"); afterDrawPoint(); if (this.onSelect) this.onSelect(); return; }
         if (k === "r") { stop(); this.setTool("rect"); if (this.onSelect) this.onSelect(); return; }
@@ -575,6 +597,14 @@ export class InputMethods {
         if (this.filletPick) {
           e.stopImmediatePropagation(); e.preventDefault();
           this.endFilletPick();
+          return;
+        }
+        if (this.tanPick || this.trimMode) {
+          e.stopImmediatePropagation(); e.preventDefault();
+          this.tanPick = null; this.trimMode = null;
+          if (this.tool === "trim" || this.tool === "maketan" || this.tool === "makeconc" || this.tool === "arctan") this.setTool(null);
+          if (this.onSelect) this.onSelect();
+          this.draw();
           return;
         }
         if (this.centrePick) {

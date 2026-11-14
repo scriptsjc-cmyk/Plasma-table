@@ -1,5 +1,6 @@
 // Sketch: editing the corners and edges of a custom outline (length, angle, curve, add / delete / move a corner) and drawing its handles.
 import { bbox, bulgeFromPoint, bulgeFromRadius, bulgeFromSagitta, bulgeMidpoint, bulgeRadius, expandContour, polysCross, selfIntersects, signedArea, splitBulge } from "../core/geom.js";
+import { fitContour } from "../core/arcs.js";
 import { cleanContour, clampBulge, clone, distToEdge, r1, wholeSet } from "./sketch-util.js";
 
 export class EdgeMethods {
@@ -259,7 +260,10 @@ export class EdgeMethods {
     if (!opts.noRemember) this.remember();
     const b = bbox(cs);
     it.type = "custom"; it.p = { scale: 100 }; it.rot = 0; it.fx = false; it.fy = false; it.holes = {};
-    it.shape = { cs: cs.map((c) => cleanContour({ pts: c.pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: c.closed !== false })) };
+    it.shape = { cs: cs.map((c) => {
+      const local = cleanContour({ pts: c.pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: c.closed !== false, bulges: c.bulges, circle: c.circle ? { cx: r1(c.circle.cx - b[0]), cy: r1(c.circle.cy - b[1]), r: c.circle.r } : undefined });
+      return fitContour(local);
+    }) };
     it.x = r1(b[0]); it.y = r1(b[1]); it._key = null;
     if (!opts.noRemember) { this.commit(); this.onSelect(); }
     return true;

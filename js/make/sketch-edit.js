@@ -1,6 +1,7 @@
 // Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...).
 import { MIN, cleanContour, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { assessOffset, bbox, bulgeMidpoint, classifyContainment, differenceOutlines, offsetLoop, pointInPoly, selfIntersects, signedArea, unionMany, unionOutlines } from "../core/geom.js";
+import { fitContour } from "../core/arcs.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
 
@@ -140,7 +141,7 @@ export class EditMethods {
     }
     const allLoops = [...u.outers.map((pts) => ({ pts, closed: true })), ...kept];
     const b = bbox(allLoops);
-    const local = (c) => cleanContour(mapC(c, ([x, y]) => [r1(x - b[0] + 1e-9), r1(y - b[1] + 1e-9)]));
+    const local = (c) => { const f = fitContour(cleanContour(mapC(c, ([x, y]) => [x - b[0] + 1e-9, y - b[1] + 1e-9]))); f.pts = f.pts.map(([x, y]) => [r1(x), r1(y)]); if (f.circle) f.circle = { cx: r1(f.circle.cx), cy: r1(f.circle.cy), r: r1(f.circle.r) }; return f; };
     this.remember();
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
       shape: { cs: allLoops.map(local) } };
@@ -561,9 +562,12 @@ export class EditMethods {
     this.remember();
     const b = bbox([{ pts: outerRes.pts }, ...holeCs]);
     const local = (c) => {
-      const m = mapC(c, ([x, y]) => [r1(x - b[0]), r1(y - b[1])]);
-      if (c.circle) m.circle = { cx: r1(c.circle.cx - b[0]), cy: r1(c.circle.cy - b[1]), r: c.circle.r };
-      return m;
+      const m = mapC(c, ([x, y]) => [x - b[0], y - b[1]]);
+      if (c.circle) m.circle = { cx: c.circle.cx - b[0], cy: c.circle.cy - b[1], r: c.circle.r };
+      const f = fitContour(m);
+      f.pts = f.pts.map(([x, y]) => [r1(x), r1(y)]);
+      if (f.circle) f.circle = { cx: r1(f.circle.cx), cy: r1(f.circle.cy), r: r1(f.circle.r) };
+      return f;
     };
     const outerC = local({ pts: outerRes.pts, closed: true, circle: outerRes.circle });
     const shape = { cs: [outerC, ...holeCs.map(local)] };

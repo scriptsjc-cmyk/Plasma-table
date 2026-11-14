@@ -9,6 +9,7 @@
 // which adds the touch-off, pierce delay, heights and speed.
 
 import { signedArea, pointInPoly, offsetPolygon, selfIntersects, bbox, cleanPts } from "../core/geom.js";
+import { fitArcs, bulgeToIJ, paramOnEdge, pointOnArc, splitEdgeAt } from "../core/arcs.js";
 import { fmt } from "./job.js";
 import { isEtchOp, emitEtchGcode } from "./etch.js";
 
@@ -144,9 +145,17 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
       const L = T(run.lead), S = T(run.start);
       lines.push(`G0 X${fmt(L[0])} Y${fmt(L[1])}`, "M3");
       if (Math.hypot(L[0] - S[0], L[1] - S[1]) > 1e-6) lines.push(`G1 X${fmt(S[0])} Y${fmt(S[1])}`);
+      let curX = +fmt(S[0]), curY = +fmt(S[1]);
       for (const [g, p, ij] of run.path) {
         const q = T(p);
-        lines.push(ij ? `${g} X${fmt(q[0])} Y${fmt(q[1])} I${fmt(ij[0])} J${fmt(ij[1])}` : `G1 X${fmt(q[0])} Y${fmt(q[1])}`);
+        const qx = +fmt(q[0]), qy = +fmt(q[1]);
+        if (ij) {
+          const ij2 = ijOnRounded([curX, curY], [qx, qy], ij);
+          lines.push(`${g} X${fmt(qx)} Y${fmt(qy)} I${fmtIJ(ij2[0])} J${fmtIJ(ij2[1])}`);
+        } else {
+          lines.push(`G1 X${fmt(qx)} Y${fmt(qy)}`);
+        }
+        curX = qx; curY = qy;
       }
       lines.push("M5");
     }
@@ -260,7 +269,89 @@ function makeCut(c, pts, circle, leadIn, warnings, inMaterial, startAt) {
   if (c.hole) seq = [...ring];
   else seq = [a, ...[...ring].reverse().slice(1)];
   seq.push(start);
-  return { depth: c.depth, start, lead, path: seq.map((p) => ["G1", p]), pathPts: [start, ...seq], scrap };
+  return { depth: c.depth, start, lead, path: pathFromFittedRing(start, pts, seq, !!c.hole, lead), pathPts: [start, ...seq], scrap };
+}
+
+// Fit the already-kerfed closed ring, then walk it from the lead-in so a mid-edge
+// start cannot turn a straight side into a shallow arc.
+function fmtIJ(v) {
+  let s = Number(v).toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+  if (s === "-0" || s === "") s = "0";
+  return s;
+}
+function ijOnRounded(p, q, ij) {
+  // Recompute I,J from already-rounded ends so both share one radius.
+  const mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+  const dx = q[0] - p[0], dy = q[1] - p[1], c = Math.hypot(dx, dy);
+  if (c < 1e-12) return ij;
+  const nx = -dy / c, ny = dx / c;
+  const d = ((p[0] + ij[0]) - mx) * nx + ((p[1] + ij[1]) - my) * ny;
+  return [mx + nx * d - p[0], my + ny * d - p[1]];
+}
+function emitBulge(path, a, b, bulge) {
+  if (Math.abs(bulge) > 1e-9) {
+    const ij = bulgeToIJ(a, b, bulge);
+    if (ij) { path.push([ij.G === 2 ? "G2" : "G3", b, [ij.I, ij.J]]); return; }
+  }
+  path.push(["G1", b]);
+}
+function pathFromFittedRing(start, ring, seq, hole, lead) {
+  const fitted = fitArcs(ring, true);
+  const pts = fitted.pts, n = pts.length;
+  if (n < 2) return seq.map((p) => ["G1", p]);
+  const bs = fitted.bulges || [];
+  let bestI = 0, bestT = 0, bestD = Infinity, bestP = start;
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n], bulge = Number(bs[i]) || 0;
+    const t = Math.max(0, Math.min(1, paramOnEdge(a, b, bulge, start)));
+    const p = Math.abs(bulge) > 1e-12 ? pointOnArc(a, b, bulge, t) : [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    const d = Math.hypot(p[0] - start[0], p[1] - start[1]);
+    if (d < bestD) { bestD = d; bestI = i; bestT = t; bestP = p; }
+  }
+  const a0 = pts[bestI], b0 = pts[(bestI + 1) % n], bulge0 = Number(bs[bestI]) || 0;
+  const sp = splitEdgeAt(a0, b0, bulge0, bestP);
+  // Walk the same way as `seq` (already clockwise or counterclockwise).
+  // Holes are cut CCW (positive area), part edges CW (negative). The fitted
+  // ring keeps the offset winding; walk forward if that already matches.
+  const pos = signedArea(pts) > 0;
+  const fwd = hole ? pos : !pos;
+  const path = [];
+  if (fwd) {
+    if (bestT < 1 - 1e-9) emitBulge(path, bestP, b0, sp.b2);
+    for (let k = 1; k < n; k++) {
+      const j = (bestI + k) % n;
+      emitBulge(path, pts[j], pts[(j + 1) % n], Number(bs[j]) || 0);
+    }
+    if (bestT > 1e-9) emitBulge(path, a0, bestP, sp.b1);
+  } else {
+    if (bestT > 1e-9) emitBulge(path, bestP, a0, -(sp.b1 || 0));
+    for (let k = 0; k < n - 1; k++) {
+      const j = (bestI - 1 - k + n) % n;
+      emitBulge(path, pts[(j + 1) % n], pts[j], -(Number(bs[j]) || 0));
+    }
+    if (bestT < 1 - 1e-9) emitBulge(path, b0, bestP, -(sp.b2 || 0));
+  }
+  const last = path.length ? path[path.length - 1][1] : start;
+  if (!last || Math.hypot(last[0] - start[0], last[1] - start[1]) > 1e-6) path.push(["G1", start]);
+  else path[path.length - 1][1] = start;
+  const walk = (lead && Math.hypot(lead[0] - start[0], lead[1] - start[1]) > 1e-6) ? [lead, start] : [start];
+  let cur = start;
+  for (const [g, p, ij] of path) {
+    if (ij && g !== "G1") {
+      const cx = cur[0] + ij[0], cy = cur[1] + ij[1], r = Math.hypot(ij[0], ij[1]);
+      const a0 = Math.atan2(cur[1] - cy, cur[0] - cx), a1 = Math.atan2(p[1] - cy, p[0] - cx);
+      let sw = g === "G2" ? a0 - a1 : a1 - a0;
+      while (sw <= 1e-9) sw += 2 * Math.PI;
+      const n = Math.max(6, Math.ceil(Math.abs(sw) / (Math.PI / 24)));
+      for (let k = 1; k <= n; k++) {
+        const a = g === "G2" ? a0 - sw * k / n : a0 + sw * k / n;
+        walk.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+      }
+    } else walk.push(p);
+    cur = p;
+  }
+  if (selfIntersects(walk)) return seq.map((p) => ["G1", p]);
+  return path;
 }
 
 function circlePts(cx, cy, r) {

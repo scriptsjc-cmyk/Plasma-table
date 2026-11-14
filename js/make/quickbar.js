@@ -73,7 +73,7 @@ export function renderQuickBar() {
     distx: !many, disty: !many, mirv: !any || locked,
     edge: !(one && one.type === "custom"),
   };
-  const onCls = { snap: !!sketch.opts.snap, draw: sketch.tool === "draw", measure: sketch.tool === "measure", rect: sketch.tool === "rect", disc: sketch.tool === "disc", size: !!one };
+  const onCls = { snap: !!sketch.opts.snap, draw: sketch.tool === "draw", measure: sketch.tool === "measure", rect: sketch.tool === "rect", disc: sketch.tool === "disc", size: !!one, trim: sketch.tool === "trim", arc3: sketch.tool === "arc3", arctan: sketch.tool === "arctan", spline: sketch.tool === "spline", maketan: sketch.tool === "maketan", makeconc: sketch.tool === "makeconc" };
   // UX2 fix: a greyed tool says why (tooltip + screen reader label)
   const whyOff = (id) => {
     if (id === "undo") return "nothing to undo"; if (id === "redo") return "nothing to redo";
@@ -216,6 +216,25 @@ export function quickAction(a) {
     }
     case "draw": case "measure": case "nest": case "offset": case "linarray": case "polar": case "subtract":
       runPro(a); break;
+    case "trim": sketch.startTrimMode && sketch.startTrimMode("trim"); break;
+    case "extend": sketch.startTrimMode && sketch.startTrimMode("extend"); break;
+    case "break": sketch.startTrimMode && sketch.startTrimMode("break"); break;
+    case "arc3": sketch.startArc3 && sketch.startArc3(); break;
+    case "arctan": sketch.startTanArc && sketch.startTanArc(); break;
+    case "spline": sketch.startSpline && sketch.startSpline(); break;
+    case "curvepoints": {
+      openCad("Curve through points", [
+        { id: "list", type: "textarea", rows: 8, label: "Points — one x,y (or r,θ) per line, or a pasted CSV", value: "", text: true },
+        { id: "mode", type: "select", label: "Numbers are", value: "xy", options: [{ v: "xy", l: "x, y (mm)" }, { v: "polar", l: "r, θ (mm and degrees)" }] },
+        { id: "closed", type: "checkbox", label: "Close the curve" },
+        { note: "A smooth curve is fitted to editable arcs, so you can still change it afterwards." },
+      ], (v) => {
+        if (!sketch.addPointsContour(v.list, v.mode, v.closed)) toast(sketch._lastMessage || "Could not build that curve.", true);
+      });
+      break;
+    }
+    case "maketan": sketch.startMakeRel && sketch.startMakeRel("tangent"); break;
+    case "makeconc": sketch.startMakeRel && sketch.startMakeRel("concentric"); break;
     case "join": sketch.join(); break;
     case "alignl": sketch.align("left"); break;
     case "alignr": sketch.align("right"); break;

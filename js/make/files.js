@@ -17,6 +17,7 @@ import { clickVerb } from "../ui/laptop.js";
 import { showSource, useShape, useShapeSoon } from "./useshape.js";
 import { setShapeFs } from "./protools.js";
 import { navBusy } from "../cut/checklist.js";
+import { bindDrawingExport } from "./drawexport.js";
 
 // ------------------------------------------------------------------ step 1: file
 // A drawing is already on the bed: a second DXF/SVG asks whether it joins the sheet or replaces what is there (never silently throws work away)
@@ -279,6 +280,7 @@ export function bindFiles() {
     makeBtn.onclick = () => makeImp.click();
     makeImp.onchange = () => { const fl = [...makeImp.files]; makeImp.value = ""; importIntoMake(fl); };
   }
+  bindDrawingExport();
   $("recent").onclick = (e) => {
     const b = e.target.closest("[data-recent]");
     if (b) { const r = recentList()[Number(b.dataset.recent)]; if (r) setFile(r.name, r.text, false, r.scale); }
