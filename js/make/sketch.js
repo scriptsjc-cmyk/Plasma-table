@@ -13,6 +13,7 @@ import { ViewMethods } from "./sketch-view.js";
 import { EdgeMethods } from "./sketch-edge.js";
 import { InputMethods } from "./sketch-input.js";
 import { TrimMethods } from "./sketch-trim.js";
+import { Stage6Methods } from "./sketch-stage6.js";
 import { installLayoutLock } from "./sketch-lock.js";
 import { clickVerb } from "../ui/laptop.js";
 export { LAYOUT_LOCK_MSG } from "./sketch-lock.js";
@@ -74,6 +75,8 @@ export class Sketch {
     if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > max * 2 || Math.abs(y) > max * 2) return null;
     const rot = Number(it.rot) || 0;
     const out = { id: Number(it.id) || 0, type: it.type, p, x, y, rot: Number.isFinite(rot) ? rot : 0, holes: {}, lock: !!it.lock, fy: !!it.fy, fx: !!it.fx };
+    if (Number(it.gid) > 0) out.gid = Math.round(Number(it.gid));
+    if (it.drive && typeof it.drive === "object") out.drive = it.drive;
     if (it.hide) out.hide = true;
     if (it.name) out.name = String(it.name).slice(0, 80);
     if (it.op === "score" || it.op === "mark") out.op = it.op;
@@ -267,6 +270,9 @@ export class Sketch {
     this.drawPts = []; this.drawBulges = []; this.drawArc = false; this.measure = null; this.drawDraft = null; this.snapMark = null; this.constraintHint = null; this.drawEtch = false;
     this.filletPick = null; this.filletHover = null;
     this.trimMode = null; this.tanPick = null;
+    if (this.tool !== "rotpt") this.rotatePick = null;
+    if (this.tool !== "scale") this.scalePick = null;
+    if (this.tool !== "drive") this.drivePick = null;
     this.cv.style.cursor = this.tool ? "crosshair" : "";
     this.draw();
   }
@@ -324,5 +330,5 @@ export class Sketch {
   }
 }
 
-mixin(Sketch, GeomMethods, EditMethods, ViewMethods, EdgeMethods, TrimMethods, InputMethods);
+mixin(Sketch, GeomMethods, EditMethods, ViewMethods, EdgeMethods, TrimMethods, Stage6Methods, InputMethods);
 installLayoutLock(Sketch);

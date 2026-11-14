@@ -233,6 +233,10 @@ export function quickAction(a) {
       });
       break;
     }
+    case "group": sketch.group(); break;
+    case "ungroup": sketch.ungroup(); break;
+    case "rotpt": case "scalepct": case "drivedim": case "sliver": case "cutctl": case "flangestd":
+      runPro(a); break;
     case "maketan": sketch.startMakeRel && sketch.startMakeRel("tangent"); break;
     case "makeconc": sketch.startMakeRel && sketch.startMakeRel("concentric"); break;
     case "join": sketch.join(); break;

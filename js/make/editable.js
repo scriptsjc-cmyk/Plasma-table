@@ -130,7 +130,9 @@ export function contoursToEditable(contours) {
   const depth = (k) => { let d = 0; for (let p = info[k].parent; p >= 0; p = info[p].parent) d++; return d; };
   const groups = [];
   for (const me of info) {
-    if (!flat[me.i] || depth(me.i) % 2 === 0) groups.push([me.i]);
+    // Closed even-depth rings only. Open lines used to be added here as well as
+    // in the loop below, so two open DXF lines became four parts (C43).
+    if (flat[me.i] && depth(me.i) % 2 === 0) groups.push([me.i]);
   }
   for (const me of info) {
     if (!flat[me.i] || depth(me.i) % 2 === 0) continue;

@@ -2,6 +2,7 @@
 import { MIN, cleanContour, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { assessOffset, bbox, bulgeMidpoint, classifyContainment, differenceOutlines, offsetLoop, pointInPoly, selfIntersects, signedArea, unionMany, unionOutlines } from "../core/geom.js";
 import { fitContour } from "../core/arcs.js";
+import { nestUnitsSync, turnAngles, ringsBox } from "../cut/nest.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
 
@@ -608,7 +609,7 @@ export class EditMethods {
     this.pick([it.id]); this.commit(); this.onSelect();
     this.onMessage("Cut out. The result is one part you can copy or resize.");
   }
-  nest(gap, sheetW, sheetH) {
+  nest(gap, sheetW, sheetH, opts = {}) {
     if (!this.items.length) return;
     if (this.items.some((i) => i.lock)) { this.onMessage("Unlock locked parts before nesting."); return; }
     gap = Math.max(0, Number(gap) || 10);
@@ -618,68 +619,76 @@ export class EditMethods {
     const holes = this.items.filter((it) => this.isHole(it));
     if (!parts.length) return;
     this.remember();
-    const boxes = parts.map((it) => {
-      const b = this.boxOf(it);
-      return { it, w: b[2] - b[0], h: b[3] - b[1], hostHoles: holes.filter((h) => (this.hostPart(h) || this.hostOf(h)) === it) };
-    }).sort((a, b) => Math.max(b.w, b.h) - Math.max(a.w, a.h));
     const origin = new Map();
-    for (const p of boxes) {
-      origin.set(p.it.id, { x: p.it.x, y: p.it.y, rot: p.it.rot || 0, holes: p.hostHoles.map((h) => ({ h, x: h.x, y: h.y })) });
+    const units = [];
+    for (const it of parts) {
+      const hostHoles = holes.filter((h) => (this.hostPart(h) || this.hostOf(h)) === it);
+      origin.set(it.id, { x: it.x, y: it.y, rot: it.rot || 0, holes: hostHoles.map((h) => ({ h, x: h.x, y: h.y, rot: h.rot || 0 })) });
+      const rings = [];
+      for (const c of this.contoursOf(it)) if (c.closed !== false && c.pts && c.pts.length >= 3) rings.push(c.pts);
+      for (const h of hostHoles) {
+        for (const c of this.contoursOf(h)) if (c.closed !== false && c.pts && c.pts.length >= 3) rings.push(c.pts);
+      }
+      if (!rings.length) continue;
+      units.push({ id: it.id, rings, it, hostHoles });
     }
-    let x = 0, y = 0, rowH = 0, usedW = 0, usedH = 0;
-    const maxW = sheetW > 0 ? sheetW : Infinity;
-    const maxH = sheetH > 0 ? sheetH : Infinity;
+    const regionW = sheetW > 0 ? sheetW : Math.max(200, this.maxMm || 2600);
+    const regionH = sheetH > 0 ? sheetH : Math.max(200, this.maxMm || 2600);
+    const step = Number.isFinite(Number(opts.angles)) ? Number(opts.angles)
+      : (opts.step != null ? Number(opts.step) : 90);
+    const angles = turnAngles(step > 0 ? step : 0);
+    const res = nestUnitsSync(units, { w: regionW, h: regionH }, { gap, angles, timeMs: opts.timeMs || 8000, refine: true, pockets: true });
+    const byId = new Map((res.placements || []).map((p) => [p.id, p]));
     const placed = [];
     const leftover = [];
-    const overlapBox = (a, b) => a[0] < b[2] - 0.05 && b[0] < a[2] - 0.05 && a[1] < b[3] - 0.05 && b[1] < a[3] - 0.05;
-    const fits = (px, py, w, h) =>
-      px >= -0.05 && py >= -0.05 && px + w <= maxW + 0.05 && py + h <= maxH + 0.05
-      && !placed.some((q) => overlapBox([px, py, px + w, py + h], q));
-    for (const p of boxes) {
-      let w = p.w, h = p.h, rot90 = false;
-      if (sheetW > 0 && w > maxW && h <= maxW) { rot90 = true; [w, h] = [h, w]; }
-      if (x > 0 && x + w > maxW + 0.05) { x = 0; y += rowH + gap; rowH = 0; }
-      if (!fits(x, y, w, h)) {
-        // try the start of a new row, then give up and leave this part where it was
-        if (x > 0) { x = 0; y += rowH + gap; rowH = 0; }
-        if (!fits(x, y, w, h)) { leftover.push(p); continue; }
+    for (const u of units) {
+      const pl = byId.get(u.id);
+      if (!pl || !pl.placed) { leftover.push(u); continue; }
+      const it = u.it;
+      const before = this.boxOf(it);
+      const hostC = [(before[0] + before[2]) / 2, (before[1] + before[3]) / 2];
+      const holeRel = u.hostHoles.map((ho) => {
+        const hb = this.boxOf(ho);
+        return { ho, rel: [(hb[0] + hb[2]) / 2 - hostC[0], (hb[1] + hb[3]) / 2 - hostC[1]] };
+      });
+      it.rot = (((it.rot || 0) + (pl.angle || 0)) % 360 + 360) % 360;
+      const want = ringsBox(pl.rings);
+      const got = this.boxOf(it);
+      it.x = r1(it.x + (want[0] - got[0]));
+      it.y = r1(it.y + (want[1] - got[1]));
+      const after = this.boxOf(it);
+      const newHostC = [(after[0] + after[2]) / 2, (after[1] + after[3]) / 2];
+      for (const rec of holeRel) {
+        const rel = rot(rec.rel, pl.angle || 0);
+        rec.ho.rot = (((rec.ho.rot || 0) + (pl.angle || 0)) % 360 + 360) % 360;
+        const nh = this.boxOf(rec.ho);
+        const gotC = [(nh[0] + nh[2]) / 2, (nh[1] + nh[3]) / 2];
+        const wantC = [newHostC[0] + rel[0], newHostC[1] + rel[1]];
+        rec.ho.x = r1(rec.ho.x + (wantC[0] - gotC[0]));
+        rec.ho.y = r1(rec.ho.y + (wantC[1] - gotC[1]));
       }
-      if (rot90) p.it.rot = (((p.it.rot || 0) + 90) % 360);
-      const nb = this.boxOf(p.it);
-      const dx = x - nb[0], dy = y - nb[1];
-      p.it.x = r1(p.it.x + dx); p.it.y = r1(p.it.y + dy);
-      for (const ho of p.hostHoles) { ho.x = r1(ho.x + dx); ho.y = r1(ho.y + dy); }
-      const placedBox = this.boxOf(p.it);
-      // If rotation or an odd outline didn't land on the planned cell, snap the recorded box and reject on overlap/overflow.
-      if (placedBox[0] < -0.05 || placedBox[1] < -0.05 || placedBox[2] > maxW + 0.05 || placedBox[3] > maxH + 0.05
-          || placed.some((q) => overlapBox(placedBox, q))) {
-        const o = origin.get(p.it.id);
-        if (o) {
-          p.it.x = o.x; p.it.y = o.y; p.it.rot = o.rot;
-          for (const rec of o.holes) { rec.h.x = rec.x; rec.h.y = rec.y; }
-        }
-        leftover.push(p);
-        continue;
-      }
-      placed.push(placedBox);
-      x = placedBox[2] + gap; rowH = Math.max(rowH, placedBox[3] - placedBox[1]); usedW = Math.max(usedW, placedBox[2]); usedH = Math.max(usedH, placedBox[3]);
+      placed.push(this.boxOf(it));
     }
-    // Park parts that would not fit just to the right of the sheet (or the packed block),
-    // so they stay visible, do not overlap the nest, and the toast can tell the truth.
-    let parkX = (sheetW > 0 ? sheetW : usedW) + Math.max(gap, 20), parkY = 0, parkH = 0;
-    for (const p of leftover) {
-      const o = origin.get(p.it.id);
-      if (o) { p.it.rot = o.rot; for (const rec of o.holes) { rec.h.x = rec.x; rec.h.y = rec.y; } }
-      const pb = this.boxOf(p.it), w = pb[2] - pb[0], h = pb[3] - pb[1];
+    let usedW = 0, usedH = 0;
+    for (const b of placed) { usedW = Math.max(usedW, b[2]); usedH = Math.max(usedH, b[3]); }
+    let parkX = (sheetW > 0 ? sheetW : usedW) + Math.max(gap, 20), parkY = 0;
+    for (const u of leftover) {
+      const o = origin.get(u.it.id);
+      if (o) {
+        u.it.x = o.x; u.it.y = o.y; u.it.rot = o.rot;
+        for (const rec of o.holes) { rec.h.x = rec.x; rec.h.y = rec.y; rec.h.rot = rec.rot; }
+      }
+      const pb = this.boxOf(u.it), h = pb[3] - pb[1];
       const dx = parkX - pb[0], dy = parkY - pb[1];
-      p.it.x = r1(p.it.x + dx); p.it.y = r1(p.it.y + dy);
-      for (const ho of p.hostHoles) { ho.x = r1(ho.x + dx); ho.y = r1(ho.y + dy); }
-      parkY += h + gap; parkH = Math.max(parkH, parkY);
+      u.it.x = r1(u.it.x + dx); u.it.y = r1(u.it.y + dy);
+      for (const ho of u.hostHoles) { ho.x = r1(ho.x + dx); ho.y = r1(ho.y + dy); }
+      parkY += h + gap;
     }
     this.commit(); this.onSelect();
-    const n = boxes.length, k = placed.length;
-    if (!sheetW) this.onMessage(`Packed in a ${r1(usedW)} × ${r1(usedH)} mm block, ${gap} mm gaps.`);
-    else if (k === n) this.onMessage(`Arranged ${n} part${n === 1 ? "" : "s"} on a ${sheetW} × ${sheetH || "–"} mm sheet, ${gap} mm gaps.`);
+    const n = units.length, k = placed.length;
+    const turnNote = step > 0 ? " True-shape packing, parts may turn." : "";
+    if (!sheetW) this.onMessage(`Packed in a ${r1(usedW)} × ${r1(usedH)} mm block, ${gap} mm gaps.${turnNote}`);
+    else if (k === n) this.onMessage(`Arranged ${n} part${n === 1 ? "" : "s"} on a ${sheetW} × ${sheetH || "–"} mm sheet, ${gap} mm gaps.${turnNote}`);
     else if (k === 0) this.onMessage(`These parts will not fit on a ${sheetW} × ${sheetH || "–"} mm sheet. Nothing was arranged.`);
     else this.onMessage(`${k} of ${n} parts fitted on a ${sheetW} × ${sheetH || "–"} mm sheet. The rest would not fit.`);
   }

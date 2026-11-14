@@ -1,4 +1,5 @@
-import { T } from "../lib/t.mjs"; import { load } from "../lib/env.mjs"; import { verifyDesign } from "../lib/verify.mjs"; import { area, inPoly, selfCross, bb } from "../lib/analyze.mjs";
+import { T } from "../lib/t.mjs";
+import { verifyLayout } from "../../js/cut/nest.js"; import { load } from "../lib/env.mjs"; import { verifyDesign } from "../lib/verify.mjs"; import { area, inPoly, selfCross, bb } from "../lib/analyze.mjs";
 const A = await load(); const t = new T("04_pro_tools");
 const mk = (specs) => { const sk = A.newSketch(); for (const [type, p, x, y] of specs) { sk.add(type, true); const it = sk.items.at(-1); Object.assign(it.p, p); it.x = x; it.y = y; } sk.opts.pro = true; return sk; };
 const boxes = (sk) => sk.items.map((i) => sk.boxOf(i));
@@ -198,14 +199,17 @@ for (const [type, d] of [["rect", 5], ["rect", -5], ["plate", 3], ["plate", -3],
 {
   const sk = mk([["rect", { w: 100, h: 60 }, 0, 0], ["disc", { d: 80 }, 200, 0], ["plate", {}, 400, 0], ["flange", {}, 0, 300], ["gusset", {}, 300, 300], ["slot", {}, 600, 300]]);
   sk.nest(10, 1300, 800); const bx = boxes(sk).filter((_, i) => !sk.isHole(sk.items[i]));
-  t.check("nest: no part boxes overlap", !bx.some((a, i) => bx.some((b, j) => j > i && overlap(a, b))), "", "PRO-NEST");
+  // C42: true-shape packing may let bounding boxes overlap when the outlines themselves keep the gap.
+  const nestLayout = sk.items.filter((i) => !sk.isHole(i)).map((it) => ({ id: it.id, rings: sk.contoursOf(it).filter((c) => c.closed !== false).map((c) => c.pts) }));
+  const nestOk = verifyLayout(nestLayout, { w: 1300, h: 800 }, 10);
+  t.check("nest: parts stay the gap apart (true-shape)", nestOk.ok, (nestOk.problems || []).join("; "), "PRO-NEST");
   t.check("nest: all inside 1300x800 sheet", bx.every((b) => b[0] >= -0.01 && b[1] >= -0.01 && b[2] <= 1300.01 && b[3] <= 800.01), JSON.stringify(bx.map((b) => b.map((v) => +v.toFixed(0)))), "PRO-NEST");
   verifyDesign(A, t, "nest result", sk.contours());
   // sheet too small: parts must not silently pile up/outside
   const sk2 = mk([["rect", { w: 100, h: 60 }, 0, 0], ["rect", { w: 100, h: 60 }, 200, 0], ["rect", { w: 100, h: 60 }, 400, 0]]); sk2.nest(10, 150, 100);
   const b2 = boxes(sk2); t.check("nest: sheet too small for all parts → parts extend beyond sheet height with warning", b2.every((b) => b[3] <= 100.01) || sk2.messages.some((m) => /not fit|too|beyond|outside/i.test(m)), `maxY=${Math.max(...b2.map((b) => b[3]))} msgs=${sk2.messages.slice(-1)}`, "PRO-NEST-OVERFLOW");
   const sk3 = mk([["rect", { w: 500, h: 60 }, 0, 0]]); sk3.nest(10, 100, 100); t.check("nest: part wider than the sheet → warned", sk3.messages.some((m) => /not fit|too|wider|beyond|outside/i.test(m)), `msgs=${sk3.messages.slice(-1)}`, "PRO-NEST-OVERFLOW");
-  const sk4 = mk([["rect", {}, 0, 0], ["rect", {}, 300, 0]]); sk4.nest(NaN, NaN, NaN); t.check("nest NaN args → sane", allFinite(sk4)); sk4.nest(-5, 0, 0); t.check("nest negative gap clamped (no overlap)", !boxes(sk4).some((a, i) => boxes(sk4).some((b, j) => j > i && overlap(a, b))), "", "PRO-NEST");
+  const sk4 = mk([["rect", {}, 0, 0], ["rect", {}, 300, 0]]); sk4.nest(NaN, NaN, NaN); t.check("nest NaN args → sane", allFinite(sk4)); sk4.nest(-5, 0, 0); const lay4 = sk4.items.map((it) => ({ id: it.id, rings: sk4.contoursOf(it).filter((c) => c.closed !== false).map((c) => c.pts) })); const v4 = verifyLayout(lay4, { w: 4000, h: 4000 }, 0); t.check("nest negative gap clamped (no overlap)", v4.ok, (v4.problems || []).join("; "), "PRO-NEST");
   const sk5 = mk([["rect", {}, 0, 0], ["rect", {}, 300, 0]]); sk5.nest(1e12, 1e12, 1e12); t.check("nest gap 1e12 rejected", Math.max(...boxes(sk5).map((b) => b[2])) < 1e5, "", "ARRAY-HUGE");
   // nest with parts that have holes (hole follows host)
   const sk6 = mk([["plate", { w: 120, h: 80, mid: 20 }, 0, 0], ["plate", { w: 120, h: 80, mid: 20 }, 300, 10]]); const holeOf = () => sk6.items.map((i) => (sk6.isHole(i) ? sk6.hostOf(i) && sk6.hostOf(i).id : null));

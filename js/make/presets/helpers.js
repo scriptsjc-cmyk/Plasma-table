@@ -1,5 +1,6 @@
 // Shared geometry helpers for parametric preset parts.
 import { arcPoints, circleContour, signedArea, selfIntersects } from "../../core/geom.js";
+import { developedDia, sheetFrom, seamShift } from "../sheetopts.js";
 import { roundedRect, slot, roundCorners, dedupe } from "../shape-helpers.js";
 import { coneDevelopment, squareToRound } from "../duct.js";
 
@@ -128,25 +129,29 @@ export function goreWaveHeight(d, bendDeg, pieces) {
   const a = mitreHalfAngle((Number(bendDeg) || 0) * Math.PI / 180, pieces);
   return Math.abs(d) * Math.tan(a);
 }
-export function mitreGore(d, bendDeg, pieces, clr, kind = "end", samples = 64) {
-  const dia = Number(d) || 0, R = dia / 2;
+export function mitreGore(d, bendDeg, pieces, clr, kind = "end", samples = 64, opts = {}) {
+  const sheet = sheetFrom(opts);
+  const namedDia = Number(d) || 0;
+  const dia = developedDia(namedDia, sheet.t, sheet.allow);
+  const R = dia / 2;
   const n = Math.max(2, Math.round(Number(pieces) || 2));
   const a = mitreHalfAngle((Number(bendDeg) || 0) * Math.PI / 180, n);
   if (!(R > 0.5) || !(a > 1e-6) || a >= Math.PI / 2 - 1e-3) return null;
   const tanA = Math.tan(a);
   const amp = R * tanA;
   let rad = Number(clr);
-  if (!Number.isFinite(rad) || rad <= 0) rad = 1.5 * dia;
+  if (!Number.isFinite(rad) || rad <= 0) rad = 1.5 * namedDia;
   if (rad < R + 1) rad = R + 1;
   const L = rad * tanA;                     // centreline length of an end gore (half of a middle gore)
   const steps = Math.max(24, Math.min(96, Math.round(samples) || 64));
   const circ = Math.PI * dia;
+  const shift = seamShift(circ, sheet.seamAt);
   const top = [], bot = [];
   for (let i = 0; i <= steps; i++) {
-    const x = (circ * i) / steps;
+    let x = (circ * i) / steps - shift;
+    x = ((x % circ) + circ) % circ;
     const c = Math.cos((2 * Math.PI * i) / steps);    // +1 at the extrados (x=0 and x=circ)
     if (kind === "mid") {
-      // Both edges wavy and in phase: wide at the back, narrow at the throat.
       bot.push([x, amp * (1 - c)]);
       top.push([x, 2 * L + amp * (1 + c)]);
     } else {
@@ -154,18 +159,26 @@ export function mitreGore(d, bendDeg, pieces, clr, kind = "end", samples = 64) {
       top.push([x, L + amp * c]);
     }
   }
-  if (top.some((p) => p[1] <= bot[top.indexOf(p)][1] + 0.2)) return null;
+  // seam allowance is a straight strip added at x = circ
+  if (sheet.seam > 0) {
+    const yb0 = bot[0][1], yt0 = top[0][1];
+    bot.push([circ + sheet.seam, yb0]);
+    top.push([circ + sheet.seam, yt0]);
+  }
+  top.sort((p, q) => p[0] - q[0]);
+  bot.sort((p, q) => p[0] - q[0]);
+  if (top.some((p, i) => p[1] <= (bot[i] ? bot[i][1] : 0) + 0.2)) return null;
   const pts = [...top, ...bot.reverse()];
   if (selfIntersects(pts) || Math.abs(signedArea(pts)) < 1) return null;
   return { pts: shiftToOrigin(pts), closed: true };
 }
-export function elbowGores(d, bendDeg, pieces, clr) {
+export function elbowGores(d, bendDeg, pieces, clr, opts = {}) {
   const n = Math.max(2, Math.min(12, Math.round(Number(pieces) || 2)));
-  const end = mitreGore(d, bendDeg, n, clr, "end");
+  const end = mitreGore(d, bendDeg, n, clr, "end", 64, opts);
   if (!end) return [];
   const piecesOut = [[end]];
   if (n >= 3) {
-    const mid = mitreGore(d, bendDeg, n, clr, "mid");
+    const mid = mitreGore(d, bendDeg, n, clr, "mid", 64, opts);
     if (!mid) return [];
     for (let i = 0; i < n - 2; i++) piecesOut.push([mid]);
   }

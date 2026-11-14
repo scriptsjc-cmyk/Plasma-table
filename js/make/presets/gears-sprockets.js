@@ -1,5 +1,6 @@
 // Gears, sprockets and toothed wheels (plasma-cut approximations).
 import { circleContour, holeIn, clamp, shape, shiftToOrigin, signedArea, selfIntersects, dedupe } from "./helpers.js";
+import { camPlateContours } from "../camprofile.js";
 
 function trapGear(teeth, module, hole, paDeg = 20) {
   const z = Math.max(6, Math.min(60, Math.round(teeth) || 12));
@@ -172,4 +173,17 @@ export const GEAR_PRESETS = [
       }
       return c;
     }),
+
+  shape("camplate", "Cam plate", "🔐", "gearing", "cam plate shm cycloidal harmonic",
+    "A closed cam plate: type the base circle, the lift, and the rise / dwell / fall angles. Motion can be simple harmonic, cycloidal or constant velocity. The outline is a smooth closed profile (you can still edit it as arcs).",
+    [["base", "Base circle Ø", 80], ["lift", "Lift (rise, mm)", 18], ["rise", "Rise angle (°)", 90], ["dwell", "Dwell at the top (°)", 60], ["fall", "Fall angle (°)", 90], ["law", "Motion law (0 SHM, 1 cycloidal, 2 constant velocity)", 0, {
+      type: "select",
+      options: [
+        { v: 0, l: "Simple harmonic (SHM)" },
+        { v: 1, l: "Cycloidal" },
+        { v: 2, l: "Constant velocity" },
+      ],
+    }], ["id", "Centre hole Ø (0 = none)", 12]],
+    (p) => camPlateContours(p),
+    { noResize: true }),
 ];

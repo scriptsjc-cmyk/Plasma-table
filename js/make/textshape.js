@@ -4,13 +4,17 @@
 // "stencil" option possible: the middle of an A, B, D, O, P, Q, R (and 4, 6, 8, 9, 0...) is joined to the plate by a small bridge,
 // so the centres do not fall out when the letters are cut as holes in a plate.
 import { FONT_DATA } from "./fontdata.js";
+import { BLOCK_FONT } from "./blockfont.js";
 import { march, simplifyRing, ringArea } from "./trace.js";
 
 export const TEXT_FONTS = [
   { id: "sans", name: "Sans (plain, easy to cut)" },
   { id: "serif", name: "Serif (classic)" },
   { id: "script", name: "Script (joined letters)" },
+  { id: "stencil", name: "Stencil (centres stay attached)" },
+  { id: "block", name: "Block (stencil-cut, heavy)" },
 ];
+const FONT_TABLE = { ...FONT_DATA, stencil: FONT_DATA.sans, block: BLOCK_FONT };
 const BASE = 22, CAP = 21;
 const cache = new Map();
 
@@ -26,7 +30,7 @@ export function hasGlyph(font, ch) {
   if (!ch) return true;
   const code = ch.charCodeAt(0);
   if (code === 32 || code === 160 || code === 9 || code === 10 || code === 13) return true;
-  const f = FONT_DATA[font] || FONT_DATA.sans;
+  const f = FONT_TABLE[font] || FONT_TABLE.sans;
   const e = f.chars && f.chars[code - 33];
   return !!(e && e[0]);
 }
@@ -40,7 +44,7 @@ export function missingChars(text, font) {
 function glyph(font, ch) {
   const key = font + ch;
   if (cache.has(key)) return cache.get(key);
-  const f = FONT_DATA[font] || FONT_DATA.sans;
+  const f = FONT_TABLE[font] || FONT_TABLE.sans;
   const code = ch.charCodeAt(0);
   let g;
   if (code === 32 || code === 160) g = { strokes: [], adv: 14 };
@@ -104,6 +108,43 @@ function curveStrokes(lay, sweepDeg) {
     };
     return { line: st.line, pts: pts.map(bend) };
   });
+}
+
+function pathLength(pts) {
+  const acc = [0];
+  let L = 0;
+  for (let i = 1; i < pts.length; i++) {
+    L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    acc.push(L);
+  }
+  return { pts, acc, L };
+}
+function pointOnPath(info, s) {
+  const t = Math.max(0, Math.min(info.L, s));
+  let i = 0;
+  while (i < info.acc.length - 2 && info.acc[i + 1] < t) i++;
+  const a = info.pts[i], b = info.pts[Math.min(i + 1, info.pts.length - 1)];
+  const span = info.acc[Math.min(i + 1, info.acc.length - 1)] - info.acc[i];
+  const u = span > 1e-9 ? (t - info.acc[i]) / span : 0;
+  const x = a[0] + (b[0] - a[0]) * u, y = a[1] + (b[1] - a[1]) * u;
+  let tx = b[0] - a[0], ty = b[1] - a[1], L = Math.hypot(tx, ty);
+  if (L < 1e-9) { tx = 1; ty = 0; L = 1; }
+  tx /= L; ty /= L;
+  return { x, y, tx, ty, nx: -ty, ny: tx };
+}
+// Place laid-out strokes along a world path (C38). s = 0 at the start of the path; y is the offset to the left of the tangent.
+function pathStrokes(lay, pathPts) {
+  if (!pathPts || pathPts.length < 2) return lay.strokes;
+  const info = pathLength(pathPts);
+  if (!(info.L > 0.5)) return lay.strokes;
+  const scale = lay.maxW > 0.5 ? info.L / lay.maxW : 1;
+  return lay.strokes.map((st) => ({
+    line: st.line,
+    pts: st.pts.map(([x, y]) => {
+      const p = pointOnPath(info, x * scale);
+      return [p.x + p.nx * y, p.y + p.ny * y];
+    }),
+  }));
 }
 
 function segDist(px, py, ax, ay, bx, by) {
@@ -201,14 +242,17 @@ export function textToContours(text, o = {}) {
   const size = Math.max(1, Number(o.size) || 40);
   const weight = Math.max(0.6, Number(o.weight) || defaultWeight(size));
   const lay = layoutText(text, o);
-  const strokes = curveStrokes(lay, o.curve);
-  const missing = missingChars(text, o.font);
+  let strokes = curveStrokes(lay, o.curve);
+  if (o.path && o.path.length >= 2) strokes = pathStrokes(lay, o.path);
+  const font = o.font || "sans";
+  const stencil = o.stencil || font === "stencil";
+  const missing = missingChars(text, font);
   if (!strokes.length) return { contours: [], width: 0, height: 0, islands: 0, weight, missing };
   const c0 = Math.max(0.05, weight / 6);
   const f = strokeField(strokes, weight, c0);
   const tol = Math.max(0.03, f.c * 0.3);
   let rings = trace(f, tol), bridges = 0;
-  if (o.stencil) {
+  if (stencil) {
     const bw = Math.max(0.8, Number(o.bridge) || Math.max(2.5, weight * 0.45));
     for (let pass = 0; pass < 3; pass++) {
       if (!rings.some((r) => ringArea(r) < 0)) break;

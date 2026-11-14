@@ -50,6 +50,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
         <label>Line spacing (×)<input id="mtLine" type="number" min="0.6" max="3" step="0.1" value="1" inputmode="decimal"></label>
         <label>Line up<select id="mtAlign"><option value="left">Left</option><option value="center">Centre</option><option value="right">Right</option></select></label>
         <label>Curve (° round a circle, − hangs)<input id="mtCurve" type="number" min="-340" max="340" step="5" value="0" inputmode="decimal"></label>
+        <label class="check"><input type="checkbox" id="mtAlong"> Follow the selected outline (text on a path)</label>
         <label class="mt-plate">Plate margin (mm)<input id="mtMargin" type="number" min="1" max="200" step="1" inputmode="decimal"></label>
         <label class="check mt-plate"><input type="checkbox" id="mtStencil" checked> Keep centres of A, B, D, O, P, Q, R… attached</label>
         <label class="mt-plate">Bridge width (mm)<input id="mtBridge" type="number" min="0.8" max="30" step="0.1" inputmode="decimal"></label>
@@ -107,6 +108,16 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
       align: pro ? $("mtAlign").value : "center", curve: pro ? num("mtCurve", 0) : 0,
       stencil: kind === "plate" && (!pro || $("mtStencil").checked), bridge: $("mtBridge").value === "" ? 0 : num("mtBridge", 0),
       plate: kind === "plate" ? ($("mtMargin").value === "" ? Math.max(8, Math.round(size * 0.35)) : num("mtMargin", 10)) : 0,
+      path: (pro && $("mtAlong") && $("mtAlong").checked && sketch && sketch.selected())
+        ? (function () {
+            const cs = sketch.rawWorld(sketch.selected());
+            const c = cs && cs.find((x) => x.pts && x.pts.length >= 2);
+            if (!c) return null;
+            const pts = c.pts.map((q) => [q[0], q[1]]);
+            if (c.closed !== false) pts.push(pts[0]);
+            return pts;
+          })()
+        : null,
     };
   };
   const paintText = () => {
@@ -134,7 +145,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
     tdlg.classList.remove("hidden"); paintText();
     setTimeout(() => { if (matchMedia("(pointer: fine)").matches) $("mtText").focus(); }, 30);
   }
-  ["mtText", "mtSize", "mtFont", "mtKind", "mtWeight", "mtSpacing", "mtLine", "mtAlign", "mtCurve", "mtMargin", "mtStencil", "mtBridge"].forEach((id) => {
+  ["mtText", "mtSize", "mtFont", "mtKind", "mtWeight", "mtSpacing", "mtLine", "mtAlign", "mtCurve", "mtAlong", "mtMargin", "mtStencil", "mtBridge"].forEach((id) => {
     $(id).addEventListener("input", textSoon); $(id).addEventListener("change", textSoon);
   });
   $("mtKind").addEventListener("change", () => { const plate = $("mtKind").value === "plate"; tdlg.classList.toggle("kind-letters", !plate); });

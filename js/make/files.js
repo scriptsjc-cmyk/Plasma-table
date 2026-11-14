@@ -166,7 +166,9 @@ export async function importIntoMake(list, opts = {}) {
     S.src = "shape";
     S.design = { name, contours, warnings: r.warnings, units: r.units };
     const cv = (r.warnings || []).find((w) => /can't be edited as true curves/.test(w));
-    toast(`Opened ${e.parts.length} part${e.parts.length > 1 ? "s" : ""} on the drawing (${e.arcs} arc${e.arcs === 1 ? "" : "s"}, ${e.lines} straight edge${e.lines === 1 ? "" : "s"}).` + (cv ? " " + cv : ""), !!cv);
+    const openW = (r.warnings || []).find((w) => /open path/.test(w));
+    const extra = [openW, cv].filter(Boolean).map((w) => " " + w).join("");
+    toast(`Opened ${e.parts.length} part${e.parts.length > 1 ? "s" : ""} on the drawing (${e.arcs} arc${e.arcs === 1 ? "" : "s"}, ${e.lines} straight edge${e.lines === 1 ? "" : "s"}).` + extra, !!(openW || cv));
     return n;
   };
   let added = 0;

@@ -1,5 +1,5 @@
 // Sketch: the view (fit, zoom, pan) and drawing the canvas.
-import { bbox, expandContour } from "../core/geom.js";
+import { bbox, expandContour, offsetLoop } from "../core/geom.js";
 import { def, r1, themeColor } from "./sketch-util.js";
 import { clickVerb, clickVerbLower } from "../ui/laptop.js";
 import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
@@ -396,6 +396,38 @@ export class ViewMethods {
       ctx.fillText(prompt, x, y + 6); ctx.textAlign = "start";
     }
 
+    if (this.opts && this.opts.showKerf) {
+      let kerf = 1.5;
+      try {
+        const el = typeof document !== "undefined" && document.getElementById("ovKerf");
+        if (el && el.value !== "") { const n = Number(el.value); if (Number.isFinite(n) && n >= 0) kerf = n; }
+      } catch (e) { /* headless */ }
+      const half = kerf / 2;
+      ctx.save();
+      ctx.strokeStyle = C.lock || "#e67e22";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      for (const it of this.items) {
+        if (it.hide) continue;
+        for (const c of this.contoursOf(it)) {
+          if (c.closed === false || !c.pts || c.pts.length < 3) continue;
+          const sign = (this.isHole && this.isHole(it)) || c.op ? half : -half;
+          let off = offsetLoop(c.pts, sign);
+          if (!off || !off.ok) off = offsetLoop(c.pts, -sign);
+          const ring = off && off.ok && off.pts;
+          if (!ring || ring.length < 2) continue;
+          ctx.beginPath();
+          ring.forEach((q, i) => {
+            const [x, y] = S(q[0], q[1]);
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+          });
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
     if (this.items.length) {
       const b = this.allBox();
       ctx.fillStyle = C.label; ctx.font = "12px Barlow, system-ui";
@@ -406,6 +438,9 @@ export class ViewMethods {
             ? " · CHAMFER: click a corner to cut a " + this.filletPick.radius + " mm × " + (this.filletPick.angle || 45) + "° chamfer"
             : " · FILLET: click a corner to round it (R " + this.filletPick.radius + " mm) · inside corners are the bigger dots")
         : this.polarPick ? " · CIRCLE ARRAY: click the centre of the circle"
+        : this.tool === "rotpt" ? " · ROTATE: " + clickVerbLower() + " the pivot"
+        : this.tool === "scale" ? " · SCALE: " + clickVerbLower() + " the origin"
+        : this.tool === "drive" ? " · DISTANCE: " + clickVerbLower() + " a hole, then an edge"
         : this.tool === "draw" ? " · DRAW: " + clickVerbLower() + " points, then Close" : this.tool === "measure" ? " · MEASURE: " + clickVerbLower() + " two points" : "";
       const np = this.partTotal();
       if (!hideFoot) ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${formatLen(b[2] - b[0], 1)} × ${formatLen(b[3] - b[1], 1)}${tool}`, 8, h - 8);

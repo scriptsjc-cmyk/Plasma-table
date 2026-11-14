@@ -4,6 +4,7 @@ import {
   clamp, pos, shape, poly, shiftToOrigin, signedArea, selfIntersects, dedupe, boltHoles,
 } from "./helpers.js";
 import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment } from "../duct.js";
+import { SHEET_PARAMS, sheetFrom, elbowTable } from "../sheetopts.js";
 
 function shiftContour(pts) {
   const p = shiftToOrigin(pts);
@@ -157,32 +158,32 @@ export const FAB_PRESETS = [
     { noResize: true }),
   shape("elbow2", "2-piece 90° elbow", "⌢", "sheetmetal", "two piece elbow mitre",
     "Two mitred gores for a 90° elbow (one square end and one mitre cut on each piece). Type the centreline radius and the number of pieces.",
-    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 2]],
-    (p) => elbowGores(p.d, p.bend, p.n || 2, p.clr > 0 ? p.clr : 1.5 * p.d),
-    { sheet: true, noResize: true }),
+    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 2], ...SHEET_PARAMS],
+    (p) => elbowGores(p.d, p.bend, p.n || 2, p.clr > 0 ? p.clr : 1.5 * p.d, sheetFrom(p)),
+    { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
   shape("elbow3", "3-piece 90° elbow (lobster-back)", "⌢", "sheetmetal", "three piece elbow lobster",
     "True mitre-plane lobster-back: two end gores (square pipe end, one mitre) and a middle gore. Type the centreline radius and the number of pieces.",
-    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 3]],
-    (p) => elbowGores(p.d, p.bend, p.n || 3, p.clr > 0 ? p.clr : 1.5 * p.d),
-    { sheet: true, noResize: true }),
+    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 3], ...SHEET_PARAMS],
+    (p) => elbowGores(p.d, p.bend, p.n || 3, p.clr > 0 ? p.clr : 1.5 * p.d, sheetFrom(p)),
+    { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
   shape("elbow4", "4-piece 90° elbow (lobster-back)", "⌢", "sheetmetal", "four piece elbow lobster-back",
     "True mitre-plane lobster-back (two end gores and two middle gores). Type the centreline radius and the number of pieces.",
-    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 4]],
-    (p) => elbowGores(p.d, p.bend, p.n || 4, p.clr > 0 ? p.clr : 1.5 * p.d),
-    { sheet: true, noResize: true }),
+    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 4], ...SHEET_PARAMS],
+    (p) => elbowGores(p.d, p.bend, p.n || 4, p.clr > 0 ? p.clr : 1.5 * p.d, sheetFrom(p)),
+    { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
   shape("elbow5", "5-piece 90° elbow (lobster-back)", "⌢", "sheetmetal", "five piece elbow lobster-back",
     "True mitre-plane lobster-back for a smoother bend. Type the centreline radius and the number of pieces.",
-    [["d", "Pipe Ø", 90], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 135], ["n", "Number of pieces", 5]],
-    (p) => elbowGores(p.d, p.bend, p.n || 5, p.clr > 0 ? p.clr : 1.5 * p.d),
-    { sheet: true, noResize: true }),
+    [["d", "Pipe Ø", 90], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 135], ["n", "Number of pieces", 5], ...SHEET_PARAMS],
+    (p) => elbowGores(p.d, p.bend, p.n || 5, p.clr > 0 ? p.clr : 1.5 * p.d, sheetFrom(p)),
+    { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
   shape("elbow45", "3-piece 45° elbow", "⌢", "sheetmetal", "45 degree elbow lobster",
     "True mitre-plane 45° elbow (two end gores and one middle gore). Type the centreline radius and the number of pieces.",
-    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 45], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 3]],
-    (p) => elbowGores(p.d, p.bend, p.n || 3, p.clr > 0 ? p.clr : 1.5 * p.d),
-    { sheet: true, noResize: true }),
+    [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 45], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 3], ...SHEET_PARAMS],
+    (p) => elbowGores(p.d, p.bend, p.n || 3, p.clr > 0 ? p.clr : 1.5 * p.d, sheetFrom(p)),
+    { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
   shape("redelbow", "Reducing elbow gores", "⌢", "sheetmetal", "reducing elbow",
     "Reducing elbow: a cone-sector plus two mitred end gores (square pipe end, one mitre cut).",
-    [["d", "Big end Ø", 120], ["d2", "Small end Ø", 80], ["h", "Length along the cone", 80], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 180]],
+    [["d", "Big end Ø", 120], ["d2", "Small end Ø", 80], ["h", "Length along the cone", 80], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 180], ...SHEET_PARAMS],
     (p) => {
       const c = coneSector(p.d, p.d2, p.h);
       const clr = p.clr > 0 ? p.clr : 1.5 * p.d;
@@ -194,7 +195,7 @@ export const FAB_PRESETS = [
       if (g2) pieces.push([g2]);
       return pieces.length ? packPieces(pieces).contours : [];
     },
-    { sheet: true, noResize: true }),
+    { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
   shape("rectelbow", "Rectangular duct elbow", "⌜", "sheetmetal", "rectangular elbow duct",
     "Rectangular duct elbow: two cheek (side) plates and two throat/back wrappers.",
     [["w", "Duct width (cheeks spacing)", 150], ["h", "Duct height", 80], ["r", "Throat radius", 40], ["bend", "Bend angle (degrees)", 90]],

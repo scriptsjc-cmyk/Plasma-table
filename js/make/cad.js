@@ -5,6 +5,7 @@ import { S, sketch } from "../core/state.js";
 import { renderProTools } from "./protools.js";
 import { clickVerb } from "../ui/laptop.js";
 import { def } from "./sketch-util.js";
+import { FLANGE_STANDARDS, lookupFlange, applyFlangeDims, flangeShapeKeys } from "./flange-tables.js";
 
 export function openCad(title, fields, onOk) {
   $("cadTitle").textContent = title;
@@ -76,9 +77,114 @@ export function runPro(cmd) {
   if (cmd === "nest") {
     openCad("Auto-arrange on the sheet", [
       { id: "gap", label: "Gap between parts (mm)", value: 10 },
-      { id: "sw", label: "Sheet width (mm)", value: sheet.x },
+      { id: "sw", label: "Sheet width (mm) – 0 = pack tight, no sheet limit", value: sheet.x },
       { id: "sh", label: "Sheet height (mm)", value: sheet.y },
-    ], (v) => sketch.nest(v.gap, v.sw, v.sh));
+      { id: "turn", type: "select", label: "Allow parts to turn", value: "90", options: [
+        { v: "0", l: "Keep orientation" },
+        { v: "90", l: "Quarter turns (0, 90, 180, 270°)" },
+        { v: "45", l: "Every 45°" },
+        { v: "15", l: "Every 15°" },
+      ] },
+      { note: "True-shape packing sits irregular parts together (not just their boxes), with the gap you type all round." },
+    ], (v) => sketch.nest(v.gap, v.sw, v.sh, { angles: Number(v.turn) || 0 }));
+    return;
+  }
+  if (cmd === "rotpt") {
+    openCad("Rotate about a point", [
+      { id: "deg", label: "Angle (°), anticlockwise", value: 90 },
+      { note: "After OK, click the pivot on the drawing. Turn 90° still turns about the bottom-left corner; the Angle field on the part still turns about the centre." },
+    ], (v) => sketch.startRotatePick(v.deg));
+    return;
+  }
+  if (cmd === "scalepct") {
+    openCad("Scale by percent", [
+      { id: "pct", label: "Scale (%) — 100 is unchanged, 50 is half, 200 is double", value: 50 },
+      { id: "pivot", type: "select", label: "Scale about", value: "centre", options: [
+        { v: "centre", l: "Centre of the picked parts" },
+        { v: "corner", l: "Bottom-left corner" },
+        { v: "click", l: "Click a point on the drawing" },
+      ] },
+    ], (v) => sketch.startScalePick(v.pct, v.pivot));
+    return;
+  }
+  if (cmd === "drivedim") {
+    sketch.onDriveReady = (a, b) => {
+      const now = sketch.featureDistance(a, b);
+      openCad("Set this distance", [
+        { id: "dist", label: "Distance (mm)", value: now != null ? Math.round(now * 10) / 10 : 15 },
+        { note: "A hole will move so it sits this far from the other hole, or from the edge." },
+      ], (v) => {
+        sketch.applyDriveDim(a, b, v.dist);
+        sketch.drivePick = null;
+        sketch.setTool(null);
+      });
+    };
+    sketch.startDriveDim();
+    return;
+  }
+  if (cmd === "sliver") {
+    let kerf = 1.5;
+    try { const el = document.getElementById("ovKerf"); if (el && el.value !== "") kerf = Number(el.value) || kerf; } catch (e) {}
+    openCad("Merge slivers closer than the cut width", [
+      { id: "kerf", label: "Cut width / kerf (mm)", value: kerf },
+      { note: "Tiny holes and webs narrower than this are merged into the surrounding metal, so they are not left as uncuttable slivers. This does not run on its own — only when you ask." },
+    ], (v) => sketch.mergeSlivers(v.kerf));
+    return;
+  }
+  if (cmd === "cutctl") {
+    const c = S.cam || (S.cam = { tabs: 0, tabW: 3, leadOut: 0, over: 0, starts: {}, tabOver: {} });
+    openCad("Cut control (whole job)", [
+      { id: "leadIn", label: "Lead-in length (mm)", value: Number(document.getElementById("ovLead") && document.getElementById("ovLead").value) || 3 },
+      { id: "leadType", type: "select", label: "Lead-in type", value: c.leadType || "auto", options: [
+        { v: "auto", l: "Automatic (current behaviour)" },
+        { v: "straight", l: "Straight" },
+        { v: "arc", l: "Arc" },
+      ] },
+      { id: "leadSide", type: "select", label: "Lead-in side", value: c.leadSide || "auto", options: [
+        { v: "auto", l: "Scrap side (automatic)" },
+        { v: "outside", l: "Outside" },
+        { v: "inside", l: "Inside" },
+      ] },
+      { id: "leadOut", label: "Lead-out (mm)", value: c.leadOut || 0 },
+      { id: "tabs", label: "Hold-down tabs per part", value: c.tabs || 0 },
+      { id: "tabW", label: "Tab width (mm)", value: c.tabW || 3 },
+      { id: "showKerf", type: "checkbox", label: "Show torch path (kerf preview) on this drawing", value: !!(sketch.opts && sketch.opts.showKerf) },
+      { note: "These are the same job-wide settings as the Inspector and the cutting screen. Dragging a pierce point is done on the cutting-screen preview. Automatic lead-ins stay as they are unless you pick a type or side." },
+    ], (v) => {
+      c.leadType = v.leadType || "auto";
+      c.leadSide = v.leadSide || "auto";
+      c.leadOut = v.leadOut;
+      c.tabs = Math.round(v.tabs);
+      c.tabW = v.tabW;
+      const leadEl = document.getElementById("ovLead");
+      if (leadEl && Number.isFinite(v.leadIn)) leadEl.value = String(v.leadIn);
+      sketch.opts = sketch.opts || {};
+      sketch.opts.showKerf = !!v.showKerf;
+      sketch.draw();
+      toast(v.showKerf ? "Torch-path preview is on. Lead-in, tabs and lead-out are saved on the job." : "Cut settings saved on the job.");
+    });
+    return;
+  }
+  if (cmd === "flangestd") {
+    const it = sketch.selected();
+    const keys = it && flangeShapeKeys(it.type);
+    if (!keys) { toast("Pick a flange first, then fill it from a standard.", true); return; }
+    const std0 = FLANGE_STANDARDS[0];
+    const series0 = std0.series[1] || std0.series[0];
+    const sizes0 = std0.sizesOf(series0);
+    openCad("Fill from a flange standard", [
+      { id: "std", type: "select", label: "Standard", value: std0.id, options: FLANGE_STANDARDS.map((s) => ({ v: s.id, l: s.name })) },
+      { id: "series", type: "select", label: "PN / Class", value: String(series0), options: std0.series.map((s) => ({ v: String(s), l: String(s) })) },
+      { id: "size", type: "select", label: "DN / NPS", value: String(sizes0[6] || sizes0[0]), options: sizes0.map((s) => ({ v: String(s), l: String(s) })) },
+      { note: "This fills outside Ø, bore, pitch circle, hole count and hole Ø. You can still edit the sizes afterwards. Change Standard, then OK — or cancel and open again to pick a different series." },
+    ], (v) => {
+      const dim = lookupFlange(v.std, v.series, v.size);
+      if (!dim) { toast("That size is not in the table.", true); return; }
+      sketch.remember();
+      applyFlangeDims(it.p, dim, keys);
+      sketch.commit(); sketch.draw(); sketch.onSelect();
+      toast(`${v.std === "asme" ? "ASME B16.5" : "BS EN 1092-1"} ${v.series} × ${v.size}: OD ${dim.od}, bore ${dim.id}, PCD ${dim.pcd}, ${dim.n} × Ø${dim.hole}.`);
+    });
     return;
   }
 }

@@ -5,7 +5,7 @@
 
 import { TOL, arcPoints, bulgePoints, circleContour, cleanPts } from "../core/geom.js";
 
-const JOIN_TOL = 0.05; // mm: ends closer than this count as touching
+export const JOIN_TOL = 0.25; // mm: ends closer than this are joined (C43 close-paths)
 
 export function parseDXF(text) {
   const raw = text.split(/\r?\n/);
@@ -128,24 +128,40 @@ export function parseDXF(text) {
     else pieces.push(pts);
   }
 
-  contours.push(...joinPieces(pieces));
+  const cleaned = cleanupOpenPieces(pieces);
+  contours.push(...cleaned.contours);
+  warnings.push(...cleaned.warnings);
   for (const [t, n] of Object.entries(skipped)) {
     const why = { TEXT: "convert text to outlines/sketch curves in your CAD", MTEXT: "convert text to outlines in your CAD",
       INSERT: "explode blocks in your CAD", DIMENSION: "dimensions are ignored", HATCH: "hatching is ignored" }[t] || "not supported";
     warnings.push(`Ignored ${n} ${t} item(s) – ${why}.`);
   }
   if (splines || ellipses) warnings.push(`${splines + ellipses} spline/ellipse curve(s) can't be edited as true curves, so they were turned into short straight lines (they still cut smoothly). Edit them point by point, or redraw them as arcs.`);
-  return { contours, warnings, units: unitsName, curves: { splines, ellipses } };
+  return { contours, warnings, units: unitsName, curves: { splines, ellipses }, open: cleaned.open };
 }
 
-// join open pieces end-to-end into chains; closed chains become outlines
-// C43 (import clean-up stage): this join can still turn two open DXF lines into four parts
-// when loose LINE/ARC pieces don't chain cleanly. C43 must stop that case — do not treat
-// this join as the complete open-path import cleanup.
-function joinPieces(pieces) {
+// C43: drop duplicate loose pieces, join ends within JOIN_TOL, close almost-closed
+// chains, and report any contours that are still open.
+export function samePiece(a, b, tol = JOIN_TOL) {
+  if (!a || !b || a.length < 2 || b.length < 2 || a.length !== b.length) return false;
+  const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < tol;
+  const fwd = a.every((p, i) => near(p, b[i]));
+  const rev = a.every((p, i) => near(p, b[b.length - 1 - i]));
+  return fwd || rev;
+}
+export function dropDuplicatePieces(pieces, tol = JOIN_TOL) {
   const out = [];
-  const left = pieces.map((p) => p.map((q) => [...q]));
-  const close = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < JOIN_TOL;
+  for (const p of pieces) {
+    if (!p || p.length < 2) continue;
+    if (out.some((q) => samePiece(p, q, tol))) continue;
+    out.push(p.map((q) => [...q]));
+  }
+  return out;
+}
+export function joinPieces(pieces, tol = JOIN_TOL) {
+  const out = [];
+  const left = dropDuplicatePieces(pieces, tol);
+  const close = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < tol;
   while (left.length) {
     let chain = left.shift();
     let grew = true;
@@ -162,9 +178,21 @@ function joinPieces(pieces) {
       }
     }
     const isClosed = chain.length > 2 && close(chain[0], chain[chain.length - 1]);
+    if (isClosed) chain[chain.length - 1] = [...chain[0]];
     out.push({ pts: cleanPts(chain, isClosed), closed: isClosed });
   }
   return out;
+}
+export function cleanupOpenPieces(pieces, tol = JOIN_TOL) {
+  const contours = joinPieces(pieces, tol);
+  const open = contours.filter((c) => c.closed === false);
+  const warnings = [];
+  if (open.length) {
+    warnings.push(open.length === 1
+      ? "1 open path was left open (its ends are more than " + tol + " mm apart). It will import as an open line, not a cut outline."
+      : open.length + " open paths were left open (ends more than " + tol + " mm apart). They will import as open lines, not cut outlines.");
+  }
+  return { contours, open: open.length, warnings };
 }
 
 // B-spline (with optional weights) -> points, using de Boor. Falls back to fit points.

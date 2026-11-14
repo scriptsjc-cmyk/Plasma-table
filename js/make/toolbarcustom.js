@@ -11,7 +11,7 @@ function refreshBar() {
 export const TOOL_GROUPS = [
   { g: "Shapes", items: [["presets", "▦", "Preset parts"], ["rect", "▭", "Rectangle"], ["disc", "◯", "Circle"], ["triangle", "△", "Triangle"], ["slot", "⊂⊃", "Slot"], ["sector", "◔", "Arc / sector"], ["lib", "⋯", "All shapes…"]] },
   { g: "Holes", items: [["hole", "◦", "Hole"], ["slothole", "⊖", "Slot hole"], ["boltcircle", "⁘", "Bolt circle"]] },
-  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["etch", "∽", "Etch / mark"], ["arc3", "⌓", "3-point arc"], ["arctan", "◜", "Tangent arc"], ["spline", "∿", "Spline"], ["curvepoints", "⋮", "Curve from points"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"], ["dims", "↔", "Size"]] },
+  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["etch", "∽", "Etch / mark"], ["arc3", "⌓", "3-point arc"], ["arctan", "◜", "Tangent arc"], ["spline", "∿", "Spline"], ["curvepoints", "⋮", "Curve from points"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"], ["dims", "↔", "Size"], ["drivedim", "↦", "Hole distance"]] },
   { g: "Snaps & constraints", items: [["snap", "⌗", "Snap"]] },
   { g: "Transform", items: [
     ["rot", "⟳", "Turn 90°"], ["mir", "⇋", "Mirror left-right"], ["mirv", "⇅", "Mirror up-down"],
@@ -19,9 +19,12 @@ export const TOOL_GROUPS = [
     ["aligncx", "↔", "Align centres (across)"], ["aligncy", "↕", "Align centres (up)"], ["alignc", "✚", "Dead centre"],
     ["distx", "↔️", "Distribute across"], ["disty", "↕️", "Distribute up"],
     ["size", "↔", "Size"], ["resize", "⤡", "Width × height"],
+    ["rotpt", "↻", "Rotate about a point"], ["scalepct", "%", "Scale by %"],
+    ["group", "▣", "Group"], ["ungroup", "▢", "Ungroup"],
   ] },
-  { g: "Boolean & offset", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"]] },
+  { g: "Boolean & offset", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"], ["sliver", "≋", "Merge slivers"]] },
   { g: "Arrays", items: [["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["nest", "⊞", "Auto-arrange"]] },
+  { g: "Cutting", items: [["cutctl", "⤳", "Cut control"], ["flangestd", "⊛", "Standard flange"]] },
   { g: "Edit", items: [["trim", "✂", "Trim"], ["extend", "━", "Extend"], ["break", "⤢", "Break"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["maketan", "⊙", "Make tangent"], ["makeconc", "◎", "Make concentric"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"]] },
 ];
 
@@ -40,7 +43,7 @@ for (const it of HEADER_TOOLS) TOOL_INFO.set(it[0], { icon: it[1], label: it[2],
 export const KNOWN_TOOLS = new Set(TOOL_INFO.keys());
 
 // Catalogue lists every align/distribute tool; the default rail stays compact (C25, C46).
-const DEFAULT_SKIP = new Set(["alignr", "alignt", "aligncx", "aligncy", "alignc", "distx", "disty", "etch", "arctan", "curvepoints", "maketan", "makeconc"]);
+const DEFAULT_SKIP = new Set(["alignr", "alignt", "aligncx", "aligncy", "alignc", "distx", "disty", "etch", "arctan", "curvepoints", "maketan", "makeconc", "ungroup", "drivedim", "sliver", "flangestd"]);
 export const DEFAULT_TOOL_IDS = TOOL_GROUPS.flatMap((grp) => grp.items.map((it) => it[0])).filter((id) => !DEFAULT_SKIP.has(id));
 
 export function toolInfo(id) { return TOOL_INFO.get(id) || null; }

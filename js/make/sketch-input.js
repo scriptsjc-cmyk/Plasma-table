@@ -280,6 +280,45 @@ export class InputMethods {
         else this.measure.b = m.p, this.measure.bInfo = m;
         this.draw(); return;
       }
+      if ((this.tool === "rotpt" || this.tool === "scale" || this.tool === "drive") && !panBtn) {
+        let px = wx, py = wy;
+        const sn = snapWorld(this, wx, wy);
+        if (sn) { px = sn.x; py = sn.y; this.snapMark = sn; }
+        else if (this.opts.snap) {
+          const step = this.opts.snap || 0.1;
+          px = Math.round(wx / step) * step; py = Math.round(wy / step) * step;
+        }
+        if (this.tool === "rotpt" && this.rotatePick) {
+          const deg = this.rotatePick.deg;
+          this.rotateAbout(px, py, deg);
+          this.rotatePick = null;
+          this.setTool(null);
+          return;
+        }
+        if (this.tool === "scale" && this.scalePick) {
+          this.scaleBy(this.scalePick.pct, px, py);
+          this.scalePick = null;
+          this.setTool(null);
+          return;
+        }
+        if (this.tool === "drive") {
+          const f = this.featureAt(px, py);
+          if (!f) { this.onMessage("Click a hole or an edge."); return; }
+          if (!this.drivePick || !this.drivePick.a) { this.drivePick = { a: f }; this.onMessage("Now click the second feature (a hole or an edge)."); this.draw(); return; }
+          this.drivePick.b = f;
+          // the typed distance is applied by the CAD dialog (runPro); if a pending dist is set, apply now
+          if (Number.isFinite(this.drivePick.dist)) {
+            this.applyDriveDim(this.drivePick.a, this.drivePick.b, this.drivePick.dist);
+            this.drivePick = null;
+            this.setTool(null);
+          } else if (this.onDriveReady) {
+            this.onDriveReady(this.drivePick.a, this.drivePick.b);
+          } else {
+            this.onMessage("Type the distance in millimetres to drive the hole.");
+          }
+          return;
+        }
+      }
       const dim = panBtn ? null : this.hitDim(sx, sy, touch);
       if (dim) { this.drag = { kind: "dim", dim, sx, sy, moved: false }; return; }
       const h = panBtn ? null : this.hit(sx, sy, touch);
@@ -306,12 +345,13 @@ export class InputMethods {
         this.pick(ids); this.onSelect(); this.draw();
         if (!this.isPicked(it)) return;
       } else if (h.kind === "hole") this.pick([it.id], h.hole);
-      else if (!this.isPicked(it)) this.pick([it.id]);
+      else if (!this.isPicked(it)) this.pick(this.groupIdsOf ? this.groupIdsOf(it) : [it.id]);
       else if (this.sel.ids.length === 1) this.sel.hole = null;
       if (h.kind !== "hole" && (h.kind === "resize" ? it.lock : this.picked().every((m) => m.lock))) {
         this.onSelect(); this.draw(); return;
       }
-      const base = h.kind === "hole" || h.kind === "resize" ? [it] : this.picked();
+      const base0 = h.kind === "hole" || h.kind === "resize" ? [it] : this.picked();
+      const base = this.expandGroup ? this.expandGroup(base0) : base0;
       const moving = [...base, ...base.flatMap((m) => this.ownedHoles(m)).filter((o) => !base.includes(o))].map((m) => ({ it: m, x: m.x, y: m.y, b0: this.boxOf(m) }));
       this.drag = { ...h, before, wx, wy, moving, holes: clone(it.holes || {}), moved: false };
       this.onSelect();

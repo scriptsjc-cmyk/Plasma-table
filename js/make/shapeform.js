@@ -15,6 +15,8 @@ import { paintCutSummary } from "./cutsummary.js";
 import { onShapeFormPainted } from "./phonesheet.js";
 import { clickVerb } from "../ui/laptop.js";
 import { isFoldPart, mountFoldView } from "./fold3d.js";
+import { flangeShapeKeys } from "./flange-tables.js";
+import { tableToHtml, openSheetTable } from "./sheetopts.js";
 
 let editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
@@ -107,6 +109,31 @@ function beginnerPartsHtml() {
   const unlock = locked ? `<p class="tip lockline">A locked part can't be moved or resized. <button type="button" data-sk="unlockAll">🔓 Unlock all</button></p>` : "";
   return `<div class="bgparts"><h4>Parts in this drawing</h4><ul>${li}</ul>${unlock}</div>`;
 }
+
+function paramField(it, param) {
+  const [k, label, , meta] = param;
+  const val = it.p[k];
+  if (meta && meta.type === "select") {
+    const opts = (meta.options || []).map((o) => `<option value="${esc(String(o.v))}"${String(o.v) === String(val) ? " selected" : ""}>${esc(o.l)}</option>`).join("");
+    return `<label>${esc(label)}<select data-p="${esc(k)}" data-psel="1">${opts}</select></label>`;
+  }
+  return `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${esc(k)}" value="${esc(String(val))}"></label>`;
+}
+function extraFormHtml(it, sh) {
+  let html = "";
+  if (sh && sh.table) {
+    html += `<div class="skbtns"><button type="button" data-sheet-table="1">Print true-length / marking-out table</button></div>`;
+  }
+  if (it && flangeShapeKeys(it.type)) {
+    html += `<div class="skbtns"><button type="button" data-pro="flangestd">Fill from BS EN 1092-1 / ASME B16.5…</button></div>`;
+  }
+  if (sketch.opts && sketch.opts.pro) {
+    html += `<p class="muted small"><label class="check"><input type="checkbox" id="sfShowKerf"${sketch.opts.showKerf ? " checked" : ""}> Show torch path (kerf preview)</label>
+      <button type="button" class="quiet" data-pro="cutctl">Cut control…</button></p>`;
+  }
+  return html;
+}
+
 export function renderShapeForm() {
   try { renderShapeFormCore(); } finally {
     try { paintFoldView(); } catch (e) { /* 3D view optional */ }
@@ -159,6 +186,8 @@ function renderShapeFormCore() {
       <p class="tip">Drag any of them to move them all. <b>Join</b> makes touching shapes one part (with their holes).</p>
       <div class="skbtns">
         <button data-sk="join" class="join" title="Ctrl+J">⬟ Join into one part</button>
+        <button data-sk="group" title="Keep them as separate parts that move together">▣ Group</button>
+        <button data-sk="ungroup">▢ Ungroup</button>
         <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
         <button data-sk="rotateBy" data-arg="90" title="Turns 90° about the bottom-left corner">⟳ Turn 90°</button>
         <button data-sk="mirror" title="Mirror left-right (H)">⇋ Mirror</button>
@@ -178,8 +207,7 @@ function renderShapeFormCore() {
       <div class="selhead"><b>${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}</div>
       <div id="fold3dHost" class="fold3d-host" hidden></div>
       ${it.lock ? `<p class="tip lockline">This part is locked, so it can't change. <button type="button" data-sk="toggleLock">🔓 Unlock</button></p>` : `<p class="tip">Type the size in millimetres.</p>`}
-      <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
-        `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}</div>${customSizeHtml(it, b)}
+      <div class="grid2">${(it.type === "custom" ? [] : sh.params).map((pr) => paramField(it, pr)).join("")}</div>${customSizeHtml(it, b)}${extraFormHtml(it, sh)}
       <div class="skbtns bigbtns">
         ${isRoundType(it.type) ? "" : `<button data-sk="rotateBy" data-arg="90">⟳ Turn it</button>`}
         ${!sh.hole && !sh.sheet && shapeDef("hole") ? `<button data-sk="add" data-arg="hole">◦ Add a hole</button>` : ""}
@@ -218,13 +246,13 @@ function renderShapeFormCore() {
     ${varBox}
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
     ${customSizeHtml(it, b)}
-    <div class="grid2">${(it.type === "custom" ? [] : sh.params).map(([k, label]) =>
-      `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${k}" value="${esc(String(it.p[k]))}"></label>`).join("")}
+    <div class="grid2">${(it.type === "custom" ? [] : sh.params).map((pr) => paramField(it, pr)).join("")}
       <label>${esc(posXLab)}<input type="number" step="any" inputmode="decimal" data-pos="x" value="${posX}"></label>
       <label>${esc(posYLab)}<input type="number" step="any" inputmode="decimal" data-pos="y" value="${posY}"></label>
       <label>Angle °<input type="number" step="any" inputmode="decimal" data-angle="1" value="${Math.round((it.rot || 0) * 10) / 10}"></label>
       ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
     </div>
+    ${extraFormHtml(it, sh)}
     <div class="skbtns">
       ${isRoundType(it.type) ? "" : `<button data-sk="rotateBy" data-arg="90" title="Turns 90° about the bottom-left corner">⟳ Turn 90°</button>`}
       <button data-sk="mirror" title="Mirror left-right (H)">⇋ Mirror</button>
@@ -290,6 +318,20 @@ export function bindShapeForm() {
       }
       editBefore = sketch.snapshot(); renderShapeForm(); useShapeSoon(); return;
     }
+    if (e.target.dataset.psel) {
+      const it = sketch.selected();
+      if (it && !it.lock) {
+        const n = Number(e.target.value);
+        if (Number.isFinite(n)) { it.p[e.target.dataset.p] = n; sketch.save(); sketch.draw(); useShapeSoon(); }
+      }
+      editBefore = sketch.snapshot(); renderShapeForm(); return;
+    }
+    if (e.target.id === "sfShowKerf") {
+      sketch.opts = sketch.opts || {};
+      sketch.opts.showKerf = !!e.target.checked;
+      sketch.draw();
+      return;
+    }
     if (editBefore && editBefore !== sketch.snapshot()) { sketch.past.push(editBefore); sketch.future = []; }
     editBefore = sketch.snapshot(); renderShapeForm();
   });
@@ -305,6 +347,16 @@ export function bindShapeForm() {
     if (bp) { sketch.pick([Number(bp.dataset.bpart)]); sketch.draw(); renderShapeForm(); return; }
     const p = e.target.closest("[data-pro]");
     if (p) { runPro(p.dataset.pro); return; }
+    const tb = e.target.closest("[data-sheet-table]");
+    if (tb) {
+      const it = sketch.selected();
+      const sh = it && shapeDef(it.type);
+      if (sh && sh.table) {
+        const html = tableToHtml(sh.table(it.p));
+        if (!openSheetTable(html)) toast("Allow pop-ups to print the true-length table.", true);
+      }
+      return;
+    }
     const b = e.target.closest("[data-sk]"); if (!b) return;
     const a = b.dataset.arg; sketch[b.dataset.sk](a === undefined ? undefined : isNaN(Number(a)) ? a : Number(a));
   });

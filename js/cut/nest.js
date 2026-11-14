@@ -260,7 +260,7 @@ function scan(grid, m, stop, bounds, start) {
 // units: [{ id, rings, fixed? }]   region: { w, h, rings?, clip? }   opts: { gap, angles, pockets, timeMs, cell, refine, onProgress, shouldCancel }
 // Result: { placements: [{ id, placed, angle, c, t, rings }], failed: [ids], cell, ms, turns }
 // A part moves as p' = R(angle) * (p - c) + t  (turning anticlockwise about c, the middle of its box).
-export async function nestUnits(units, region, opts = {}) {
+function* nestGen(units, region, opts = {}) {
   const t0 = Date.now();
   const gap = Math.max(0, Number(opts.gap) || 0);
   const budget = opts.timeMs || 20000;
@@ -268,7 +268,6 @@ export async function nestUnits(units, region, opts = {}) {
   let c = opts.cell || Math.max(0.75, Math.min(6, gap / 2 || 1.5));
   c = Math.max(c, Math.sqrt((region.w * region.h) / 1.6e6));
   const grid = new Grid(region, c);
-  const tick = opts.yield || (() => new Promise((r) => setTimeout(r, 0)));
   const placed = [];                                     // { id, rings, box }
   const result = new Map();
   // fixed parts first: they stay put and take their cells
@@ -289,8 +288,9 @@ export async function nestUnits(units, region, opts = {}) {
   const verify = (rings, box) => {
     if (!insideRegion(rings, box, region, gap)) return false;
     for (const o of placed) {
-      if (boxGap(box, o.box) >= gap) continue;
-      const r = pairDistance(rings, o.rings, box, o.box, gap);
+      // When gap is 0, boxGap >= 0 is always true and would skip the exact overlap check.
+      if (boxGap(box, o.box) >= Math.max(gap, 1e-6)) continue;
+      const r = pairDistance(rings, o.rings, box, o.box, Math.max(gap, 1e-6));
       if (r.overlap || r.dist < gap - 1e-6) return false;
     }
     return true;
@@ -372,9 +372,27 @@ export async function nestUnits(units, region, opts = {}) {
     }
     done++;
     if (opts.onProgress) opts.onProgress(done, mine.length, u.id);
-    await tick();
+    yield;
   }
   return { placements: units.map((u) => result.get(u.id) || { id: u.id, placed: false }), failed, cell: c, ms: Date.now() - t0, tried: anglesUsed };
+}
+
+export function nestUnitsSync(units, region, opts = {}) {
+  const g = nestGen(units, region, opts);
+  let n = g.next();
+  while (!n.done) n = g.next();
+  return n.value;
+}
+
+export async function nestUnits(units, region, opts = {}) {
+  const tick = opts.yield || (() => new Promise((r) => setTimeout(r, 0)));
+  const g = nestGen(units, region, opts);
+  let n = g.next();
+  while (!n.done) {
+    await tick();
+    n = g.next();
+  }
+  return n.value;
 }
 
 // the angles for a "turn parts" setting: 0 = none, 90 = quarter turns, or any step that divides 360
