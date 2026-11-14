@@ -161,6 +161,28 @@ t.check("angle gusset stays two pieces and says so", (() => {
   return !!(sh && sh.note) && outersFromMake("anglegus").length === 2;
 })());
 
+t.check("square-to-round defaults to one folding body (plus optional flanges)", outersFromMake("s2r", { lip: 0, ring: 0 }).length === 1, String(outersFromMake("s2r", { lip: 0, ring: 0 }).length));
+t.check("square-to-round default packs the body with flange frame and ring", outersFromMake("s2r").length === 3, String(outersFromMake("s2r").length));
+t.check("square-to-round Separate pieces cuts the four sides apart", outersFromMake("s2r", { split: 1, lip: 0, ring: 0 }).length === 4, String(outersFromMake("s2r", { split: 1, lip: 0, ring: 0 }).length));
+t.check("rectangular transition defaults to one folding blank", outersFromMake("recttrans").length === 1, String(outersFromMake("recttrans").length));
+t.check("rectangular transition Separate pieces cuts the four sides apart", outersFromMake("recttrans", { split: 1 }).length === 4, String(outersFromMake("recttrans", { split: 1 }).length));
+t.check("offset square-to-round falls back to two halves when a single unwrap overlaps", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "s2roffset");
+  const n = outersFromMake("s2roffset", { lip: 0 }).length;
+  const note = typeof sh.note === "function" ? sh.note(Object.fromEntries(sh.params.map((q) => [q[0], q[2]]))) : "";
+  return n === 2 && /two halves/.test(note);
+})());
+t.check("a large square-to-round is two halves and says it is for the bed", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "s2r");
+  const p = Object.fromEntries(sh.params.map((q) => [q[0], q[2]]));
+  Object.assign(p, { a: 800, b: 600, d: 400, h: 500, lip: 0, ring: 0 });
+  const n = outersFromMake("s2r", { a: 800, b: 600, d: 400, h: 500, lip: 0, ring: 0 }).length;
+  const note = typeof sh.note === "function" ? sh.note(p) : "";
+  return n === 2 && /two halves/.test(note) && /1300/.test(note);
+})());
+t.check("hopper with top flange defaults to one folding blank", outersFromMake("hopflange").length === 1, String(outersFromMake("hopflange").length));
+t.check("fan duct defaults to one body plus the square flange", outersFromMake("fanduct").length === 2, String(outersFromMake("fanduct").length));
+
 
 // Bolt-on pipe-end flanges: off by default (goldens unchanged); when on, a ring
 // with bolt holes is added to the cut pattern and a matching plate appears in 3D.
@@ -237,6 +259,8 @@ t.check("machine guard window is cut in the 3D front", (() => {
 // C32 added etched bend / fold lines to these flat patterns (angle brackets,
 // channels, cuboid wrap). Those hashes were updated; elbow gores at t=0 were
 // restored after a C35 wrap-around bug and must still match the original goldens.
+// Square-to-round and rectangular transitions now default to one connected
+// folding blank (or two halves if needed) with etch lines; hashes updated.
 const goldPath = new URL("../data/existing-preset-flat.json", import.meta.url);
 const gold = JSON.parse(fs.readFileSync(goldPath, "utf8"));
 t.check("golden flat-pattern fixture is present", Array.isArray(gold.rows) && gold.rows.length > 50, String(gold.rows && gold.rows.length));

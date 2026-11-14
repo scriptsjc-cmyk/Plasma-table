@@ -3,6 +3,7 @@
 import { arcPoints, circleContour, signedArea } from "../core/geom.js";
 import { roundedRect, slot, roundCorners, dedupe } from "./shape-helpers.js";
 import { squareToRound, coneDevelopment } from "./duct.js";
+import { s2rBlank, SPLIT_PARAM } from "./presets/helpers.js";
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const pos = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
@@ -204,21 +205,10 @@ export const FAB_SHAPES = [
   {
     id: "s2r", name: "Square to round transition", icon: "⏢", group: "duct", sheet: true, noResize: true,
     aka: "square to round rectangular to round transition reducer duct adaptor flat pattern development triangulation flange",
-    tip: "Flat cutting pattern for a rectangular (or square) to round duct transition: 4 side panels (2 for the width edges, 2 for the depth edges) developed by triangulation, plus a flange frame for the rectangular end and a flange ring for the round end. Sizes are to the sheet's centre-line.",
-    params: [["a", "Width A (rectangular end)", 300], ["b", "Depth B (rectangular end)", 200], ["d", "Round diameter", 150], ["h", "Height between the ends", 200], ["lip", "Flange lip width (0 = no flange pieces)", 25], ["ring", "Round end flange ring (1 = yes, 0 = no)", 1]],
-    make: (p) => {
-      if (!(p.a >= 10 && p.b >= 10 && p.d >= 10 && p.h >= 5)) return [];
-      const t = squareToRound(p.a, p.b, p.d, p.h);
-      if (!t) return [];
-      const panel = (d) => [{ pts: d.pts.map((q) => [q[0], q[1]]), closed: true }];
-      const pieces = [panel(t.A), panel(t.A), panel(t.B), panel(t.B)];
-      const lip = pos(p.lip);
-      if (lip > 0.5) {
-        pieces.push([roundedRect(0, 0, p.a + 2 * lip, p.b + 2 * lip, 0), { pts: [[lip, lip], [lip, lip + p.b], [lip + p.a, lip + p.b], [lip + p.a, lip]], closed: true }]);
-        if (Math.round(p.ring) >= 1) { const R = p.d / 2 + lip; pieces.push([circleContour(R, R, R), circleContour(R, R, p.d / 2)]); }
-      }
-      return packPieces(pieces).contours;
-    },
+    tip: "Flat cutting pattern for a rectangular (or square) to round duct transition, developed as one folding blank with a single seam and etch lines at the bends. Tick Separate pieces to cut the four sides apart. Optional flange frame and ring are packed beside the body. Sizes are to the sheet's centre-line.",
+    params: [["a", "Width A (rectangular end)", 300], ["b", "Depth B (rectangular end)", 200], ["d", "Round diameter", 150], ["h", "Height between the ends", 200], ["lip", "Flange lip width (0 = no flange pieces)", 25], ["ring", "Round end flange ring (1 = yes, 0 = no)", 1], SPLIT_PARAM],
+    make: (p) => s2rBlank(p).contours,
+    note: (p) => s2rBlank(p).reason,
   },
   {
     id: "cone", name: "Round reducer / cone (flat pattern)", icon: "◠", group: "duct", noResize: true,

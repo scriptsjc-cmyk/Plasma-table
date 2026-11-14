@@ -54,7 +54,8 @@ function developSide(u, v, R, H, n = segmentsFor(R)) {
   let area = 0;
   for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; area += p[0] * q[1] - q[0] * p[1]; }
   if (!(area > 1e-6) || selfCross(pts)) return null;
-  return { pts, apex, fan: right, hT, lengths: l, chords: c, angles, seamLength: l[n], model: m };
+  const leftFan = right.map(([x, y]) => [-x, y]);
+  return { pts, apex, fan: right, leftFan, hT, lengths: l, chords: c, angles, seamLength: l[n], model: m };
 }
 
 function segX(a, b, c, d) {
@@ -106,7 +107,7 @@ function developSide3(p0, p1, mid, rightArc, leftArc) {
   let area = 0;
   for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; area += a[0] * b[1] - b[0] * a[1]; }
   if (!(area > 1e-6) || selfCross(pts)) return null;
-  return { pts, apex: mid2, seamLength: dist3(p1, rightArc[rightArc.length - 1] || mid) };
+  return { pts, apex: mid2, fan: right, leftFan: left, seamLength: dist3(p1, rightArc[rightArc.length - 1] || mid) };
 }
 
 function squareToRoundOffset(A, B, D, H, ox, oy) {
@@ -222,26 +223,34 @@ export function offsetRoundToRound(d1, d2, H, ox = 0, oy = 0, segs = 24) {
   return unrollLoft(b, t);
 }
 
-// Rectangular-to-rectangular (or offset) transition: four trapezoid side panels.
+// Rectangular-to-rectangular (or offset) transition: four side panels unrolled
+// from the true 3D edge lengths (so adjacent hips match and the sides can be
+// joined into one folding blank).
 export function rectangularTransition(A, B, A2, B2, H, ox = 0, oy = 0) {
   if (!(A >= 10 && B >= 10 && A2 >= 10 && B2 >= 10 && H >= 5)) return null;
-  const trap = (bot, top, rise, off) => {
-    const tx0 = (bot - top) / 2 + off, tx1 = tx0 + top;
-    const pts = [[0, 0], [bot, 0], [tx1, rise], [tx0, rise]];
-    if (selfCross(pts)) return null;
-    return { pts };
-  };
-  const frontH = Math.hypot(H, (B / 2) - (oy - B2 / 2));
-  const backH  = Math.hypot(H, (-B / 2) - (oy + B2 / 2));
-  const leftH  = Math.hypot(H, (A / 2) - (ox - A2 / 2));
-  const rightH = Math.hypot(H, (-A / 2) - (ox + A2 / 2));
-  const panels = [
-    trap(A, A2, frontH, ox),
-    trap(A, A2, backH, -ox),
-    trap(B, B2, leftH, oy),
-    trap(B, B2, rightH, -oy),
+  const bot = [
+    [-A / 2, -B / 2, 0], [A / 2, -B / 2, 0], [A / 2, B / 2, 0], [-A / 2, B / 2, 0],
   ];
-  return panels.every(Boolean) ? panels : null;
+  const top = [
+    [ox - A2 / 2, oy - B2 / 2, H], [ox + A2 / 2, oy - B2 / 2, H],
+    [ox + A2 / 2, oy + B2 / 2, H], [ox - A2 / 2, oy + B2 / 2, H],
+  ];
+  const panels = [];
+  for (let i = 0; i < 4; i++) {
+    const p0 = bot[i], p1 = bot[(i + 1) % 4], q0 = top[i], q1 = top[(i + 1) % 4];
+    const L = dist3(p0, p1), b0 = [0, 0], b1 = [L, 0];
+    const h0 = dist3(p0, q0), h1 = dist3(p1, q1), T = dist3(q0, q1);
+    let t1 = placeByDistances(b1, h1, b0, dist3(p0, q1), 1);
+    if (!t1 || !Number.isFinite(t1[0]) || t1[1] < -1e-6) t1 = placeByDistances(b1, h1, b0, dist3(p0, q1), -1);
+    if (!t1 || !Number.isFinite(t1[0])) return null;
+    let t0 = placeByDistances(b0, h0, t1, T, 1);
+    if (!t0 || !Number.isFinite(t0[0]) || t0[1] < -1e-6) t0 = placeByDistances(b0, h0, t1, T, -1);
+    if (!t0 || !Number.isFinite(t0[0])) return null;
+    const pts = [b0, b1, t1, t0];
+    if (selfCross(pts)) return null;
+    panels.push({ pts });
+  }
+  return panels;
 }
 
 // 90° pipe-on-pipe saddle / fishmouth: unrolled branch end, plus a skirt so the pattern is a sturdy closed band.
@@ -279,3 +288,198 @@ export function pipeOnFlat(d, rise, skirt = 20, n = 48) {
   if (selfCross(pts)) return null;
   return { pts };
 }
+
+// ---- join developed side panels into one (or two) folding blanks ----
+
+export const BED_W = 1300, BED_H = 800;
+
+export function boxSize(pts) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
+}
+
+export function fitsBed(w, h, margin = 8, bedW = BED_W, bedH = BED_H) {
+  const W = bedW - margin, H = bedH - margin;
+  return (w <= W && h <= H) || (w <= H && h <= W);
+}
+
+function rigidMap(s0, s1, d0, d1) {
+  const ang = Math.atan2(d1[1] - d0[1], d1[0] - d0[0]) - Math.atan2(s1[1] - s0[1], s1[0] - s0[0]);
+  const c = Math.cos(ang), s = Math.sin(ang);
+  return (p) => {
+    const x = p[0] - s0[0], y = p[1] - s0[1];
+    return [d0[0] + c * x - s * y, d0[1] + s * x + c * y];
+  };
+}
+
+function closePts(pts) {
+  const out = [];
+  for (const q of pts) {
+    const p = out[out.length - 1];
+    if (!p || Math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-6) out.push(q);
+  }
+  if (out.length >= 2 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) < 1e-6) out.pop();
+  return out;
+}
+
+// Join side panels along matching right/left seams. Each panel's pts are
+// [baseL, baseR, rightSeamEnd, ...top edge..., leftSeamEnd].
+export function joinPanels(panels) {
+  if (!panels || !panels.length) return null;
+  const src = panels.map((p) => (p && p.pts) || p);
+  if (src.some((p) => !p || p.length < 3)) return null;
+  const placed = [src[0].map((q) => q.slice())];
+  const maps = [(q) => q.slice()];
+  for (let i = 1; i < src.length; i++) {
+    const prev = placed[i - 1], next = src[i];
+    const sl = Math.hypot(next[0][0] - next[next.length - 1][0], next[0][1] - next[next.length - 1][1]);
+    const sr = Math.hypot(prev[1][0] - prev[2][0], prev[1][1] - prev[2][1]);
+    if (!(sl > 1e-6 && sr > 1e-6) || Math.abs(sl - sr) > 0.5) return null;
+    const map = rigidMap(next[0], next[next.length - 1], prev[1], prev[2]);
+    maps.push(map);
+    placed.push(next.map(map));
+  }
+  const last = placed[placed.length - 1];
+  const raw = [placed[0][0]];
+  for (const p of placed) raw.push(p[1]);
+  raw.push(...last.slice(2));
+  for (let i = placed.length - 2; i >= 0; i--) raw.push(...placed[i].slice(3));
+  const pts = closePts(raw);
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length];
+    area += a[0] * b[1] - b[0] * a[1];
+  }
+  if (!(Math.abs(area) > 1e-3) || selfCross(pts)) return null;
+  const bends = [];
+  const addSeg = (a, b) => {
+    if (a && b && Math.hypot(a[0] - b[0], a[1] - b[1]) > 0.2) bends.push([a, b]);
+  };
+  for (let i = 0; i < placed.length; i++) {
+    const p = placed[i], pan = panels[i] || {};
+    if (i < placed.length - 1) addSeg(p[1], p[2]);
+    const map = maps[i];
+    const apex = pan.apex ? map(pan.apex) : null;
+    if (apex) { addSeg(p[0], apex); addSeg(p[1], apex); }
+    if (pan.fan) for (const q of pan.fan) addSeg(p[1], map(q));
+    if (pan.leftFan) for (const q of pan.leftFan) addSeg(p[0], map(q));
+    if (pan.topFold && pan.topFold.length === 2) addSeg(map(pan.topFold[0]), map(pan.topFold[1]));
+  }
+  const tops = placed.map((p) => [p[2], p[p.length - 1]]);
+  return { pts, bends, box: boxSize(pts), area: Math.abs(area) / 2, tops };
+}
+
+function lineHit(a, b, c, d) {
+  const x1 = b[0] - a[0], y1 = b[1] - a[1], x2 = d[0] - c[0], y2 = d[1] - c[1];
+  const den = x1 * y2 - y1 * x2;
+  if (Math.abs(den) < 1e-9) return null;
+  const t = ((c[0] - a[0]) * y2 - (c[1] - a[1]) * x2) / den;
+  return [a[0] + t * x1, a[1] + t * y1];
+}
+
+function offsetOpenOutward(chain, lip, cx, cy) {
+  if (chain.length < 2 || !(lip > 0)) return null;
+  const nrm = (a, b) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
+    let nx = -dy / L, ny = dx / L;
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    if (nx * (cx - mx) + ny * (cy - my) > 0) { nx = -nx; ny = -ny; }
+    return [nx, ny];
+  };
+  const ns = [];
+  for (let i = 0; i < chain.length - 1; i++) ns.push(nrm(chain[i], chain[i + 1]));
+  const out = [];
+  for (let i = 0; i < chain.length; i++) {
+    if (i === 0) out.push([chain[0][0] + ns[0][0] * lip, chain[0][1] + ns[0][1] * lip]);
+    else if (i === chain.length - 1) out.push([chain[i][0] + ns[i - 1][0] * lip, chain[i][1] + ns[i - 1][1] * lip]);
+    else {
+      const n0 = ns[i - 1], n1 = ns[i];
+      const a = chain[i - 1], b = chain[i], c = chain[i + 1];
+      const hit = lineHit([a[0] + n0[0] * lip, a[1] + n0[1] * lip], [b[0] + n0[0] * lip, b[1] + n0[1] * lip],
+        [b[0] + n1[0] * lip, b[1] + n1[1] * lip], [c[0] + n1[0] * lip, c[1] + n1[1] * lip]);
+      out.push(hit || [b[0] + n1[0] * lip, b[1] + n1[1] * lip]);
+    }
+  }
+  return out;
+}
+
+function replaceChain(pts, chain, next) {
+  const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 1e-3;
+  let start = -1;
+  for (let i = 0; i < pts.length; i++) {
+    if (near(pts[i], chain[0])) { start = i; break; }
+  }
+  if (start < 0) return null;
+  // walk pts from start to match chain length (chain may skip exact mid-duplicates)
+  let i = start, matched = 1, j = 1;
+  while (j < chain.length && matched < pts.length + 2) {
+    i = (i + 1) % pts.length;
+    matched++;
+    if (near(pts[i], chain[j])) j++;
+  }
+  if (j < chain.length) return null;
+  const end = i;
+  const out = [];
+  // pts[0] .. start-1, then next, then end+1 .. end of pts (avoid wrap first)
+  if (start <= end) {
+    out.push(...pts.slice(0, start), ...next, ...pts.slice(end + 1));
+  } else {
+    out.push(...next, ...pts.slice(end + 1, start));
+  }
+  return closePts(out);
+}
+
+// Add a folded lip around the developed top opening of a joined transition.
+export function addFlangeLip(part, lip) {
+  if (!(lip > 0.5) || !part || !part.pts || !part.tops || !part.tops.length) return part;
+  const chain = [];
+  for (let i = part.tops.length - 1; i >= 0; i--) {
+    const seg = part.tops[i];
+    if (!seg || seg.length < 2) continue;
+    if (!chain.length) chain.push(seg[0]);
+    const last = chain[chain.length - 1];
+    if (Math.hypot(last[0] - seg[0][0], last[1] - seg[0][1]) > 1e-3) chain.push(seg[0]);
+    chain.push(seg[1]);
+  }
+  if (chain.length < 2) return part;
+  let cx = 0, cy = 0;
+  for (const q of part.pts) { cx += q[0]; cy += q[1]; }
+  cx /= part.pts.length; cy /= part.pts.length;
+  const outer = offsetOpenOutward(chain, lip, cx, cy);
+  if (!outer || outer.length < 2) return part;
+  const next = [chain[0], ...outer, chain[chain.length - 1]];
+  const pts = replaceChain(part.pts, chain, next);
+  if (!pts || pts.length < 4 || selfCross(pts)) return part;
+  const bends = (part.bends || []).slice();
+  for (let i = 0; i < chain.length - 1; i++) {
+    const a = chain[i], b = chain[i + 1];
+    if (Math.hypot(a[0] - b[0], a[1] - b[1]) > 0.2) bends.push([a, b]);
+  }
+  return { pts, bends, box: boxSize(pts), area: part.area, tops: part.tops };
+}
+
+// One connected development if it is simple and fits the bed; otherwise two halves.
+export function developConnected(panels) {
+  if (!panels || !panels.length) return null;
+  const one = joinPanels(panels);
+  if (one && fitsBed(one.box.w, one.box.h)) return { parts: [one], halves: false };
+  const mid = Math.max(1, Math.ceil(panels.length / 2));
+  const a = joinPanels(panels.slice(0, mid));
+  const b = joinPanels(panels.slice(mid));
+  if (a && b) {
+    const reason = one
+      ? "This size is developed as two halves so it fits the 1300 × 800 mm bed."
+      : "This size is developed as two halves so the unfolding doesn't overlap.";
+    return { parts: [a, b], halves: true, reason };
+  }
+  if (one) return { parts: [one], halves: false, overflow: true };
+  return null;
+}
+
+export function s2rPanels(A, B, D, H, ox = 0, oy = 0) {
+  const t = squareToRound(A, B, D, H, ox, oy);
+  if (!t) return null;
+  return t.offset ? [t.A, t.B, t.A2, t.B2] : [t.A, t.B, t.A, t.B];
+}
+

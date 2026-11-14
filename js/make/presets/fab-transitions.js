@@ -2,6 +2,7 @@
 import {
   circleContour, roundedRect, holeIn, rectContour, packPieces, coneSector, elbowGores, mitreGore,
   clamp, pos, shape, poly, shiftToOrigin, signedArea, selfIntersects, dedupe, boltHoles,
+  SPLIT_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, boxBlank, wantsSplit,
 } from "./helpers.js";
 import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment } from "../duct.js";
 import { SHEET_PARAMS, sheetFrom, elbowTable } from "../sheetopts.js";
@@ -66,71 +67,46 @@ export const FAB_PRESETS = [
     (p) => loftOrCone(p.d, p.d2, p.h, p.ox, p.oy),
     { noResize: true }),
   shape("recttrans", "Rectangular transition", "⏢", "sheetmetal", "rectangular to rectangular transition",
-    "Flat pattern: four side panels for a rectangular-to-rectangular transition.",
-    [["a", "Bottom width", 200], ["b", "Bottom depth", 120], ["a2", "Top width", 100], ["b2", "Top depth", 80], ["h", "Height", 120]],
-    (p) => {
-      const panels = rectangularTransition(p.a, p.b, p.a2, p.b2, p.h);
-      if (!panels) return [];
-      return packPieces(panels.map((d) => [shiftContour(d.pts)].filter(Boolean))).contours;
-    },
-    { sheet: true, noResize: true }),
+    "Rectangular-to-rectangular transition as one folding blank with a single seam and etch lines at the hips. Tick Separate pieces to cut the four sides apart.",
+    [["a", "Bottom width", 200], ["b", "Bottom depth", 120], ["a2", "Top width", 100], ["b2", "Top depth", 80], ["h", "Height", 120], SPLIT_PARAM],
+    (p) => rectTransBlank(p).contours,
+    { sheet: true, noResize: true, note: (p) => rectTransBlank(p).reason }),
   shape("recttransoff", "Offset rectangular transition", "⏢", "sheetmetal", "offset rectangular transition",
-    "Rectangular transition with the top opening offset to one side.",
-    [["a", "Bottom width", 200], ["b", "Bottom depth", 120], ["a2", "Top width", 80], ["b2", "Top depth", 60], ["h", "Height", 120], ["ox", "X offset", 30]],
-    (p) => {
-      const panels = rectangularTransition(p.a, p.b, p.a2, p.b2, p.h, p.ox, 0);
-      if (!panels) return [];
-      return packPieces(panels.map((d) => [shiftContour(d.pts)].filter(Boolean))).contours;
-    },
-    { sheet: true, noResize: true }),
+    "Rectangular transition with the top opening offset to one side, developed as one folding blank (or two halves if it will not fit the bed). Tick Separate pieces to cut the sides apart.",
+    [["a", "Bottom width", 200], ["b", "Bottom depth", 120], ["a2", "Top width", 80], ["b2", "Top depth", 60], ["h", "Height", 120], ["ox", "X offset", 30], SPLIT_PARAM],
+    (p) => rectTransBlank(p).contours,
+    { sheet: true, noResize: true, note: (p) => rectTransBlank(p).reason }),
   shape("sqrpyramid", "Square pyramid hopper", "△", "sheetmetal", "square pyramid hopper",
-    "Four triangular sides for a square pyramid (or a hopper that comes to a point). Leave a small flat if you set a top opening.",
-    [["a", "Base width", 200], ["a2", "Top opening (0 = a point)", 40], ["h", "Height", 150]],
+    "Square pyramid or hopper, developed as one folding blank with a single seam. Tick Separate pieces to cut the four sides apart. Leave a small flat if you set a top opening.",
+    [["a", "Base width", 200], ["a2", "Top opening (0 = a point)", 40], ["h", "Height", 150], SPLIT_PARAM],
     (p) => {
       const top = Math.max(0, p.a2);
       if (top < 4) {
-        // four isosceles triangles
         const slant = Math.hypot(p.h, p.a / 2);
-        const tri = (base) => [poly([[0, 0], [base, 0], [base / 2, slant]])];
-        return packPieces([tri(p.a), tri(p.a), tri(p.a), tri(p.a)]).contours;
+        const tri = { pts: [[0, 0], [p.a, 0], [p.a / 2, slant]], apex: [p.a / 2, slant] };
+        return transitionBlank([tri, tri, tri, tri], p).contours;
       }
-      const panels = rectangularTransition(p.a, p.a, top, top, p.h);
-      if (!panels) return [];
-      return packPieces(panels.map((d) => [shiftContour(d.pts)].filter(Boolean))).contours;
+      return rectTransBlank({ a: p.a, b: p.a, a2: top, b2: top, h: p.h, split: p.split }).contours;
     },
-    { sheet: true, noResize: true }),
+    { sheet: true, noResize: true, note: (p) => {
+      const top = Math.max(0, p.a2);
+      if (top < 4) {
+        const slant = Math.hypot(p.h, p.a / 2);
+        const tri = { pts: [[0, 0], [p.a, 0], [p.a / 2, slant]], apex: [p.a / 2, slant] };
+        return transitionBlank([tri, tri, tri, tri], p).reason;
+      }
+      return rectTransBlank({ a: p.a, b: p.a, a2: top, b2: top, h: p.h, split: p.split }).reason;
+    } }),
   shape("s2roffset", "Offset square-to-round", "⏢", "sheetmetal", "offset square to round transition",
-    "Eccentric square-to-round: the round end is offset from the rectangle centre. The four side panels are each developed from the true 3D lengths, so opposite sides are no longer a matching pair.",
-    [["a", "Width A (rectangular end)", 260], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 120], ["h", "Height between the ends", 160], ["ox", "X offset of the round end", 40], ["oy", "Y offset of the round end", 0], ["lip", "Flange lip width (0 = none)", 20]],
-    (p) => {
-      if (!(p.a >= 10 && p.b >= 10 && p.d >= 10 && p.h >= 5)) return [];
-      const t = squareToRound(p.a, p.b, p.d, p.h, p.ox || 0, p.oy || 0);
-      if (!t) return [];
-      const panel = (d) => [{ pts: d.pts.map((q) => [q[0], q[1]]), closed: true }];
-      const sides = t.offset ? [t.A, t.A2, t.B, t.B2] : [t.A, t.A, t.B, t.B];
-      const pieces = sides.filter(Boolean).map(panel);
-      if (p.lip > 0.5) {
-        const f = flangeFrame(p.a, p.b, p.lip); if (f) pieces.push(f);
-        const r = flangeRing(p.d + 2 * p.lip, p.d); if (r) pieces.push(r);
-      }
-      return packPieces(pieces).contours;
-    },
-    { sheet: true, noResize: true }),
+    "Eccentric square-to-round: the round end is offset from the rectangle centre. Developed as one folding blank (or two halves if it will not fit the bed) with etch lines at the bends. Tick Separate pieces to cut the sides apart.",
+    [["a", "Width A (rectangular end)", 260], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 120], ["h", "Height between the ends", 160], ["ox", "X offset of the round end", 40], ["oy", "Y offset of the round end", 0], ["lip", "Flange lip width (0 = none)", 20], SPLIT_PARAM],
+    (p) => s2rBlank(p).contours,
+    { sheet: true, noResize: true, note: (p) => s2rBlank(p).reason }),
   shape("r2s", "Round-to-rectangular transition", "⏢", "sheetmetal", "round to rectangular transition",
-    "Same development as square-to-round (the rectangular end is the base). Packed with optional flanges.",
-    [["a", "Width A (rectangular end)", 240], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 130], ["h", "Height between the ends", 150], ["lip", "Flange lip width (0 = none)", 20]],
-    (p) => {
-      const t = squareToRound(p.a, p.b, p.d, p.h);
-      if (!t) return [];
-      const panel = (d) => [{ pts: d.pts.map((q) => [q[0], q[1]]), closed: true }];
-      const pieces = [panel(t.A), panel(t.A), panel(t.B), panel(t.B)];
-      if (p.lip > 0.5) {
-        const f = flangeFrame(p.a, p.b, p.lip); if (f) pieces.push(f);
-        const r = flangeRing(p.d + 2 * p.lip, p.d); if (r) pieces.push(r);
-      }
-      return packPieces(pieces).contours;
-    },
-    { sheet: true, noResize: true }),
+    "Same development as square-to-round (the rectangular end is the base): one folding blank with a single seam, plus optional flanges. Tick Separate pieces to cut the sides apart.",
+    [["a", "Width A (rectangular end)", 240], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 130], ["h", "Height between the ends", 150], ["lip", "Flange lip width (0 = none)", 20], SPLIT_PARAM],
+    (p) => s2rBlank(p).contours,
+    { sheet: true, noResize: true, note: (p) => s2rBlank(p).reason }),
   shape("fishmouth", "Pipe saddle / fishmouth", "∿", "sheetmetal", "pipe saddle fishmouth cope template",
     "Flat template for a 90° pipe-on-pipe saddle (fishmouth). Wrap it around the branch pipe to mark the cut.",
     [["d", "Branch pipe Ø", 80], ["d2", "Header pipe Ø", 120], ["skirt", "Skirt length", 30]],
@@ -221,14 +197,10 @@ export const FAB_PRESETS = [
     },
     { sheet: true, noResize: true }),
   shape("hopperrect", "Rectangular hopper", "▽", "sheetmetal", "rectangular hopper bin",
-    "Four trapezoid sides for a rectangular hopper (large rectangle to a smaller rectangle).",
-    [["a", "Top width", 240], ["b", "Top depth", 180], ["a2", "Bottom width", 80], ["b2", "Bottom depth", 60], ["h", "Height", 160]],
-    (p) => {
-      const panels = rectangularTransition(p.a, p.b, p.a2, p.b2, p.h);
-      if (!panels) return [];
-      return packPieces(panels.map((d) => [shiftContour(d.pts)].filter(Boolean))).contours;
-    },
-    { sheet: true, noResize: true }),
+    "Rectangular hopper developed as one folding blank with a single seam. Tick Separate pieces to cut the four sides apart.",
+    [["a", "Top width", 240], ["b", "Top depth", 180], ["a2", "Bottom width", 80], ["b2", "Bottom depth", 60], ["h", "Height", 160], SPLIT_PARAM],
+    (p) => rectTransBlank(p).contours,
+    { sheet: true, noResize: true, note: (p) => rectTransBlank(p).reason }),
   shape("cyclonehop", "Cyclone hopper / cone", "◠", "sheetmetal", "cyclone hopper cone",
     "Cyclone-style cone (a tall reducer) plus a top ring.",
     [["d", "Top Ø", 240], ["d2", "Outlet Ø", 60], ["h", "Straight height", 280], ["lip", "Top ring width (0 = none)", 20]],
@@ -399,12 +371,16 @@ export const FAB_PRESETS = [
     },
     { sheet: true, noResize: true }),
   shape("rectcap", "Rectangular end cap", "▭", "sheetmetal", "rectangular duct cap",
-    "Rectangular duct end cap with an optional lip frame.",
-    [["w", "Width", 200], ["h", "Height", 120], ["lip", "Lip width (0 = plain lid)", 18]],
+    "Rectangular duct end cap as one folding blank with a lip on all four sides. Tick Separate pieces to cut a plain lid and a separate lip frame.",
+    [["w", "Width", 200], ["h", "Height", 120], ["lip", "Lip width (0 = plain lid)", 18], SPLIT_PARAM],
     (p) => {
-      const pieces = [[rectContour(p.w, p.h)]];
-      if (p.lip > 1) { const f = flangeFrame(p.w, p.h, p.lip); if (f) pieces.push(f); }
-      return packPieces(pieces).contours;
+      if (!(p.w >= 10 && p.h >= 10)) return [];
+      if (wantsSplit(p) || !(p.lip > 1)) {
+        const pieces = [[rectContour(p.w, p.h)]];
+        if (p.lip > 1) { const f = flangeFrame(p.w, p.h, p.lip); if (f) pieces.push(f); }
+        return packPieces(pieces).contours;
+      }
+      return boxBlank(p.w, p.h, p.lip);
     },
     { sheet: true, noResize: true }),
   shape("ybranch", "Y-branch saddles", "Y", "sheetmetal", "y branch saddles",

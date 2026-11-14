@@ -529,27 +529,27 @@
     {
       "id": "recttrans",
       "n": 4,
-      "hash": "c7e55bb70a09a0c9"
+      "hash": "43542afae99d82f7"
     },
     {
       "id": "recttransoff",
       "n": 4,
-      "hash": "af4c6fe51a401c9e"
+      "hash": "28ec96d2f5ca614f"
     },
     {
       "id": "sqrpyramid",
       "n": 4,
-      "hash": "f9cb8504fdee82af"
+      "hash": "630f45025c673c4b"
     },
     {
       "id": "s2roffset",
       "n": 8,
-      "hash": "245928ce9398f8e4"
+      "hash": "cbb8bd30deee87a6"
     },
     {
       "id": "r2s",
       "n": 8,
-      "hash": "043365c0ebd6b32f"
+      "hash": "614c8f13a0ef5388"
     },
     {
       "id": "fishmouth",
@@ -604,7 +604,7 @@
     {
       "id": "hopperrect",
       "n": 4,
-      "hash": "825fe81f4338fa87"
+      "hash": "07bd2612736e58f9"
     },
     {
       "id": "cyclonehop",
@@ -684,7 +684,7 @@
     {
       "id": "rectcap",
       "n": 3,
-      "hash": "57deadaaceffd18f"
+      "hash": "3957b42c7f9d4dc0"
     },
     {
       "id": "ybranch",
@@ -1244,7 +1244,7 @@
     {
       "id": "s2r",
       "n": 8,
-      "hash": "5f833a7c49a9e57f"
+      "hash": "fbdd5a260bb15e1a"
     },
     {
       "id": "cone",

@@ -644,7 +644,7 @@ function existingLip(id, p, end) {
     return 0;
   }
   if (id === "fanduct") return end.key === "fl1" ? lip : 0;
-  if (id === "takeoff" || id === "ductcap" || id === "rectcap") return end.key === "fl1" ? lip : 0;
+  if (id === "takeoff" || id === "ductcap") return end.key === "fl1" ? lip : 0;
   if (id === "conecentric" || id === "coneadapter" || id === "cyclonehop") return lip;
   return 0;
 }

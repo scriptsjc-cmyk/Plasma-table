@@ -121,7 +121,10 @@ function paramField(it, param) {
 }
 function extraFormHtml(it, sh) {
   let html = "";
-  if (sh && sh.note) html += `<p class="tip fold-note">${esc(sh.note)}</p>`;
+  if (sh && sh.note) {
+    const note = typeof sh.note === "function" ? sh.note(it && it.p ? it.p : {}) : sh.note;
+    if (note) html += `<p class="tip fold-note">${esc(String(note))}</p>`;
+  }
   if (sh && sh.table) {
     html += `<div class="skbtns"><button type="button" data-sheet-table="1">Print true-length / marking-out table</button></div>`;
   }

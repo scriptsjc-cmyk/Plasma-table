@@ -1,7 +1,8 @@
 // New folded / formed workshop presets. Each has a developed flat pattern (what you cut)
 // and a fold() model for the 3D view. Bend sizes follow the existing enclosure presets:
 // developed length is the sum of the face sizes (no extra k-factor deducted).
-import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM } from "./helpers.js";
+import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, s2rPanels, wantsSplit } from "./helpers.js";
+import { rectangularTransition, addFlangeLip, developConnected } from "../duct.js";
 import {
   foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedCross,
   foldTrayCross, foldS2r, foldHopper, addTopFlanges, foldFrustum, foldUSaddle, face, attach, assemble,
@@ -12,6 +13,24 @@ const panel = (w, h, holes = []) => {
   for (const [x, y, d] of holes) { const hole = holeIn(x, y, d, 0, 0, w, h, 1); if (hole) c.push(hole); }
   return c;
 };
+
+function fanductBlank(p) {
+  const sides = s2rPanels(p.a, p.a, p.d, p.h);
+  if (!sides) return { contours: [], halves: false, reason: "" };
+  const extra = p.lip > 0.5 ? [panel(p.a + 2 * p.lip, p.a + 2 * p.lip)] : [];
+  return transitionBlank(sides, p, extra);
+}
+function hopflangeBlank(p) {
+  const panels = rectangularTransition(p.a, p.b, p.a2, p.b2, p.h);
+  if (!panels) return { contours: [], halves: false, reason: "" };
+  const lip = Number(p.lip) || 0;
+  if (wantsSplit(p) || !(lip > 0.5)) {
+    const sides = lip > 0.5 ? panels.map((d) => withTopLip(d.pts, lip)) : panels;
+    return transitionBlank(sides, p);
+  }
+  return transitionBlank(panels, p, [], (part) => addFlangeLip(part, lip));
+}
+
 function holesOn(len, wid, d, inset, count = 1) {
   const hs = [];
   if (!(d > 0)) return hs;
@@ -206,30 +225,16 @@ export const FOLD_PRESETS = [
     { noResize: true, fold: (p) => foldHat(p.wid, p.d, p.leg, p.flange) }),
 
   shape("fanduct", "Fan duct transition", "⏢", "folded", "fan duct square to round folded",
-    "Short square-to-round transition for a fan or filter, packed with a square flange.",
-    [["a", "Square / fan side", 140], ["d", "Round Ø", 100], ["h", "Height", 60], ["lip", "Flange lip", 18]],
-    (p) => {
-      // reuse the same triangulation as s2r when available; fallback to four trapezoids
-      const bot = p.a, top = p.d * Math.PI / 4;
-      const slant = Math.hypot(p.h, (bot - p.d) / 2);
-      const trap = (bw, tw, s) => [poly([[0, 0], [bw, 0], [(bw + tw) / 2, s], [(bw - tw) / 2, s]])];
-      const pieces = [trap(bot, Math.min(top, bot), slant), trap(bot, Math.min(top, bot), slant), trap(bot, Math.min(top, bot), slant), trap(bot, Math.min(top, bot), slant)];
-      if (p.lip > 0.5) pieces.push(panel(p.a + 2 * p.lip, p.a + 2 * p.lip));
-      return packPieces(pieces).contours;
-    },
-    { sheet: true, noResize: true, fold: (p) => foldS2r(p.a, p.a, p.d, p.h) }),
+    "Short square-to-round transition for a fan or filter, as one folding blank with etch lines, packed with a square flange. Tick Separate pieces to cut the sides apart.",
+    [["a", "Square / fan side", 140], ["d", "Round Ø", 100], ["h", "Height", 60], ["lip", "Flange lip", 18], SPLIT_PARAM],
+    (p) => fanductBlank(p).contours,
+    { sheet: true, noResize: true, fold: (p) => foldS2r(p.a, p.a, p.d, p.h), note: (p) => fanductBlank(p).reason }),
 
   shape("hopflange", "Hopper with flanges", "▽", "folded", "hopper folded flanges",
-    "Rectangular hopper with a folded flange around the top opening.",
-    [["a", "Base width", 200], ["b", "Base depth", 150], ["a2", "Top width", 80], ["b2", "Top depth", 60], ["h", "Height", 140], ["lip", "Top flange", 18]],
-    (p) => {
-      const sides = [];
-      const slantA = Math.hypot(p.h, (p.a - p.a2) / 2), slantB = Math.hypot(p.h, (p.b - p.b2) / 2);
-      const trap = (bw, tw, s, lip) => [poly([[0, 0], [bw, 0], [(bw + tw) / 2, s], [(bw + tw) / 2, s + lip], [(bw - tw) / 2, s + lip], [(bw - tw) / 2, s]])];
-      sides.push(trap(p.a, p.a2, slantA, p.lip), trap(p.a, p.a2, slantA, p.lip), trap(p.b, p.b2, slantB, p.lip), trap(p.b, p.b2, slantB, p.lip));
-      return packPieces(sides).contours;
-    },
-    { sheet: true, noResize: true, fold: (p) => addTopFlanges(foldHopper(p.a, p.b, p.a2, p.b2, p.h), p.a2, p.b2, p.h, p.lip) }),
+    "Rectangular hopper with a folded flange around the top opening, developed as one folding blank. Tick Separate pieces to cut the sides apart.",
+    [["a", "Base width", 200], ["b", "Base depth", 150], ["a2", "Top width", 80], ["b2", "Top depth", 60], ["h", "Height", 140], ["lip", "Top flange", 18], SPLIT_PARAM],
+    (p) => hopflangeBlank(p).contours,
+    { sheet: true, noResize: true, fold: (p) => addTopFlanges(foldHopper(p.a, p.b, p.a2, p.b2, p.h), p.a2, p.b2, p.h, p.lip), note: (p) => hopflangeBlank(p).reason }),
 
   shape("gusflange", "Gusset with flanges", "◣", "folded", "gusset folded flanges stiffener",
     "Right-angle gusset with a folded flange along each leg, developed as one piece.",

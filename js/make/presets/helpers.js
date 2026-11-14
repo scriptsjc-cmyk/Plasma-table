@@ -2,9 +2,9 @@
 import { arcPoints, circleContour, signedArea, selfIntersects } from "../../core/geom.js";
 import { developedDia, sheetFrom, seamShift } from "../sheetopts.js";
 import { roundedRect, slot, roundCorners, dedupe } from "../shape-helpers.js";
-import { coneDevelopment, squareToRound } from "../duct.js";
+import { coneDevelopment, squareToRound, developConnected, joinPanels, s2rPanels, rectangularTransition, fitsBed } from "../duct.js";
 
-export { arcPoints, circleContour, signedArea, selfIntersects, roundedRect, slot, roundCorners, dedupe, coneDevelopment, squareToRound };
+export { arcPoints, circleContour, signedArea, selfIntersects, roundedRect, slot, roundCorners, dedupe, coneDevelopment, squareToRound, developConnected, joinPanels, s2rPanels };
 
 export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
 export const pos = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
@@ -197,6 +197,100 @@ export const SPLIT_PARAM = ["split", "Blank", 0, { type: "select", options: [
   { v: 1, l: "Separate pieces" },
 ] }];
 export const wantsSplit = (p) => Math.round(Number(p && p.split) || 0) >= 1;
+
+
+// One folding blank (or two halves if it will not fit the 1300×800 bed) from
+// developed side panels, plus any extra cut pieces (flange frames / rings).
+function packedFitsBed(cs, margin = 8) {
+  const pts = (cs || []).flatMap((c) => c.pts || []);
+  if (!pts.length) return false;
+  const [x0, y0, x1, y1] = boxOfPts(pts);
+  return fitsBed(x1 - x0, y1 - y0, margin);
+}
+
+export function transitionBlank(panels, p, extraPieces = [], finishPart = null) {
+  const densify = (pts, maxSeg = 80) => {
+    if (!pts || pts.length < 3) return pts;
+    const out = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      out.push(a);
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const n = Math.floor(L / maxSeg);
+      for (let k = 1; k <= n; k++) out.push([a[0] + (b[0] - a[0]) * k / (n + 1), a[1] + (b[1] - a[1]) * k / (n + 1)]);
+    }
+    return out;
+  };
+  const asPiece = (part) => {
+    const done = finishPart ? finishPart(part) : part;
+    const [x0, y0] = boxOfPts(done.pts);
+    const c = [{ pts: densify(done.pts).map(([x, y]) => [x - x0, y - y0]), closed: true }];
+    for (const seg of done.bends || []) {
+      const a = seg[0], b = seg[1];
+      if (a && b) c.push(bendLine(a[0] - x0, a[1] - y0, b[0] - x0, b[1] - y0));
+    }
+    return c;
+  };
+  const internal = (pan) => joinPanels([pan]) || { pts: pan.pts, bends: pan.bends || (pan.topFold ? [pan.topFold] : []) };
+  if (wantsSplit(p)) {
+    const pieces = panels.filter(Boolean).map((pan) => asPiece(internal(pan)));
+    return { contours: packPieces(pieces.concat(extraPieces)).contours, halves: false, reason: "" };
+  }
+  const dev = developConnected(panels.filter(Boolean));
+  if (!dev) {
+    const pieces = panels.filter(Boolean).map((pan) => asPiece(internal(pan)));
+    return { contours: packPieces(pieces.concat(extraPieces)).contours, halves: false, reason: "" };
+  }
+  const contours = packPieces(dev.parts.map(asPiece).concat(extraPieces)).contours;
+  let reason = dev.reason || "";
+  if (dev.halves && reason.includes("fits the 1300") && !packedFitsBed(contours)) {
+    reason = "This size is developed as two halves. Each half fits the 1300 × 800 mm bed; cut them as two sheets.";
+  }
+  return { contours, halves: !!dev.halves, reason };
+}
+
+export function flangeRing(od, id) {
+  if (!(od > id + 4 && id >= 8)) return null;
+  const r = od / 2;
+  return [circleContour(r, r, r), circleContour(r, r, id / 2)];
+}
+
+export function flangeFrame(w, h, lip) {
+  if (!(lip > 0.5 && w > 8 && h > 8)) return null;
+  return [roundedRect(0, 0, w + 2 * lip, h + 2 * lip, 0), { pts: [[lip, lip], [lip, lip + h], [lip + w, lip + h], [lip + w, lip]], closed: true }];
+}
+
+export function withTopLip(pts, lip) {
+  if (!(lip > 0.5) || !pts || pts.length < 4) return pts;
+  const tR = pts[2], tL = pts[pts.length - 1];
+  const midB = [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2];
+  const midT = [(tL[0] + tR[0]) / 2, (tL[1] + tR[1]) / 2];
+  const ux = tR[0] - tL[0], uy = tR[1] - tL[1], L = Math.hypot(ux, uy) || 1;
+  let nx = -uy / L, ny = ux / L;
+  if (nx * (midB[0] - midT[0]) + ny * (midB[1] - midT[1]) > 0) { nx = -nx; ny = -ny; }
+  const lipR = [tR[0] + nx * lip, tR[1] + ny * lip], lipL = [tL[0] + nx * lip, tL[1] + ny * lip];
+  return { pts: [pts[0], pts[1], tR, lipR, lipL, tL], topFold: [tR, tL] };
+}
+
+export function s2rBlank(p) {
+  if (!(p.a >= 10 && p.b >= 10 && p.d >= 10 && p.h >= 5)) return { contours: [], halves: false, reason: "" };
+  const sides = s2rPanels(p.a, p.b, p.d, p.h, p.ox || 0, p.oy || 0);
+  if (!sides) return { contours: [], halves: false, reason: "" };
+  const extra = [];
+  const lip = pos(p.lip);
+  if (lip > 0.5) {
+    const f = flangeFrame(p.a, p.b, lip); if (f) extra.push(f);
+    const wantRing = p.ring == null ? true : Math.round(Number(p.ring)) >= 1;
+    if (wantRing) { const r = flangeRing(p.d + 2 * lip, p.d); if (r) extra.push(r); }
+  }
+  return transitionBlank(sides, p, extra);
+}
+
+export function rectTransBlank(p) {
+  const panels = rectangularTransition(p.a, p.b, p.a2, p.b2, p.h, p.ox || 0, p.oy || 0);
+  if (!panels) return { contours: [], halves: false, reason: "" };
+  return transitionBlank(panels, p);
+}
 
 export function panel(w, h, holes = []) {
   const c = [rectContour(w, h)];
