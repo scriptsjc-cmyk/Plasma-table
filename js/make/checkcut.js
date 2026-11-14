@@ -92,11 +92,10 @@ function runCheck() {
   try { chk = checkDesign(cs, limits); } catch (e) { out.innerHTML = `<p class="warntext">${e.message}</p>`; return; }
   const html = !chk ? "<p>Couldn't run the check.</p>" : `
     <div class="cchead">Cut check <span>· ${mat.toLowerCase()} ${th} mm</span></div>
-    ${chk.groups.length
-      ? `<ol>${chk.groups.map((g) => `<li class="${g.level}"><b>${g.n || ""}</b><span>${g.text}</span></li>`).join("")}</ol>`
-      : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${th} mm ${mat.toLowerCase()}.</p>`}`;
+    ${chk.groups.length ? renderGroups(chk.groups) : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${th} mm ${mat.toLowerCase()}.</p>`}`;
   out.innerHTML = html;
-  if (ask) ask.textContent = "Results for this drawing, at the material and thickness you picked.";
+  bindGroupClicks(out, chk && chk.groups);
+  if (ask) ask.textContent = "Results for this drawing, at the material and thickness you picked. Click an issue to zoom to it.";
 }
 
 function openDlg() {
@@ -120,4 +119,39 @@ export function bindCheckCut() {
   const dlg = $("makeCheckDlg");
   if (dlg) dlg.addEventListener("click", (e) => { if (e.target === dlg) closeDlg(); });
   window.addEventListener("keydown", (e) => { if (e.key === "Escape" && dlg && !dlg.classList.contains("hidden")) closeDlg(); });
+}
+
+
+function renderGroups(groups) {
+  const order = ["error", "warn", "info", "ok"];
+  const title = { error: "Must fix", warn: "Check these", info: "Notes", ok: "OK" };
+  const used = new Set();
+  let html = "";
+  const item = (g) => `<li class="${g.level || ""}" data-gi="${groups.indexOf(g)}"><b>${g.n || ""}</b><span>${g.text}</span></li>`;
+  for (const level of order) {
+    const list = groups.filter((g) => (g.level || "info") === level);
+    if (!list.length) continue;
+    used.add(level);
+    html += `<h4 class="cc-${level}">${title[level]}</h4><ol class="cc-list">${list.map(item).join("")}</ol>`;
+  }
+  const rest = groups.filter((g) => !used.has(g.level || "info"));
+  if (rest.length) html += `<ol class="cc-list">${rest.map(item).join("")}</ol>`;
+  return html;
+}
+
+function bindGroupClicks(out, groups) {
+  if (!out || !groups) return;
+  out.querySelectorAll("[data-gi]").forEach((li) => {
+    li.style.cursor = "pointer";
+    li.title = "Click to zoom to this on the drawing";
+    li.addEventListener("click", () => {
+      const g = groups[Number(li.dataset.gi)];
+      if (!g || !sketch) return;
+      const spots = g.spots || [];
+      if (!spots.length) { if (sketch.fitView) sketch.fitView(); return; }
+      const xs = spots.map((p) => p[0]), ys = spots.map((p) => p[1]);
+      const pad = 40;
+      (sketch.zoomToBox || sketch.fitView).call(sketch, [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) + pad, Math.max(...ys) + pad]);
+    });
+  });
 }

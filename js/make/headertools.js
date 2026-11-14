@@ -36,9 +36,8 @@ export function bindMakeHeaderTools() {
   if (snap) {
     snap.onclick = () => {
       if (!sketch) return;
-      sketch.opts.snap = sketch.opts.snap ? 0 : 1;
-      try { sketch.saveOpts && sketch.saveOpts(); } catch (e) { /* ignore */ }
-      try { savePrefs({ snap: !!sketch.opts.snap }); } catch (e) { /* ignore */ }
+      const step = sketch.toggleSnap ? sketch.toggleSnap() : (sketch.opts.snap = sketch.opts.snap ? 0 : 1);
+      try { savePrefs({ snap: !!step, snapStep: step || getPrefs().snapStep }); } catch (e) { /* ignore */ }
       sketch.draw();
       paintMakeHeaderTools();
     };

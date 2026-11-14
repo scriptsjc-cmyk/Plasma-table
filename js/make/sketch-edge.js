@@ -1,6 +1,6 @@
 // Sketch: editing the corners and edges of a custom outline (length, angle, curve, add / delete / move a corner) and drawing its handles.
 import { bbox, bulgeFromPoint, bulgeFromRadius, bulgeFromSagitta, bulgeMidpoint, bulgeRadius, expandContour, polysCross, selfIntersects, signedArea, splitBulge } from "../core/geom.js";
-import { cleanContour, clampBulge, distToEdge, r1, wholeSet } from "./sketch-util.js";
+import { cleanContour, clampBulge, clone, distToEdge, r1, wholeSet } from "./sketch-util.js";
 
 export class EdgeMethods {
   isEditableCustom(it) { return !!(it && it.type === "custom" && this.canMutate(it) && it.shape && it.shape.cs && it.shape.cs.length); }
@@ -148,11 +148,35 @@ export class EdgeMethods {
     if (!this.isEditableCustom(it)) return false;
     this.pick([it.id]);
     this.edgeSel = { id: it.id, ci, ei, vi };
+    this.captureEdgeSnap(it);
     this.normalizeEdgeSel();
     this.draw();
     this.onSelect();
     this.onEdgeChange && this.onEdgeChange();
     return !!this.edgeSel;
+  }
+  captureEdgeSnap(it) {
+    const host = it || (this.edgeSel && this.item(this.edgeSel.id));
+    this._edgeSnap = host ? clone(host) : null;
+  }
+  doneEdge() {
+    this.edgeSel = null;
+    this._edgeSnap = null;
+    this.draw();
+    this.onSelect();
+    this.onEdgeChange && this.onEdgeChange();
+  }
+  cancelEdge() {
+    const snap = this._edgeSnap;
+    const it = snap && this.item(snap.id);
+    const changed = !!(it && JSON.stringify(it) !== JSON.stringify(snap));
+    if (changed) {
+      this.remember();
+      const i = this.items.findIndex((x) => x.id === snap.id);
+      if (i >= 0) this.items[i] = clone(snap);
+      this.commit();
+    }
+    this.doneEdge();
   }
   setEdgeLength(len, fixed) {
     len = Number(len);
@@ -760,7 +784,7 @@ export class EdgeMethods {
         if (p && q) {
           const b = Number(bs[i]) || 0;
           ctx.save();
-          ctx.strokeStyle = C.sel; ctx.lineWidth = 3; ctx.setLineDash([]);
+          ctx.strokeStyle = C.edge || "#C05621"; ctx.lineWidth = 3.5; ctx.setLineDash([]);
           ctx.beginPath();
           const [sx, sy] = S(p[0], p[1]);
           ctx.moveTo(sx, sy);
@@ -776,7 +800,7 @@ export class EdgeMethods {
           const [mx, my] = S(mid[0], mid[1]);
           const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
           const extra = Math.abs(b) > 1e-9 ? ` · R ${r1(bulgeRadius(p, q, b))}` : "";
-          const rec = this.tag(ctx, `${r1(len)} mm${extra}`, mx, my - 18, C.sel);
+          const rec = this.tag(ctx, `${r1(len)} mm${extra}`, mx, my - 18, C.edge || C.lock);
           this.dimHits.push({ ...rec, kind: "edge-len", it: one, label: "Edge length (mm)" });
           ctx.restore();
         }

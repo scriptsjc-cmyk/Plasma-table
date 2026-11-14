@@ -2,7 +2,7 @@
 import { getPrefs } from "../core/prefs.js";
 import { boxOverlap, clone, r1, unionBox, wholeSet } from "./sketch-util.js";
 import { screenBoxToWorld, shiftView } from "../cut/bedview.js";
-import { pointInPoly } from "../core/geom.js";
+import { detectCircle, pointInPoly, bulgeRadius } from "../core/geom.js";
 import { snapWorld, constraintOf, applyConstraints } from "./snaps.js";
 import { afterDrawPoint, startRectAt, startDiscAt, paintDrawHud, commitRectDisc, closeDrawHud, cancelDrawHud } from "./drawhud.js";
 import { openCtxMenu } from "./ctxmenu.js";
@@ -137,6 +137,34 @@ export class InputMethods {
     return [r1(dx), r1(dy)];
   }
   // ---------------------------------------------------------------- input
+  // Measure snaps to centres and edges; reports ΔX, ΔY, angle, and a radius when the click is on a circle or curve (C28).
+  measureAt(wx, wy) {
+    const sn = snapWorld(this, wx, wy);
+    const p = sn ? [sn.x, sn.y] : [wx, wy];
+    let radius = null;
+    const consider = (it) => {
+      if (!it || radius != null) return;
+      const cs = this.contoursOf(it) || [];
+      for (const c of cs) {
+        const circ = c.circle || detectCircle(c);
+        if (circ && circ.r > 0) {
+          const d = Math.hypot(p[0] - circ.cx, p[1] - circ.cy);
+          if (sn && (sn.kind === "centre" || sn.kind === "tangent") && sn.it === it) { radius = circ.r; return; }
+          if (Math.abs(d - circ.r) < 2) { radius = circ.r; return; }
+        }
+        const pts = c.pts || [], bs = c.bulges || [];
+        for (let i = 0; i < pts.length; i++) {
+          const b = Number(bs[i]) || 0;
+          if (!(Math.abs(b) > 1e-9)) continue;
+          const r = bulgeRadius(pts[i], pts[(i + 1) % pts.length], b);
+          if (r > 0 && Math.abs(Math.hypot(p[0] - pts[i][0], p[1] - pts[i][1]) - r) < 3) { radius = r; return; }
+        }
+      }
+    };
+    if (sn && sn.it) consider(sn.it);
+    if (radius == null) for (const it of this.items || []) consider(it);
+    return { p, radius, snap: sn };
+  }
   bind() {
     const cv = this.cv;
     const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
@@ -234,8 +262,9 @@ export class InputMethods {
         this.draw(); return;
       }
       if (this.tool === "measure" && !panBtn) {
-        if (!this.measure || this.measure.b) this.measure = { a: [wx, wy] };
-        else this.measure.b = [wx, wy];
+        const m = this.measureAt(wx, wy);
+        if (!this.measure || this.measure.b) this.measure = { a: m.p, aInfo: m };
+        else this.measure.b = m.p, this.measure.bInfo = m;
         this.draw(); return;
       }
       const dim = panBtn ? null : this.hitDim(sx, sy, touch);
@@ -253,6 +282,7 @@ export class InputMethods {
       if (h.kind === "vertex" || h.kind === "edge" || h.kind === "bulge") {
         this.pick([it.id]);
         this.edgeSel = { id: it.id, ci: h.ci, ei: (h.ei != null ? h.ei : h.vi), vi: h.kind === "vertex" ? h.vi : null };
+        if (this.captureEdgeSnap) this.captureEdgeSnap(it);
         this.drag = { kind: h.kind, it, ci: h.ci, ei: h.ei, vi: h.vi, before, wx, wy, moved: false };
         this.onSelect(); this.onEdgeChange && this.onEdgeChange(); this.draw();
         return;
@@ -348,7 +378,7 @@ export class InputMethods {
         return;
       }
       if (this.tool === "measure" && this.measure && !this.measure.b) {
-        this.measure.hover = this.toWorld(sx, sy); this.draw(); 
+        this.measure.hover = this.measureAt(this.toWorld(sx, sy)[0], this.toWorld(sx, sy)[1]).p; this.draw();
       }
       if (d.kind === "pan") {
         if (Math.abs(sx - d.sx) + Math.abs(sy - d.sy) > 3) d.moved = true;
@@ -529,6 +559,15 @@ export class InputMethods {
         if (k === "c") { stop(); this.setTool("disc"); if (this.onSelect) this.onSelect(); return; }
         if (k === "d") { stop(); this.setTool("measure"); if (this.onSelect) this.onSelect(); return; }
         if (k === "m") { stop(); this.setTool(null); if (this.onSelect) this.onSelect(); return; }
+        if (k === "s") {
+          stop();
+          const step = this.toggleSnap ? this.toggleSnap() : (this.opts.snap = this.opts.snap ? 0 : 1);
+          this.onMessage(step ? ("Snap on (" + step + " mm)") : "Snap off");
+          this.draw(); if (this.onSelect) this.onSelect(); return;
+        }
+        if (k === "f") { stop(); this.fitView(); return; }
+        if (k === "h") { stop(); this.mirror(); return; }
+        if (k === "v") { stop(); this.flipV(); return; }
       }
       if (e.key === "Escape") {
         // Cancel an in-progress line / rect / disc first; otherwise leave Escape

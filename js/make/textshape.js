@@ -22,6 +22,21 @@ function parsePath(d) {
   }
   return out;
 }
+export function hasGlyph(font, ch) {
+  if (!ch) return true;
+  const code = ch.charCodeAt(0);
+  if (code === 32 || code === 160 || code === 9 || code === 10 || code === 13) return true;
+  const f = FONT_DATA[font] || FONT_DATA.sans;
+  const e = f.chars && f.chars[code - 33];
+  return !!(e && e[0]);
+}
+export function missingChars(text, font) {
+  const miss = [];
+  for (const ch of [...String(text == null ? "" : text)]) {
+    if (!hasGlyph(font, ch) && !miss.includes(ch)) miss.push(ch);
+  }
+  return miss;
+}
 function glyph(font, ch) {
   const key = font + ch;
   if (cache.has(key)) return cache.get(key);
@@ -29,8 +44,9 @@ function glyph(font, ch) {
   const code = ch.charCodeAt(0);
   let g;
   if (code === 32 || code === 160) g = { strokes: [], adv: 14 };
+  else if (!hasGlyph(font, ch)) g = { strokes: [], adv: 14, missing: true };
   else {
-    const e = f.chars[code - 33] || f.chars["?".charCodeAt(0) - 33];
+    const e = f.chars[code - 33];
     g = { strokes: parsePath(e[0]), adv: e[1] * 2 };
   }
   cache.set(key, g);
@@ -186,7 +202,8 @@ export function textToContours(text, o = {}) {
   const weight = Math.max(0.6, Number(o.weight) || defaultWeight(size));
   const lay = layoutText(text, o);
   const strokes = curveStrokes(lay, o.curve);
-  if (!strokes.length) return { contours: [], width: 0, height: 0, islands: 0, weight };
+  const missing = missingChars(text, o.font);
+  if (!strokes.length) return { contours: [], width: 0, height: 0, islands: 0, weight, missing };
   const c0 = Math.max(0.05, weight / 6);
   const f = strokeField(strokes, weight, c0);
   const tol = Math.max(0.03, f.c * 0.3);
@@ -210,5 +227,5 @@ export function textToContours(text, o = {}) {
     const W = width + 2 * margin, H = height + 2 * margin;
     contours.unshift({ pts: [[0, 0], [W, 0], [W, H], [0, H]], closed: true });
   }
-  return { contours, width: margin ? width + 2 * margin : width, height: margin ? height + 2 * margin : height, islands, bridges, weight, cell: f.c };
+  return { contours, width: margin ? width + 2 * margin : width, height: margin ? height + 2 * margin : height, islands, bridges, weight, cell: f.c, missing };
 }

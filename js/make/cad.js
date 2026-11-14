@@ -41,9 +41,10 @@ export function runPro(cmd) {
   if (cmd === "disty") { sketch.distribute("y"); return; }
   if (cmd === "linarray") {
     openCad("Linear array", [
-      { id: "n", label: "How many (including this one)", value: 3 },
+      { id: "n", label: "How many (including this one, max 50)", value: 3 },
       { id: "gx", label: "Gap across (mm)", value: 10 },
       { id: "gy", label: "Gap up (mm)", value: 0 },
+      { note: "The array is limited to 50 copies, including this one. A larger number is clipped to 50." },
     ], (v) => sketch.linearArray(v.n, v.gx, v.gy));
     return;
   }

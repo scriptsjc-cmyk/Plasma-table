@@ -18,7 +18,11 @@ let shapeTimer = null;
 export function syncShapeForm() {
   const it = sketch.selected(); if (!it) return;
   const b = sketch.boxOf(it);
-  $$("#shapeForm [data-p]").forEach((i) => { if (document.activeElement !== i) i.value = it.p[i.dataset.p]; });
+  $$("#shapeForm [data-p]").forEach((i) => {
+    if (document.activeElement === i) return;
+    const v = it.p[i.dataset.p];
+    if (Number.isFinite(v)) i.value = v;
+  });
   $$("#shapeForm [data-pos]").forEach((i) => { if (document.activeElement !== i) i.value = Math.round(b[i.dataset.pos === "x" ? 0 : 1] * 10) / 10; });
 }
 export function useShapeSoon() { clearTimeout(shapeTimer); shapeTimer = setTimeout(useShape, 250); }
@@ -80,7 +84,7 @@ export function showSource(src, opts) {
 }
 export function bindSketchBar() {
   $("skAll").onclick = () => sketch.pickAll();
-  $("skSnap").onchange = () => { sketch.setSnap(Number($("skSnap").value)); sketch.draw(); };
+  $("skSnap").onchange = () => { sketch.setSnap(Number($("skSnap").value)); sketch.draw(); try { import("../core/prefs.js").then((m) => { const v = Number($("skSnap").value); m.savePrefs({ snap: v > 0, snapStep: v > 0 ? v : m.getPrefs().snapStep }); }).catch(() => {}); } catch (e) { /* ignore */ } };
   $("skGuides").onchange = () => sketch.setGuides($("skGuides").checked);
   $("skUndo").onclick = () => sketch.undo();
   $("skRedo").onclick = () => sketch.redo();

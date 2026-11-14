@@ -14,7 +14,7 @@ import { M, S, sketch } from "../core/state.js";
 import { refresh } from "../core/hooks.js";
 
 // ------------------------------------------------------------------ job prepare + preview
-export function kerfNow() { const v = Number($("ovKerf").value); return v > 0 ? v : (row().kerf_mm ?? S.chart.kerf_mm ?? 1.5); }
+export function kerfNow() { const v = Number($("ovKerf").value); return Number.isFinite(v) && v >= 0 && $("ovKerf").value !== "" ? v : (row().kerf_mm ?? S.chart.kerf_mm ?? 1.5); }
 export function leadNow() { const v = $("ovLead").value.trim(); return v !== "" && Number(v) >= 0 ? Number(v) : (row().lead_in_mm ?? S.chart.lead_in_mm ?? 3); }
 // ---- cut check + what the machine can do
 function limitsNow() {

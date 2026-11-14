@@ -70,6 +70,8 @@ function bindEdgePanel() {
   $("edgeStraight") && ($("edgeStraight").onclick = () => { sketch.straightenEdge(); fillEdgePanel(); });
   $("edgeAddV") && ($("edgeAddV").onclick = () => { const e = sketch.edgeSel; if (e) sketch.addVertexOnEdge(e.ci, e.ei); fillEdgePanel(); });
   $("edgeDelV") && ($("edgeDelV").onclick = () => { sketch.deleteVertex(); fillEdgePanel(); });
+  $("edgeDone") && ($("edgeDone").onclick = () => { sketch.doneEdge && sketch.doneEdge(); fillEdgePanel(); });
+  $("edgeCancel") && ($("edgeCancel").onclick = () => { sketch.cancelEdge && sketch.cancelEdge(); fillEdgePanel(); });
   bindFilletPanel();
 }
 function bindFilletPanel() {

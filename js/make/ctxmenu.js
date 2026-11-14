@@ -53,8 +53,8 @@ export function bindCtxMenu() {
     if (it && !sketch.sel.ids.includes(it.id)) { sketch.pick([it.id]); sketch.onSelect(); }
     if (act === "move") { sketch.setTool(null); }
     else if (act === "dup" && it) sketch.duplicate();
-    else if (act === "lock" && it) { it.lock = !it.lock; sketch.draw(); if (sketch.onChange) sketch.onChange(true); }
-    else if (act === "hide" && it) { it.hide = !it.hide; sketch.draw(); if (sketch.onChange) sketch.onChange(true); }
+    else if (act === "lock" && it) { if (sketch.toggleLock) sketch.toggleLock(it); else { it.lock = !it.lock; sketch.draw(); if (sketch.onChange) sketch.onChange(true); } }
+    else if (act === "hide" && it) { if (sketch.toggleHide) sketch.toggleHide(it); else { it.hide = !it.hide; sketch.draw(); if (sketch.onChange) sketch.onChange(true); } }
     else if (act === "del" && it) sketch.remove();
     else if (act === "props") {
       const pane = $("shapeForm") || $("stepPane");

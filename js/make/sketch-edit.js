@@ -39,7 +39,7 @@ export class EditMethods {
     it.rot = ((deg % 360) + 360) % 360;
     const nb = this.boxOf(it);
     it.x = r1(c[0] - (nb[2] - nb[0]) / 2); it.y = r1(c[1] - (nb[3] - nb[1]) / 2);
-    this.commit();
+    this.commit(); this.onSelect();
   }
   // mirror left-right about the middle of the picked shapes
   mirror() {
@@ -199,8 +199,11 @@ export class EditMethods {
     const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v) || Math.abs(v) > this.maxMm * 2) return;
     this.remember();
     const b = this.boxOf(it);
-    if (axis === "x") it.x = r1(it.x + v - b[0]);
-    else it.y = r1(it.y + v - b[1]);
+    const host = this.hostPart && this.hostPart(it);
+    const origin = host ? this.boxOf(host) : [0, 0];
+    // Typed values are applied exactly — never snapped (C21). Snap stays for dragging and clicking.
+    if (axis === "x") it.x = it.x + (origin[0] + v) - b[0];
+    else it.y = it.y + (origin[1] + v) - b[1];
     this.commit(); this.onSelect();
   }
   setHoleOffset(axis, v) {
@@ -220,11 +223,26 @@ export class EditMethods {
     }
     this.commit(); this.onSelect();
   }
-  toggleLock() {
-    const list = this.picked(); if (!list.length) return;
+  toggleLock(it) {
+    const list = it ? [it] : this.picked(); if (!list.length) return;
     this.remember();
     const on = !list.every((i) => i.lock);
-    for (const it of list) it.lock = on;
+    for (const x of list) x.lock = on;
+    this.commit(); this.onSelect();
+  }
+  toggleHide(it) {
+    const list = it ? [it] : this.picked(); if (!list.length) return;
+    this.remember();
+    const on = !list.every((i) => i.hide);
+    for (const x of list) x.hide = on;
+    this.commit(); this.onSelect();
+  }
+  setName(it, name) {
+    const host = it || this.selected();
+    if (!host) return;
+    this.remember();
+    const n = String(name || "").trim().slice(0, 80);
+    if (n) host.name = n; else delete host.name;
     this.commit(); this.onSelect();
   }
   // round 5 item 9: one tap frees every locked part (Beginner has no Lock button, so no lock may stay hidden there)
@@ -348,7 +366,9 @@ export class EditMethods {
   }
   linearArray(n, gapX, gapY) {
     const list = this.picked(); if (!list.length) return;
-    n = Math.max(2, Math.min(50, Math.round(n || 2)));
+    const want = Math.round(n || 2);
+    n = Math.max(2, Math.min(50, want));
+    if (want > 50) this.onMessage("A linear array is limited to 50 copies (including this one). Using 50.");
     gapX = Number(gapX); gapY = Number(gapY);
     if (!Number.isFinite(gapX)) gapX = 10; if (!Number.isFinite(gapY)) gapY = 0;
     if (Math.abs(gapX) > this.maxMm || Math.abs(gapY) > this.maxMm) { this.onMessage("That array gap is bigger than the table."); return; }
@@ -359,11 +379,20 @@ export class EditMethods {
     if (Math.abs((n - 1) * dx) > this.maxMm || Math.abs((n - 1) * dy) > this.maxMm) { this.onMessage("That array wouldn't fit on the table."); return; }
     this.remember();
     const ids = [...this.sel.ids];
+    const onlyHole = list.length === 1 && this.isHole(list[0]);
     for (let k = 1; k < n; k++) {
       for (const src of list) {
         const c = { ...clone(src), id: this.nextId++, lock: false };
         c.x = r1(src.x + k * dx); c.y = r1(src.y + k * dy);
         this.items.push(c); ids.push(c.id);
+        if (!onlyHole) {
+          for (const h of this.ownedHoles(src)) {
+            if (list.includes(h)) continue;
+            const hc = { ...clone(h), id: this.nextId++, lock: false };
+            hc.x = r1(h.x + k * dx); hc.y = r1(h.y + k * dy);
+            this.items.push(hc); ids.push(hc.id);
+          }
+        }
       }
     }
     this.pick(ids); this.ensureVisible(); this.commit(); this.onSelect();
@@ -412,6 +441,25 @@ export class EditMethods {
     it.y = r1(it.y + ty - (b[1] + b[3]) / 2);
     it._key = null;
   }
+  // Copy a part's unpicked holes to sit in the same place on a new copy (C20).
+  _copyOwnedHoles(src, dest, ids) {
+    const sb = this.boxOf(src), db = this.boxOf(dest);
+    if (!sb || !db) return;
+    const sc = [(sb[0] + sb[2]) / 2, (sb[1] + sb[3]) / 2];
+    const dc = [(db[0] + db[2]) / 2, (db[1] + db[3]) / 2];
+    const dang = (((dest.rot || 0) - (src.rot || 0)) * Math.PI) / 180;
+    const ca = Math.cos(dang), sa = Math.sin(dang);
+    for (const h of this.ownedHoles(src)) {
+      if (this.sel.ids.includes(h.id)) continue;
+      const hb = this.boxOf(h), hc = [(hb[0] + hb[2]) / 2, (hb[1] + hb[3]) / 2];
+      const dx = hc[0] - sc[0], dy = hc[1] - sc[1];
+      const tx = dc[0] + dx * ca - dy * sa, ty = dc[1] + dx * sa + dy * ca;
+      const c = { ...clone(h), id: this.nextId++, lock: false, rot: (((h.rot || 0) + (dest.rot || 0) - (src.rot || 0)) % 360 + 360) % 360 };
+      this.items.push(c);
+      this._placeCentre(c, tx, ty);
+      if (ids) ids.push(c.id);
+    }
+  }
   polarArray(n, pcd, pivot) {
     const list = this.picked(); if (!list.length) return;
     if (list.some((i) => i.lock)) { this.onMessage("Unlock the part before making a polar array."); return; }
@@ -448,6 +496,7 @@ export class EditMethods {
         c.rot = ((rot0 + (k / n) * 360) % 360 + 360) % 360;
         this.items.push(c); ids.push(c.id);
         this._placeCentre(c, cx + r0 * Math.cos(ang), cy + r0 * Math.sin(ang));
+        if (!(list.length === 1 && this.isHole(src))) this._copyOwnedHoles(src, c, ids);
       }
     }
     this.pick(ids); this.ensureVisible(); this.commit(); this.onSelect();
@@ -684,6 +733,7 @@ export class EditMethods {
     const b = bbox([{ pts: uniq }]);
     this.remember();
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
+      name: "Outline",
       shape: { cs: [{ pts: uniq.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true, bulges: ub.slice(0, uniq.length) }] } };
     this.items.push(it);
     this.pick([it.id]); this.tool = null; this.drawPts = []; this.drawBulges = []; this.drawArc = false;
@@ -695,10 +745,15 @@ export class EditMethods {
   setParam(k, v) {
     const it = this.selected(); if (!this.canMutate(it) || !Number.isFinite(v)) return;
     const sizeKeys = ["w", "h", "d", "a", "b", "len", "wid", "s"];
+    if ((k === "d" || k === "hole") && v > 0 && v < MIN) {
+      this.onMessage("A hole smaller than " + MIN + " mm will not cut. Use at least " + MIN + " mm, or bigger than the kerf.");
+      return false;
+    }
     if (sizeKeys.includes(k) && (v < MIN || v > this.maxMm)) return;
     if (["n", "cols", "rows"].includes(k)) v = Math.max(0, Math.min(64, v));
     if (Math.abs(v) > this.maxMm * 4) return;
     it.p[k] = v; this.save(); this.draw();
+    return true;
   }
   nudge(dx, dy) {
     const list = this.picked().filter((i) => this.canMutate(i)); if (!list.length) return;
@@ -747,7 +802,7 @@ export class EditMethods {
     // a curved edge bulges past its end points, so the first guess can be a little off: nudge the scale until the real outline is the size asked for
     for (let k = 0; k < 6; k++) {
       const bb = this.boxOf(it), aw = bb[2] - bb[0], ah = bb[3] - bb[1];
-      const okW = Math.abs(aw - W) < 0.005, okH = Math.abs(ah - H) < 0.005;
+      const okW = Math.abs(aw - W) < 0.02, okH = Math.abs(ah - H) < 0.02;
       if (keep ? (which === "h" ? okH : okW) : (okW && okH)) break;
       if (keep) { const f = which === "h" ? H / ah : W / aw; sx *= f; sy *= f; }
       else { sx *= W / aw; sy *= H / ah; }

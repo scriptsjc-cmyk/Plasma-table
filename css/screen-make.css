@@ -1212,3 +1212,19 @@ body.laptop-ui .fold3d-sum { display: none; }
 
 #makeSelStatus, .makeselstatus { margin: 0 0 8px; color: var(--text); font-size: var(--fs-sm); font-weight: 650; }
 #makeSelStatus:empty { display: none; }
+
+#mtKind { min-width: 0; width: 100%; white-space: normal; height: auto; min-height: var(--tap); }
+#mtKind option { white-space: normal; }
+.mt-lab, #textDlg label { overflow: visible; white-space: normal; }
+#mtSize { font-weight: 700; }
+
+/* C28 label wrap */
+#shapeForm label, #shapeForm .mktool, .shapelib button, .shapelib .sname,
+.qb-btn span, #quickBar [data-qb] span, .layer-pick, .variantbtn, [data-var] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+.cc-error { color: var(--cad-danger, #C42B1C); }
+.cc-warn { color: var(--cad-lock, #C05600); }
+#makeCheckOut li[data-gi]:hover { text-decoration: underline; }

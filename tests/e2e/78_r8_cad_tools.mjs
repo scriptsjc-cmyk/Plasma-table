@@ -393,7 +393,7 @@ rec("advanced", "Fit", true, true, "fitView");
 
 await ev(page, () => { window.plasmaTest.setShapeFs(true); });
 a = await snap();
-rec("advanced", "Full screen", a.fs === false, false, "r8 removed the full-screen editor; the button is now a no-op");
+rec("advanced", "Full screen", a.fs === false, false, "Full screen was removed from the catalogue; setShapeFs stays a no-op");
 await ev(page, () => { window.plasmaTest.setShapeFs(false); });
 
 // customise toolbar
@@ -482,10 +482,8 @@ const rotOk = await ev(page, () => { const s = window.plasmaTest.sketch, b = s.b
 t.check("Turn 90° swaps width and height", rotOk);
 await ev(page, () => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect"); s.add("rect"); const [a,b] = s.items; a.x=20; a.y=20; b.x=40; b.y=25; s.pick([a.id,b.id]); s.commit(); s.join(); });
 t.check("Join unions two overlapping rectangles into one part", await ev(page, () => window.plasmaTest.sketch.items.length === 1 && window.plasmaTest.sketch.items[0].type === "custom"));
-await ev(page, () => { const t = document.getElementById("toast"); if (t) t.textContent = ""; const b = document.querySelector("[data-qb=fs]"); if (b) { b.scrollIntoView(); b.click(); } });
-await new Promise((r) => setTimeout(r, 200));
-const fsToast = await ev(page, () => (document.getElementById("toast")||{}).textContent || "");
-t.check("Full screen button explains that the editor was removed", /full-screen editor was removed/i.test(fsToast), fsToast);
+const fsGone = await ev(page, () => !document.querySelector("[data-qb=fs]") && !document.getElementById("btnShapeFs"));
+t.check("Full screen tool is gone (no dead button)", fsGone);
 await shot(page, "78-r8-cad-tools-advanced");
 const errs = (page.errors || []).filter((e) => !/404|favicon/i.test(e));
 t.check("no page errors during the tool sweep", errs.length === 0, errs.join(" | "));

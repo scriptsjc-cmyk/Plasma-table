@@ -113,9 +113,13 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
     if (!txt.trim()) { tres = null; drawOutlines($("mtPrev"), []); $("mtInfo").textContent = "Type some words."; $("mtAdd").disabled = true; return; }
     try { tres = textToContours(txt, textOpts()); } catch (e) { tres = null; $("mtInfo").textContent = "Could not make that text: " + e.message; $("mtAdd").disabled = true; return; }
     drawOutlines($("mtPrev"), tres.contours);
+    const miss = (tres.missing || []).filter(Boolean);
     const warn = tres.islands ? ` ${tres.islands} centre${tres.islands > 1 ? "s" : ""} are loose (no bridge possible).` : "";
-    $("mtInfo").textContent = `${tres.width.toFixed(0)} × ${tres.height.toFixed(0)} mm, stroke ${tres.weight.toFixed(1)} mm.` + warn;
-    $("mtAdd").disabled = !tres.contours.length;
+    const missNote = miss.length
+      ? ` These characters aren't in the font and were not added (they would not be cut as a “?”): ${miss.join(" ")}.`
+      : "";
+    $("mtInfo").textContent = `${tres.width.toFixed(0)} × ${tres.height.toFixed(0)} mm, stroke ${tres.weight.toFixed(1)} mm.` + warn + missNote;
+    $("mtAdd").disabled = !tres.contours.length || !!miss.length;
   };
   const textSoon = () => { clearTimeout(timer); timer = setTimeout(paintText, 120); };
   function openText() {
@@ -123,6 +127,8 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
     syncPro(); closeBoth();
     if (!$("mtWeight").value) $("mtWeight").placeholder = "auto";
     $("mtMargin").placeholder = "auto"; $("mtBridge").placeholder = "auto";
+    $("mtSize").value = "40";
+    $("mtSize").placeholder = "40";
     $("mtKind").dispatchEvent(new Event("change"));
     tdlg.classList.remove("hidden"); paintText();
     setTimeout(() => { if (matchMedia("(pointer: fine)").matches) $("mtText").focus(); }, 30);
@@ -177,6 +183,12 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
   }
   async function loadPicture(file) {
     if (!file) return;
+    const name = (file.name || "").toLowerCase();
+    if (name.endsWith(".svg") || (file.type || "").includes("svg")) {
+      $("trInfo").textContent = "Open a bitmap (PNG, JPG or similar) to trace. For an SVG drawing, use Open DXF / SVG instead — live SVG is not loaded here.";
+      $("trAdd").disabled = true;
+      return;
+    }
     $("trInfo").textContent = "Reading the picture…"; $("trAdd").disabled = true;
     try {
       let bmp;

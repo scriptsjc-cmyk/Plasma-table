@@ -7,6 +7,7 @@ import { applyDimEdit, closeDimEdit, closeNumPad, nudgeDimEdit, tabDimEdit } fro
 import { setShapeFs } from "../make/protools.js";
 import { closeCad } from "../make/cad.js";
 import { closeLibrary, closeVersions } from "../make/library.js";
+import { closeToolbarCustom } from "../make/toolbarcustom.js";
 
 export function bindDialogKeys() {
   document.addEventListener("keydown", (e) => {
@@ -40,6 +41,18 @@ export function bindDialogKeys() {
       e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
       if (!$("shapeLib").classList.contains("hidden")) closeLibrary();
       if (!$("verPop").classList.contains("hidden")) closeVersions();
+      return;
+    }
+    const resize = $("resizeDlg");
+    if (resize && !resize.classList.contains("hidden") && e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      resize.classList.add("hidden");
+      return;
+    }
+    const tc = $("toolbarCustom");
+    if (tc && tc.classList.contains("is-open") && e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      closeToolbarCustom();
       return;
     }
   }, true);

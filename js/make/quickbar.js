@@ -46,7 +46,11 @@ function paintPinnedTools(B, wrap, qb) {
   if (!show) { pin.innerHTML = ""; return; }
   pin.innerHTML = B("undo", "↶", "Undo") + B("redo", "↷", "Redo") + B("fit", "⤢", "Fit") + B("del", "🗑", "Delete");
   pin.querySelectorAll("[data-qb]").forEach((btn) => {
-    btn.onclick = () => { if (Date.now() < (S.uiBlockUntil || 0)) return; if (btn.getAttribute("aria-disabled") !== "true") quickAction(btn.dataset.qb); };
+    btn.onclick = () => {
+      const id = btn.dataset.qb;
+      if (Date.now() < (S.uiBlockUntil || 0) && id !== "undo" && id !== "redo") return;
+      if (btn.getAttribute("aria-disabled") !== "true") quickAction(id);
+    };
   });
 }
 
@@ -63,27 +67,33 @@ export function renderQuickBar() {
   const dis = {
     undo: !sketch.past.length, redo: !sketch.future.length,
     dup: !any, del: !any || locked, rot: !any || locked, mir: !any || locked,
-    size: !one || locked, resize: !one || locked, ver: !hasVer || locked, join: !many || locked, subtract: !many || locked,
+    size: !one || locked, resize: !one || locked || !(one && sketch.canResize(one)), ver: !hasVer || locked, join: !many || locked, subtract: !many || locked,
     offset: !one || locked, linarray: !one || locked, polar: !one || locked,
-    alignl: !many, alignb: !many, edge: !(one && one.type === "custom"),
+    alignl: !many, alignr: !many, alignt: !many, alignb: !many, aligncx: !many, aligncy: !many, alignc: !many,
+    distx: !many, disty: !many, mirv: !any || locked,
+    edge: !(one && one.type === "custom"),
   };
-  const onCls = { snap: !!sketch.opts.snap, draw: sketch.tool === "draw", measure: sketch.tool === "measure", rect: sketch.tool === "rect", disc: sketch.tool === "disc", fs: S.shapeFs, size: !!one };
+  const onCls = { snap: !!sketch.opts.snap, draw: sketch.tool === "draw", measure: sketch.tool === "measure", rect: sketch.tool === "rect", disc: sketch.tool === "disc", size: !!one };
   // UX2 fix: a greyed tool says why (tooltip + screen reader label)
   const whyOff = (id) => {
     if (id === "undo") return "nothing to undo"; if (id === "redo") return "nothing to redo";
     if (locked && !["undo", "redo"].includes(id) && any) return "the selected shape is locked";
-    if (id === "join" || id === "subtract" || id === "alignl" || id === "alignb") return "Shift-click or Ctrl-click to pick two or more shapes first";
+    if (id === "join" || id === "subtract" || id === "alignl" || id === "alignr" || id === "alignt" || id === "alignb" || id === "aligncx" || id === "aligncy" || id === "alignc" || id === "distx" || id === "disty") return "Shift-click or Ctrl-click to pick two or more shapes first";
     if (id === "edge") return "select a drawn or joined outline first (Draw outline, then tap it)";
     if (id === "ver") return "this shape has no versions";
+    if (id === "resize" && one && one.lock) return "this part is locked";
+    if (id === "resize" && one && (one.rot || 0) % 90 !== 0) return "this part is not axis-aligned (turn it to a 0° or 90° angle first)";
+    if (id === "resize" && one && !sketch.canResize(one)) return "this part can't be resized here";
     if (["size", "resize", "offset", "linarray", "polar"].includes(id)) return "select one shape first";
     return "select a shape first";
   };
-  const HINTS = { rot: "", mir: "", undo: "Ctrl+Z", redo: "Ctrl+Y", del: "Del", dup: "Ctrl+D", fit: "F", fs: "Esc", join: "Ctrl+J", snap: "S", rect: "R", disc: "C", draw: "L", measure: "D", select: "M", presets: "" };
+  const HINTS = { rot: "", mir: "H", mirv: "V", undo: "Ctrl+Z", redo: "Ctrl+Y", del: "Del", dup: "Ctrl+D", fit: "F", join: "Ctrl+J", snap: "S", rect: "R", disc: "C", draw: "L", measure: "D", select: "M", presets: "" };
   const B = (id, icon, label) => {
     const hint = (sketch.opts.pro && HINTS[id]) ? HINTS[id] : "";
     const long = id === "subtract"
       ? "Cut out — Shift-click or Ctrl-click to pick more. Later-picked shapes are cut from the first-picked part"
       : id === "join" ? "Join into one part — Shift-click or Ctrl-click to pick the shapes, then Join"
+      : id === "rot" ? "Turns 90° about the bottom-left corner"
       : label;
     const title = hint ? `${long} (${hint})` : long;
     const kbd = hint ? ` <kbd>${esc(hint)}</kbd>` : "";
@@ -176,18 +186,33 @@ export function quickAction(a) {
     case "del": sketch.remove(); break;
     case "rot": sketch.rotateBy(90); break;
     case "mir": sketch.mirror(); break;
+    case "mirv": sketch.flipV(); break;
     case "size": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast(clickVerb() + " one shape first."); break; }
     case "resize": openResize(); break;
     case "ver": openVersions(); break;
     case "fit": sketch.fitView(); break;
-    case "snap": sketch.opts.snap = sketch.opts.snap ? 0 : 1; try { sketch.saveOpts && sketch.saveOpts(); } catch (e) { /* ignore */ } try { savePrefs({ snap: !!sketch.opts.snap }); const ys = document.getElementById("yoursSnap"); if (ys) ys.checked = !!sketch.opts.snap; } catch (e) { /* ignore */ } sketch.draw(); toast(sketch.opts.snap ? "Snap on (1 mm)" : "Snap off"); break;
+    case "snap": {
+      const step = sketch.toggleSnap ? sketch.toggleSnap() : (sketch.opts.snap = sketch.opts.snap ? 0 : 1);
+      try { savePrefs({ snap: !!step, snapStep: step || savePrefs && undefined }); } catch (e) { /* ignore */ }
+      try { const ys = document.getElementById("yoursSnap"); if (ys) ys.checked = !!step; } catch (e) { /* ignore */ }
+      try { import("./headertools.js").then((m) => m.paintMakeHeaderTools && m.paintMakeHeaderTools()).catch(() => {}); } catch (e) { /* ignore */ }
+      sketch.draw();
+      toast(step ? ("Snap on (" + step + " mm)") : "Snap off");
+      break;
+    }
     case "draw": case "measure": case "nest": case "offset": case "linarray": case "polar": case "subtract":
       runPro(a); break;
     case "join": sketch.join(); break;
     case "alignl": sketch.align("left"); break;
+    case "alignr": sketch.align("right"); break;
+    case "alignt": sketch.align("top"); break;
     case "alignb": sketch.align("bottom"); break;
+    case "aligncx": sketch.align("centre"); break;
+    case "aligncy": sketch.align("middle"); break;
+    case "alignc": sketch.align("both"); break;
+    case "distx": sketch.distribute("x"); break;
+    case "disty": sketch.distribute("y"); break;
     case "edge": { const ep = $("edgePanel"); if (ep) { ep.classList.remove("hidden"); ep.hidden = false; ep.scrollIntoView({ block: "nearest" }); } toast(clickVerb() + " an edge on the outline, then change its length, angle or curve."); break; }
-    case "fs": setShapeFs(false); toast("The full-screen editor was removed. The tools stay in this header."); break;
     case "dims": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast(clickVerb() + " a blue size on the drawing, then type the new number."); break; }
     case "fillet": {
       const it = sketch.selected();
@@ -281,6 +306,12 @@ export function bindQuickBar() {
       const inp = $("qbSearch"); if (inp && wrap && wrap.classList.contains("search-open")) inp.focus();
     });
   }
-  $("quickBar").addEventListener("click", (e) => { if (Date.now() < (S.uiBlockUntil || 0)) return; const b = e.target.closest("[data-qb]"); if (b && !b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(b.dataset.qb); });
+  $("quickBar").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-qb]");
+    if (!b) return;
+    const id = b.dataset.qb;
+    if (Date.now() < (S.uiBlockUntil || 0) && id !== "undo" && id !== "redo") return;
+    if (!b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(id);
+  });
   bindQbRoving();
 }

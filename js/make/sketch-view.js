@@ -28,6 +28,15 @@ export class ViewMethods {
     this.view = { s, vx: (b[0] + b[2]) / 2 - w / 2 / s, vy: (b[1] + b[3]) / 2 - h / 2 / s + (padTop - padBot) / 2 / s };
     this.draw();
   }
+  zoomToBox(b) {
+    if (!b || !Number.isFinite(b[0])) return;
+    const [w, h] = this.size();
+    const bw = Math.max(20, b[2] - b[0]), bh = Math.max(20, b[3] - b[1]);
+    const pad = 80;
+    const s = Math.min((w - pad * 2) / bw, (h - pad * 2) / bh);
+    this.view = { s, vx: (b[0] + b[2]) / 2 - w / 2 / s, vy: (b[1] + b[3]) / 2 - h / 2 / s };
+    this.draw();
+  }
   ensureVisible() {
     if (!this.view) return;
     const [w, h] = this.size(), b = this.pickedBox();
@@ -90,6 +99,7 @@ export class ViewMethods {
       hole: themeColor("--cad-hole", "#FFFFFF"),
       partLine: themeColor("--cad-part-line", "#334155"),
       sel: themeColor("--cad-sel", "#0078D4"),
+      edge: themeColor("--cad-edge", "#C05621"),
       lock: themeColor("--cad-lock", "#C05600"),
       dim: themeColor("--cad-dim", "#0078D4"),
       guide: themeColor("--cad-guide", "#0078D4"),
@@ -312,7 +322,13 @@ export class ViewMethods {
         const [ax, ay] = S(a[0], a[1]), [bx, by] = S(b[0], b[1]);
         ctx.strokeStyle = C.sel; ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
         ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
-        this.tag(ctx, `${r1(Math.hypot(b[0] - a[0], b[1] - a[1]))} mm`, (ax + bx) / 2, (ay + by) / 2 - 16, C.lock);
+        const dx = b[0] - a[0], dy = b[1] - a[1];
+        const len = Math.hypot(dx, dy);
+        const ang = (Math.atan2(dy, dx) * 180 / Math.PI);
+        const rad = (this.measure.bInfo && this.measure.bInfo.radius) || (this.measure.aInfo && this.measure.aInfo.radius);
+        const bits = [`${r1(len)} mm`, `ΔX ${r1(dx)}`, `ΔY ${r1(dy)}`, `${r1(ang)}°`];
+        if (rad > 0) bits.push(`R ${r1(rad)}`);
+        this.tag(ctx, bits.join("  "), (ax + bx) / 2, (ay + by) / 2 - 16, C.lock);
       }
     }
 

@@ -6,8 +6,10 @@ import { $ } from "../core/dom.js";
 import { shapeDef } from "./sketch-util.js";
 
 function itemName(it) {
+  if (it && it.name) return it.name;
   const d = it && shapeDef(it.type);
   const base = (d && d.name) || (it && it.type) || "part";
+  if (it && it.type === "custom") return "Outline " + it.id;
   return base + " #" + it.id;
 }
 
@@ -119,16 +121,14 @@ export function bindLayers() {
     const it = sketch.item(id);
     if (!it) return;
     if (hide) {
-      it.hide = !it.hide;
-      sketch.draw();
-      if (sketch.onChange) sketch.onChange(true);
+      if (sketch.toggleHide) sketch.toggleHide(it);
+      else { it.hide = !it.hide; sketch.draw(); if (sketch.onChange) sketch.onChange(true); }
       paintLayers();
       return;
     }
     if (lock) {
-      it.lock = !it.lock;
-      sketch.draw();
-      if (sketch.onChange) sketch.onChange(true);
+      if (sketch.toggleLock) sketch.toggleLock(it);
+      else { it.lock = !it.lock; sketch.draw(); if (sketch.onChange) sketch.onChange(true); }
       paintLayers();
       return;
     }

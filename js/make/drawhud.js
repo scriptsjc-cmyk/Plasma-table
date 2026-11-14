@@ -46,10 +46,21 @@ export function applyHudPoint() {
   if (tool === "draw") {
     const a = lastPt();
     if (!a) return false;
-    const len = num($("drawHudLen"), 0);
-    const ang = num($("drawHudAng"), 0) * Math.PI / 180;
-    if (!(len >= 0.5)) return false;
-    const x = a[0] + len * Math.cos(ang), y = a[1] + len * Math.sin(ang);
+    const raw = (($("drawHudLen") && $("drawHudLen").value) || "").trim();
+    let x, y;
+    const xy = raw.match(/^(-?[\d.]+)\s*[,;]\s*(-?[\d.]+)$/);
+    const polar = raw.match(/^(-?[\d.]+)\s*@\s*(-?[\d.]+)$/);
+    if (xy) { x = Number(xy[1]); y = Number(xy[2]); }
+    else if (polar) {
+      const len = Number(polar[1]), ang = Number(polar[2]) * Math.PI / 180;
+      x = a[0] + len * Math.cos(ang); y = a[1] + len * Math.sin(ang);
+    } else {
+      const len = num($("drawHudLen"), 0);
+      const ang = num($("drawHudAng"), 0) * Math.PI / 180;
+      if (!(len >= 0.5)) return false;
+      x = a[0] + len * Math.cos(ang); y = a[1] + len * Math.sin(ang);
+    }
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
     if (Math.abs(x) > sketch.maxMm || Math.abs(y) > sketch.maxMm) { sketch.onMessage("That point is off the table."); return false; }
     const nx = Math.round(x * 10) / 10, ny = Math.round(y * 10) / 10;
     if (sketch.pushDrawPoint) sketch.pushDrawPoint(nx, ny);
@@ -119,7 +130,7 @@ export function paintDrawHud() {
       <button type="button" id="drawHudAdd" class="small">Add point</button>
       <button type="button" id="drawHudArc" class="small${arcOn ? " on" : ""}" aria-pressed="${arcOn ? "true" : "false"}">${arcOn ? "Arc on" : "Arc"}</button>
       <button type="button" id="drawHudClose" class="small go">Close</button>
-      <span class="muted small">Enter or Close finishes the outline · A or Arc starts a curve · type a length and click Add for the next point · Esc cancels</span>`;
+      <span class="muted small">Enter or Close finishes the outline · A or Arc starts a curve · type a length, or 100,50 for a point, or 40@90 for length@angle · Esc cancels</span>`;
     el.classList.remove("hidden"); el.hidden = false;
     fields = ["drawHudLen", "drawHudAng"];
   } else if (tool === "rect" && sketch.drawDraft) {

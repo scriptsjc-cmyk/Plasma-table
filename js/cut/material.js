@@ -71,7 +71,7 @@ export function renderMaterials() {
   $("ovDelay").placeholder = auto(r.pierce_delay_s);
   $("ovKerf").placeholder = auto(r.kerf_mm ?? S.chart.kerf_mm ?? 1.5); $("ovLead").placeholder = auto(r.lead_in_mm ?? S.chart.lead_in_mm ?? 3);
   $("ovPierce").placeholder = auto(r.pierce_height_mm ?? S.chart.pierce_height_mm); $("ovCut").placeholder = auto(r.cut_height_mm ?? S.chart.cut_height_mm);
-  const kerf = o.kerf_mm || (r.kerf_mm ?? S.chart.kerf_mm ?? 1.5);
+  const kerf = (Number.isFinite(Number(o.kerf_mm)) && Number(o.kerf_mm) >= 0) ? Number(o.kerf_mm) : (r.kerf_mm ?? S.chart.kerf_mm ?? 1.5);
   const feed = S.speed || r.feed_mm_min;
   const delay = o.pierce_delay_s || r.pierce_delay_s;
   const maxT = r.max_cuttable_mm || material().max_cuttable_mm || S.chart.max_cuttable_mm;

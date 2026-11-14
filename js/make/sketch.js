@@ -35,6 +35,7 @@ export class Sketch {
       if (typeof saved.pro === "boolean") this.opts.pro = saved.pro;
       if (typeof saved.pointSnap === "boolean") this.opts.pointSnap = saved.pointSnap;
     } catch (e) { /* ignore */ }
+    this._snapStep = this.opts.snap > 0 ? this.opts.snap : 1;
     this.load();
     this.sel = this.sel || { ids: [], hole: null };
     this.past = [];
@@ -72,6 +73,8 @@ export class Sketch {
     if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > max * 2 || Math.abs(y) > max * 2) return null;
     const rot = Number(it.rot) || 0;
     const out = { id: Number(it.id) || 0, type: it.type, p, x, y, rot: Number.isFinite(rot) ? rot : 0, holes: {}, lock: !!it.lock, fy: !!it.fy, fx: !!it.fx };
+    if (it.hide) out.hide = true;
+    if (it.name) out.name = String(it.name).slice(0, 80);
     if (it.op === "score" || it.op === "mark") out.op = it.op;
     if (it.type === "custom") {
       const cs = it.shape && Array.isArray(it.shape.cs) ? it.shape.cs : null;
@@ -143,9 +146,17 @@ export class Sketch {
     }
     this.remember();
     const it = this.newItem(type, overrides);
+    const tiny = (hole && Number(it.p.d) > 0 && it.p.d < 2) || (Number(it.p.hole) > 0 && it.p.hole < 2);
+    if (tiny) {
+      this.past.pop();
+      this.onMessage("A hole smaller than 2 mm will not cut (and may not show on the drawing). Use at least 2 mm, or bigger than the kerf.");
+      return;
+    }
+    if (host && it.type === "boltcircle") this.fitPatternToHost(it, host);
     this.items.push(it);
     if (hole && host) {                                                  // holes drop into the middle of the part (or the solid spot nearest it, e.g. beside a ring's bore)
-      if (!this.placeHoleIn(it, host) && !quiet) this.onMessage("That hole is bigger than the solid part of the shape. Make the hole smaller or the part bigger.");
+      const ok = this.placeHoleIn(it, host);
+      if (!ok && !quiet) this.onMessage("That hole is bigger than the solid part of the shape, or it falls off the plate. Make the hole smaller or the part bigger.");
     } else {
       const b = this.allBoxExcept([it]);
       if (b) { it.x = Math.round(b[2] + 15); it.y = Math.round(b[1]); }
@@ -205,7 +216,33 @@ export class Sketch {
     if (this.items.some((i) => i.lock)) { this.onMessage("Unlock locked parts before clearing the drawing."); return; }
     this.remember(); this.items = []; this.pick([]); this.commit(); this.onSelect();
   }
-  setSnap(v) { this.opts.snap = v; this.saveOpts(); }
+  setSnap(v) {
+    this.opts.snap = v;
+    if (Number(v) > 0) this._snapStep = Number(v);
+    this.saveOpts();
+  }
+  // Toggle snap on/off without wiping the last step (C22, C28). Off remembers 0.5 / 5 / 10 mm.
+  toggleSnap() {
+    if (this.opts.snap) {
+      const cur = Number(this.opts.snap);
+      if (cur > 0) this._snapStep = cur;
+      this.opts.snap = 0;
+      this.saveOpts();
+      return 0;
+    }
+    let step = this._snapStep;
+    const snapEl = typeof document !== "undefined" && document.getElementById && document.getElementById("skSnap");
+    if (!(step > 0) && snapEl) {
+      const n = Number(snapEl.value);
+      if (n > 0) step = n;
+    }
+    if (!(step > 0)) step = 1;
+    this.opts.snap = step;
+    this._snapStep = step;
+    this.saveOpts();
+    if (snapEl && snapEl.options && [...snapEl.options].some((o) => o.value === String(step))) snapEl.value = String(step);
+    return step;
+  }
   setGuides(on) { this.opts.guides = on; this.saveOpts(); }
   setPro(on) { this.opts.pro = !!on; this.saveOpts(); this.draw(); }
   setPointSnap(on) { this.opts.pointSnap = !!on; this.saveOpts(); }

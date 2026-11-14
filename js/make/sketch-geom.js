@@ -218,8 +218,32 @@ export class GeomMethods {
   }
   // ---- the sheet layout: a hole drawn inside a part belongs to that part (it moves, turns, copies and goes with it; it is never moved on its own)
   ownedHoles(host) {
-    if (!this.layout || !this._holes || !this._holes.size || !host) return [];
-    return this.items.filter((o) => o !== host && this._holes.has(o.id) && this.isHole(o) && this.hostPart(o) === host);
+    if (!host) return [];
+    if (this.layout && this._holes && this._holes.size) {
+      return this.items.filter((o) => o !== host && this._holes.has(o.id) && this.isHole(o) && this.hostPart(o) === host);
+    }
+    // Make a part: a separate hole item that sits in this host travels with it.
+    return this.items.filter((o) => o !== host && this.isHole(o) && (this.hostPart(o) || this.hostOf(o)) === host);
+  }
+  // Shrink a bolt-circle (or similar) so it fits inside the host plate with an edge gap (C15).
+  fitPatternToHost(it, host) {
+    if (!it || !host || it.type !== "boltcircle") return true;
+    const hb = this.boxOf(host);
+    if (!hb) return true;
+    const w = hb[2] - hb[0], h = hb[3] - hb[1];
+    const hole = Math.max(0, Number(it.p.hole) || 0);
+    const gap = Math.max(5, hole * 0.5);
+    const maxPcd = Math.max(0, Math.min(w, h) - hole - 2 * gap);
+    const cur = Number(it.p.pcd) || 0;
+    if (cur > maxPcd + 0.05) {
+      if (maxPcd < hole + 1) {
+        this.onMessage("That ring of holes does not fit on this plate. Make the plate bigger or the holes smaller.");
+        return false;
+      }
+      it.p.pcd = Math.round(maxPcd * 10) / 10;
+      this.onMessage("Ring Ø set to " + it.p.pcd + " mm so it fits on the plate with a " + Math.round(gap) + " mm edge gap.");
+    }
+    return true;
   }
   holeOwner(it) {
     if (!this.layout || !this._holes || !it || !this._holes.has(it.id) || !this.isHole(it)) return null;

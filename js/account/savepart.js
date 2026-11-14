@@ -7,7 +7,11 @@ import * as A from "./account.js";
 // Save: a brand-new drawing saves straight away. A part that came from the account asks first: save over it
 // (an Undo bar puts the old version back) or save as a copy in the same parts list.
 export async function saveCurrent(mode) {
-  if (!A.isSignedIn()) { openAccount("in"); throw new Error("Sign in to save parts to your account."); }
+  if (!A.isSignedIn()) {
+    openAccount("in");
+    toast("Sign in to save parts to your account.", true);
+    return null;
+  }
   if (!host || !host.getDesign) throw new Error("Nothing to save.");
   const items = host.getDesign();
   if (!items || !items.length) throw new Error("The drawing is empty.");

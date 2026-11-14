@@ -160,8 +160,8 @@ function renderShapeFormCore() {
       <div class="skbtns">
         <button data-sk="join" class="join" title="Ctrl+J">⬟ Join into one part</button>
         <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
-        <button data-sk="rotateBy" data-arg="90" title="R">⟳ Turn 90°</button>
-        <button data-sk="mirror" title="M">⇋ Mirror</button>
+        <button data-sk="rotateBy" data-arg="90" title="Turns 90° about the bottom-left corner">⟳ Turn 90°</button>
+        <button data-sk="mirror" title="Mirror left-right (H)">⇋ Mirror</button>
         <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
       </div>
       <h4>Line up with the biggest one</h4>
@@ -226,8 +226,8 @@ function renderShapeFormCore() {
       ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
     </div>
     <div class="skbtns">
-      ${isRoundType(it.type) ? "" : `<button data-sk="rotateBy" data-arg="90" title="R">⟳ Turn 90°</button>`}
-      <button data-sk="mirror" title="M">⇋ Mirror</button>
+      ${isRoundType(it.type) ? "" : `<button data-sk="rotateBy" data-arg="90" title="Turns 90° about the bottom-left corner">⟳ Turn 90°</button>`}
+      <button data-sk="mirror" title="Mirror left-right (H)">⇋ Mirror</button>
       <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>
       ${moved ? `<button data-sk="resetHoles">↺ Holes back</button>` : ""}
       ${sh.sheet ? `<button data-sk="explode" title="Make each piece its own part, so you can place them on the bed one by one">✂ Split into parts</button>` : ""}
@@ -247,7 +247,7 @@ export function bindShapeForm() {
     const i = e.target, v = evalExpr(i.value) ;
     if (i.value.trim() === "" || !Number.isFinite(v)) return;
     const it = sketch.selected(); if (!it) return;
-    if (i.dataset.angle || i.dataset.cw || i.dataset.ch || i.dataset.hrel) return;     // applied on change
+    if (i.dataset.angle || i.dataset.cw || i.dataset.ch || i.dataset.hrel || i.dataset.pos) return;     // applied on change (typed position is never snapped)
     if (i.dataset.p) {
       if (it.lock) return;
       const k = i.dataset.p;
@@ -257,12 +257,6 @@ export function bindShapeForm() {
       if (["n", "cols", "rows"].includes(k) && (v < 0 || v > 64)) return;
       if (v > (sketch.maxMm || 2600) * 4) return;
       it.p[k] = v;
-    }
-    else if (i.dataset.pos) {                // position = bottom-left of the shape; for a hole in a part, from the part's bottom-left
-      const b = sketch.boxOf(it);
-      const host = sketch.hostPart && sketch.hostPart(it);
-      const origin = host ? sketch.boxOf(host) : [0, 0];
-      if (i.dataset.pos === "x") it.x += (origin[0] + v) - b[0]; else it.y += (origin[1] + v) - b[1];
     }
     sketch.save(); sketch.draw(); useShapeSoon();
   });
@@ -280,7 +274,22 @@ export function bindShapeForm() {
       if (it && !it.lock && Number.isFinite(v)) sketch.setHoleOffset(e.target.dataset.hrel, v);
       editBefore = sketch.snapshot(); renderShapeForm(); useShapeSoon(); return;
     }
-    if (e.target.dataset.angle) { sketch.setAngle(Number(e.target.value)); editBefore = sketch.snapshot(); renderShapeForm(); return; }
+    if (e.target.dataset.pos) {
+      const v = evalExpr(e.target.value);
+      if (Number.isFinite(v)) {
+        sketch.setPos(e.target.dataset.pos, v);
+        toast("Applied " + (e.target.dataset.pos === "x" ? "X" : "Y") + " = " + v + " mm.");
+      }
+      editBefore = sketch.snapshot(); renderShapeForm(); useShapeSoon(); return;
+    }
+    if (e.target.dataset.angle) {
+      const v = evalExpr(e.target.value);
+      if (Number.isFinite(v)) {
+        sketch.setAngle(v);
+        toast("Rotated " + v + "° about the centre.");
+      }
+      editBefore = sketch.snapshot(); renderShapeForm(); useShapeSoon(); return;
+    }
     if (editBefore && editBefore !== sketch.snapshot()) { sketch.past.push(editBefore); sketch.future = []; }
     editBefore = sketch.snapshot(); renderShapeForm();
   });
