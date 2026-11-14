@@ -595,6 +595,14 @@ export function foldThumbSvg(model, w = 96, h = 72, cam = DEFAULT_CAM) {
 
 // Persist orbit per part so re-painting the form doesn't snap the view back.
 const orbit = { yaw: DEFAULT_CAM.yaw, pitch: DEFAULT_CAM.pitch, key: "" };
+// Phone "Folded view" starts collapsed; remember if the user opened it this session.
+const phoneFold = { open: false };
+
+function isPhoneFold() {
+  return typeof document !== "undefined" && (
+    document.body.classList.contains("phone-ui") || !document.body.classList.contains("laptop-ui")
+  );
+}
 
 export function mountFoldView(host, sh, params) {
   if (!host) return;
@@ -603,11 +611,22 @@ export function mountFoldView(host, sh, params) {
   host.hidden = false;
   const key = sh && sh.id;
   if (orbit.key !== key) { orbit.key = key; orbit.yaw = DEFAULT_CAM.yaw; orbit.pitch = DEFAULT_CAM.pitch; }
+  const phone = isPhoneFold();
   let canvas = host.querySelector("canvas.fold3d");
   if (!canvas) {
-    host.innerHTML = `<div class="fold3d-wrap"><canvas class="fold3d" width="360" height="200" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><p class="fold3d-cap">Folded view — drag to turn. The drawing is the flat pattern you cut.</p></div>`;
+    const thumb = foldThumbSvg(model, 56, 40);
+    const open = phone ? (phoneFold.open ? " open" : "") : " open";
+    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="360" height="200" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><p class="fold3d-cap">Folded view — drag to turn. The drawing is the flat pattern you cut.</p></div></details>`;
     canvas = host.querySelector("canvas.fold3d");
     bindOrbit(canvas);
+    const box = host.querySelector("details.fold3d-box");
+    if (box) box.addEventListener("toggle", () => {
+      if (isPhoneFold()) phoneFold.open = box.open;
+      if (box.open && host._model) drawFoldCanvas(canvas, host._model, orbit);
+    });
+  } else {
+    const mini = host.querySelector(".fold3d-mini");
+    if (mini) mini.innerHTML = foldThumbSvg(model, 56, 40);
   }
   drawFoldCanvas(canvas, model, orbit);
   host._model = model;

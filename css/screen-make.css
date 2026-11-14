@@ -1154,10 +1154,49 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
   color: var(--muted);
   font-size: var(--fs-sm);
 }
-/* Phone: the 3D view lives in the size form (above the inputs), not over the drawing. */
+/* Phone: compact Folded view in the size form (does not change the drawing/form split).
+   Collapsed, the thumb sits on the shape-name row so it stays above the sticky Next. */
+body.phone-ui.has-fold3d .selhead { padding-right: 176px; }
+body.phone-ui .fold3d-host { margin: 6px 0 8px; }
+body.phone-ui .fold3d-host:not(:has(details[open])) {
+  height: 0;
+  margin: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+}
+body.phone-ui .fold3d-host:not(:has(details[open])) .fold3d-sum {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  gap: 6px;
+  padding: 2px 6px;
+  background: #e8edf2;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+body.phone-ui .fold3d-box {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: #e8edf2;
+}
+body.phone-ui .fold3d-sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 8px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 650;
+}
+body.phone-ui .fold3d-sum::-webkit-details-marker,
+body.phone-ui .fold3d-sum::marker { display: none; }
+body.phone-ui .fold3d-mini { flex: 0 0 auto; line-height: 0; }
+body.phone-ui .fold3d-mini svg { width: 56px; height: 40px; display: block; }
 body.phone-ui .fold3d-wrap canvas.fold3d,
-body:not(.laptop-ui) .fold3d-wrap canvas.fold3d { height: 112px; }
-body.phone-ui .fold3d-host { margin: 6px 0 8px; flex: 0 0 auto; }
+body:not(.laptop-ui) .fold3d-wrap canvas.fold3d { height: 100px; }
 body.phone-ui .fold3d-cap,
 body:not(.laptop-ui) .fold3d-cap {
   padding: 3px 8px 5px;
@@ -1165,13 +1204,8 @@ body:not(.laptop-ui) .fold3d-cap {
   line-height: 1.3;
   white-space: normal;
 }
-/* More room for the size form, and keep Next in the flow so it cannot sit on the 3D card. */
-body.app-shell.phone-ui.has-fold3d.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid,
-body.app-shell.phone-ui.has-fold3d[data-screen="make"].simple-mode:not(.short-land):not(.shape-fs) .cutgrid {
-  grid-template-rows: minmax(0, 1fr) minmax(300px, 1.25fr) !important;
-}
-body.phone-ui.has-fold3d[data-screen="make"] .stepPane > .step .nav {
-  position: static;
-}
+/* Laptop: the disclosure chrome is hidden; the 3D view stays open in the form. */
+body.laptop-ui .fold3d-box { border: 0; background: transparent; }
+body.laptop-ui .fold3d-sum { display: none; }
 .pb-tile { position: relative; }
 .pb-tile svg.fold-thumb { width: 96px; height: 72px; }
