@@ -58,6 +58,8 @@ input[type=checkbox] { width: 44px; height: 44px; min-width: 44px; min-height: 4
 .checklist input { width: 44px; height: 44px; min-width: 44px; min-height: 44px; flex: none; }
 .numpad-keys button.wide { grid-column: span 2; }
 .cadfields input { width: 100%; min-height: var(--tap); font-size: 18px; box-sizing: border-box; }
+.cadfields input[type=checkbox] { width: 44px; min-width: 44px; max-width: 44px; height: 44px; }
+.cadfields label.check { flex-direction: row; align-items: center; gap: 10px; color: var(--text); font-size: var(--fs-md); font-weight: 650; }
 .shapelib-head h2 { margin: 0; font-size: var(--fs-xl); }
 button.locked { position: relative; }
 @keyframes torchpulse { 50% { filter: brightness(1.15); } }

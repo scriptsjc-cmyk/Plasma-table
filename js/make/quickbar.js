@@ -72,7 +72,7 @@ export function renderQuickBar() {
   const whyOff = (id) => {
     if (id === "undo") return "nothing to undo"; if (id === "redo") return "nothing to redo";
     if (locked && !["undo", "redo"].includes(id) && any) return "the selected shape is locked";
-    if (id === "join" || id === "subtract" || id === "alignl" || id === "alignb") return "select two or more shapes first";
+    if (id === "join" || id === "subtract" || id === "alignl" || id === "alignb") return "Shift-click or Ctrl-click to pick two or more shapes first";
     if (id === "edge") return "select a drawn or joined outline first (Draw outline, then tap it)";
     if (id === "ver") return "this shape has no versions";
     if (["size", "resize", "offset", "linarray", "polar"].includes(id)) return "select one shape first";
@@ -81,7 +81,10 @@ export function renderQuickBar() {
   const HINTS = { rot: "", mir: "", undo: "Ctrl+Z", redo: "Ctrl+Y", del: "Del", dup: "Ctrl+D", fit: "F", fs: "Esc", join: "Ctrl+J", snap: "S", rect: "R", disc: "C", draw: "L", measure: "D", select: "M", presets: "" };
   const B = (id, icon, label) => {
     const hint = (sketch.opts.pro && HINTS[id]) ? HINTS[id] : "";
-    const long = id === "subtract" ? "Cut out — later-picked shapes are cut from the first-picked part" : label;
+    const long = id === "subtract"
+      ? "Cut out — Shift-click or Ctrl-click to pick more. Later-picked shapes are cut from the first-picked part"
+      : id === "join" ? "Join into one part — Shift-click or Ctrl-click to pick the shapes, then Join"
+      : label;
     const title = hint ? `${long} (${hint})` : long;
     const kbd = hint ? ` <kbd>${esc(hint)}</kbd>` : "";
     const why = dis[id] ? ` – ${whyOff(id)}` : "";

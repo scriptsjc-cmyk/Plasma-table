@@ -169,6 +169,18 @@ export class InputMethods {
         const eh = this.hitCentreEdge ? this.hitCentreEdge(sx, sy, touch) : this.hit(sx, sy, touch);
         if (this.takeCentreEdge && this.takeCentreEdge(eh)) { this.draw(); return; }
       }
+      if (this.polarPick && !panBtn) {
+        let px = wx, py = wy;
+        const sn = snapWorld(this, wx, wy);
+        if (sn) { px = sn.x; py = sn.y; this.snapMark = sn; }
+        else if (this.opts.snap) {
+          const step = this.opts.snap || 0.1;
+          px = Math.round(wx / step) * step; py = Math.round(wy / step) * step;
+        }
+        const job = this.polarPick;
+        this.polarArray(job.n, job.pcd, { x: px, y: py, mode: "point" });
+        this.draw(); return;
+      }
       if (this.filletPick && !panBtn) {
         const ch = this.hitCustomHandles(sx, sy, touch, true);
         if (ch && ch.kind === "vertex") {
@@ -412,13 +424,9 @@ export class InputMethods {
       if (d.kind === "box") {
         if (!d.moved) { if (this.sel.ids.length) { this.pick([]); this.onSelect(); } this.draw(); return; }
         const box = screenBoxToWorld(this.toWorld.bind(this), d.sx, d.sy, d.cx, d.cy);
-        const leftToRight = d.cx >= d.sx;
         const hit = (i) => {
           const b = this.boxOf(i);
-          if (!b) return false;
-          if (!leftToRight) return boxOverlap(b, box);
-          const pad = 0.2;
-          return b[0] >= box[0] - pad && b[1] >= box[1] - pad && b[2] <= box[2] + pad && b[3] <= box[3] + pad;
+          return !!(b && boxOverlap(b, box));
         };
         const ids = this.items.filter(hit).map((i) => i.id);
         this.pick(d.add ? [...new Set([...this.sel.ids, ...ids])] : ids);
@@ -533,6 +541,11 @@ export class InputMethods {
         if (this.centrePick) {
           e.stopImmediatePropagation(); e.preventDefault();
           this.cancelCentrePick && this.cancelCentrePick();
+          return;
+        }
+        if (this.polarPick) {
+          e.stopImmediatePropagation(); e.preventDefault();
+          this.cancelPolarPick && this.cancelPolarPick();
           return;
         }
         if (this.drawPts && this.drawPts.length || this.drawDraft) {

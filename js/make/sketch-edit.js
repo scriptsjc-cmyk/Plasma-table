@@ -1,6 +1,6 @@
 // Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...).
 import { MIN, cleanContour, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
-import { bbox, bulgeMidpoint, classifyContainment, differenceOutlines, offsetPolygon, pointInPoly, selfIntersects, signedArea, unionMany, unionOutlines } from "../core/geom.js";
+import { assessOffset, bbox, bulgeMidpoint, classifyContainment, differenceOutlines, offsetLoop, pointInPoly, selfIntersects, signedArea, unionMany, unionOutlines } from "../core/geom.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
 
@@ -368,59 +368,166 @@ export class EditMethods {
     }
     this.pick(ids); this.ensureVisible(); this.commit(); this.onSelect();
   }
-  polarArray(n, pcd) {
+  // Centre used by a circular array: a clicked point, the host plate, or the picked shape itself (C13).
+  arrayPivotOf(list, pivot) {
+    if (pivot && Number.isFinite(Number(pivot.x)) && Number.isFinite(Number(pivot.y))) return [Number(pivot.x), Number(pivot.y)];
+    const mode = (pivot && pivot.mode) || (typeof pivot === "string" ? pivot : "shape");
+    if (mode === "click") return null;
+    if (mode === "host") {
+      for (const it of list) {
+        const h = this.hostOf(it) || this.hostPart && this.hostPart(it);
+        if (h) { const b = this.boxOf(h); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]; }
+      }
+      const others = this.items.filter((i) => !list.includes(i) && !this.isHole(i));
+      if (others.length) {
+        others.sort((a, b) => {
+          const ba = this.boxOf(a), bb = this.boxOf(b);
+          return (bb[2] - bb[0]) * (bb[3] - bb[1]) - (ba[2] - ba[0]) * (ba[3] - ba[1]);
+        });
+        const b = this.boxOf(others[0]);
+        return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+      }
+      return null;
+    }
+    const box = this.pickedBox() || this.boxOf(list[0]);
+    return [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
+  }
+  startPolarPick(n, pcd) {
+    this.polarPick = { n, pcd };
+    this.onMessage("Click the centre of the circle (a plate centre, a hole, or any point). Esc cancels.");
+    this.draw();
+  }
+  cancelPolarPick() {
+    if (!this.polarPick) return;
+    this.polarPick = null;
+    this.onMessage("Circular array cancelled.");
+    this.draw();
+  }
+  // Move a part so its bounding-box centre sits at (tx, ty), after any rotation has been applied.
+  _placeCentre(it, tx, ty) {
+    it._key = null;
+    const b = this.boxOf(it);
+    if (!b) return;
+    it.x = r1(it.x + tx - (b[0] + b[2]) / 2);
+    it.y = r1(it.y + ty - (b[1] + b[3]) / 2);
+    it._key = null;
+  }
+  polarArray(n, pcd, pivot) {
     const list = this.picked(); if (!list.length) return;
     if (list.some((i) => i.lock)) { this.onMessage("Unlock the part before making a polar array."); return; }
     n = Math.max(2, Math.min(36, Math.round(n || 4)));
     const box = this.pickedBox();
-    const cx = (box[0] + box[2]) / 2, cy = (box[1] + box[3]) / 2;
     const pcdN = Number(pcd);
     if (Number.isFinite(pcdN) && (pcdN > this.maxMm || pcdN < 0)) { this.onMessage("That bolt-circle is bigger than the table."); return; }
     let R = Number.isFinite(pcdN) && pcdN > 0 ? pcdN / 2 : Math.max(box[2] - box[0], box[3] - box[1]) / 2 + 10;
     if (!(R <= this.maxMm)) { this.onMessage("That bolt-circle is bigger than the table."); return; }
+    const mode = (pivot && pivot.mode) || (typeof pivot === "string" ? pivot : null);
+    if (mode === "click" && !(pivot && Number.isFinite(Number(pivot.x)))) { this.startPolarPick(n, pcd); return; }
+    const cxy = this.arrayPivotOf(list, pivot);
+    if (!cxy) {
+      this.onMessage("There is no plate to use as the centre. Click a point on the drawing, or pick the plate first.");
+      this.startPolarPick(n, pcd);
+      return;
+    }
+    const [cx, cy] = cxy;
+    this.polarPick = null;
     this.remember();
     const ids = [...this.sel.ids];
-    const atCentre = list.length === 1 && Math.hypot((box[0] + box[2]) / 2 - cx, (box[1] + box[3]) / 2 - cy) < 0.05;
-    if (atCentre) {
-      const src = list[0], b = this.boxOf(src), scx = (b[0] + b[2]) / 2, scy = (b[1] + b[3]) / 2;
-      src.x = r1(src.x + (cx + R) - scx); src.y = r1(src.y + cy - scy);
-    }
-    for (let k = 1; k < n; k++) {
-      const a = (k / n) * 2 * Math.PI;
-      for (const src of list) {
-        const c = { ...clone(src), id: this.nextId++, lock: false };
-        const b = this.boxOf(src), scx = (b[0] + b[2]) / 2, scy = (b[1] + b[3]) / 2;
-        let dx = scx - cx, dy = scy - cy;
-        if (Math.hypot(dx, dy) < 0.05) { dx = R; dy = 0; }
-        const rx = dx * Math.cos(a) - dy * Math.sin(a), ry = dx * Math.sin(a) + dy * Math.cos(a);
-        c.x = r1(src.x + (cx + rx) - scx); c.y = r1(src.y + (cy + ry) - scy);
-        c.rot = (((src.rot || 0) + (a * 180) / Math.PI) % 360 + 360) % 360;
+    const pcdGiven = Number.isFinite(pcdN) && pcdN > 0;
+    for (const src of list) {
+      const b = this.boxOf(src), scx = (b[0] + b[2]) / 2, scy = (b[1] + b[3]) / 2;
+      let dx = scx - cx, dy = scy - cy;
+      let r0 = Math.hypot(dx, dy);
+      const a0 = r0 > 0.05 ? Math.atan2(dy, dx) : 0;
+      if (pcdGiven || r0 < 0.05) r0 = R;
+      if (pcdGiven || Math.hypot(dx, dy) < 0.05) this._placeCentre(src, cx + r0 * Math.cos(a0), cy + r0 * Math.sin(a0));
+      const rot0 = src.rot || 0;
+      for (let k = 1; k < n; k++) {
+        const ang = a0 + (k / n) * 2 * Math.PI;
+        const c = { ...clone(src), id: this.nextId++, lock: false, rot: rot0 };
+        c.rot = ((rot0 + (k / n) * 360) % 360 + 360) % 360;
         this.items.push(c); ids.push(c.id);
+        this._placeCentre(c, cx + r0 * Math.cos(ang), cy + r0 * Math.sin(ang));
       }
     }
     this.pick(ids); this.ensureVisible(); this.commit(); this.onSelect();
   }
-  offsetBy(d) {
+  offsetBy(d, opts = {}) {
     const it = this.selected(); if (!it) { this.onMessage("Pick one part to offset."); return; }
     if (!this.canMutate(it)) return;
     d = Number(d); if (!Number.isFinite(d) || !d) return;
     if (Math.abs(d) > this.maxMm) { this.onMessage("That offset is bigger than the table."); return; }
+    const keep = !!opts.keepOriginal, both = !!opts.bothSides;
+    const dist = both ? Math.abs(d) : d;
+    // A disc (or ring) stays a true circle: change the diameter(s) rather than tessellating.
+    if (!both && (it.type === "disc" || it.type === "hole") && Number(it.p && it.p.d) > 0 && !(it.rot)) {
+      const oldD = Number(it.p.d), newD = oldD + 2 * dist;
+      const reason = newD <= 0.4 ? "That offset would collapse the circle. Use a smaller shrink distance."
+        : (dist < 0 && newD < 2 ? "That offset would leave a sliver too thin to cut cleanly. Use a smaller distance." : null);
+      if (reason) { this.onMessage(reason); return; }
+      this.remember();
+      const cx = it.x + oldD / 2, cy = it.y + oldD / 2;
+      const target = keep ? { ...clone(it), id: this.nextId++, lock: false } : it;
+      target.p = { ...target.p, d: r1(newD) };
+      target.x = r1(cx - newD / 2); target.y = r1(cy - newD / 2);
+      if (keep) this.items.push(target);
+      this.pick([target.id]); this.commit(); this.onSelect();
+      return;
+    }
+    if (!both && it.type === "ring" && Number(it.p && it.p.d) > 0 && !(it.rot)) {
+      const oldD = Number(it.p.d), oldId = Number(it.p.id) || 0;
+      const newD = oldD + 2 * dist, newId = Math.max(0, oldId - 2 * dist);
+      const reason = newD <= 0.4 ? "That offset would collapse the ring. Use a smaller shrink distance."
+        : (newId >= newD - 0.4 ? "That offset would leave a sliver too thin to cut cleanly. Use a smaller distance."
+        : (dist < 0 && newD < 2 ? "That offset would leave a sliver too thin to cut cleanly. Use a smaller distance." : null));
+      if (reason) { this.onMessage(reason); return; }
+      this.remember();
+      const cx = it.x + oldD / 2, cy = it.y + oldD / 2;
+      const target = keep ? { ...clone(it), id: this.nextId++, lock: false } : it;
+      target.p = { ...target.p, d: r1(newD), id: r1(newId) };
+      target.x = r1(cx - newD / 2); target.y = r1(cy - newD / 2);
+      if (keep) this.items.push(target);
+      this.pick([target.id]); this.commit(); this.onSelect();
+      return;
+    }
     const cs = this.contoursOf(it); if (!cs.length) return;
+    const offOne = (c, amount) => offsetLoop(c.pts, amount, c);
+    let outerRes, holeCs;
+    if (both) {
+      const outR = offOne(cs[0], dist), inR = offOne(cs[0], -dist);
+      if (!outR.ok) { this.onMessage(outR.reason); return; }
+      if (!inR.ok) { this.onMessage(inR.reason || "The inside of that band is too tight for this shape."); return; }
+      outerRes = outR;
+      holeCs = [{ pts: inR.pts, closed: true, circle: inR.circle }];
+    } else {
+      outerRes = offOne(cs[0], dist);
+      if (!outerRes.ok) { this.onMessage(outerRes.reason); return; }
+      holeCs = cs.slice(1).map((h) => {
+        const r = offOne(h, -dist);
+        return r.ok ? { pts: r.pts, closed: true, circle: r.circle } : null;
+      }).filter(Boolean);
+    }
+    const reason = assessOffset(cs[0].pts, outerRes.pts, both ? dist : dist);
+    if (reason) { this.onMessage(reason); return; }
     this.remember();
-    const outer = cs[0].pts, sa = signedArea(outer);
-    const pts = sa < 0 ? [...outer].reverse() : outer;
-    let off;
-    try { off = offsetPolygon(pts, d); } catch (e) { this.onMessage("Couldn't offset that shape."); this.past.pop(); return; }
-    if (!off || off.length < 3) { this.onMessage("Offset is too tight for this shape."); this.past.pop(); return; }
-    const holes = cs.slice(1).map((h) => {
-      const p = signedArea(h.pts) < 0 ? h.pts : [...h.pts].reverse();
-      try { return { pts: offsetPolygon(p, -d), closed: true }; } catch (e) { return h; }
-    }).filter((h) => h.pts && h.pts.length >= 3);
-    const b = bbox([{ pts: off }]);
-    const local = (c) => mapC(c, ([x, y]) => [r1(x - b[0]), r1(y - b[1])]);
-    it.type = "custom"; it.p = { scale: 100 }; it.rot = 0; it.fx = false; it.fy = false; it.holes = {};
-    it.shape = { cs: [local({ pts: off, closed: true }), ...holes.map(local)] };
-    it.x = r1(b[0]); it.y = r1(b[1]);
+    const b = bbox([{ pts: outerRes.pts }, ...holeCs]);
+    const local = (c) => {
+      const m = mapC(c, ([x, y]) => [r1(x - b[0]), r1(y - b[1])]);
+      if (c.circle) m.circle = { cx: r1(c.circle.cx - b[0]), cy: r1(c.circle.cy - b[1]), r: c.circle.r };
+      return m;
+    };
+    const outerC = local({ pts: outerRes.pts, closed: true, circle: outerRes.circle });
+    const shape = { cs: [outerC, ...holeCs.map(local)] };
+    if (keep) {
+      const neu = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, fx: false, fy: false, holes: {}, shape };
+      this.items.push(neu);
+      this.pick([it.id, neu.id]);
+    } else {
+      it.type = "custom"; it.p = { scale: 100 }; it.rot = 0; it.fx = false; it.fy = false; it.holes = {};
+      it.shape = shape;
+      it.x = r1(b[0]); it.y = r1(b[1]);
+      this.pick([it.id]);
+    }
     this.commit(); this.onSelect();
   }
   subtract() {
@@ -581,7 +688,8 @@ export class EditMethods {
     this.items.push(it);
     this.pick([it.id]); this.tool = null; this.drawPts = []; this.drawBulges = []; this.drawArc = false;
     this.commit(); this.onSelect();
-    this.onMessage("Outline closed. Drag a corner to move it, or click an edge to type its length.");
+    if (this.isHole(it)) this.onMessage("That outline sits inside another part, so it will be cut as a hole.");
+    else this.onMessage("Outline closed. Drag a corner to move it, or click an edge to type its length.");
     if (this.onDrawFinished) this.onDrawFinished();
   }
   setParam(k, v) {

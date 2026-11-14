@@ -4,6 +4,7 @@ import { $, esc, toast } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
 import { renderProTools } from "./protools.js";
 import { clickVerb } from "../ui/laptop.js";
+import { def } from "./sketch-util.js";
 
 export function openCad(title, fields, onOk) {
   $("cadTitle").textContent = title;
@@ -47,16 +48,27 @@ export function runPro(cmd) {
     return;
   }
   if (cmd === "polar") {
+    const list = sketch.picked();
+    const holeish = list.some((i) => sketch.isHole(i) || (def(i.type) && def(i.type).hole));
     openCad("Circular array", [
       { id: "n", label: "How many around the circle", value: 4 },
       { id: "pcd", label: "Circle Ø (PCD, mm) – 0 = auto", value: 0 },
-    ], (v) => sketch.polarArray(v.n, v.pcd));
+      { id: "pivot", type: "select", label: "Pivot (centre of the circle)", value: holeish ? "host" : "shape", options: [
+        { v: "host", l: "Centre of the plate (or host part)" },
+        { v: "shape", l: "Centre of the picked shape" },
+        { v: "click", l: "Click a point on the drawing" },
+      ] },
+      { note: "For a ring of holes on a plate, pick the hole and use the plate centre. Or click the centre yourself." },
+    ], (v) => sketch.polarArray(v.n, v.pcd, { mode: v.pivot }));
     return;
   }
   if (cmd === "offset") {
     openCad("Offset the outline", [
       { id: "d", label: "Offset (mm) – plus grows, minus shrinks", value: 5 },
-    ], (v) => sketch.offsetBy(v.d));
+      { id: "keep", type: "checkbox", label: "Keep the original part" },
+      { id: "both", type: "checkbox", label: "Both sides (a strip of this width)" },
+      { note: "A shrink that would invert, spike or leave a sliver is refused. Circles stay circles." },
+    ], (v) => sketch.offsetBy(v.d, { keepOriginal: v.keep, bothSides: v.both }));
     return;
   }
   if (cmd === "nest") {

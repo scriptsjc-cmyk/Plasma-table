@@ -3,6 +3,15 @@ import { $ } from "../core/dom.js";
 import { sketch } from "../core/state.js";
 import { getPrefs, savePrefs } from "../core/prefs.js";
 
+export function paintMakeSelStatus() {
+  const el = $("makeSelStatus");
+  if (!el || !sketch) return;
+  const n = sketch.picked().length;
+  if (n === 0) el.textContent = "Shift-click or Ctrl-click to pick more than one part, or drag a box around them.";
+  else if (n === 1) el.textContent = "1 part selected. Shift-click or Ctrl-click to pick more, then Join or Cut out.";
+  else el.textContent = n + " parts selected. Shift-click or Ctrl-click to pick more. Then Join or Cut out.";
+}
+
 export function paintMakeHeaderTools() {
   const snap = $("btnSimpleSnap");
   if (snap && sketch) {
@@ -15,10 +24,10 @@ export function paintMakeHeaderTools() {
     const dragPans = !!getPrefs().emptyDragPan;
     pan.setAttribute("aria-pressed", dragPans ? "false" : "true");
     pan.classList.toggle("on", !dragPans);
-    pan.textContent = dragPans ? "Pan view" : "Box select";
+    pan.textContent = dragPans ? "Drag pans" : "Drag selects";
     pan.title = dragPans
-      ? "Dragging empty canvas pans the view. Click to switch to box select. Space never pans — Space is STOP."
-      : "Drag on empty canvas to draw a selection box. Click to switch to pan. Space never pans — Space is STOP.";
+      ? "Drag pans: dragging empty canvas pans the view. Click to switch to box select. Space never pans — Space is STOP."
+      : "Drag selects: drag a box on empty canvas to pick every part it covers. Click to switch to pan. Space never pans — Space is STOP.";
   }
 }
 
@@ -42,4 +51,5 @@ export function bindMakeHeaderTools() {
     };
   }
   paintMakeHeaderTools();
+  paintMakeSelStatus();
 }

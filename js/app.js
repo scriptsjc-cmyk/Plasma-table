@@ -48,7 +48,7 @@ import { bindProTools, renderProTools, setShapeFs } from "./make/protools.js";
 import { applyMatchingPreset, applyPresetRow, bindMaterial, defaultSpeed, renderMaterials, row, saveSpeed, setSpeed } from "./cut/material.js";
 import { bindJog, bindJogKeys, mountJogPads } from "./machine/jog.js";
 import { bindGate, paintWhy, refreshGate } from "./ui/gate.js";
-import { addPartsFlow, bindFiles, clearRecent, editDrawing, handleFiles, openEditor, renderRecent, startOver } from "./make/files.js";
+import { addPartsFlow, bindFiles, clearRecent, editDrawing, handleFiles, importIntoMake, openEditor, renderRecent, startOver } from "./make/files.js";
 import { bindLibrary, openMakeTool } from "./make/library.js";
 import { applyDimEdit, bindDimEdit, closeDimEdit, closeNumPad, openDimEdit, openNumPad } from "./make/dimedit.js";
 import { bindCad, runPro } from "./make/cad.js";
@@ -69,7 +69,7 @@ import { bindCutBar } from "./cut/cutbar.js";
 import { bindCutStatus } from "./cut/cutstatus.js";
 import { bindCheckCut } from "./make/checkcut.js";
 import { bindHoverTips } from "./ui/hovertip.js";
-import { bindMakeHeaderTools } from "./make/headertools.js";
+import { bindMakeHeaderTools, paintMakeSelStatus } from "./make/headertools.js";
 import { bindCutPanels } from "./cut/cutpanels.js";
 import { bindViewport } from "./ui/viewport.js";
 import { bindPicture } from "./make/picture.js";
@@ -196,7 +196,7 @@ async function init() {
   bindJogKeys();                                  // before the editor: on the cutting screen the arrows jog the torch (r7 J4)
   setSketch(new Sketch($("preview"), {
     onChange: (done) => { syncShapeForm(); if (done) { renderShapeForm(); useShape(); renderProTools(); renderQuickBar(); } Setup.paint(!done); if (done && inspectorApi) inspectorApi.emit(); },
-    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); Setup.paint(true); if (inspectorApi) inspectorApi.emit(); },
+    onSelect: () => { renderShapeForm(); renderProTools(); renderQuickBar(); fillEdgePanel(); Setup.paint(true); paintMakeSelStatus(); if (inspectorApi) inspectorApi.emit(); },
     onEdgeChange: () => { fillEdgePanel(); },
     onMessage: (t) => toast(t),
     onDimTap: (dim) => {
@@ -376,7 +376,7 @@ async function init() {
   routeAuth();
   refreshPublishedPresets().then(() => { applyMatchingPreset(); renderMaterials(); }).catch(() => {});
   // Test hooks only once the app has finished starting, so a test never talks to a half-ready page.
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, bedViewRotated, jogToMachine, isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM, openPresetBrowser, renderShapeForm, useShape };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, importIntoMake, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, bedViewRotated, jogToMachine, isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM, openPresetBrowser, renderShapeForm, useShape };
   if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   if (window.plasmaTest) publishCadTestHooks();
 }

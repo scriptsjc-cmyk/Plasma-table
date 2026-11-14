@@ -1209,3 +1209,6 @@ body.laptop-ui .fold3d-box { border: 0; background: transparent; }
 body.laptop-ui .fold3d-sum { display: none; }
 .pb-tile { position: relative; }
 .pb-tile svg.fold-thumb { width: 96px; height: 72px; }
+
+#makeSelStatus, .makeselstatus { margin: 0 0 8px; color: var(--text); font-size: var(--fs-sm); font-weight: 650; }
+#makeSelStatus:empty { display: none; }

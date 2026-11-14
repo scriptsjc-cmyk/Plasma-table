@@ -20,9 +20,12 @@ import { navBusy } from "../cut/checklist.js";
 
 // ------------------------------------------------------------------ step 1: file
 // A drawing is already on the bed: a second DXF/SVG asks whether it joins the sheet or replaces what is there (never silently throws work away)
-function askAddOrReplace(f) {
+function askAddOrReplace(f, where = "bed") {
   return new Promise((res) => {
-    $("importAskText").textContent = `You already have parts on the bed. What should “${f.name}” do?`;
+    const place = where === "make" ? "drawing" : "bed";
+    $("importAskText").textContent = `You already have parts on the ${place}. What should “${f.name}” do?`;
+    if ($("importAskAdd")) $("importAskAdd").textContent = where === "make" ? "Add to the drawing" : "Add to the sheet";
+    if ($("importAskReplace")) $("importAskReplace").textContent = where === "make" ? "Replace the drawing" : "Replace what is open";
     const dlg = $("importAskDlg"); dlg.classList.remove("hidden");
     const done = (v) => { dlg.classList.add("hidden"); res(v); };
     $("importAskAdd").onclick = () => done("add"); $("importAskReplace").onclick = () => done("replace"); $("importAskCancel").onclick = () => done("cancel");
@@ -131,6 +134,65 @@ export async function editDrawing() {
   const cv = d.curveNote || (d.warnings || []).find((w) => /can't be edited as true curves/.test(w));
   toast(`Opened ${e.parts.length} part${e.parts.length > 1 ? "s" : ""} for editing (${e.arcs} arc${e.arcs === 1 ? "" : "s"}, ${e.lines} straight edge${e.lines === 1 ? "" : "s"}).` + (cv ? " " + cv : ""), !!cv);
 }
+
+// Open a DXF / SVG on the Make canvas (C14). The parts land in the editor, not on the cutting bed.
+export async function importIntoMake(list, opts = {}) {
+  const fl = [...(list || [])].filter((f) => f && /\.(dxf|svg)$/i.test(f.name));
+  if (!fl.length) { toast("Open a DXF or SVG file.", true); return 0; }
+  if (S.job && S.job.running) { toast("Stop the cut first.", true); return 0; }
+  let replace = !!opts.replace;
+  if (!replace && sketch && sketch.items.length && !opts.add) {
+    const a = await askAddOrReplace(fl[0], "make");
+    if (a === "cancel") return 0;
+    replace = a === "replace";
+  }
+  const skipSize = !!opts.skipSizeCheck;
+  const loadOne = (f) => new Promise((res, rej) => {
+    const rd = new FileReader();
+    rd.onload = () => res(String(rd.result));
+    rd.onerror = () => rej(new Error("Couldn't read " + f.name));
+    rd.readAsText(f);
+  });
+  const apply = (name, r, scale) => {
+    const contours = (scale && scale !== 1) ? scaleContours(r.contours, scale) : r.contours;
+    const e = contoursToEditable(contours);
+    if (!e || !e.parts || !e.parts.length) { toast("There is nothing in “" + name + "” the editor can use.", true); return 0; }
+    const n = sketch.importParts(e.parts, replace);
+    replace = false; // further files append
+    S.currentPart = null;
+    S.fileName = String(name || "Imported drawing").replace(/\.[^.]+$/, "");
+    if ($("partName")) $("partName").value = S.fileName;
+    S.src = "shape";
+    S.design = { name, contours, warnings: r.warnings, units: r.units };
+    const cv = (r.warnings || []).find((w) => /can't be edited as true curves/.test(w));
+    toast(`Opened ${e.parts.length} part${e.parts.length > 1 ? "s" : ""} on the drawing (${e.arcs} arc${e.arcs === 1 ? "" : "s"}, ${e.lines} straight edge${e.lines === 1 ? "" : "s"}).` + (cv ? " " + cv : ""), !!cv);
+    return n;
+  };
+  let added = 0;
+  for (const f of fl) {
+    let text;
+    try { text = await loadOne(f); } catch (e) { toast(e.message || String(e), true); continue; }
+    const ext = f.name.toLowerCase().split(".").pop();
+    let r;
+    try { r = ext === "svg" ? parseSVG(text) : parseDXF(text); } catch (e) { toast(e.message || String(e), true); continue; }
+    if (!r || !r.contours || !r.contours.length) { toast("“" + f.name + "” has no outlines to add.", true); continue; }
+    if (!skipSize && sizeCheckWanted()) {
+      await new Promise((done) => {
+        askSize({ name: f.name, contours: r.contours, units: r.units }, r.units, () => {
+          // sizeFinish has already scaled r.contours when the user picked a scale.
+          added += apply(f.name, r, 1) || 0;
+          done();
+        });
+      });
+    } else {
+      added += apply(f.name, r, 1) || 0;
+    }
+  }
+  if (added && screen() !== "make") showScreen("make");
+  if (added) { showSource("shape"); useShape(); }
+  return added;
+}
+
 // exact width x height for the picked part (custom parts can also be stretched)
 export function openResize() {
   const list = sketch.picked(), it = list.length === 1 ? list[0] : null;
@@ -201,14 +263,22 @@ export function bindFiles() {
   drop.addEventListener("focusout", () => setTimeout(slimDrop, 100));
   $("file").onchange = () => { const fl = [...$("file").files]; $("file").value = ""; handleFiles(fl); };   // several files = they all go on the bed, each with a quantity
   const cutDrop = () => screen() === "cut" && S.tab === "cut" && !navBusy();
+  const makeDrop = () => screen() === "make" && !navBusy();
   ["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); if (cutDrop()) drop.classList.add("over"); }));
   ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
   document.addEventListener("drop", (e) => {
     if (!$("importDlg").classList.contains("hidden")) return;     // the Import DXFs dialog handles its own drops
-    if (!cutDrop() || !e.dataTransfer) return;
+    if (!e.dataTransfer) return;
     if (document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden), .numpad:not(.hidden)")) return;   // a dialog open: its own drop zone (if any) handles it
+    if (makeDrop()) { importIntoMake(e.dataTransfer.files); return; }
+    if (!cutDrop()) return;
     handleFiles(e.dataTransfer.files);
   });
+  const makeImp = $("makeImpFiles"), makeBtn = $("btnMakeImport");
+  if (makeBtn && makeImp) {
+    makeBtn.onclick = () => makeImp.click();
+    makeImp.onchange = () => { const fl = [...makeImp.files]; makeImp.value = ""; importIntoMake(fl); };
+  }
   $("recent").onclick = (e) => {
     const b = e.target.closest("[data-recent]");
     if (b) { const r = recentList()[Number(b.dataset.recent)]; if (r) setFile(r.name, r.text, false, r.scale); }

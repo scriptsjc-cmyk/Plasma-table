@@ -344,6 +344,19 @@ export class ViewMethods {
       ctx.fillText(prompt, x, y + 6); ctx.textAlign = "start";
     }
 
+    if (this.polarPick) {
+      const prompt = "Click the centre of the circular array (plate centre, hole, or a point). Esc cancels.";
+      ctx.font = "600 16px Barlow, system-ui";
+      const tw = ctx.measureText(prompt).width + 24, th = 32;
+      const x = w / 2, y = 22;
+      ctx.fillStyle = C.sel;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x - tw / 2, y - th / 2, tw, th, 8); else ctx.rect(x - tw / 2, y - th / 2, tw, th);
+      ctx.fill();
+      ctx.fillStyle = themeColor("--cad-tag-text", "#FFFFFF"); ctx.textAlign = "center";
+      ctx.fillText(prompt, x, y + 6); ctx.textAlign = "start";
+    }
+
     if (this.items.length) {
       const b = this.allBox();
       ctx.fillStyle = C.label; ctx.font = "12px Barlow, system-ui";
@@ -353,6 +366,7 @@ export class ViewMethods {
           : this.filletPick.mode === "chamfer"
             ? " · CHAMFER: click a corner to cut a " + this.filletPick.radius + " mm × " + (this.filletPick.angle || 45) + "° chamfer"
             : " · FILLET: click a corner to round it (R " + this.filletPick.radius + " mm) · inside corners are the bigger dots")
+        : this.polarPick ? " · CIRCLE ARRAY: click the centre of the circle"
         : this.tool === "draw" ? " · DRAW: " + clickVerbLower() + " points, then Close" : this.tool === "measure" ? " · MEASURE: " + clickVerbLower() + " two points" : "";
       const np = this.partTotal();
       if (!hideFoot) ctx.fillText(`${np} part${np === 1 ? "" : "s"} · overall ${formatLen(b[2] - b[0], 1)} × ${formatLen(b[3] - b[1], 1)}${tool}`, 8, h - 8);

@@ -4,7 +4,9 @@
     <h1>Make a part</h1>
     <div id="qbPinned" class="qb-pinned" role="group" aria-label="Edit the drawing"></div>
     <button type="button" id="btnSimpleSnap" class="small simplesnap" aria-pressed="false" title="Snap: shapes click neatly to the grid, edges and centres so they line up exactly">Snap</button>
-    <button type="button" id="btnDragPan" class="small dragpan" aria-pressed="false" title="When on, dragging empty canvas pans the view. When off, a drag on empty canvas draws a selection box. Space never pans — Space is STOP.">Box select</button>
+    <button type="button" id="btnDragPan" class="small dragpan" aria-pressed="false" title="Drag selects: drag a box on empty canvas to pick every part it covers. Click to switch to pan. Space never pans — Space is STOP.">Drag selects</button>
+    <button type="button" id="btnMakeImport" class="small makeimp" title="Open a DXF or SVG drawing and add its parts to this sheet">Open DXF / SVG</button>
+    <input type="file" id="makeImpFiles" accept=".dxf,.svg" multiple hidden>
     <button type="button" id="btnMakeCheckCut" class="small makecheck" title="Check whether this drawing will cut cleanly" aria-label="Check cut">Check cut</button>
     <button type="button" id="btnViewParts" class="small viewparts">Parts</button>
     <div id="editorSwitch" class="editorsw" role="group" aria-label="Drawing tools">
@@ -34,6 +36,7 @@
 <template data-slot="make-editor">
 <div id="srcShape" class="hidden">
           <p class="muted small skhelp beginner-help">Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</p>
+          <p id="makeSelStatus" class="makeselstatus" aria-live="polite"></p>
           <div class="sktools">
             <button id="skUndo" title="Undo (Ctrl+Z)">↶ Undo</button><button id="skRedo" title="Redo (Ctrl+Y)">↷ Redo</button>
             <button id="skAll" title="Pick every shape (Ctrl+A)">▣ Pick all</button><button id="skFit" title="Show everything (double-click empty space)">⤢ Fit</button>

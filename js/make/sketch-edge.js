@@ -96,16 +96,26 @@ export class EdgeMethods {
   // Run an edit on a drawn outline. If it would make the outline cross itself, flatten it or push it off the table
   // (and it wasn't already broken), the whole edit is undone and the reason is shown.
   _guarded(it, fn) {
+    const batch = !!this._batchGuard;
     const snap = this.snapshot(), fut = this.future, es = this.edgeSel ? { ...this.edgeSel } : null;
-    this.remember();
+    if (!batch) this.remember();
     this.bakeCustom(it);
     const wasBad = this.outlineProblem(it);
     const r = fn();
-    if (r === false) { this.past.pop(); this.future = fut; return false; }
+    if (r === false) { if (!batch) { this.past.pop(); this.future = fut; } return false; }
     this._renorm(it);
     const bad = wasBad ? null : this.outlineProblem(it);
-    if (bad) { this._revertEdit(snap, fut, es); this.onMessage(bad + " Nothing was changed."); return false; }
-    this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+    if (bad) {
+      this.items = JSON.parse(snap);
+      this.sel.ids = this.sel.ids.filter((id) => this.item(id));
+      this.edgeSel = es ? { ...es } : null;
+      this.normalizeEdgeSel();
+      if (!batch) { this.past.pop(); this.future = fut; this.commit(); }
+      this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+      this.onMessage(bad + " Nothing was changed.");
+      return false;
+    }
+    if (!batch) { this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange(); }
     return true;
   }
   _withEdge(fn, msg) {
@@ -217,17 +227,17 @@ export class EdgeMethods {
     });
   }
   // Turn a library shape into an editable custom outline so its corners can be filleted.
-  toEditableCustom(it) {
+  toEditableCustom(it, opts = {}) {
     if (!it || !this.canMutate(it)) return false;
     if (this.isEditableCustom(it)) { this.tidyCustom(it); return true; }
     const cs = this.contoursOf(it);
     if (!cs.length) { this.onMessage("That part has no outline to fillet."); return false; }
-    this.remember();
+    if (!opts.noRemember) this.remember();
     const b = bbox(cs);
     it.type = "custom"; it.p = { scale: 100 }; it.rot = 0; it.fx = false; it.fy = false; it.holes = {};
     it.shape = { cs: cs.map((c) => cleanContour({ pts: c.pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: c.closed !== false })) };
     it.x = r1(b[0]); it.y = r1(b[1]); it._key = null;
-    this.commit(); this.onSelect();
+    if (!opts.noRemember) { this.commit(); this.onSelect(); }
     return true;
   }
   tidyCustom(it) {
@@ -242,16 +252,34 @@ export class EdgeMethods {
     if (changed) it._key = null;
     return changed;
   }
-  prepareFillet() {
+  prepareFillet(opts = {}) {
     const it = this.selected() || (this.picked().length === 1 ? this.picked()[0] : null);
     if (!it) { this.onMessage("Pick a part first, then Fillet."); return false; }
     if (this.layout) { this.onMessage("Open the part to fillet its corners. The sheet layout only places parts."); return false; }
     if (!this.canMutate(it)) return false;
     this.pick([it.id]);
-    if (it.type !== "custom") return this.toEditableCustom(it);
+    if (it.type !== "custom") return this.toEditableCustom(it, opts);
     const dirty = it.shape.cs.some((c) => cleanContour(c).pts.length !== c.pts.length);
-    if (dirty) { this.remember(); this.tidyCustom(it); this._renorm(it); this.commit(); this.onSelect(); }
+    if (dirty) {
+      if (!opts.noRemember) this.remember();
+      this.tidyCustom(it); this._renorm(it);
+      if (!opts.noRemember) { this.commit(); this.onSelect(); }
+    }
     return true;
+  }
+  countInsideCorners(it) {
+    if (!it) return 0;
+    const cs = this.isEditableCustom(it) ? it.shape.cs : this.contoursOf(it);
+    let n = 0;
+    for (const c of cs || []) n += this.insideCornerIndices(c).length;
+    return n;
+  }
+  countSharpCorners(it) {
+    if (!it) return 0;
+    const cs = this.isEditableCustom(it) ? it.shape.cs : this.contoursOf(it);
+    let n = 0;
+    for (const c of cs || []) n += this.sharpCornerIndices(c).length;
+    return n;
   }
   startFilletPick(size, mode, angle) {
     const r = Number(size);
@@ -363,9 +391,13 @@ export class EdgeMethods {
     const r = Number(radius);
     if (!(r > 0)) { this.onMessage("Enter a radius."); return 0; }
     const host = it || this.selected();
-    if (!this.prepareFillet()) return 0;
+    if (!host) { this.onMessage("Pick a part first, then Fillet."); return 0; }
+    if (!this.countInsideCorners(host)) { this.onMessage("This part has no sharp inside corners to round."); return 0; }
+    this.remember();
+    this._batchGuard = true;
+    if (!this.prepareFillet({ noRemember: true })) { this._batchGuard = false; this.restore(this.past.pop()); return 0; }
     const part = host && this.item(host.id) || this.selected();
-    if (!this.isEditableCustom(part)) return 0;
+    if (!this.isEditableCustom(part)) { this._batchGuard = false; this.restore(this.past.pop()); return 0; }
     let n = 0, skipped = 0;
     for (let ci = 0; ci < part.shape.cs.length; ci++) {
       const idxs = this.insideCornerIndices(part.shape.cs[ci]).sort((a, b) => b - a);
@@ -374,9 +406,15 @@ export class EdgeMethods {
         else skipped++;
       }
     }
-    if (!n && skipped) this.onMessage("That radius is too big for the inside corners, or they are already rounded.");
-    else if (!n) this.onMessage("This part has no sharp inside corners to round.");
-    else if (skipped) this.onMessage(n + " inside corner" + (n === 1 ? "" : "s") + " rounded. " + skipped + " could not use that radius.");
+    this._batchGuard = false;
+    if (!n) {
+      this.restore(this.past.pop());
+      if (skipped) this.onMessage("That radius is too big for the inside corners, or they are already rounded.");
+      else this.onMessage("This part has no sharp inside corners to round.");
+      return 0;
+    }
+    this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+    if (skipped) this.onMessage(n + " inside corner" + (n === 1 ? "" : "s") + " rounded. " + skipped + " could not use that radius.");
     return n;
   }
   // Corner relief / dog-bone: a circle of the given diameter centred on an inside
@@ -463,9 +501,13 @@ export class EdgeMethods {
     const d = Number(diameter);
     if (!(d > 0)) { this.onMessage("Enter a diameter."); return 0; }
     const host = it || this.selected();
-    if (!this.prepareFillet()) return 0;
+    if (!host) { this.onMessage("Pick a part first, then Fillet."); return 0; }
+    if (!this.countInsideCorners(host)) { this.onMessage("This part has no sharp inside corners for a relief cut."); return 0; }
+    this.remember();
+    this._batchGuard = true;
+    if (!this.prepareFillet({ noRemember: true })) { this._batchGuard = false; this.restore(this.past.pop()); return 0; }
     const part = host && this.item(host.id) || this.selected();
-    if (!this.isEditableCustom(part)) return 0;
+    if (!this.isEditableCustom(part)) { this._batchGuard = false; this.restore(this.past.pop()); return 0; }
     let n = 0, skipped = 0;
     for (let ci = 0; ci < part.shape.cs.length; ci++) {
       const idxs = this.insideCornerIndices(part.shape.cs[ci]).sort((a, b) => b - a);
@@ -474,9 +516,15 @@ export class EdgeMethods {
         else skipped++;
       }
     }
-    if (!n && skipped) this.onMessage("That circle is too big for the inside corners, or they already have a relief.");
-    else if (!n) this.onMessage("This part has no sharp inside corners for a relief cut.");
-    else if (skipped) this.onMessage(n + " inside corner" + (n === 1 ? "" : "s") + " relieved. " + skipped + " could not use that diameter.");
+    this._batchGuard = false;
+    if (!n) {
+      this.restore(this.past.pop());
+      if (skipped) this.onMessage("That circle is too big for the inside corners, or they already have a relief.");
+      else this.onMessage("This part has no sharp inside corners for a relief cut.");
+      return 0;
+    }
+    this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+    if (skipped) this.onMessage(n + " inside corner" + (n === 1 ? "" : "s") + " relieved. " + skipped + " could not use that diameter.");
     return n;
   }
   // Sharp corners of a closed outline (straight edges, not already filleted), inside or outside.
@@ -557,9 +605,13 @@ export class EdgeMethods {
     if (!(d > 0)) { this.onMessage("Enter a distance."); return 0; }
     const ang = Number(angle) > 0 ? Number(angle) : 45;
     const host = it || this.selected();
-    if (!this.prepareFillet()) return 0;
+    if (!host) { this.onMessage("Pick a part first, then Fillet."); return 0; }
+    if (!this.countSharpCorners(host)) { this.onMessage("This part has no sharp corners to chamfer."); return 0; }
+    this.remember();
+    this._batchGuard = true;
+    if (!this.prepareFillet({ noRemember: true })) { this._batchGuard = false; this.restore(this.past.pop()); return 0; }
     const part = host && this.item(host.id) || this.selected();
-    if (!this.isEditableCustom(part)) return 0;
+    if (!this.isEditableCustom(part)) { this._batchGuard = false; this.restore(this.past.pop()); return 0; }
     let n = 0, skipped = 0;
     for (let ci = 0; ci < part.shape.cs.length; ci++) {
       const idxs = this.sharpCornerIndices(part.shape.cs[ci]).sort((a, b) => b - a);
@@ -568,9 +620,15 @@ export class EdgeMethods {
         else skipped++;
       }
     }
-    if (!n && skipped) this.onMessage("That distance is too big for the corners, or they are already chamfered.");
-    else if (!n) this.onMessage("This part has no sharp corners to chamfer.");
-    else if (skipped) this.onMessage(n + " corner" + (n === 1 ? "" : "s") + " chamfered. " + skipped + " could not use that distance.");
+    this._batchGuard = false;
+    if (!n) {
+      this.restore(this.past.pop());
+      if (skipped) this.onMessage("That distance is too big for the corners, or they are already chamfered.");
+      else this.onMessage("This part has no sharp corners to chamfer.");
+      return 0;
+    }
+    this.commit(); this.onSelect(); this.onEdgeChange && this.onEdgeChange();
+    if (skipped) this.onMessage(n + " corner" + (n === 1 ? "" : "s") + " chamfered. " + skipped + " could not use that distance.");
     return n;
   }
   straightenEdge() {

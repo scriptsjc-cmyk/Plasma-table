@@ -141,6 +141,69 @@ export function selfIntersects(pts, limit = 4000) {
   return false;
 }
 
+// True if the loop is a circle within `tol` mm (or 1% of radius). Used to keep
+// discs as discs when offsetting (C12) rather than tessellating them.
+export function detectCircle(pts, tol = 0.15) {
+  if (!pts || pts.length < 8) return null;
+  let cx = 0, cy = 0;
+  for (const p of pts) { cx += p[0]; cy += p[1]; }
+  cx /= pts.length; cy /= pts.length;
+  const rs = pts.map((p) => Math.hypot(p[0] - cx, p[1] - cy));
+  const r = rs.reduce((s, v) => s + v, 0) / rs.length;
+  if (!(r > 0.5)) return null;
+  let maxDev = 0;
+  for (const v of rs) maxDev = Math.max(maxDev, Math.abs(v - r));
+  if (maxDev > Math.max(tol, r * 0.01)) return null;
+  return { cx, cy, r };
+}
+
+// Why an offset result is unusable: self-crossing, inverted (a shrink that grew),
+// or a sliver too thin to cut. Returns a plain-English reason or null if it's fine.
+export function assessOffset(orig, off, d) {
+  if (!off || off.length < 3) return "That offset is too tight for this shape.";
+  if (selfIntersects(off)) return "That offset makes the outline cross itself.";
+  const a0 = Math.abs(signedArea(orig)), a1 = Math.abs(signedArea(off));
+  const b0 = bbox([{ pts: orig }]), b1 = bbox([{ pts: off }]);
+  const w0 = b0[2] - b0[0], h0 = b0[3] - b0[1], w1 = b1[2] - b1[0], h1 = b1[3] - b1[1];
+  const min0 = Math.min(w0, h0);
+  const mm = (v) => Math.max(0.1, Math.round(v * 10) / 10).toFixed(1);
+  if (d < 0) {
+    if (min0 > 0 && Math.abs(d) >= min0 / 2 - 0.05) {
+      return "That shrink is larger than half the part. Use " + mm(min0 / 2 - 0.1) + " mm or less.";
+    }
+    if (a1 > a0 * 1.05 || w1 > w0 + 1 || h1 > h0 + 1) {
+      return "That offset would invert the part into a much larger shape. Use a smaller shrink distance.";
+    }
+    if (Math.min(w1, h1) < 2 || a1 < 4) {
+      return "That offset would leave a sliver too thin to cut cleanly. Use a smaller distance.";
+    }
+  }
+  return null;
+}
+
+// Offset a closed loop, keeping a true circle when the source is circular.
+// Returns { ok, pts, circle? } or { ok: false, reason }.
+export function offsetLoop(pts, d, hint) {
+  const circ = (hint && hint.circle) || detectCircle(pts);
+  if (circ) {
+    const r = circ.r + d;
+    if (!(r > 0.2)) return { ok: false, reason: "That offset would collapse the circle. Use a smaller shrink distance." };
+    const c = circleContour(circ.cx, circ.cy, r);
+    const reason = d < 0 ? assessOffset(pts, c.pts, d) : null;
+    if (reason) return { ok: false, reason };
+    return { ok: true, pts: c.pts, circle: c.circle };
+  }
+  let oriented = pts;
+  try {
+    const off = offsetPolygon(oriented, d);
+    const reason = assessOffset(oriented, off, d);
+    if (reason) return { ok: false, reason };
+    return { ok: true, pts: off };
+  } catch (e) {
+    return { ok: false, reason: "Couldn't offset that shape." };
+  }
+}
+
 // ------------------------------------------------------------------ union of outlines (for "Join")
 // Greiner-Hormann polygon union. Shapes are grown by a hair and nudged a hair so that edges
 // that exactly touch (very common on a 1 mm grid) still overlap cleanly. Returns
