@@ -58,7 +58,7 @@ for (const sh of foldShapes) {
   const flat = outlineArea(cs);
   // Approximated developments (faceted cones, gores, saddles, flashing) must still build a 3D model;
   // their declared panel area can differ from the packed templates. Strict match for folded boxes, channels and new folded parts.
-  const loose = /^(cone|elbow|fish|saddle|chim|cricket|roof|sky|takeoff|ductcap|rectcap|ybranch|britches|teetemp|coneadapter|conecentric|coneecc|cyclone|hopper|hopflange|gusflange|rectelbow|recttrans|sqrpyramid|s2r|r2s|fanduct|panflash|valley|silocone)/;
+  const loose = /^(cone|elbow|redelbow|fish|saddle|chim|cricket|roof|sky|takeoff|ductcap|rectcap|ybranch|britches|teetemp|coneadapter|conecentric|coneecc|cyclone|hopper|hopflange|gusflange|rectelbow|recttrans|sqrpyramid|s2r|r2s|fanduct|panflash|valley|silocone)/;
   const skipArea = /^(ductcap)$/;
   const tol = loose.test(sh.id) ? 0.85 : 0.22;
   if (flat > 10 && panelArea > 10 && !skipArea.test(sh.id)) {
@@ -182,6 +182,42 @@ t.check("a large square-to-round is two halves and says it is for the bed", (() 
 })());
 t.check("hopper with top flange defaults to one folding blank", outersFromMake("hopflange").length === 1, String(outersFromMake("hopflange").length));
 t.check("fan duct defaults to one body plus the square flange", outersFromMake("fanduct").length === 2, String(outersFromMake("fanduct").length));
+
+t.check("square-to-round default etch fans are a handful of lines, not a dense fill", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "s2r");
+  const p = Object.fromEntries(sh.params.map((q) => [q[0], q[2]]));
+  const cs = sh.make({ ...p, lip: 0, ring: 0 }) || [];
+  const scores = cs.filter((c) => c.closed === false).length;
+  const none = (sh.make({ ...p, lip: 0, ring: 0, fans: 0 }) || []).filter((c) => c.closed === false).length;
+  return scores >= 15 && scores <= 40 && none < scores;
+})());
+t.check("lobster-back 3D is a full pipe of gore segments, not a ribbon", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "elbow3");
+  const p = Object.fromEntries(sh.params.map((q) => [q[0], q[2]]));
+  const m = foldModel(sh, p);
+  const faces = (m && m.faces) || [];
+  const gores = new Set(faces.map((f) => f.gore).filter((g) => g != null));
+  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+  for (const f of faces) for (const q of f.pts) {
+    x0 = Math.min(x0, q[0]); y0 = Math.min(y0, q[1]); z0 = Math.min(z0, q[2]);
+    x1 = Math.max(x1, q[0]); y1 = Math.max(y1, q[1]); z1 = Math.max(z1, q[2]);
+  }
+  const d = p.d || 100;
+  return gores.size === Math.max(2, Math.round(p.n || 3)) && (x1 - x0) > 0.8 * d && (y1 - y0) > 0.8 * d && (z1 - z0) > 0.8 * d;
+})());
+t.check("fishmouth 3D shows a saddle cut and a ghosted header", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "fishmouth");
+  const p = Object.fromEntries(sh.params.map((q) => [q[0], q[2]]));
+  const m = foldModel(sh, p);
+  const faces = (m && m.faces) || [];
+  return faces.some((f) => f.ghost) && faces.some((f) => !f.ghost);
+})());
+t.check("saddle-hole 3D keeps a ghosted branch", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "saddlehole");
+  const p = Object.fromEntries(sh.params.map((q) => [q[0], q[2]]));
+  const m = foldModel(sh, p);
+  return ((m && m.faces) || []).some((f) => f.ghost);
+})());
 
 
 // Bolt-on pipe-end flanges: off by default (goldens unchanged); when on, a ring

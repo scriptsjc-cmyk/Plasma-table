@@ -2,7 +2,7 @@
 import {
   circleContour, roundedRect, holeIn, rectContour, packPieces, coneSector, elbowGores, mitreGore,
   clamp, pos, shape, poly, shiftToOrigin, signedArea, selfIntersects, dedupe, boltHoles,
-  SPLIT_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, boxBlank, wantsSplit,
+  SPLIT_PARAM, FAN_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, boxBlank, wantsSplit,
 } from "./helpers.js";
 import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment } from "../duct.js";
 import { SHEET_PARAMS, sheetFrom, elbowTable } from "../sheetopts.js";
@@ -99,12 +99,12 @@ export const FAB_PRESETS = [
     } }),
   shape("s2roffset", "Offset square-to-round", "⏢", "sheetmetal", "offset square to round transition",
     "Eccentric square-to-round: the round end is offset from the rectangle centre. Developed as one folding blank (or two halves if it will not fit the bed) with etch lines at the bends. Tick Separate pieces to cut the sides apart.",
-    [["a", "Width A (rectangular end)", 260], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 120], ["h", "Height between the ends", 160], ["ox", "X offset of the round end", 40], ["oy", "Y offset of the round end", 0], ["lip", "Flange lip width (0 = none)", 20], SPLIT_PARAM],
+    [["a", "Width A (rectangular end)", 260], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 120], ["h", "Height between the ends", 160], ["ox", "X offset of the round end", 40], ["oy", "Y offset of the round end", 0], ["lip", "Flange lip width (0 = none)", 20], FAN_PARAM, SPLIT_PARAM],
     (p) => s2rBlank(p).contours,
     { sheet: true, noResize: true, note: (p) => s2rBlank(p).reason }),
   shape("r2s", "Round-to-rectangular transition", "⏢", "sheetmetal", "round to rectangular transition",
     "Same development as square-to-round (the rectangular end is the base): one folding blank with a single seam, plus optional flanges. Tick Separate pieces to cut the sides apart.",
-    [["a", "Width A (rectangular end)", 240], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 130], ["h", "Height between the ends", 150], ["lip", "Flange lip width (0 = none)", 20], SPLIT_PARAM],
+    [["a", "Width A (rectangular end)", 240], ["b", "Depth B (rectangular end)", 160], ["d", "Round diameter", 130], ["h", "Height between the ends", 150], ["lip", "Flange lip width (0 = none)", 20], FAN_PARAM, SPLIT_PARAM],
     (p) => s2rBlank(p).contours,
     { sheet: true, noResize: true, note: (p) => s2rBlank(p).reason }),
   shape("fishmouth", "Pipe saddle / fishmouth", "∿", "sheetmetal", "pipe saddle fishmouth cope template",

@@ -1,7 +1,7 @@
 // New folded / formed workshop presets. Each has a developed flat pattern (what you cut)
 // and a fold() model for the 3D view. Bend sizes follow the existing enclosure presets:
 // developed length is the sum of the face sizes (no extra k-factor deducted).
-import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, s2rPanels, wantsSplit } from "./helpers.js";
+import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM, FAN_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, s2rPanels, wantsSplit } from "./helpers.js";
 import { rectangularTransition, addFlangeLip, developConnected } from "../duct.js";
 import {
   foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedCross,
@@ -226,7 +226,7 @@ export const FOLD_PRESETS = [
 
   shape("fanduct", "Fan duct transition", "⏢", "folded", "fan duct square to round folded",
     "Short square-to-round transition for a fan or filter, as one folding blank with etch lines, packed with a square flange. Tick Separate pieces to cut the sides apart.",
-    [["a", "Square / fan side", 140], ["d", "Round Ø", 100], ["h", "Height", 60], ["lip", "Flange lip", 18], SPLIT_PARAM],
+    [["a", "Square / fan side", 140], ["d", "Round Ø", 100], ["h", "Height", 60], ["lip", "Flange lip", 18], FAN_PARAM, SPLIT_PARAM],
     (p) => fanductBlank(p).contours,
     { sheet: true, noResize: true, fold: (p) => foldS2r(p.a, p.a, p.d, p.h), note: (p) => fanductBlank(p).reason }),
 

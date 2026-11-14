@@ -3,7 +3,7 @@
 import { arcPoints, circleContour, signedArea } from "../core/geom.js";
 import { roundedRect, slot, roundCorners, dedupe } from "./shape-helpers.js";
 import { squareToRound, coneDevelopment } from "./duct.js";
-import { s2rBlank, SPLIT_PARAM } from "./presets/helpers.js";
+import { s2rBlank, SPLIT_PARAM, FAN_PARAM } from "./presets/helpers.js";
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const pos = (v) => (Number.isFinite(v) && v > 0 ? v : 0);
@@ -206,7 +206,7 @@ export const FAB_SHAPES = [
     id: "s2r", name: "Square to round transition", icon: "⏢", group: "duct", sheet: true, noResize: true,
     aka: "square to round rectangular to round transition reducer duct adaptor flat pattern development triangulation flange",
     tip: "Flat cutting pattern for a rectangular (or square) to round duct transition, developed as one folding blank with a single seam and etch lines at the bends. Tick Separate pieces to cut the four sides apart. Optional flange frame and ring are packed beside the body. Sizes are to the sheet's centre-line.",
-    params: [["a", "Width A (rectangular end)", 300], ["b", "Depth B (rectangular end)", 200], ["d", "Round diameter", 150], ["h", "Height between the ends", 200], ["lip", "Flange lip width (0 = no flange pieces)", 25], ["ring", "Round end flange ring (1 = yes, 0 = no)", 1], SPLIT_PARAM],
+    params: [["a", "Width A (rectangular end)", 300], ["b", "Depth B (rectangular end)", 200], ["d", "Round diameter", 150], ["h", "Height between the ends", 200], ["lip", "Flange lip width (0 = no flange pieces)", 25], ["ring", "Round end flange ring (1 = yes, 0 = no)", 1], FAN_PARAM, SPLIT_PARAM],
     make: (p) => s2rBlank(p).contours,
     note: (p) => s2rBlank(p).reason,
   },

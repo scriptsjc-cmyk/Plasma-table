@@ -197,6 +197,8 @@ export const SPLIT_PARAM = ["split", "Blank", 0, { type: "select", options: [
   { v: 1, l: "Separate pieces" },
 ] }];
 export const wantsSplit = (p) => Math.round(Number(p && p.split) || 0) >= 1;
+export const FAN_PARAM = ["fans", "Etch lines per corner", 4];
+export const fanLineCount = (p) => Math.max(0, Math.min(8, Math.round(Number(p && p.fans != null ? p.fans : 4))));
 
 
 // One folding blank (or two halves if it will not fit the 1300×800 bed) from
@@ -231,12 +233,13 @@ export function transitionBlank(panels, p, extraPieces = [], finishPart = null) 
     }
     return c;
   };
-  const internal = (pan) => joinPanels([pan]) || { pts: pan.pts, bends: pan.bends || (pan.topFold ? [pan.topFold] : []) };
+  const fanOpts = { fanLines: fanLineCount(p) };
+  const internal = (pan) => joinPanels([pan], fanOpts) || { pts: pan.pts, bends: pan.bends || (pan.topFold ? [pan.topFold] : []) };
   if (wantsSplit(p)) {
     const pieces = panels.filter(Boolean).map((pan) => asPiece(internal(pan)));
     return { contours: packPieces(pieces.concat(extraPieces)).contours, halves: false, reason: "" };
   }
-  const dev = developConnected(panels.filter(Boolean));
+  const dev = developConnected(panels.filter(Boolean), fanOpts);
   if (!dev) {
     const pieces = panels.filter(Boolean).map((pan) => asPiece(internal(pan)));
     return { contours: packPieces(pieces.concat(extraPieces)).contours, halves: false, reason: "" };

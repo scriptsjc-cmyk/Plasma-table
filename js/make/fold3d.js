@@ -240,6 +240,7 @@ export function thicken(model, t) {
   }
   const faces = [];
   for (const f of model.faces) {
+    if (f.ghost) { faces.push({ ...f, pts: f.pts.map((q) => q.slice()), holes: (f.holes || []).map((r) => r.map((q) => q.slice())) }); continue; }
     const nrm = norm(f.n);
     const half = ((Number(f.thk) > 0.05 ? Number(f.thk) : t) / 2);
     const vns = (f.vn && f.vn.length === f.pts.length) ? f.vn.map(norm) : f.pts.map(() => nrm);
@@ -296,6 +297,221 @@ export function foldFrustum(d1, d2, h, segs = 72) {
 export function foldTube(d, h, segs = 72) {
   return foldFrustum(d, d, h, segs);
 }
+
+function basisOf(axis) {
+  const a = norm(axis);
+  const tmp = Math.abs(a[1]) < 0.85 ? V(0, 1, 0) : V(1, 0, 0);
+  const xA = norm(cross(tmp, a));
+  const yA = cross(a, xA);
+  return { a, xA, yA };
+}
+function tubeFaces(d, origin, axis, len, segs = 48, opts = {}) {
+  const r0 = opts.r0 != null ? opts.r0 : d / 2;
+  const r1 = opts.r1 != null ? opts.r1 : r0;
+  const { a, xA, yA } = basisOf(axis);
+  const ring = (s, rad, th) => add(add(origin, scl(a, s)), add(scl(xA, rad * Math.cos(th)), scl(yA, rad * Math.sin(th))));
+  const faces = [];
+  const L = Math.max(0.5, Number(len) || 0);
+  for (let i = 0; i < segs; i++) {
+    const t0 = (i * 2 * Math.PI) / segs, t1 = ((i + 1) * 2 * Math.PI) / segs;
+    const pts = [ring(0, r0, t0), ring(0, r0, t1), ring(L, r1, t1), ring(L, r1, t0)];
+    const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+    faces.push({ pts, n, holes: [], w: (Math.PI * (r0 + r1)) / segs, h: L, smooth: true, ghost: !!opts.ghost, gore: opts.gore });
+  }
+  return faces;
+}
+function lineHitCylinder(P0, dir, C0, Cdir, R) {
+  const a = norm(dir), h = norm(Cdir);
+  const W0 = sub(P0, C0);
+  const U = sub(W0, scl(h, dot(W0, h)));
+  const V = sub(a, scl(h, dot(a, h)));
+  const A = dot(V, V), B = 2 * dot(U, V), C = dot(U, U) - R * R;
+  if (A < 1e-12) return Math.abs(C) < 1e-6 ? 0 : null;
+  const disc = B * B - 4 * A * C;
+  if (disc < 0) return null;
+  const s0 = (-B - Math.sqrt(disc)) / (2 * A), s1 = (-B + Math.sqrt(disc)) / (2 * A);
+  const cand = [s0, s1].filter((s) => Number.isFinite(s)).sort((x, y) => x - y);
+  return cand.length ? cand[0] : null;
+}
+function fishmouthBranch(d, orig, axis, headerOrig, headerAxis, headerD, skirt, segs = 48, opts = {}) {
+  const r = d / 2, R = headerD / 2;
+  const { a, xA, yA } = basisOf(axis);
+  const cutS = [];
+  let peak = -Infinity, trough = Infinity;
+  for (let i = 0; i <= segs; i++) {
+    const th = (i * 2 * Math.PI) / segs;
+    const off = add(scl(xA, r * Math.cos(th)), scl(yA, r * Math.sin(th)));
+    const hit = lineHitCylinder(add(orig, off), a, headerOrig, headerAxis, R);
+    const v = hit == null ? 0 : hit;
+    cutS.push(v);
+    peak = Math.max(peak, v);
+    trough = Math.min(trough, v);
+  }
+  if (!Number.isFinite(peak)) return { faces: [], peak: 0, trough: 0, sTop: 0 };
+  const sk = Math.max(8, Number(skirt) || 0);
+  // away: skirt sticks out from the first (near) hit, back toward the origin, so the
+  // branch sits on the header instead of running through it.
+  const sTop = opts.away !== false ? trough - sk : peak + sk;
+  const faces = [];
+  for (let i = 0; i < segs; i++) {
+    const t0 = (i * 2 * Math.PI) / segs, t1 = ((i + 1) * 2 * Math.PI) / segs;
+    const p = (ss, th) => add(add(orig, scl(a, ss)), add(scl(xA, r * Math.cos(th)), scl(yA, r * Math.sin(th))));
+    const a0 = p(cutS[i], t0), a1 = p(cutS[i + 1], t1), b1 = p(sTop, t1), b0 = p(sTop, t0);
+    const pts = sTop < (cutS[i] + cutS[i + 1]) / 2 ? [a0, b0, b1, a1] : [a0, a1, b1, b0];
+    const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+    faces.push({ pts, n, holes: [], w: (2 * Math.PI * r) / segs, h: Math.abs(sTop - trough), smooth: true, ghost: !!opts.ghost });
+  }
+  return { faces, peak, trough, sTop };
+}
+function plateFaces(cx, cz, w, d, y = 0, ghost = true) {
+  const hw = w / 2, hd = d / 2;
+  const pts = [V(cx - hw, y, cz - hd), V(cx + hw, y, cz - hd), V(cx + hw, y, cz + hd), V(cx - hw, y, cz + hd)];
+  return [{ pts, n: V(0, 1, 0), holes: [], w, h: d, ghost: !!ghost }];
+}
+
+// Branch pipe with a 90° fishmouth onto a ghosted header.
+export function foldFishmouth(d, d2, skirt, segs = 48) {
+  const R = Math.max(d2, d) / 2;
+  const hLen = Math.max(2.6 * R, d + 40);
+  const headerOrig = V(0, R, -hLen / 2);
+  const header = tubeFaces(R * 2, headerOrig, V(0, 0, 1), hLen, segs, { ghost: true });
+  // Approach the header from above along -Y so the first hit is the top saddle.
+  const origin = V(0, R * 2 + 120, 0);
+  const br = fishmouthBranch(d, origin, V(0, -1, 0), headerOrig, V(0, 0, 1), R * 2, skirt, segs);
+  const faces = header.concat(br.faces);
+  sitOnTable(faces);
+  return { faces, panels: [{ w: Math.PI * d, h: Math.abs((br.sTop || 0) - (br.trough || 0)) || (skirt + R) }] };
+}
+
+// Header wrap with a saddle hole and a ghosted branch sitting in it.
+export function foldSaddleHole(d, len, branch, segs = 48) {
+  const R = Math.max(4, d / 2), r = Math.max(4, branch / 2);
+  const L = Math.max(len, 2 * r + 20);
+  const yc = L / 2;
+  // Header along +Y, centre on Y. Hole on the +X side.
+  const raw = tubeFaces(d, V(0, 0, 0), V(0, 1, 0), L, segs);
+  const inside = (p) => {
+    const dy = p[1] - yc, dz = p[2];
+    return (dy * dy + dz * dz) < (r * r - 0.8) && p[0] > 0;
+  };
+  const faces = raw.filter((f) => {
+    const mid = f.pts.reduce((s, q) => add(s, q), V(0, 0, 0));
+    const c = scl(mid, 1 / f.pts.length);
+    return !inside(c);
+  });
+  // Ghost branch on the +X side, sitting in the hole (approach from +X, skirt away).
+  const reach = Math.max(40, r * 1.6);
+  const br = fishmouthBranch(branch, V(R + reach + 40, yc, 0), V(-1, 0, 0), V(0, 0, 0), V(0, 1, 0), d, reach, segs, { ghost: true });
+  const out = faces.concat(br.faces);
+  sitOnTable(out);
+  return { faces: out, panels: [{ w: Math.PI * d, h: L }] };
+}
+
+// Pipe with a bevelled / coped end sitting on a ghosted plate.
+export function foldPipeOnFlat(d, rise, skirt, segs = 48) {
+  const r = Math.max(4, d / 2);
+  const riseN = Math.max(0, Number(rise) || 0);
+  const yCut = (th) => riseN * (1 - Math.cos(th)) / 2;
+  let peak = 0;
+  for (let i = 0; i <= segs; i++) peak = Math.max(peak, yCut((i * 2 * Math.PI) / segs));
+  const yTop = peak + Math.max(8, Number(skirt) || 0);
+  const faces = plateFaces(0, 0, d * 2.2, d * 2.2, 0, true);
+  for (let i = 0; i < segs; i++) {
+    const t0 = (i * 2 * Math.PI) / segs, t1 = ((i + 1) * 2 * Math.PI) / segs;
+    const pts = [
+      V(r * Math.cos(t0), yCut(t0), r * Math.sin(t0)),
+      V(r * Math.cos(t1), yCut(t1), r * Math.sin(t1)),
+      V(r * Math.cos(t1), yTop, r * Math.sin(t1)),
+      V(r * Math.cos(t0), yTop, r * Math.sin(t0)),
+    ];
+    const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+    faces.push({ pts, n, holes: [], w: (2 * Math.PI * r) / segs, h: yTop, smooth: true });
+  }
+  sitOnTable(faces);
+  return { faces, panels: [{ w: Math.PI * d, h: yTop }] };
+}
+
+// Assembled tee: header with a saddle hole and a fishmouth branch, both solid.
+export function foldTee(branchD, headerD, headerLen, skirt, segs = 48) {
+  const R = Math.max(4, headerD / 2), r = Math.max(4, branchD / 2);
+  const L = Math.max(headerLen, 2 * r + 30);
+  const yc = L / 2;
+  const raw = tubeFaces(headerD, V(0, 0, 0), V(0, 1, 0), L, segs);
+  const inside = (p) => {
+    const dy = p[1] - yc, dz = p[2];
+    return (dy * dy + dz * dz) < (r * r - 0.8) && p[0] > 0;
+  };
+  const header = raw.filter((f) => {
+    const mid = f.pts.reduce((s, q) => add(s, q), V(0, 0, 0));
+    return !inside(scl(mid, 1 / f.pts.length));
+  });
+  const reach = Math.max(Number(skirt) || 0, r + 30, 40);
+  const br = fishmouthBranch(branchD, V(R + reach + 40, yc, 0), V(-1, 0, 0), V(0, 0, 0), V(0, 1, 0), headerD, reach, segs);
+  const faces = header.concat(br.faces);
+  sitOnTable(faces);
+  return { faces, panels: [{ w: Math.PI * headerD, h: L }, { w: Math.PI * branchD, h: (br.sTop - br.trough) || (skirt + R) }] };
+}
+
+
+function faceCentre(f) {
+  const mid = f.pts.reduce((s, q) => add(s, q), V(0, 0, 0));
+  return scl(mid, 1 / f.pts.length);
+}
+function insideBranchCyl(p, orig, axis, r, s0, s1) {
+  const a = norm(axis);
+  const w = sub(p, orig);
+  const s = dot(w, a);
+  const rad2 = mag(sub(w, scl(a, s)));
+  return s >= Math.min(s0, s1) && s <= Math.max(s0, s1) && rad2 < r - 0.4;
+}
+function punchBranchHoles(header, branches, r) {
+  return header.filter((f) => {
+    const c = faceCentre(f);
+    return !branches.some((b) => insideBranchCyl(c, b.orig, b.axis, r, b.trough - 2, b.peak + r * 2));
+  });
+}
+// Header with two 45° branches (Y).
+export function foldYBranch(branchD, headerD, len, rise, segs = 48) {
+  const R = Math.max(4, headerD / 2), r = Math.max(4, branchD / 2);
+  const L = Math.max(len, 2 * r + 40);
+  const yc = L * 0.45;
+  const header = tubeFaces(headerD, V(0, 0, 0), V(0, 1, 0), L, segs);
+  const ang = Math.PI / 4;
+  const skirt = Math.max(len * 0.6, r + 20);
+  const mk = (sign) => {
+    const axis = V(sign * Math.sin(ang), Math.cos(ang), 0);
+    const back = Math.max(80, R + r + 40);
+    const join = V(0, yc, 0);
+    const orig = sub(join, scl(axis, back));
+    const br = fishmouthBranch(branchD, orig, axis, V(0, 0, 0), V(0, 1, 0), headerD, skirt, segs);
+    return { ...br, orig, axis };
+  };
+  const a = mk(1), b = mk(-1);
+  const faces = punchBranchHoles(header, [a, b], r).concat(a.faces, b.faces);
+  sitOnTable(faces);
+  return { faces, panels: [{ w: Math.PI * headerD, h: L }, { w: Math.PI * branchD, h: skirt + R }, { w: Math.PI * branchD, h: skirt + R }] };
+}
+
+// Pants / britches: larger header splitting into two saddled branches.
+export function foldBritches(branchD, headerD, len, segs = 48) {
+  const R = Math.max(4, headerD / 2), r = Math.max(4, branchD / 2);
+  const L = Math.max(len, 2 * r + 30);
+  const header = tubeFaces(headerD, V(0, 0, 0), V(0, 1, 0), L, segs);
+  const ang = Math.PI / 5;
+  const yc = L * 0.7;
+  const skirt = Math.max(len, r + 24);
+  const mk = (sign) => {
+    const axis = V(sign * Math.sin(ang), Math.cos(ang), 0);
+    const join = V(sign * R * 0.15, yc, 0);
+    const orig = sub(join, scl(axis, Math.max(80, R + r + 40)));
+    const br = fishmouthBranch(branchD, orig, axis, V(0, 0, 0), V(0, 1, 0), headerD, skirt, segs);
+    return { ...br, orig, axis };
+  };
+  const a = mk(1), b = mk(-1);
+  const faces = punchBranchHoles(header, [a, b], r).concat(a.faces, b.faces);
+  sitOnTable(faces);
+  return { faces, panels: [{ w: Math.PI * headerD, h: L }, { w: Math.PI * branchD, h: skirt + R }, { w: Math.PI * branchD, h: skirt + R }] };
+}
 function triArea(pts) {
   const nrm = cross(sub(pts[1], pts[0]), sub(pts[2], pts[0]));
   return mag(nrm) / 2;
@@ -339,27 +555,66 @@ export function foldS2r(a, b, d, h, segs, ox = 0, oy = 0) {
   const area = faces.reduce((s, f) => s + f.w * f.h, 0);
   return { faces, panels: [{ w: Math.sqrt(Math.max(0, area)), h: Math.sqrt(Math.max(0, area)) }], n };
 }
-export function foldElbow(d, bendDeg, pieces, segs = 48, clr) {
-  const faces = [];
-  const R = d / 2;
-  const bend = (bendDeg * Math.PI) / 180;
-  const rad = (Number(clr) > 0 ? Number(clr) : 1.5 * d);
-  const steps = Math.max(2, pieces) * 4;
-  for (let i = 0; i < steps; i++) {
-    const a0 = (i / steps) * bend, a1 = ((i + 1) / steps) * bend;
+export function foldElbow(d, bendDeg, pieces, segs = 32, clr, d2) {
+  const nGore = Math.max(2, Math.round(Number(pieces) || 2));
+  const bend = (Math.max(5, Number(bendDeg) || 90) * Math.PI) / 180;
+  const R0 = Math.max(4, Number(d) || 0) / 2;
+  const R1 = Math.max(4, Number(d2) > 0 ? Number(d2) : (Number(d) || 0)) / 2;
+  const rad = Math.max(Number(clr) > 0 ? Number(clr) : 1.5 * Math.max(Number(d) || 0, Number(d2) > 0 ? Number(d2) : (Number(d) || 0)), R0 + R1 + 1);
+  const alpha = bend / (2 * (nGore - 1));
+  const Lend = rad * Math.tan(alpha);
+  const Lmid = 2 * Lend;
+  const dir = (i) => {
+    const ang = 2 * alpha * i;
+    return V(Math.cos(ang), Math.sin(ang), 0);
+  };
+  const nrmE = (i) => {
+    const ang = 2 * alpha * i;
+    return V(Math.sin(ang), -Math.cos(ang), 0);
+  };
+  const bin = V(0, 0, 1);
+  const joints = [V(0, 0, 0)];
+  let P = V(0, 0, 0);
+  const lengths = [];
+  for (let i = 0; i < nGore; i++) {
+    const L = (i === 0 || i === nGore - 1) ? Lend : Lmid;
+    lengths.push(L);
+    P = add(P, scl(dir(i), L));
+    joints.push(P);
+  }
+  const totalL = lengths.reduce((s, v) => s + v, 0);
+  const rAt = (t) => R0 + (R1 - R0) * t;
+  const jointN = (k) => norm(add(dir(k - 1), dir(k)));
+  const ringOn = (i, planeP, planeN, r) => {
+    const D = dir(i), N = nrmE(i), pts = [];
     for (let k = 0; k < segs; k++) {
-      const t0 = (k / segs) * 2 * Math.PI, t1 = ((k + 1) / segs) * 2 * Math.PI;
-      const ring = (ang, t) => {
-        const cx = rad * Math.sin(ang), cy = rad * (1 - Math.cos(ang)), cz = 0;
-        const tx = Math.cos(ang), ty = Math.sin(ang);
-        return V(cx + R * Math.cos(t) * tx, cy + R * Math.cos(t) * ty, cz + R * Math.sin(t));
-      };
-      const pts = [ring(a0, t0), ring(a0, t1), ring(a1, t1), ring(a1, t0)];
-      const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
-      faces.push({ pts, n, holes: [], w: (2 * Math.PI * R) / segs, h: rad * (a1 - a0), smooth: true });
+      const th = (k / segs) * 2 * Math.PI;
+      const radial = add(scl(N, Math.cos(th)), scl(bin, Math.sin(th)));
+      const denom = dot(D, planeN);
+      const s = Math.abs(denom) < 1e-9 ? 0 : -dot(add(sub(joints[i], planeP), scl(radial, r)), planeN) / denom;
+      pts.push(add(add(joints[i], scl(D, s)), scl(radial, r)));
+    }
+    return pts;
+  };
+  const faces = [];
+  let acc = 0;
+  for (let i = 0; i < nGore; i++) {
+    const rA = rAt(acc / totalL), rB = rAt((acc + lengths[i]) / totalL);
+    acc += lengths[i];
+    const n0 = (i === 0) ? dir(0) : jointN(i);
+    const n1 = (i === nGore - 1) ? dir(nGore - 1) : jointN(i + 1);
+    const ring0 = ringOn(i, joints[i], n0, rA);
+    const ring1 = ringOn(i, joints[i + 1], n1, rB);
+    const hLen = lengths[i];
+    for (let k = 0; k < segs; k++) {
+      const k2 = (k + 1) % segs;
+      const pts = [ring0[k], ring0[k2], ring1[k2], ring1[k]];
+      const nn = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+      faces.push({ pts, n: nn, holes: [], w: (Math.PI * (rA + rB)) / segs, h: hLen, smooth: true, gore: i });
     }
   }
-  return { faces, panels: [{ w: Math.PI * d, h: rad * bend }] };
+  // Leave mid-surface unshifted so endFrames (flanges) stay on the openings; thicken() sits the view.
+  return { faces, panels: [{ w: Math.PI * (R0 + R1), h: totalL }] };
 }
 export function foldRectElbow(w, h, r, bendDeg) {
   const faces = [];
@@ -582,7 +837,7 @@ export const FOLD_MODELS = {
   elbow4: (p) => foldElbow(p.d, p.bend, p.n || 4, 48, p.clr),
   elbow5: (p) => foldElbow(p.d, p.bend, p.n || 5, 48, p.clr),
   elbow45: (p) => foldElbow(p.d, p.bend, p.n || 3, 48, p.clr),
-  redelbow: (p) => foldElbow((p.d + p.d2) / 2, p.bend, 3, 48, p.clr),
+  redelbow: (p) => foldElbow(p.d, p.bend, 3, 32, p.clr, p.d2),
   rectelbow: (p) => foldRectElbow(p.w, p.h, p.r, p.bend),
   dustpan: (p) => foldDustpan(p.w, p.front, p.d, p.h),
   scoop: (p) => foldScoop(p.w, p.d, p.h, p.r),
@@ -593,26 +848,13 @@ export const FOLD_MODELS = {
   chimround: (p) => foldFrustum(p.base * 0.6, p.d, p.collar),
   cricketflash: (p) => foldAngle(p.w, p.h, p.rise),
   roofjack: (p) => foldFrustum(p.d + 2 * p.collar, p.d, p.collar),
-  fishmouth: (p) => foldTube(p.d, (p.skirt || 30) + (p.d2 || p.d) / 2),
-  fishflat: (p) => foldTube(p.d, (p.skirt || 30) + (p.rise || 25)),
-  saddlehole: (p) => foldTube(p.d, p.len),
+  fishmouth: (p) => foldFishmouth(p.d, p.d2 || p.d, p.skirt || 30),
+  fishflat: (p) => foldPipeOnFlat(p.d, p.rise || 25, p.skirt || 30),
+  saddlehole: (p) => foldSaddleHole(p.d, p.len, p.branch),
   takeoff: (p) => foldTube(p.d, p.len),
-  britches: (p) => {
-    const a = foldTube(p.d, p.len), b = foldTube(p.d, p.len), c = foldTube(p.d2, p.len);
-    b.faces.forEach((f) => f.pts.forEach((q) => { q[0] += p.d; }));
-    c.faces.forEach((f) => f.pts.forEach((q) => { q[2] += p.d; }));
-    return { faces: a.faces.concat(b.faces, c.faces), panels: a.panels.concat(b.panels, c.panels) };
-  },
-  teetemp: (p) => {
-    const main = foldTube(p.d2, p.len), br = foldTube(p.d, p.skirt + p.d2 / 2);
-    br.faces.forEach((f) => f.pts.forEach((q) => { const y = q[1]; q[1] = q[2] + p.d2 / 2; q[2] = y; }));
-    return { faces: main.faces.concat(br.faces), panels: main.panels.concat(br.panels) };
-  },
-  ybranch: (p) => {
-    const main = foldTube(p.d2, p.len), br = foldTube(p.d, p.len);
-    br.faces.forEach((f) => f.pts.forEach((q) => { q[0] += p.d; q[1] += p.rise || 0; }));
-    return { faces: main.faces.concat(br.faces), panels: main.panels.concat(br.panels) };
-  },
+  britches: (p) => foldBritches(p.d, p.d2, p.len),
+  teetemp: (p) => foldTee(p.d, p.d2, p.len, p.skirt || 25),
+  ybranch: (p) => foldYBranch(p.d, p.d2, p.len, p.rise || 20),
   ductcap: (p) => foldDisc(p.d, p.hole > 8 ? p.hole : 0),
   rectcap: (p) => flangeFrame3(p.w, p.h, p.lip),
 };
@@ -809,10 +1051,12 @@ const SMOOTH_COS = Math.cos((75 * Math.PI) / 180);  // curved shells keep facets
 const STEEL = [188, 196, 204], EDGE = "#2c333c";
 
 function wrinkleLimit(f, g) {
+  if (f && g && f.gore != null && g.gore != null && f.gore !== g.gore) return SHARP_COS;
   if (f && g && f.smooth && g.smooth) return -1;
   return (f && g && (f.smooth || g.smooth)) ? SMOOTH_COS : SHARP_COS;
 }
 function isSharpPair(f, g) {
+  if (f && g && f.gore != null && g.gore != null && f.gore !== g.gore) return true;
   if (f && g && f.smooth && g.smooth) return false;
   return dot(f.n, g.n) < wrinkleLimit(f, g);
 }
@@ -992,17 +1236,22 @@ function drawGroundShadow(ctx, faces, cam, w, h, pad) {
   ctx.restore();
 }
 
-function drawSharpEdges(ctx, faces, cam, w, h, pad, strokeW) {
+function drawSharpEdges(ctx, faces, cam, w, h, pad, strokeW, ghostPass = false) {
   const { xy } = projector(faces, cam, w, h, pad);
   ctx.save();
-  ctx.strokeStyle = EDGE;
-  ctx.lineWidth = strokeW;
+  ctx.strokeStyle = ghostPass ? "rgba(70, 90, 110, 0.55)" : EDGE;
+  ctx.lineWidth = ghostPass ? strokeW * 0.8 : strokeW;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
+  if (ghostPass) ctx.setLineDash([3, 2.2]);
   ctx.beginPath();
   for (const e of collectEdges(faces)) {
     const walls = e.faces.filter((f) => f.holeWall);
     if (walls.length === e.faces.length) continue;
+    const allGhost = e.faces.every((f) => f.ghost);
+    const anyGhost = e.faces.some((f) => f.ghost);
+    if (ghostPass ? !allGhost : allGhost) continue;
+    if (!ghostPass && anyGhost && allGhost) continue;
     const ncs = e.faces.map((f) => rotCam(f.n, cam));
     let sharp = e.faces.length !== 2;
     if (e.faces.length === 2) sharp = isSharpPair(e.faces[0], e.faces[1]);
@@ -1033,10 +1282,19 @@ export function drawFoldCanvas(cv, model, cam = DEFAULT_CAM) {
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
   const pad = Math.max(16, Math.round(Math.min(w, h) * 0.06));
-  drawGroundShadow(ctx, model.faces, cam, w, h, pad);
-  const polys = projectFaces(model.faces, cam, w, h, pad);
+  const solidFaces = model.faces.filter((f) => !f.ghost);
+  const ghostFaces = model.faces.filter((f) => f.ghost);
+  drawGroundShadow(ctx, solidFaces.length ? solidFaces : model.faces, cam, w, h, pad);
+  if (ghostFaces.length) {
+    ctx.save();
+    ctx.globalAlpha = 0.32;
+    for (const p of projectFaces(ghostFaces, cam, w, h, pad)) fillShaded(ctx, p.path, p.holes, p.lits, p.back);
+    ctx.restore();
+    drawSharpEdges(ctx, ghostFaces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280), true);
+  }
+  const polys = projectFaces(solidFaces.length ? solidFaces : model.faces, cam, w, h, pad);
   for (const p of polys) fillShaded(ctx, p.path, p.holes, p.lits, p.back);
-  drawSharpEdges(ctx, model.faces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280));
+  drawSharpEdges(ctx, solidFaces.length ? solidFaces : model.faces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280));
 }
 
 export function foldThumbSvg(model, w = 96, h = 72, cam = DEFAULT_CAM) {
@@ -1048,7 +1306,8 @@ export function foldThumbSvg(model, w = 96, h = 72, cam = DEFAULT_CAM) {
   for (const p of polys) {
     const ring = (pts) => pts.map((q, i) => `${i ? "L" : "M"}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(" ") + "Z";
     const fill = steelRgb(p.back ? 0.5 : p.lit);
-    body += `<path d="${ring(p.path)}${p.holes.map(ring).join("")}" fill="${fill}" fill-rule="evenodd"/>`;
+    const op = p.src && p.src.ghost ? ' fill-opacity="0.32"' : "";
+    body += `<path d="${ring(p.path)}${p.holes.map(ring).join("")}" fill="${fill}" fill-rule="evenodd"${op}/>`;
   }
   let edges = "";
   for (const e of collectEdges(model.faces)) {

@@ -325,7 +325,7 @@ function closePts(pts) {
 
 // Join side panels along matching right/left seams. Each panel's pts are
 // [baseL, baseR, rightSeamEnd, ...top edge..., leftSeamEnd].
-export function joinPanels(panels) {
+export function joinPanels(panels, opts = {}) {
   if (!panels || !panels.length) return null;
   const src = panels.map((p) => (p && p.pts) || p);
   if (src.some((p) => !p || p.length < 3)) return null;
@@ -362,8 +362,24 @@ export function joinPanels(panels) {
     const map = maps[i];
     const apex = pan.apex ? map(pan.apex) : null;
     if (apex) { addSeg(p[0], apex); addSeg(p[1], apex); }
-    if (pan.fan) for (const q of pan.fan) addSeg(p[1], map(q));
-    if (pan.leftFan) for (const q of pan.leftFan) addSeg(p[0], map(q));
+    const fanMarks = (arr, firstHalf) => {
+      const perCorner = Math.max(0, Math.min(8, Math.round(Number(opts.fanLines != null ? opts.fanLines : 4))));
+      if (!arr || !arr.length || perCorner <= 0) return [];
+      const inner = arr.length > 2 ? arr.slice(1, -1) : arr;
+      if (!inner.length) return [];
+      const lo = firstHalf ? 0 : 0.5, hi = firstHalf ? 0.5 : 1;
+      const out = [];
+      for (let k = 1; k <= perCorner; k++) {
+        const t = k / (perCorner + 1);
+        if (t <= lo || t > hi) continue;
+        const u = (t - lo) / (hi - lo);
+        const idx = Math.round(u * (inner.length - 1));
+        out.push(inner[Math.max(0, Math.min(inner.length - 1, idx))]);
+      }
+      return out;
+    };
+    if (pan.fan) for (const q of fanMarks(pan.fan, true)) addSeg(p[1], map(q));
+    if (pan.leftFan) for (const q of fanMarks(pan.leftFan, false)) addSeg(p[0], map(q));
     if (pan.topFold && pan.topFold.length === 2) addSeg(map(pan.topFold[0]), map(pan.topFold[1]));
   }
   const tops = placed.map((p) => [p[2], p[p.length - 1]]);
@@ -460,13 +476,13 @@ export function addFlangeLip(part, lip) {
 }
 
 // One connected development if it is simple and fits the bed; otherwise two halves.
-export function developConnected(panels) {
+export function developConnected(panels, opts = {}) {
   if (!panels || !panels.length) return null;
-  const one = joinPanels(panels);
+  const one = joinPanels(panels, opts);
   if (one && fitsBed(one.box.w, one.box.h)) return { parts: [one], halves: false };
   const mid = Math.max(1, Math.ceil(panels.length / 2));
-  const a = joinPanels(panels.slice(0, mid));
-  const b = joinPanels(panels.slice(mid));
+  const a = joinPanels(panels.slice(0, mid), opts);
+  const b = joinPanels(panels.slice(mid), opts);
   if (a && b) {
     const reason = one
       ? "This size is developed as two halves so it fits the 1300 × 800 mm bed."
