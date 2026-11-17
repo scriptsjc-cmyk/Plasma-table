@@ -1,5 +1,6 @@
-// Laptop Setup and Cut only: show the bed rotated 180° so the sheet corner (0, 0) and
-// the gantry sit at the top-right, matching someone standing at the far side of the table.
+// Laptop Setup and Cut only: flip the bed picture top-to-bottom (Y only) so it
+// matches the table as you stand at it. The sheet corner (0, 0) sits at the
+// top-left; +X points right (same as Machine setup) and +Y points down.
 // This is a view transform only. Machine coordinates, G-code and commands are unchanged.
 import { isLaptopUi } from "../ui/laptop.js";
 import { screen } from "../ui/flow.js";
@@ -14,24 +15,26 @@ export function bedViewRotated() {
   return step === 3 || step === 4;
 }
 
-export function flipScreen(sx, sy, w, h) { return [w - sx, h - sy]; }
+// Involutive Y-only flip (mirror top to bottom). X is unchanged.
+export function flipScreen(sx, sy, w, h) { return [sx, h - sy]; }
 
-// Involutive: the same call maps a screen point into (or back out of) the unrotated canvas.
+// Involutive: the same call maps a screen point into (or back out of) the unflipped canvas.
 export function applyBedScreen(sx, sy, w, h) {
   return bedViewRotated() ? flipScreen(sx, sy, w, h) : [sx, sy];
 }
 
-// Pointer / wheel pan: keep the picture following the hand after the 180° flip.
+// Pointer / wheel pan: keep the picture following the hand after the Y flip.
 export function shiftView(view, dsx, dsy) {
   if (!view || !(view.s > 0)) return;
   const k = 1 / view.s;
-  if (bedViewRotated()) { view.vx += dsx * k; view.vy -= dsy * k; }
-  else { view.vx -= dsx * k; view.vy += dsy * k; }
+  view.vx -= dsx * k;
+  view.vy += (bedViewRotated() ? -dsy : dsy) * k;
 }
 
 export function jogToMachine(axis, dir) {
   dir = Number(dir);
-  if (bedViewRotated() && (axis === "X" || axis === "Y")) return [axis, -dir];
+  // Y is mirrored on screen, so invert only Y. X matches Machine setup.
+  if (bedViewRotated() && axis === "Y") return [axis, -dir];
   return [axis, dir];
 }
 
@@ -49,7 +52,7 @@ export function syncJogPadLabels() {
     const axis = b.dataset.axis;
     if (axis === "Z") continue;
     const dir = Number(b.dataset.dir);
-    const shown = rot ? -dir : dir;
+    const shown = (rot && axis === "Y") ? -dir : dir;
     const lab = axis + (shown > 0 ? "+" : "−");
     const small = b.querySelector("small");
     if (small) small.textContent = lab;
@@ -58,7 +61,7 @@ export function syncJogPadLabels() {
 }
 
 
-// Map a world-space axis-aligned rect through X/Y (works when those mappers are 180°-flipped).
+// Map a world-space axis-aligned rect through X/Y (works when those mappers flip Y).
 export function worldRect(X, Y, x, y, w, h) {
   const x0 = X(x), y0 = Y(y), x1 = X(x + w), y1 = Y(y + h);
   return [Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0)];
@@ -75,7 +78,7 @@ function arrow(ctx, x0, y0, x1, y1) {
   ctx.stroke();
 }
 
-// Tiny upright +X / +Y hints in machine space, so the rotated view is not ambiguous.
+// Tiny upright +X / +Y hints in machine space, so the flipped view is not ambiguous.
 export function drawAxisHints(ctx, toScreen) {
   if (!bedViewRotated() || !toScreen) return;
   const [ox, oy] = toScreen(0, 0);

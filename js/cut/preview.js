@@ -122,10 +122,11 @@ function drawCanvas(cv, main) {
   const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
   const rot = !isPartPreview() && bedViewRotated();
   const X0 = (x) => offX + (x - A.x[0]) * sc, Y0 = (y) => h - offY - (y - A.y[0]) * sc;
-  const X = (x) => rot ? w - X0(x) : X0(x), Y = (y) => rot ? h - Y0(y) : Y0(y);
+  // Y-only flip when the laptop Setup/Cut bed view is on: X stays as drawn, Y is mirrored.
+  const X = (x) => X0(x), Y = (y) => rot ? h - Y0(y) : Y0(y);
   const cam = previewCam();
   const toMmRaw = (px, py) => {
-    if (rot) { px = w - px; py = h - py; }
+    if (rot) py = h - py;
     return [A.x[0] + (px - offX) / sc, A.y[0] + (h - offY - py) / sc];
   };
   const toMm = (px, py) => {

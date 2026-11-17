@@ -212,7 +212,7 @@ function drawBg(sk, ctx, S, C, w, h) {
   const [ox, oy] = S(0, 0);
   ctx.fillStyle = "#c05600"; ctx.beginPath(); ctx.arc(ox, oy, 5, 0, 7); ctx.fill();
   if (H.S.zeroSet) {                                                     // work zero: the sheet corner, not the part
-    const [ix, iy] = S(80, 40);                                          // offset into the sheet so the label stays readable when the view is rotated
+    const [ix, iy] = S(80, 40);                                          // offset into the sheet so the label stays readable when the view is flipped
     ctx.textAlign = ix >= ox ? "left" : "right";
     ctx.textBaseline = iy >= oy ? "top" : "bottom";
     ctx.fillText("Sheet corner (0, 0)", ox + (ix >= ox ? 8 : -8), oy + (iy >= oy ? 10 : -10));

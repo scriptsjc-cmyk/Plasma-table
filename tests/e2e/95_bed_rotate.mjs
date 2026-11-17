@@ -1,5 +1,5 @@
-// Laptop Setup and Cut: the bed is drawn rotated 180° (origin and gantry at top-right) so it matches
-// standing at the table. View-only: G-code is unchanged. Drag and jog follow the screen.
+// Laptop Setup and Cut: the bed is flipped top-to-bottom (Y only; origin at top-left, +X right, +Y down)
+// so it matches the table. View-only: G-code is unchanged. Drag and jog follow the screen.
 import { T } from "../lib/t.mjs";
 import { startServer, launch, newPage, demoToShape } from "../lib/browser.mjs";
 
@@ -58,7 +58,7 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     screen: window.plasmaTest.screen(),
     laptop: matchMedia("(min-width: 900px) and (pointer: fine)").matches,
   }));
-  t.check("laptop Setup: the bed view is rotated", rot.on && rot.step === 3 && rot.laptop, JSON.stringify(rot));
+  t.check("laptop Setup: the bed view is Y-flipped", rot.on && rot.step === 3 && rot.laptop, JSON.stringify(rot));
 
   const corners = await ev(page, () => {
     const sk = window.plasmaTest.sketch, [w, h] = sk.size();
@@ -67,15 +67,15 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     const mid = sk.toScreen((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
     return { w, h, o, far, mid, axes: document.getElementById("preview").dataset.axes };
   });
-  t.check("Setup: sheet corner (0,0) is in the top-right", corners.o[0] > corners.w * 0.55 && corners.o[1] < corners.h * 0.45, JSON.stringify(corners));
-  t.check("Setup: the far table corner is toward the bottom-left", corners.far[0] < corners.o[0] && corners.far[1] > corners.o[1], JSON.stringify(corners));
+  t.check("Setup: sheet corner (0,0) is in the top-left", corners.o[0] < corners.w * 0.45 && corners.o[1] < corners.h * 0.45, JSON.stringify(corners));
+  t.check("Setup: the far table corner is toward the bottom-right", corners.far[0] > corners.o[0] && corners.far[1] > corners.o[1], JSON.stringify(corners));
   t.check("Setup: +X / +Y axis hints are drawn", corners.axes === "on", JSON.stringify(corners));
 
   const g1 = motionXY(await gcodeOf(page));
-  t.check("G-code motion XY is unchanged by the view rotation", sameXY(g1, GOLDEN_XY), JSON.stringify(g1.slice(0, 4)));
+  t.check("G-code motion XY is unchanged by the view flip", sameXY(g1, GOLDEN_XY), JSON.stringify(g1.slice(0, 4)));
   t.check("G-code stays near the sheet origin (not flipped in machine space)", g1.every((p) => p[0] < 200 && p[1] < 200), JSON.stringify([Math.max(...g1.map((p) => p[0])), Math.max(...g1.map((p) => p[1]))]));
 
-  // drag right on screen: the part moves toward screen-right and its machine X decreases
+  // drag right on screen: the part moves toward screen-right and its machine X increases (X is not flipped)
   const before = await ev(page, () => {
     const sk = window.plasmaTest.sketch, it = sk.items[0], b = sk.boxOf(it);
     const [sx, sy] = sk.toScreen((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
@@ -93,9 +93,9 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     return { x: it.x, y: it.y, sx, sy };
   });
   t.check("Setup: dragging right moves the part toward screen-right", after.sx > before.sx + 20, JSON.stringify({ before, after }));
-  t.check("Setup: a screen-right drag decreases machine X (inverse of the view)", after.x < before.x - 5, JSON.stringify({ before, after }));
+  t.check("Setup: a screen-right drag increases machine X (X is not flipped)", after.x > before.x + 5, JSON.stringify({ before, after }));
 
-  // Zoom to parts: the picture stays rotated — (0,0) is still to the top-right of the part.
+  // Zoom to parts: the picture stays Y-flipped — (0,0) is still to the top-left of the part.
   await ev(page, () => { const z = document.getElementById("layZoom"); if (z && !z.classList.contains("hidden")) z.click(); });
   await sleep(80);
   const zParts = await ev(page, () => {
@@ -103,16 +103,16 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     const mid = sk.toScreen((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
     const o = sk.toScreen(0, 0), x = sk.toScreen(100, 0), y = sk.toScreen(0, 100);
     const [w, h] = sk.size();
-    return { o, x, y, mid, w, h, onCanvas: mid[0] > 0 && mid[0] < w && mid[1] > 0 && mid[1] < h, xLeft: x[0] < o[0], yDown: y[1] > o[1] };
+    return { o, x, y, mid, w, h, onCanvas: mid[0] > 0 && mid[0] < w && mid[1] > 0 && mid[1] < h, xRight: x[0] > o[0], yDown: y[1] > o[1] };
   });
-  t.check("Zoom to parts keeps the part in view, with +X left and +Y down", zParts.onCanvas && zParts.xLeft && zParts.yDown, JSON.stringify(zParts));
+  t.check("Zoom to parts keeps the part in view, with +X right and +Y down", zParts.onCanvas && zParts.xRight && zParts.yDown, JSON.stringify(zParts));
   await ev(page, () => { const f = document.getElementById("layFit"); if (f && !f.classList.contains("hidden")) f.click(); });
   await sleep(80);
   const zFit = await ev(page, () => {
     const sk = window.plasmaTest.sketch, [w, h] = sk.size();
     return { o: sk.toScreen(0, 0), far: sk.toScreen(1250, 2500), w, h };
   });
-  t.check("Fit to table keeps (0,0) in the top-right", zFit.o[0] > zFit.w * 0.55 && zFit.o[1] < zFit.h * 0.45, JSON.stringify(zFit));
+  t.check("Fit to table keeps (0,0) in the top-left", zFit.o[0] < zFit.w * 0.45 && zFit.o[1] < zFit.h * 0.45, JSON.stringify(zFit));
 
   // Make a part / step 1 is not rotated
   await ev(page, () => window.plasmaTest.goStep(1));
@@ -124,7 +124,7 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     // part preview uses the zoom map; fall back to a raw corner check via prepared bounds if present
     return { rot, axes: cv && cv.dataset.axes, hasMap: !!(map || zmap) };
   });
-  t.check("step 1 (Part) is not rotated", part.rot === false, JSON.stringify(part));
+  t.check("step 1 (Part) is not flipped", part.rot === false, JSON.stringify(part));
 
   await ev(page, () => { window.plasmaTest.showScreen("make"); window.plasmaTest.setShapeFs(false); });
   await sleep(150);
@@ -133,7 +133,7 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     const o = sk.toScreen(0, 0);
     return { rot: window.plasmaTest.bedViewRotated(), o, w, h };
   });
-  t.check("Make a part is not rotated: (0,0) stays bottom-left", !make.rot && make.o[0] < make.w * 0.5 && make.o[1] > make.h * 0.5, JSON.stringify(make));
+  t.check("Make a part is not flipped: (0,0) stays bottom-left", !make.rot && make.o[0] < make.w * 0.5 && make.o[1] > make.h * 0.5, JSON.stringify(make));
   await page.ctx.close();
 }
 
@@ -142,7 +142,7 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
   const page = await setupPage("d1366", { connect: true, step: 3 });
   await ev(page, () => { if (document.activeElement) document.activeElement.blur(); });
   const labels = await ev(page, () => [...document.querySelectorAll(".j[data-axis='X'][data-dir='1'] small")].map((s) => s.textContent));
-  t.check("Setup jog pad: the screen-right button is labelled X−", labels.length && labels.every((s) => /X−/.test(s)), JSON.stringify(labels));
+  t.check("Setup jog pad: the screen-right button is labelled X+", labels.length && labels.every((s) => /X\+/.test(s)), JSON.stringify(labels));
 
   const snap = () => ev(page, () => {
     const w = window.plasmaTest.S.status.WPos || [0, 0, 0];
@@ -154,7 +154,7 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
   let a = await snap();
   await page.keyboard.down("ArrowRight"); await sleep(120); await page.keyboard.up("ArrowRight"); await sleep(900);
   let b = await snap();
-  t.check("Setup: ArrowRight moves the torch toward screen-right (machine −X)", b.sx > a.sx && b.x < a.x, JSON.stringify({ a, b }));
+  t.check("Setup: ArrowRight moves the torch toward screen-right (machine +X)", b.sx > a.sx && b.x > a.x, JSON.stringify({ a, b }));
 
   a = await snap();
   await page.keyboard.down("ArrowUp"); await sleep(120); await page.keyboard.up("ArrowUp"); await sleep(900);
@@ -188,7 +188,7 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     await sleep(900);
   }
   b = await snap();
-  t.check("Setup: the screen-right jog button sends machine −X and moves toward screen-right", !!(btn && b.sx > a.sx && b.x < a.x), JSON.stringify({ btn, a, b }));
+  t.check("Setup: the screen-right jog button sends machine +X and moves toward screen-right", !!(btn && b.sx > a.sx && b.x > a.x), JSON.stringify({ btn, a, b }));
 
   a = await snap();
   await page.keyboard.down("PageUp"); await sleep(120); await page.keyboard.up("PageUp"); await sleep(900);
@@ -205,14 +205,14 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     tab: window.plasmaTest.S.tab,
     labels: [...document.querySelectorAll(".j[data-axis='X'][data-dir='1'] small")].map((s) => s.textContent),
   }));
-  t.check("Machine setup is not rotated; the right button is X+ again", !ms.rot && ms.tab === "setup" && ms.labels.some((s) => /X\+/.test(s)), JSON.stringify(ms));
+  t.check("Machine setup is not flipped; the right button is X+ again", !ms.rot && ms.tab === "setup" && ms.labels.some((s) => /X\+/.test(s)), JSON.stringify(ms));
   await ev(page, () => { if (document.activeElement) document.activeElement.blur(); });
   a = await ev(page, () => { const w = window.plasmaTest.S.status.WPos || [0, 0, 0]; return { x: w[0], y: w[1] }; });
   await page.keyboard.down("ArrowRight"); await sleep(120); await page.keyboard.up("ArrowRight"); await sleep(900);
   b = await ev(page, () => { const w = window.plasmaTest.S.status.WPos || [0, 0, 0]; return { x: w[0], y: w[1] }; });
   t.check("Machine setup: ArrowRight still jogs machine +X", b.x > a.x, JSON.stringify({ a, b }));
 
-  // Cut step: rotation, torch marker maps through the rotated view
+  // Cut step: Y-flip, torch marker maps through the flipped view
   await ev(page, () => { const tab = document.querySelector(".tab[data-tab='cut']"); if (tab) tab.click(); });
   await ev(page, () => { window.plasmaTest.S.job = window.plasmaTest.S.job || { running: false }; window.plasmaTest.goStep(4); });
   await sleep(250);
@@ -227,13 +227,13 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     const torch = map ? map.toPx(w[0], w[1]) : null;
     return { rot, axes: cv && cv.dataset.axes, w: cv.clientWidth, h: cv.clientHeight, o, far, torch, wpos: w.slice() };
   });
-  t.check("Cut: the bed view is rotated", cut.rot && cut.o && cut.o[0] > cut.w * 0.55 && cut.o[1] < cut.h * 0.45, JSON.stringify(cut));
+  t.check("Cut: the bed view is Y-flipped (0,0 at top-left)", cut.rot && cut.o && cut.o[0] < cut.w * 0.45 && cut.o[1] < cut.h * 0.45, JSON.stringify(cut));
   t.check("Cut: +X / +Y axis hints are drawn", cut.axes === "on", JSON.stringify(cut));
-  t.check("Cut: the torch marker is drawn in the rotated view", cut.torch && cut.o && Math.hypot(cut.torch[0] - cut.o[0], cut.torch[1] - cut.o[1]) < 400, JSON.stringify(cut));
-  t.check("Cut: the far table corner is toward the bottom-left", cut.far && cut.o && cut.far[0] < cut.o[0] && cut.far[1] > cut.o[1], JSON.stringify(cut));
+  t.check("Cut: the torch marker is drawn in the flipped view", cut.torch && cut.o && Math.hypot(cut.torch[0] - cut.o[0], cut.torch[1] - cut.o[1]) < 400, JSON.stringify(cut));
+  t.check("Cut: the far table corner is toward the bottom-right", cut.far && cut.o && cut.far[0] > cut.o[0] && cut.far[1] > cut.o[1], JSON.stringify(cut));
 
   const g2 = motionXY(await gcodeOf(page));
-  t.check("Cut: generated G-code is still the unrotated machine path", sameXY(g2, GOLDEN_XY), JSON.stringify(g2.slice(0, 4)));
+  t.check("Cut: generated G-code is still the unflipped machine path", sameXY(g2, GOLDEN_XY), JSON.stringify(g2.slice(0, 4)));
   await page.ctx.close();
 }
 
@@ -246,7 +246,7 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     const labels = [...document.querySelectorAll(".j[data-axis='X'][data-dir='1'] small")].map((s) => s.textContent);
     return { rot: window.plasmaTest.bedViewRotated(), o, w, h, labels, laptop: matchMedia("(min-width: 900px) and (pointer: fine)").matches };
   });
-  t.check("phone Setup is not rotated: (0,0) stays bottom-left", !ph.rot && !ph.laptop && ph.o[0] < ph.w * 0.5 && ph.o[1] > ph.h * 0.5, JSON.stringify(ph));
+  t.check("phone Setup is not flipped: (0,0) stays bottom-left", !ph.rot && !ph.laptop && ph.o[0] < ph.w * 0.5 && ph.o[1] > ph.h * 0.5, JSON.stringify(ph));
   t.check("phone jog pad still shows X+ on the right button", ph.labels.some((s) => /X\+/.test(s)), JSON.stringify(ph));
   await ev(page, () => { if (document.activeElement) document.activeElement.blur(); });
   const x0 = await ev(page, () => Number((window.plasmaTest.S.status.WPos || [0])[0]));
