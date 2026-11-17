@@ -13,6 +13,7 @@ import { keepAwake, setConnected } from "./connection.js";
 import { LOST_BOARD } from "./boardrun.js";
 import { goStep } from "../ui/nav.js";
 import { log } from "./console.js";
+import { probeDisplayOn } from "./probefilter.js";
 
 function onStatus(st) {
   S.status = st;
@@ -21,11 +22,13 @@ function onStatus(st) {
   renderLamps(st);
   refresh();
 }
-function renderLamps(st) {
+export function renderLamps(st) {
   const inp = st.inputs || {};
   $$("[data-in]").forEach((el) => {
     const k = el.dataset.in;
-    const on = k === "torch" ? !!st.torch : !!inp[k];
+    // Probe lamp is debounced so electrical noise doesn't flicker it. Other
+    // inputs (especially E-stop) stay immediate.
+    const on = k === "torch" ? !!st.torch : k === "probe" ? probeDisplayOn() : !!inp[k];
     el.classList.toggle("on", on);
     if (el.closest(".mini") && k === "estop") el.textContent = on ? "E-STOP!" : "E-stop OK";
   });

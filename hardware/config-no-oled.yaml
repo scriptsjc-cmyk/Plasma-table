@@ -1,0 +1,220 @@
+# FluidNC config.yaml for Josh's plasma table
+# Board: DUBEUYEW / DOIT-style ESP32-DevKitC V1 (30-pin) + green screw-terminal adapter
+# Drivers: StepperOnline DM542TE, motors: NEMA 23 23HS32 (typically 23HS32-4004S, 2.4 Nm, 4.0 A)
+# App: connects at ws://<fluidnc-ip>:81  (M3/M5 fire the torch relay)
+#
+# This file is written for CURRENT FluidNC (Relay: is a top-level section, not
+# "spindle: type: Relay"). Wi-Fi is NOT stored here — set it in the FluidNC
+# web installer or web UI, or with $Sta / $WiFi commands (see the wiring guide).
+#
+# Wiring this file expects (recommended, because the ESP32 is 3.3 V and the
+# DM542TE optocouplers want 5–24 V):
+#   Common-anode: PUL+, DIR+ (and ENA+ if used) to the adapter VIN (5 V).
+#   PUL-, DIR-, ENA- to the GPIO terminals below.
+#   The :low on step/dir pins makes a LOW from the ESP32 count as a pulse.
+# If you instead wire common-cathode (GPIO to PUL+/DIR+, minuses to GND),
+# remove every :low from the step and direction pins.
+#
+# Limit switches and the hardware E-stop are reserved but left as NO_PIN so
+# the board will boot and jog before those switches are fitted. Uncomment the
+# pin lines in the "when switches are fitted" notes after they are wired.
+
+name: Plasma Table
+board: ESP32 DevKitC V1 30-pin
+
+# Do not require homing before jogging. Turn must_home on after limit
+# switches are fitted, tested, and homing cycles are enabled below.
+start:
+  must_home: false
+  check_limits: false
+
+stepping:
+  engine: RMT
+  idle_ms: 255
+  pulse_us: 4
+  dir_delay_us: 5
+  disable_delay_us: 0
+
+# ---------------------------------------------------------------------------
+# steps_per_mm — HOW THESE NUMBERS WERE DERIVED, AND HOW TO CHANGE THEM
+#
+# Formula:
+#   steps_per_mm = (200 * microsteps) / mm_of_travel_per_motor_revolution
+#
+# This config assumes 16x microstepping on the DM542TE
+# (DIP SW5 ON, SW6 ON, SW7 OFF, SW8 ON = 3200 steps/rev).
+# If you change the DIP microstep setting, change steps_per_mm in the same ratio.
+#
+# X and Y assumption (CONFIRM on your machine):
+#   GT2 belt, 2 mm pitch, 20-tooth pulley
+#   travel per rev = 20 * 2 = 40 mm
+#   steps_per_mm  = 3200 / 40 = 80
+#
+#   Other common XY drives (still at 16x / 3200 steps/rev):
+#     GT2 belt, 16-tooth pulley:  3200 / (16*2) = 100
+#     GT2 belt, 30-tooth pulley:  3200 / (30*2) = 53.333
+#     Module-1 rack, 20-tooth pinion: 3200 / (20 * 3.1416) ≈ 50.93
+#     Module-1.5 rack, 20-tooth pinion: 3200 / (20 * 1.5 * 3.1416) ≈ 33.95
+#     HTD 5 mm belt, 20-tooth pulley: 3200 / (20*5) = 32
+#
+# Z assumption (CONFIRM on your machine):
+#   T8 leadscrew, 8 mm lead (2 mm pitch, 4 starts — very common)
+#   steps_per_mm = 3200 / 8 = 400
+#   If the screw is 4 mm lead: 3200 / 4 = 800
+#   If the screw is 2 mm lead: 3200 / 2 = 1600
+#
+# After a tape-measure test: commanded_mm / actual_mm * current_steps_per_mm
+# gives the corrected value. Example: you asked for 100 mm, it moved 97 mm,
+# and X is 80:  new = 100 / 97 * 80 ≈ 82.47
+# ---------------------------------------------------------------------------
+
+axes:
+  shared_stepper_disable_pin: NO_PIN
+
+  x:
+    steps_per_mm: 80
+    max_rate_mm_per_min: 6000
+    acceleration_mm_per_sec2: 400
+    max_travel_mm: 1300
+    soft_limits: false
+    homing:
+      cycle: 0
+      mpos_mm: 0
+      positive_direction: false
+      seek_mm_per_min: 1500
+      feed_mm_per_min: 100
+    motor0:
+      limit_neg_pin: NO_PIN
+      # When an NC limit switch is fitted at the negative/home end:
+      # limit_neg_pin: gpio.33:pu
+      hard_limits: false
+      pulloff_mm: 2
+      standard_stepper:
+        step_pin: gpio.18:low
+        direction_pin: gpio.19:low
+        disable_pin: NO_PIN
+
+  y:
+    steps_per_mm: 80
+    max_rate_mm_per_min: 6000
+    acceleration_mm_per_sec2: 400
+    max_travel_mm: 800
+    soft_limits: false
+    homing:
+      cycle: 0
+      mpos_mm: 0
+      positive_direction: false
+      seek_mm_per_min: 1500
+      feed_mm_per_min: 100
+    motor0:
+      limit_neg_pin: NO_PIN
+      # When an NC limit switch is fitted at the negative/home end:
+      # limit_neg_pin: gpio.16:pu
+      hard_limits: false
+      pulloff_mm: 2
+      standard_stepper:
+        step_pin: gpio.22:low
+        direction_pin: gpio.23
+        disable_pin: NO_PIN
+    # If the gantry is driven by TWO Y motors (not assumed here), add motor1:
+    # motor1:
+    #   limit_neg_pin: NO_PIN
+    #   hard_limits: false
+    #   pulloff_mm: 2
+    #   standard_stepper:
+    #     step_pin: gpio.17:low
+    #     direction_pin: gpio.4:low
+    #     disable_pin: NO_PIN
+    # and move the Y limit / E-stop / OLED pins as described in the wiring guide.
+
+  z:
+    steps_per_mm: 400
+    max_rate_mm_per_min: 1200
+    acceleration_mm_per_sec2: 200
+    max_travel_mm: 60
+    soft_limits: false
+    idle_disable: false
+    homing:
+      cycle: 0
+      mpos_mm: 0
+      positive_direction: true
+      seek_mm_per_min: 400
+      feed_mm_per_min: 80
+    motor0:
+      limit_neg_pin: NO_PIN
+      # When an NC limit switch is fitted at the Z home end (usually the top):
+      # limit_neg_pin: gpio.17:pu
+      hard_limits: false
+      pulloff_mm: 1
+      standard_stepper:
+        step_pin: gpio.25:low
+        direction_pin: gpio.26
+        disable_pin: NO_PIN
+
+# Torch on/off through a RELAY MODULE. M3 turns it on, M5 turns it off.
+# Never wire gpio.27 to the plasma cutter itself.
+# off_on_alarm turns the relay off if an alarm or the hardware E-stop trips.
+Relay:
+  output_pin: gpio.27
+  enable_pin: NO_PIN
+  direction_pin: NO_PIN
+  off_on_alarm: true
+  speed_map: 0=0% 1=100%
+
+# Floating-head / ohmic probe (active-low, internal pull-up).
+# Invert by changing :low to :high (or the other way) if the probe light
+# is on when the head is up in the air.
+# FluidNC 4.1.1 has no probe debounce_ms (or other software input filter)
+# in config.yaml — do not invent one; an unknown key can break the config.
+# Do not add any board-side debounce that would delay G38.2: the probe
+# cycle must stop on the raw pin, or the torch can crash into the sheet.
+# :pu is the ESP32 internal pull-up. If the floating-head lamp flickers
+# from noise, also fit a 10k pull-up to 3.3V on gpio.32. Do not enable
+# probe_hard_limit on a noisy probe (it would alarm during jogs).
+probe:
+  pin: gpio.32:low:pu
+
+# Hardware E-stop is reserved on gpio.4. Leave it NO_PIN until the button
+# is wired, or FluidNC will think the E-stop is pressed (the pin would float
+# high). When a normally-closed E-stop to GND is fitted:
+#   estop_pin: gpio.4:pu
+# That is active-high: the button opens, the pull-up takes the pin high, stop.
+# This is only a control-input stop. A real E-stop should also cut motor
+# power and the torch-relay supply. See the wiring guide.
+control:
+  estop_pin: NO_PIN
+  feed_hold_pin: NO_PIN
+  reset_pin: NO_PIN
+  safety_door_pin: NO_PIN
+  cycle_start_pin: NO_PIN
+
+# Optional 0.96 inch SSD1306 I2C OLED (128 x 64). Address 60 is 0x3C.
+# If the screen is upside down, set flip: true. If it stays blank, try
+# i2c_address: 61 (0x3D). Turned off: with no screen fitted it can stall the board (stop-start jogging). Remove the # marks only once a screen is fitted.
+# i2c0:
+#   sda_pin: gpio.14
+#   scl_pin: gpio.13
+#   frequency: 100000
+
+# oled:
+#   i2c_num: 0
+#   i2c_address: 60
+#   width: 128
+#   height: 64
+#   flip: false
+#   mirror: false
+#   radio_delay_ms: 2000
+#   report_interval_ms: 500
+
+# Wi-Fi is configured outside this file (FluidNC stores it separately).
+# First boot, the board puts out a network called FluidNC, password 12345678,
+# and its page is http://192.168.0.1/
+# Then, in the web UI or over USB:
+#   $Sta/SSID=YourNetworkName
+#   $Sta/Password=YourNetworkPassword
+#   $WiFi/Mode=STA>AP
+#   $Bye
+# STA>AP tries your home Wi-Fi, and falls back to the FluidNC access point
+# if that fails. The app then connects to ws://<ip>:81
+# If the live HTTPS app blocks that link, serve a local HTTP copy of the app
+# (see the app's docs/FLUIDNC.md).

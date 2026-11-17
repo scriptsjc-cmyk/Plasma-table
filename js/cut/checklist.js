@@ -8,6 +8,7 @@ import { $, $$, esc } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
 import { CHECK_LINE } from "../machine/boardrun.js";
 import { isEtchOp, throughCutInEtch } from "./etch.js";
+import { probeDisplayOn } from "../machine/probefilter.js";
 
 // ------------------------------------------------------------------ step 3 (second half): checks
 // Round 5 (safety): the first line, "Start point set", is not a box you tick. It follows the machine's zeroConfirmed flag
@@ -81,7 +82,9 @@ export function blockers() {
   else if (S.connected && st !== "Idle") b.push(`Machine is busy (${st}). Wait for it to stop.`);
   const inp = S.status.inputs || {};
   if (inp.estop) b.push("E-stop is pressed – release it and press Unlock.");
-  if (inp.probe) b.push("Floating head is pushed up – check the torch isn't touching anything or stuck.");
+  // Debounced so a one-report noise pulse doesn't flash this warning. startJob
+  // still uses the conservative raw-or-shown check, so a genuine trigger cannot start a cut.
+  if (probeDisplayOn()) b.push("Floating head is pushed up – check the torch isn't touching anything or stuck.");
   if (S.safety.limits && !S.safety.referenced) b.push("Machine needs homing – press Home.");
   if (fit().bad) b.push("The part doesn't fit the machine – move the parts or the sheet's start corner.");
   for (const t of Setup.blockText()) b.push(t);

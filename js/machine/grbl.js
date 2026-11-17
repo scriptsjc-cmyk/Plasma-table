@@ -3,6 +3,10 @@
 // Same protocol handling as plasma/grbl.py.
 import { looksLikeFluidNC } from "./fluidnc.js";
 import { parseFileField, onBoardLine, onBoardStatus, onBoardClosed, abortBoardUpload, attachBoardRun } from "./boardrun.js";
+import {
+  noteProbeRaw, resetProbeFilter, probeBlocks, markProbeStart, clearProbeStart,
+  probeTripLooksFalse, parseProbeTripZ, isProbeMove, PROBE_CLEAR_WAIT_MS,
+} from "./probefilter.js";
 
 export const RT = {
   STATUS: "?", HOLD: "!", RESUME: "~", RESET: "\x18",
@@ -146,6 +150,8 @@ export class GrblLink {
     clearInterval(this.poll);
     this.closeReason = reason || "";
     this.status = { ...this.status, state: "Disconnected", reason: reason || "" };
+    this._clearProbeWait();
+    resetProbeFilter();
     this._emit("status", this.status);
     this._emit("log", { text: reason ? `Controller disconnected: ${reason}` : "Controller disconnected.", level: "error" });
     if (onBoardClosed(this)) return;
@@ -205,6 +211,7 @@ export class GrblLink {
     // Drop everything still queued NOW. Before, the 250 ms between feed-hold and reset let each 'ok' pump more
     // job lines (even M3) into the controller after STOP had been pressed; reset flushed them, but nothing should be sent.
     this.pending = [];
+    this._clearProbeWait();
     const uploading = this.job && this.job.running && this.job.boardRun && this.job.phase === "upload";
     if (uploading) abortBoardUpload(this);
     this.realtime(RT.HOLD);
@@ -213,6 +220,7 @@ export class GrblLink {
   reset(reason) {
     this.pending = [];
     this.inflight = [];
+    this._clearProbeWait();
     if (this.job && this.job.running) this._finishJob("stopped", reason || "Reset.");
     this.realtime(RT.RESET);
   }
@@ -234,6 +242,8 @@ export class GrblLink {
 
   _finishJob(result, message) {
     const j = this.job;
+    this._clearProbeWait();
+    clearProbeStart();
     if (j && j.running) {
       j.running = false; j.result = result; j.finished = Date.now(); j.message = message;
       this._emit("job", this.jobProgress());
@@ -241,13 +251,52 @@ export class GrblLink {
     }
   }
 
+  _clearProbeWait() {
+    this._probeWaitSince = 0;
+    if (this._probeWaitTimer) { clearTimeout(this._probeWaitTimer); this._probeWaitTimer = 0; }
+  }
+
+  // Pre-check only: don't *send* G38.2 while the probe bit is already on (noise or a
+  // stuck head). Wait briefly for a pulse to clear; if it stays on, abort. Once G38.2
+  // has been sent, the board stops the move on the raw pin — this filter is not in
+  // that path and must not delay the stop (a delay would crash the torch into the sheet).
+  _abortProbe(message) {
+    this.pending = [];
+    this._clearProbeWait();
+    clearProbeStart();
+    if (this.job && this.job.running) this._finishJob("error", message);
+    else this._emit("log", { text: message, level: "error" });
+    this.realtime(RT.HOLD);
+    setTimeout(() => this.realtime(RT.RESET), 250);
+  }
+
+  _gateProbe(item) {
+    if (!item || !isProbeMove(item.line)) { this._probeWaitSince = 0; return false; }
+    const rawOn = !!(this.status.inputs && this.status.inputs.probe);
+    if (!probeBlocks(rawOn)) {
+      this._probeWaitSince = 0;
+      return false;
+    }
+    if (!this._probeWaitSince) this._probeWaitSince = Date.now();
+    if (Date.now() - this._probeWaitSince < PROBE_CLEAR_WAIT_MS) {
+      if (!this._probeWaitTimer) {
+        this._probeWaitTimer = setTimeout(() => { this._probeWaitTimer = 0; this._pump(); }, 50);
+      }
+      return true;
+    }
+    this._abortProbe("Touch-off was not started: the floating head was already triggered. Check it isn't stuck up. If the input flickers, fit a 10k pull-up to 3.3V on the probe pin (GPIO32).");
+    return true;
+  }
+
   _pump() {
     while (this.pending.length) {
+      if (this._gateProbe(this.pending[0])) return;
       const { line, source, got, done } = this.pending[0];
       const n = line.length + 1;
       const used = this.inflight.reduce((a, x) => a + x.n, 0);
       if (used + n > this.rx && this.inflight.length) break;
       this.pending.shift();
+      if (isProbeMove(line)) markProbeStart(this.status.MPos && this.status.MPos[2]);
       this.inflight.push({ n, source, line, got, done });
       this.t.write(line + "\n");
       if (source === "job" && this.job) this.job.sent++;
@@ -291,11 +340,13 @@ export class GrblLink {
       else if (st.WPos) st.MPos = st.WPos.map((v, i) => v + this.wco[i]);
       st.torch = (st.accessories || "").includes("S");
       st.inputs = decodePins(st.pins);
+      noteProbeRaw(!!st.inputs.probe);
       if (st.overrides) this.feedOv = Number(st.overrides.split(",")[0]) || 100;  // only sent now and then
       st.feedOv = this.feedOv;
       this.status = st;
       onBoardStatus(this, st);
       this._emit("status", st);
+      if (this._probeWaitSince) this._pump();
       return;
     }
     if (line === "ok") return this._ack(true, line);
@@ -321,7 +372,20 @@ export class GrblLink {
     }
     // FluidNC ConfigAlarm: config.yaml has an error. The status says plain "Alarm", but $X can't clear it, so say what it really is
     if (CONFIG_ERR.test(line)) this._emit("alarm", { code: "config", message: `FluidNC reports a problem in its config.yaml (${line.replace(/^\[MSG:(ERR: )?|\]$/g, "")}). Unlock won't clear this: fix config.yaml, then restart the board. Type $SS in the console to see its start-up messages.` });
-    if (line.startsWith("[PRB:")) this._emit("probe", { text: line });
+    if (line.startsWith("[PRB:")) {
+      this._emit("probe", { text: line });
+      // After the board has already stopped: streamed jobs record Z when G38.2
+      // was sent. A trip within 1 mm of that start is almost certainly noise
+      // (height would be set in the air). This does not delay the probe stop —
+      // FluidNC has already halted on the raw pin. Board-run jobs have no start Z,
+      // so this check is skipped there (firmware still raises ALARM:4 if the pin
+      // is already on at the start of the cycle).
+      const z = parseProbeTripZ(line);
+      if (z != null && this.job && this.job.running && !this.job.boardRun && probeTripLooksFalse(z)) {
+        this._abortProbe("Touch-off stopped almost immediately, so the torch height was not trusted (a noisy probe can false-trigger in the air). Fit a 10k pull-up to 3.3V on GPIO32 if the floating-head light flickers.");
+      }
+      clearProbeStart();
+    }
     if (this.inflight[0] && this.inflight[0].got) this.inflight[0].got.push(line);     // the answer to an ask() comes before its ok
     this._emit("log", { text: line, level: "rx" });
   }

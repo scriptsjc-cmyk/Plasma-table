@@ -8,6 +8,7 @@ import { resolveEtch } from "../cut/etch.js";
 import { currentSettings } from "./settings.js";
 import { Safety, SafetyError } from "./safety.js";
 import { filterConsoleCommand } from "./admin-machine.js";
+import { probeBlocks } from "./probefilter.js";
 
 export const POSITION_LOST_ALARMS = new Set([1, 3, 10, 13]);
 export { JobError, SafetyError };
@@ -253,6 +254,8 @@ export class Machine {
         break;
       }
       case "touchoff_test": {
+        const inp = g.status.inputs || {};
+        if (probeBlocks(inp.probe)) throw new JobError("The floating head is pushed up. Check the torch isn't touching anything or stuck.");
         const cut = this.findCut(body.material, body.thickness, body.overrides);
         g.sendLines(this.boundedProbes(touchoffTestLines(cut, m)));
         break;
@@ -327,7 +330,7 @@ export class Machine {
     if (this.startGuard) { const why = this.startGuard(); if (why) throw new JobError(why); }
     const inp = this.grbl.status.inputs || {};
     if (inp.estop) throw new JobError("E-stop is pressed. Release it and press Unlock.");
-    if (inp.probe) throw new JobError("The floating head is pushed up. Check the torch isn't touching anything or stuck.");
+    if (probeBlocks(inp.probe)) throw new JobError("The floating head is pushed up. Check the torch isn't touching anything or stuck.");
     if (this.safety.limits && !this.safety.referenced && this.requireReference)
       throw new JobError("The machine doesn't know where its edges are yet. Press Home (or 'Torch is at the home corner') first.");
     const problem = this.safety.jobCheck(this.prepared.stats.bounds, this.wco());

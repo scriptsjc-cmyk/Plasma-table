@@ -6,6 +6,7 @@ import * as Acc from "../account/account.js";
 import { filterConsoleCommand, renderAdvancedMachine } from "./admin-machine.js";
 import { DIALECTS } from "./dialect.js";
 import { defaultEtchSettings, sanitizeEtchSettings } from "../cut/etch.js";
+import { probeDisplayOn } from "./probefilter.js";
 
 const KEY = "plasma.settings.v1";
 
@@ -361,7 +362,7 @@ function paintIo() {
   const inp = st.inputs || {};
   const rows = [
     ["Torch relay (output)", !!(st.torch || inp.torch)],
-    ["Probe / floating head (ohmic or switch)", !!inp.probe],
+    ["Probe / floating head (ohmic or switch)", probeDisplayOn()],
     ["X limit / home", !!inp.limX],
     ["Y limit / home", !!inp.limY],
     ["Z limit / home", !!inp.limZ],
