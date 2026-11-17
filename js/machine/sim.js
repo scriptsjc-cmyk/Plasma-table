@@ -15,7 +15,7 @@ export class SimTransport {
     this.homing = false; this.relative = false; this.feed = 1000; this.motion = 0;
     this.sheetZ = sheetZ; this.switchOffset = switchOffset; this.speedup = speedup;
     this.busyUntil = 0; this.queue = []; this.feedOv = 100; this.estop = false; this.inbuf = ""; this.log = [];
-    this.torchOnCount = 0; this.thcReport = true; this.arcLost = false; this.moving = false; this.jogging = false; this.jogGen = 0; this.probeCount = 0; this.closed = false; this.resetGen = 0;
+    this.torchOnCount = 0; this.thcReport = true; this.arcLost = false; this.moving = false; this.jogging = false; this.jogGen = 0; this.probeCount = 0; this.closed = false; this.resetGen = 0; this.fluidnc = false; this.fluidPins = { x: { 0: "gpio.19" }, y: { 0: "gpio.23" }, z: { 0: "gpio.26" } };
   }
   async open() {
     this._send("GrblHAL 1.1f ['$' or '$' for help] (demo)");
@@ -213,7 +213,44 @@ export class SimTransport {
     this._send(`[PRB:${this.mpos.map((v) => v.toFixed(3)).join(",")}:1]`);
     this._send("ok");
   }
+
+  // tests / Machine setup: pretend to be a FluidNC board with direction pins
+  useFluidNC(extra = {}) {
+    this.fluidnc = true;
+    this.fluidPins = { x: { 0: "gpio.19" }, y: { 0: "gpio.23" }, z: { 0: "gpio.26" }, ...extra };
+  }
+  _fluidDir(u) {
+    const m = u.match(/^\$\/AXES\/([XYZ])\/MOTOR([01])\/STANDARD_STEPPER\/DIRECTION_PIN(?:=(.+))?$/);
+    if (!m) { this._send("error:3"); return; }
+    const a = m[1].toLowerCase(), n = Number(m[2]);
+    if (m[3] == null) {
+      const pin = this.fluidPins[a] && this.fluidPins[a][n];
+      if (!pin) { this._send("error:3"); return; }
+      this._send("[axes/" + a + "/motor" + n + "/standard_stepper/direction_pin=" + pin + "]");
+      this._send("ok");
+      return;
+    }
+    if (!this.fluidPins[a]) this.fluidPins[a] = {};
+    this.fluidPins[a][n] = m[3];
+    this._send("ok");
+  }
+  _fluidDump() {
+    const lines = ["name: Demo FluidNC", "axes:"];
+    for (const a of ["x", "y", "z"]) {
+      const motors = this.fluidPins[a] || {};
+      lines.push("  " + a + ":");
+      for (const n of Object.keys(motors).sort()) {
+        lines.push("    motor" + n + ":");
+        lines.push("      standard_stepper:");
+        lines.push("        direction_pin: " + motors[n]);
+      }
+    }
+    for (const l of lines) this._send(l);
+    this._send("ok");
+  }
   async _dollar(u) {
+    if (this.fluidnc && u.startsWith("$/")) return this._fluidDir(u);
+    if (this.fluidnc && (u === "$CD" || u.startsWith("$CD=") || u === "$CONFIG/DUMP")) return this._fluidDump();
     if (u === "$X") {
       if (this.estop) return this._send("error:79");
       this.alarm = false; this._send("[MSG:Caution: Unlocked]");

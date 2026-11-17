@@ -8,6 +8,7 @@ import { askConfirm } from "../core/safeprompt.js";
 import { refreshGate } from "../ui/gate.js";
 import { refresh } from "../ui/refresh.js";
 import { requireMachine } from "./access.js";
+import { loadMotorDir } from "./motordir.js";
 import { showTab } from "../ui/nav.js";
 
 // ------------------------------------------------------------------ connection
@@ -27,6 +28,7 @@ export function setConnected(on, label = "") {
   $("demoInputs").classList.toggle("hidden", !(on && S.demo));
   refreshGate();
   refresh();
+  if (on) loadMotorDir();
 }
 async function connectUSB() {
   if (!requireMachine("Link your machine to run jobs")) return;
