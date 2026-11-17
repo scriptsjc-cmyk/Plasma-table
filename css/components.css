@@ -103,3 +103,8 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
 .safedlg-card p { margin: 0 0 10px; white-space: pre-wrap; }
 .safedlg-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .safedlg-actions button { min-height: var(--tap); }
+.safedlg-ticks { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
+.safedlg-ticks.hidden { display: none; }
+.safedlg-tick { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs); cursor: pointer; }
+.safedlg-tick input { margin-top: 3px; }
+

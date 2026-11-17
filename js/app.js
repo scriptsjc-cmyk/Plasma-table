@@ -59,6 +59,7 @@ import { addTestPattern, adminMayTalk, bindMachineControls, fillEdgePanel, readC
 import { bindShapeForm, paintGuide, renderShapeForm, renderShapeTiles } from "./make/shapeform.js";
 import { bindConnection, setConnected } from "./machine/connection.js";
 import { bindMotorDir, loadMotorDir, motorDirState } from "./machine/motordir.js";
+import { bindTorchTest, paintTorchTest, torchTestOff, torchTestState } from "./machine/torchtest.js";
 import { bindQuickBar, renderQuickBar } from "./make/quickbar.js";
 import { bindCadUi, publishCadTestHooks } from "./make/cadui.js";
 import { bindHeader, setHeaderHidden } from "./ui/header.js";
@@ -85,6 +86,7 @@ function bind() {
   bindNav();
   bindConnection();
   bindMotorDir();
+  bindTorchTest();
   bindFiles();
   bindShapeForm();
   bindExport();
@@ -379,7 +381,7 @@ async function init() {
   routeAuth();
   refreshPublishedPresets().then(() => { applyMatchingPreset(); renderMaterials(); }).catch(() => {});
   // Test hooks only once the app has finished starting, so a test never talks to a half-ready page.
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, importIntoMake, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, bedViewRotated, jogToMachine, loadMotorDir, motorDirState, isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM, openPresetBrowser, renderShapeForm, useShape, scoreMarkProblem, throughCutInEtch };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, importIntoMake, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, bedViewRotated, jogToMachine, loadMotorDir, motorDirState, torchTestState, torchTestOff, isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM, openPresetBrowser, renderShapeForm, useShape, scoreMarkProblem, throughCutInEtch };
   if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   if (window.plasmaTest) publishCadTestHooks();
 }

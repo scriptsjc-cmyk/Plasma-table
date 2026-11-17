@@ -9,10 +9,12 @@ import { refreshGate } from "../ui/gate.js";
 import { refresh } from "../ui/refresh.js";
 import { requireMachine } from "./access.js";
 import { loadMotorDir } from "./motordir.js";
+import { torchTestOff } from "./torchtest.js";
 import { showTab } from "../ui/nav.js";
 
 // ------------------------------------------------------------------ connection
 export function setConnected(on, label = "") {
+  if (!on) torchTestOff();
   S.connected = on;
   if (on && $("lostBar")) $("lostBar").classList.add("hidden");
   const connLabel = on ? (S.demo ? "Practice table" : "Connected") : "Not connected";
@@ -60,6 +62,7 @@ async function connectDemo() {
   setConnected(true, "the demo (nothing real moves)");
 }
 async function disconnect() {
+  torchTestOff();
   const board = M.boardRunLive && M.boardRunLive();
   if (M.jobRunning() && !(await askConfirm({
     title: "Disconnect while a job is running?",

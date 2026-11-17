@@ -8,6 +8,7 @@ import { machineAllowed } from "../machine/access.js";
 import { blockers } from "../cut/checklist.js";
 import { $, $$ } from "../core/dom.js";
 import { paintMenu } from "./nav.js";
+import { torchTestWhy } from "../machine/torchtest.js";
 
 // ---- why a control is greyed (aria-disabled + data-why); see whyoff.js
 function whyOff(el) {
@@ -31,6 +32,7 @@ function whyOff(el) {
     case "skAll": return "There is nothing to select.";
     case "rsKeep": return "Only for imported drawings.";
     case "btnDemoEdges": return "The demo is finding the table edges now.";
+    case "btnTorchTest": return torchTestWhy() || "Not available right now.";
     default: return needConn || (busy ? "Wait until the machine stops moving." : (S.job && S.job.running ? "Not while a job is running." : "Not available right now."));
   }
 }

@@ -16,3 +16,12 @@ body:not(.laptop-ui) #motorDirCard { display: none !important; }
 #motorDirCard .motor-dir-row { display: flex; flex-wrap: wrap; gap: 4px 28px; margin: 8px 0 0; }
 #motorDirCard .motor-dir-row .check { margin-top: 0; min-height: 44px; }
 #motorDirCard #motorDirNote { margin-top: 8px; }
+
+#btnTorchTest { touch-action: none; user-select: none; min-width: 8.5em; }
+#btnTorchTest.torch-live {
+  background: var(--alarm);
+  border-color: var(--alarm);
+  color: #fff;
+  font-weight: 700;
+  animation: torchpulse 1s ease-in-out infinite;
+}

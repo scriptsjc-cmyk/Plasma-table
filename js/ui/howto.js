@@ -42,7 +42,7 @@ const STEPS = [
     "Won’t connect: use Chrome or Edge on a computer. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as “Standard Serial over Bluetooth link”). Close the FluidNC installer or any other program using the port first.",
     "Wrong size: check units (mm), kerf, and that Start here was set at the corner you meant. Trace the outline before cutting.",
     "Not cutting through: slow down a step, confirm amps and thickness, check air pressure and earth clamp, and that pierce delay is long enough for the arc to start.",
-    "Torch won’t fire: not a practice run? M3 is confirmed in the console and the Torch test is on Machine setup. Check the torch relay wiring and that the cutter is ready.",
+    "Torch won’t fire: not a practice run? M3 is confirmed in the console and Test torch is on Machine setup. Check the torch relay wiring and that the cutter is ready.",
   ]},
   { id: "fluidnc", title: "FluidNC on an ESP32", body: [
     "A typical path: an ESP32-DevKitC with a screw-terminal breakout, running FluidNC, driving stepper drivers.",

@@ -5,7 +5,7 @@ import { askConfirm } from "../core/safeprompt.js";
 import { M, S, sketch } from "../core/state.js";
 import { goStep, showTab } from "../ui/nav.js";
 import { useShape } from "../make/useshape.js";
-import { cmd, requireMachine } from "./access.js";
+import { cmd } from "./access.js";
 import { overrides } from "../cut/material.js";
 import { sendConsoleLine } from "./console.js";
 
@@ -207,7 +207,7 @@ export function bindMachineControls() {
   $("btnRef").onclick = async () => { if (await askConfirm({ title: "Set the home corner?", body: "Is the torch exactly at the home corner, raised right up?", ok: "Yes", cancel: "Cancel" })) cmd("set_reference"); };
   $("btnClearLimits").onclick = async () => { if (await askConfirm({ title: "Clear the saved edges?", body: "Crash protection will be off until you set them again.", ok: "Clear edges", cancel: "Cancel", danger: true })) cmd("limits_clear"); };
   $("btnTouchTest").onclick = () => cmd("touchoff_test", { material: S.material, thickness: S.thickness, overrides: overrides() });
-  $("btnTorchTest").onclick = async () => { if (!requireMachine("Link your machine to run jobs")) return; if (await askConfirm({ title: "Fire the torch?", body: "Fire the torch for half a second? Torch over scrap, earth clamp on, hands clear.", ok: "Fire torch", cancel: "Cancel", danger: true })) cmd("torch_test", { confirm: true }); };
+  // Test torch is hold-to-fire (js/machine/torchtest.js); Space and a plain click never light it.
   $("btnPushSettings").onclick = async () => { if (await askConfirm({ title: "Send controller settings?", body: "Only after editing the CHANGE-ME values for your machine.", ok: "Send settings", cancel: "Cancel" })) cmd("push_settings"); };
   $("consoleForm").onsubmit = (e) => { e.preventDefault(); sendConsoleLine($("consoleIn").value, $("consoleIn")); };
   bindEdgePanel();

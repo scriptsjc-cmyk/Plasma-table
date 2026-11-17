@@ -8,7 +8,7 @@ let closeOpen = null;            // answers the confirm on screen (if any) with 
 // STOP answers any open confirm with Cancel, so a "Start anyway" can't be left waiting behind a latched E-stop (r7 U6)
 export function cancelConfirm() { if (closeOpen) closeOpen(false); }
 
-export function askConfirm({ title = "Please confirm", body = "", ok = "OK", cancel = "Cancel", danger = false, okDisabled = false, okDisabledReason = "" } = {}) {
+export function askConfirm({ title = "Please confirm", body = "", ok = "OK", cancel = "Cancel", danger = false, okDisabled = false, okDisabledReason = "", ticks = null } = {}) {
   const run = async () => {
     const msg = [title, body].filter(Boolean).join("\n");
     try {
@@ -21,14 +21,52 @@ export function askConfirm({ title = "Please confirm", body = "", ok = "OK", can
     return new Promise((resolve) => {
     const dlg = $("safeDlg"), titleEl = $("safeDlgTitle"), bodyEl = $("safeDlgBody");
     const noteEl = $("safeDlgNote"), okBtn = $("safeDlgOk"), cancelBtn = $("safeDlgCancel");
+    const ticksEl = $("safeDlgTicks");
     if (!dlg || !okBtn || !cancelBtn) { resolve(false); return; }
+    const tickList = Array.isArray(ticks) ? ticks.filter(Boolean) : [];
+    const allTicked = () => !tickList.length || (ticksEl && [...ticksEl.querySelectorAll("input[type=checkbox]")].every((c) => c.checked));
+    const blocked = () => !!okDisabled || !allTicked();
+    const syncOk = () => {
+      const off = blocked();
+      okBtn.disabled = off;
+      okBtn.classList.toggle("danger", !!danger && !off);
+      if (noteEl) {
+        const note = okDisabled ? (okDisabledReason || "This action isn't available right now.")
+          : (tickList.length && !allTicked() ? "Tick each check first." : "");
+        noteEl.textContent = note;
+        noteEl.classList.toggle("hidden", !note);
+      }
+    };
+    const fillTicks = () => {
+      if (!ticksEl) return;
+      ticksEl.innerHTML = "";
+      if (!tickList.length) { ticksEl.classList.add("hidden"); return; }
+      ticksEl.classList.remove("hidden");
+      tickList.forEach((label, i) => {
+        const row = document.createElement("label");
+        row.className = "safedlg-tick";
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.id = "safeDlgTick" + i;
+        cb.addEventListener("change", syncOk);
+        const span = document.createElement("span");
+        span.textContent = label;
+        row.append(cb, span);
+        ticksEl.append(row);
+      });
+    };
     const finish = (yes) => {
       closeOpen = null;
       dlg.classList.add("hidden");
       dlg.setAttribute("aria-hidden", "true");
       okBtn.onclick = cancelBtn.onclick = null;
+      if (ticksEl) { ticksEl.innerHTML = ""; ticksEl.classList.add("hidden"); }
       document.removeEventListener("keydown", onKey, true);
       resolve(!!yes);
+    };
+    const focusables = () => {
+      const boxes = ticksEl ? [...ticksEl.querySelectorAll("input[type=checkbox]")] : [];
+      return [...boxes, cancelBtn, okBtn].filter((b) => b && !b.disabled);
     };
     const onKey = (e) => {
       if (dlg.classList.contains("hidden")) return;
@@ -36,12 +74,12 @@ export function askConfirm({ title = "Please confirm", body = "", ok = "OK", can
       if (e.key === "Enter" && document.activeElement === okBtn && !okBtn.disabled) { e.preventDefault(); finish(true); return; }
       if (e.key === "Enter" && document.activeElement === cancelBtn) { e.preventDefault(); finish(false); return; }
       if (e.key === "Tab") {
-        const focusable = [cancelBtn, okBtn].filter((b) => !b.disabled);
-        if (!focusable.length) return;
+        const list = focusables();
+        if (!list.length) return;
         e.preventDefault();
-        const i = focusable.indexOf(document.activeElement);
-        const next = e.shiftKey ? (i <= 0 ? focusable.length - 1 : i - 1) : (i === focusable.length - 1 || i < 0 ? 0 : i + 1);
-        focusable[next].focus();
+        const i = list.indexOf(document.activeElement);
+        const next = e.shiftKey ? (i <= 0 ? list.length - 1 : i - 1) : (i === list.length - 1 || i < 0 ? 0 : i + 1);
+        list[next].focus();
       }
       // Do not let Space click OK/Cancel; do not stop it, so flow.js can still E-stop.
       if (e.key === " " || e.code === "Space") { e.preventDefault(); return; }
@@ -50,12 +88,8 @@ export function askConfirm({ title = "Please confirm", body = "", ok = "OK", can
     bodyEl.textContent = body;
     okBtn.textContent = ok;
     cancelBtn.textContent = cancel;
-    okBtn.disabled = !!okDisabled;
-    okBtn.classList.toggle("danger", !!danger && !okDisabled);
-    if (noteEl) {
-      noteEl.textContent = okDisabled ? (okDisabledReason || "This action isn't available right now.") : "";
-      noteEl.classList.toggle("hidden", !okDisabled);
-    }
+    fillTicks();
+    syncOk();
     dlg.style.top = Math.ceil(bannerBottom()) + "px";
     dlg.classList.remove("hidden");
     dlg.setAttribute("aria-hidden", "false");

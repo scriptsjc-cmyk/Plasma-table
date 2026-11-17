@@ -111,8 +111,8 @@ export function filterConsoleCommand(raw, opts = {}) {
       if (v === 0 || v === 1) moves = true;
     } else if (w === "M") {
       if (v === 3 || v === 4) {
-        if (!opts.allowTorch) return { ok: false, reason: "That would fire the torch. Confirm first, or use the Torch test button on the Setup tab.", needsTorchConfirm: true };
-      } else if (v !== 5) return fail([7, 8].includes(v) ? "That would fire the torch. Use the Torch test button on the Setup tab." : "M" + v + " isn't allowed in this console.");
+        if (!opts.allowTorch) return { ok: false, reason: "That would fire the torch. Confirm first, or use Test torch on the Setup tab.", needsTorchConfirm: true };
+      } else if (v !== 5) return fail([7, 8].includes(v) ? "That would fire the torch. Use Test torch on the Setup tab." : "M" + v + " isn't allowed in this console.");
     } else if (w === "S") {
       if (v !== 0) return fail("Only S0 is allowed here.");
     } else if (w === "F") {

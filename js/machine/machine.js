@@ -15,11 +15,11 @@ export { JobError, SafetyError };
 // Round 5 (safety). While the app's E-stop is latched nothing may move, light the torch or start a job; the only things still
 // allowed are the ones that make the machine safer or let a person recover (stop, reset, hold, unlock, jog cancel, speed down).
 const LATCH_MSG = "E-STOP is ON. Press and hold the red button to reset it first.";
-const LATCH_BLOCKED = new Set(["resume", "jog", "jog_dir", "home", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test", "zero_xy", "set_origin"]);
+const LATCH_BLOCKED = new Set(["resume", "jog", "jog_dir", "home", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test", "torch_on", "zero_xy", "set_origin"]);
 // FluidNC/grbl refuse every move in Alarm (error:9). Say so up front instead of sending a jog that is silently rejected.
 export const ALARM_DEFAULT = "The controller is locked (Alarm) and won't move. Check the torch is clear, then press Unlock (or Home).";
 const ALARM_MSG = "The controller is in Alarm, so it won't move. Press Unlock at the top of the screen first (or Home).";
-const ALARM_BLOCKED = new Set(["jog", "jog_dir", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test", "zero_xy", "set_origin"]);
+const ALARM_BLOCKED = new Set(["jog", "jog_dir", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test", "torch_on", "zero_xy", "set_origin"]);
 const NO_ZERO_MSG = "The sheet corner isn't set. Put the torch on the sheet's bottom-left corner and press Start here first. The part already cuts where you placed it.";
 
 export class Machine {
@@ -154,6 +154,7 @@ export class Machine {
     if (!g) throw new JobError("Not connected. Press Connect.");
     if (LATCH_BLOCKED.has(cmd) && this.estopLatched()) throw new JobError(LATCH_MSG);
     switch (cmd) {
+      case "torch_off": g.send("M5"); return { ok: true };
       case "hold": g.hold(); return { ok: true };
       case "resume": g.resume(); return { ok: true };
       case "stop": this.zeroConfirmed = false; g.stop(); return { ok: true };       // a stop (soft reset) can lose the place: work zero must be confirmed again
@@ -260,6 +261,13 @@ export class Machine {
         if (!body.confirm) throw new JobError("Torch test needs confirming.");
         g.sendLines(torchTestLines(m));
         break;
+      case "torch_on": {
+        if (!body.confirm) throw new JobError("Torch test needs confirming.");
+        if (this.state() !== "Idle" && this.state() !== "Check") throw new JobError(`Machine must be Idle (it is ${this.state()}).`);
+        const s = Number(m.torch && m.torch.spindle_s);
+        g.send(`M3 S${fmt(Number.isFinite(s) ? s : 1)}`);
+        break;
+      }
       case "pins": g.send("$pins"); break;
       case "settings_list": g.send("$$"); break;
       case "push_settings": {

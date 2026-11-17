@@ -24,6 +24,7 @@ import { liveProgress } from "../cut/progress.js";
 import { ampsNow } from "../cut/material.js";
 import { matchPreset } from "../machine/settings.js";
 import { paintMotorDir } from "../machine/motordir.js";
+import { paintTorchTest } from "../machine/torchtest.js";
 
 // The header's state chip. While the E-stop is latched it says "Stopped" (red) whatever the controller reports, so a green
 // "Ready" never sits next to E-STOP ON (r7 U7).
@@ -230,6 +231,7 @@ export function refresh() {
   $("btnTrace").disabled = busy || !(S.prepared && idle);
   $("btnZero").disabled = busy || !idle;
   paintMotorDir();
+  paintTorchTest();
   drawPreview();
 }
 // B5 18: the reasons Start is greyed, as visible text next to the button (the full list is still under "Check, then cut")
