@@ -264,8 +264,11 @@ export class Machine {
       case "torch_on": {
         if (!body.confirm) throw new JobError("Torch test needs confirming.");
         if (this.state() !== "Idle" && this.state() !== "Check") throw new JobError(`Machine must be Idle (it is ${this.state()}).`);
-        const s = Number(m.torch && m.torch.spindle_s);
-        g.send(`M3 S${fmt(Number.isFinite(s) ? s : 1)}`);
+        // Raw g.send (not the console filter, not a realtime byte, not $J). FluidNC 4.x
+        // Relay with speed_map 0=0% 1=100% turns on for any S>=1; S1 is the documented
+        // hold-to-fire command. Do not go through filterConsoleCommand — that path
+        // refuses "M3 S1000" as a console line.
+        g.send("M3 S1");
         break;
       }
       case "pins": g.send("$pins"); break;

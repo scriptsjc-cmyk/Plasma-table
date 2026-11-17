@@ -22,11 +22,24 @@ export function flipPinLow(s) {
   if (!base) return s;
   const rest = attrs.filter((a) => a.toLowerCase() !== "low");
   if (rest.length === attrs.length) rest.push("low");
-  return [base, ...rest].join(":");
+  // FluidNC pin values are case-sensitive in practice: keys are case-insensitive, but
+  // the value must be sent lowercase (gpio.26:low, not GPIO.26:LOW).
+  return [base, ...rest].map((p) => p.toLowerCase()).join(":");
+}
+export function pinCanonical(s) {
+  const raw = String(s || "").trim().replace(/^['"]|['"]$/g, "");
+  return raw ? raw.toLowerCase() : raw;
 }
 
 function gLink() { return M && M.grbl; }
-function isFluid() { return !!(S.fluidnc || (gLink() && gLink().fluidnc)); }
+const state = { pins: { x: {}, y: {}, z: {} }, mask: 0, ready: false, loading: false, painting: false, sawFluidPath: false };
+function markFluid() {
+  state.sawFluidPath = true;
+  try { if (S) S.fluidnc = true; } catch (e) { /* ignore */ }
+  const g = gLink();
+  if (g) g.fluidnc = true;
+}
+export function isFluid() { return !!(state.sawFluidPath || S.fluidnc || (gLink() && gLink().fluidnc)); }
 function jobBusy() { return !!(S.job && S.job.running) || !!(M && M.jobRunning && M.jobRunning()); }
 function isAlarm() { return /alarm/i.test((S.status && S.status.state) || ""); }
 function isIdle() { return /^(Idle|Check)$/i.test((S.status && S.status.state) || ""); }
@@ -47,26 +60,54 @@ export function motorDirWhy() {
 }
 export function motorDirEnabled() { return !motorDirWhy(); }
 
-function parsePinReply(lines, path) {
-  const key = String(path || "").replace(/^\$\//, "").trim();
+// FluidNC 4.1.1 RuntimeSetting prints a plain line:
+//   $/axes/z/motor0/standard_stepper/direction_pin=gpio.26:low
+// (no brackets). log_stream uses MsgLevelNone, so there is no [MSG:INFO:] wrap
+// on this version; older or other channels may still bracket it.
+export function parsePinReply(lines, path) {
+  const key = String(path || "").replace(/^\$\//, "").trim().toLowerCase();
   for (const raw of lines || []) {
-    const t = String(raw).trim();
-    const br = t.match(/^\[(?:MSG:INFO:\s*)?(?:\$\/)?([^=\]]+?)\s*=\s*([^\]]+)\]$/i);
-    if (br && (!key || br[1].replace(/^\$\//, "").trim().toLowerCase() === key.toLowerCase())) return br[2].trim();
-    if (/^gpio\./i.test(t) || /^NO_PIN$/i.test(t) || /^i2so\./i.test(t)) return t;
+    let inner = String(raw).trim();
+    inner = inner.replace(/^\[(?:MSG:(?:INFO|DBG|VRB|WARN|WRN|ERR|ERROR):\s*)?/i, "").replace(/\]$/, "").trim();
+    const br = inner.match(/^(?:\$\/)?([^=\s]+?)\s*=\s*(\S+)\s*$/);
+    if (br) {
+      const got = br[1].replace(/^\$\//, "").trim().toLowerCase();
+      if (!key || got === key) return pinCanonical(br[2]);
+    }
+    if (/^gpio\./i.test(inner) || /^NO_PIN$/i.test(inner) || /^i2so\./i.test(inner)) return pinCanonical(inner);
   }
   return "";
 }
-function parseDumpPins(text) {
+// $CD / $Config/Dump is a YAML dump: 2-space indent, no required header, and pin
+// values that contain a colon are wrapped in single quotes (gpio.26:low). A real
+// dump also lists every default, including Relay.direction_pin: NO_PIN — so the
+// parser must stay inside the axes: tree and not take a later direction_pin.
+export function parseDumpPins(text) {
   const out = { x: {}, y: {}, z: {} };
-  let axis = "", motor = "";
+  let inAxes = false, axis = "", motor = "";
+  let axesIndent = -1, axisIndent = -1, motorIndent = -1;
   for (const raw of String(text || "").split(/\r?\n/)) {
-    const m = raw.match(/^(\s*)([^:#\n]+):\s*(.*?)\s*$/);
+    const line = String(raw).replace(/\t/g, "    ");
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith(";") || trimmed.startsWith("[")) continue;
+    const m = line.match(/^(\s*)([^:#\n]+):\s*(.*?)\s*$/);
     if (!m) continue;
-    const key = m[2].trim(), val = m[3].trim();
-    if (key === "x" || key === "y" || key === "z") { axis = key; motor = ""; }
-    else if (/^motor[01]$/i.test(key) && axis) motor = key.slice(-1);
-    else if (key === "direction_pin" && axis && motor !== "") out[axis][motor] = val.replace(/^['"]|['"]$/g, "");
+    const indent = m[1].length;
+    const key = m[2].trim().toLowerCase();
+    const val = pinCanonical(m[3].trim());
+    if (key === "axes") {
+      inAxes = true; axesIndent = indent; axis = ""; motor = "";
+      continue;
+    }
+    if (inAxes && indent <= axesIndent) { inAxes = false; axis = ""; motor = ""; }
+    if (!inAxes) continue;
+    if ((key === "x" || key === "y" || key === "z") && indent > axesIndent) {
+      axis = key; motor = ""; axisIndent = indent;
+    } else if (/^motor[01]$/.test(key) && axis && indent > axisIndent) {
+      motor = key.slice(-1); motorIndent = indent;
+    } else if (key === "direction_pin" && axis && motor !== "" && indent > motorIndent) {
+      out[axis][motor] = val;
+    }
   }
   return out;
 }
@@ -93,7 +134,7 @@ async function readFluidAll() {
   for (const a of AXES) {
     for (const n of [0, 1]) {
       const r = await readFluidPin(a, n);
-      if (r.ok) { pins[a][n] = r.pin; any = true; }
+      if (r.ok) { pins[a][n] = pinCanonical(r.pin); any = true; markFluid(); }
       else if (n === 0) lastErr = r.error || lastErr;
     }
   }
@@ -119,7 +160,6 @@ async function readGrblMask() {
   return { ok: false, mask: 0, error: "Couldn't read $3." };
 }
 
-const state = { pins: { x: {}, y: {}, z: {} }, mask: 0, ready: false, loading: false, painting: false };
 
 function reversed(axis) {
   if (isFluid()) {
@@ -181,9 +221,16 @@ export async function loadMotorDir() {
   }
   state.loading = true; paint();
   try {
-    if (isFluid()) {
+    let fluid = isFluid();
+    if (!fluid) {
+      // Banner detection can miss a Bluetooth FluidNC 4.x build. If the board
+      // answers a $/axes/... query with a pin, treat it as FluidNC from now on.
+      const probe = await readFluidPin("x", 0);
+      if (probe.ok) { markFluid(); fluid = true; }
+    }
+    if (fluid) {
       const r = await readFluidAll();
-      if (r.ok) { state.pins = r.pins; state.ready = true; setNote(""); }
+      if (r.ok) { markFluid(); state.pins = r.pins; state.ready = true; setNote(""); }
       else { state.ready = false; setNote(r.error || "Couldn't read the direction pins."); }
     } else {
       const r = await readGrblMask();
@@ -206,8 +253,12 @@ async function writeFluid(axis) {
   for (const n of motors) {
     const from = state.pins[axis][n];
     if (!from) continue;
-    const val = n === 0 ? next : flipPinLow(from);
+    const val = pinCanonical(n === 0 ? next : flipPinLow(from));
     const r = await ask(PIN_PATH(axis, n) + "=" + val);
+    const text = ((r.lines || []).join("\n") + " " + (r.error || "")).trim();
+    if (/Runtime setting of Pin objects is not supported/i.test(text)) {
+      throw new Error("This FluidNC build cannot change pin settings while it is running. Edit direction_pin in config.yaml (add or remove :low) and restart the board.");
+    }
     if (!r.ok) throw new Error(r.error || "The board refused the new direction pin.");
     state.pins[axis][n] = val;
   }

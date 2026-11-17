@@ -148,9 +148,11 @@ export class SimTransport {
     }
   }
   async _exec(line) {
+    // Keep the original case in the log so tests can catch pin values sent as
+    // GPIO.26:LOW (FluidNC keys are case-insensitive; pin values must be lowercase).
     const u = line.toUpperCase().replace(/ /g, "");
-    this.log.push(u);
-    if (u.startsWith("$")) return this._dollar(u);
+    this.log.push(line);
+    if (u.startsWith("$")) return this._dollar(u, line);
     if (this.alarm) return this._send("error:9");
     const words = [...u.matchAll(WORD)].map((m) => [m[1], parseFloat(m[2])]);
     const g = words.filter(([k]) => k === "G").map(([, v]) => v);
@@ -219,37 +221,55 @@ export class SimTransport {
     this.fluidnc = true;
     this.fluidPins = { x: { 0: "gpio.19" }, y: { 0: "gpio.23" }, z: { 0: "gpio.26" }, ...extra };
   }
-  _fluidDir(u) {
+  _fluidDir(u, raw = "") {
     const m = u.match(/^\$\/AXES\/([XYZ])\/MOTOR([01])\/STANDARD_STEPPER\/DIRECTION_PIN(?:=(.+))?$/);
     if (!m) { this._send("error:3"); return; }
     const a = m[1].toLowerCase(), n = Number(m[2]);
     if (m[3] == null) {
       const pin = this.fluidPins[a] && this.fluidPins[a][n];
       if (!pin) { this._send("error:3"); return; }
-      this._send("[axes/" + a + "/motor" + n + "/standard_stepper/direction_pin=" + pin + "]");
+      // Real FluidNC 4.1.1: plain "$/path=gpio.26:low" then ok (no brackets).
+      this._send("$/axes/" + a + "/motor" + n + "/standard_stepper/direction_pin=" + pin);
       this._send("ok");
       return;
     }
+    const eq = String(raw).indexOf("=");
+    const val = eq >= 0 ? String(raw).slice(eq + 1).trim() : "";
+    // Pin values must be sent lowercase; rejecting uppercase would have caught a
+    // sender that uppercased the whole line (keys may be any case).
+    if (!val || val !== val.toLowerCase()) { this._send("error:3"); return; }
     if (!this.fluidPins[a]) this.fluidPins[a] = {};
-    this.fluidPins[a][n] = m[3];
+    this.fluidPins[a][n] = val;
     this._send("ok");
   }
   _fluidDump() {
-    const lines = ["name: Demo FluidNC", "axes:"];
+    // Shape of a real FluidNC $CD: YAML, 2-space indent, quoted pin values that
+    // contain a colon, and later sections such as Relay: with their own direction_pin.
+    const lines = ["name: Demo FluidNC", "board: ESP32", "axes:"];
     for (const a of ["x", "y", "z"]) {
       const motors = this.fluidPins[a] || {};
       lines.push("  " + a + ":");
       for (const n of Object.keys(motors).sort()) {
+        const pin = motors[n];
+        const quoted = /:/.test(pin) ? "'" + pin + "'" : pin;
         lines.push("    motor" + n + ":");
         lines.push("      standard_stepper:");
-        lines.push("        direction_pin: " + motors[n]);
+        lines.push("        direction_pin: " + quoted);
       }
     }
+    lines.push("Relay:");
+    lines.push("  output_pin: gpio.27");
+    lines.push("  direction_pin: NO_PIN");
+    lines.push("  speed_map: 0=0% 1=100%");
     for (const l of lines) this._send(l);
     this._send("ok");
   }
-  async _dollar(u) {
-    if (this.fluidnc && u.startsWith("$/")) return this._fluidDir(u);
+  async _dollar(u, raw = "") {
+    if (u.startsWith("$/")) {
+      if (this.fluidnc) return this._fluidDir(u, raw);
+      this._send("error:3"); // classic GRBL: unknown $ statement
+      return;
+    }
     if (this.fluidnc && (u === "$CD" || u.startsWith("$CD=") || u === "$CONFIG/DUMP")) return this._fluidDump();
     if (u === "$X") {
       if (this.estop) return this._send("error:79");

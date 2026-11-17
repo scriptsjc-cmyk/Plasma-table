@@ -105,12 +105,53 @@ const afterCancel = await ev(page, () => ({ mask: window.plasmaTest.motorDirStat
 t.check("cancelling the confirm does not send $3", !log.some((l) => /^\$3=/.test(l)) && afterCancel.mask === 7 && afterCancel.x, JSON.stringify({ log, afterCancel }));
 page._safeConfirmAuto = "accept";
 
+// ------------------------------------------------------------------ parsers against real FluidNC 4.1.1 shapes
+const parsed = await ev(page, () => {
+  const T = window.plasmaTest;
+  const path = "$/axes/z/motor0/standard_stepper/direction_pin";
+  const plain = T.parsePinReply(["$/axes/z/motor0/standard_stepper/direction_pin=gpio.26:low", "ok"], path);
+  const bracket = T.parsePinReply(["[axes/z/motor0/standard_stepper/direction_pin=gpio.26:low]"], path);
+  const msg = T.parsePinReply(["[MSG:INFO: $/axes/z/motor0/standard_stepper/direction_pin=gpio.26:low]"], path);
+  const dump = T.parseDumpPins(`name: Plasma Table
+board: ESP32
+axes:
+  x:
+    steps_per_mm: 80
+    motor0:
+      standard_stepper:
+        direction_pin: 'gpio.19:low'
+  y:
+    motor0:
+      standard_stepper:
+        direction_pin: 'gpio.23:low'
+    motor1:
+      standard_stepper:
+        direction_pin: gpio.17
+  z:
+    motor0:
+      standard_stepper:
+        direction_pin: 'gpio.26:low'
+Relay:
+  output_pin: gpio.27
+  direction_pin: NO_PIN
+  speed_map: 0=0% 1=100%
+`);
+  return { plain, bracket, msg, dump, flip: T.flipPinLow("gpio.26"), hasLow: T.pinHasLow("gpio.26:low") };
+});
+t.check("parsePinReply accepts plain, bracketed and [MSG:INFO:] FluidNC replies",
+  parsed.plain === "gpio.26:low" && parsed.bracket === "gpio.26:low" && parsed.msg === "gpio.26:low",
+  JSON.stringify(parsed));
+t.check("parseDumpPins reads quoted axis pins and ignores Relay.direction_pin",
+  parsed.dump.x[0] === "gpio.19:low" && parsed.dump.y[0] === "gpio.23:low" && parsed.dump.y[1] === "gpio.17" && parsed.dump.z[0] === "gpio.26:low" && parsed.flip === "gpio.26:low" && parsed.hasLow,
+  JSON.stringify(parsed.dump));
+
 // ------------------------------------------------------------------ FluidNC path
 await ev(page, async () => {
   const T = window.plasmaTest;
   T.S.demo.useFluidNC({ y: { 0: "gpio.23", 1: "gpio.17" } });
-  T.S.fluidnc = true;
-  if (T.getM().grbl) T.getM().grbl.fluidnc = true;
+  // Banner missed: isFluid() is false until a $/axes answer arrives.
+  T.S.fluidnc = false;
+  if (T.getM().grbl) T.getM().grbl.fluidnc = false;
   await T.loadMotorDir();
 });
 await page.waitForFunction(() => {
@@ -119,14 +160,14 @@ await page.waitForFunction(() => {
 }, null, { timeout: 8000 });
 
 const fl0 = await ev(page, () => window.plasmaTest.motorDirState());
-t.check("FluidNC demo reads the stock pins with Reverse off", fl0.fluidnc && fl0.pins.x[0] === "gpio.19" && !fl0.reversed.x && !fl0.reversed.y && !fl0.reversed.z, JSON.stringify(fl0));
+t.check("FluidNC is detected from a $/axes reply and reads the stock pins, Reverse off", fl0.fluidnc && fl0.pins.x[0] === "gpio.19" && !fl0.reversed.x && !fl0.reversed.y && !fl0.reversed.z, JSON.stringify(fl0));
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
 await ev(page, () => { const el = document.getElementById("revX"); el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
 await sleep(900);
 log = await logAfter(n);
 t.check("FluidNC Reverse X writes the direction pin with :low, then saves config.yaml",
-  log.some((l) => /\$\/AXES\/X\/MOTOR0\/STANDARD_STEPPER\/DIRECTION_PIN=GPIO\.19:LOW/.test(l)) && log.some((l) => l.startsWith("$CD=")),
+  log.some((l) => l === "$/axes/x/motor0/standard_stepper/direction_pin=gpio.19:low") && log.some((l) => l.startsWith("$CD=")),
   JSON.stringify(log));
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
@@ -134,8 +175,8 @@ await ev(page, () => { const el = document.getElementById("revY"); el.checked = 
 await sleep(900);
 log = await logAfter(n);
 t.check("FluidNC Reverse Y also flips motor1 when it is present",
-  log.some((l) => /\$\/AXES\/Y\/MOTOR0\/STANDARD_STEPPER\/DIRECTION_PIN=GPIO\.23:LOW/.test(l)) &&
-  log.some((l) => /\$\/AXES\/Y\/MOTOR1\/STANDARD_STEPPER\/DIRECTION_PIN=GPIO\.17:LOW/.test(l)) &&
+  log.some((l) => l === "$/axes/y/motor0/standard_stepper/direction_pin=gpio.23:low") &&
+  log.some((l) => l === "$/axes/y/motor1/standard_stepper/direction_pin=gpio.17:low") &&
   log.some((l) => l.startsWith("$CD=")),
   JSON.stringify(log));
 
@@ -144,7 +185,7 @@ await ev(page, () => { const el = document.getElementById("revZ"); el.checked = 
 await sleep(900);
 log = await logAfter(n);
 t.check("FluidNC Reverse Z writes gpio.26:low and saves",
-  log.some((l) => /\$\/AXES\/Z\/MOTOR0\/STANDARD_STEPPER\/DIRECTION_PIN=GPIO\.26:LOW/.test(l)) && log.some((l) => l.startsWith("$CD=")),
+  log.some((l) => l === "$/axes/z/motor0/standard_stepper/direction_pin=gpio.26:low") && log.some((l) => l.startsWith("$CD=")),
   JSON.stringify(log));
 
 const note = await ev(page, () => (document.getElementById("motorDirNote") || {}).textContent || "");
@@ -180,7 +221,7 @@ const first = await ev(page, () => {
   return { lit: T.torchTestState().lit, armed: T.torchTestState().armed, log: T.S.demo.log.slice(0) };
 });
 t.check("first hold shows the fire-the-torch confirm and does not send M3",
-  first.armed && !first.lit && !first.log.slice(n).some((l) => /M0*3/.test(l)) && page.dialogs.some((d) => /Fire the torch/i.test(d)),
+  first.armed && !first.lit && !first.log.slice(n).some((l) => /^M3\b/i.test(l)) && page.dialogs.some((d) => /Fire the torch/i.test(d)),
   JSON.stringify({ first, dialogs: page.dialogs.slice(-2) }));
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
@@ -198,7 +239,7 @@ const held = await ev(page, (start) => {
   };
 }, n);
 t.check("holding Test torch sends M3 and shows TORCH ON",
-  held.lit && held.label === "TORCH ON" && held.live && held.torch && held.log.some((l) => /M3S/.test(l)),
+  held.lit && held.label === "TORCH ON" && held.live && held.torch && held.log.some((l) => l === "M3 S1"),
   JSON.stringify(held));
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
@@ -230,7 +271,7 @@ const auto = await ev(page, (start) => {
     lit: T.torchTestState().lit,
     label: (b.textContent || "").trim(),
     log,
-    hadM3: log.some((l) => /M3S/.test(l)),
+    hadM3: log.some((l) => l === "M3 S1"),
     hadM5: log.some((l) => /M5/.test(l)),
     torch: !!(T.S.demo.torch),
   };
@@ -254,7 +295,7 @@ const keyed = await ev(page, (start) => {
   return { lit: T.torchTestState().lit, log: T.S.demo.log.slice(start) };
 }, n);
 t.check("click and Space do not fire the torch",
-  !keyed.lit && !keyed.log.some((l) => /M0*3/.test(l)),
+  !keyed.lit && !keyed.log.some((l) => /^M3\b/i.test(l)),
   JSON.stringify(keyed));
 
 await ev(page, () => { window.plasmaTest.S.demo.setEstop(true); window.plasmaTest.refresh(); });
