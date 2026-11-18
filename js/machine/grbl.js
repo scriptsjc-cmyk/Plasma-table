@@ -2,6 +2,7 @@
 // the connect handshake, real-time commands, and status parsing. USB / Bluetooth serial itself is usbserial.js.
 // Same protocol handling as plasma/grbl.py.
 import { looksLikeFluidNC } from "./fluidnc.js";
+import { USB_POLL_MS, noteSerialDrop } from "./usbserial.js";
 import { parseFileField, onBoardLine, onBoardStatus, onBoardClosed, abortBoardUpload, attachBoardRun } from "./boardrun.js";
 import {
   noteProbeRaw, resetProbeFilter, probeBlocks, markProbeStart, clearProbeStart,
@@ -76,7 +77,6 @@ function decodePins(pn = "") {
 }
 
 // ------------------------------------------------------------------ controller link
-const POLL_MS = 100;
 const CONFIG_ERR = /Configuration is invalid|^\[MSG:ERR: (Ignored key|Configuration error|Pin .* cannot be used)/;
 export const BOOT_WAIT_MS = 25000;
 export const BOOT_STUCK_MSG = "The controller is talking but never finished starting up. Check its start-up messages in the FluidNC web installer's Terminal for errors (config.yaml), then restart the board.";
@@ -102,8 +102,10 @@ export class GrblLink {
     this.pollPaused = false;            // off during XModem: '?' would be written into the file
     this.t.onLine = (l) => this._line(l);
     this.t.onClose = (reason) => this._closed(reason);
-    this.poll = setInterval(() => this._tick(), POLL_MS);
+    this.poll = setInterval(() => this._tick(), this._pollMs());
   }
+  _pollMs() { return this.t.pollMs || USB_POLL_MS; }
+  _isBluetooth() { return this.t.kind === "bluetooth"; }
   pausePoll() { this.pollPaused = true; }
   resumePoll() {
     this.pollPaused = false;
@@ -121,10 +123,19 @@ export class GrblLink {
   // must not look like a dead link. Lost = several '?' in a row went unanswered AND the watchdog time has passed.
   _tick() {
     if (!this.running || this.pollPaused) return;
+    const pollMs = this._pollMs();
     const wd = this.t.watchdogMs;
-    if (wd && this.ready && this.pollsSinceRx >= Math.ceil(wd / POLL_MS) && Date.now() - this.lastRx > wd) {
+    if (wd && this.ready && this.pollsSinceRx >= Math.ceil(wd / pollMs) && Date.now() - this.lastRx > wd) {
       this._closed(`No reply from the controller for ${Math.round(wd / 1000)} s. Check the connection (USB cable or Bluetooth) and the controller's power.`);
       this.t.close().catch?.(() => {});
+      return;
+    }
+    // Don't pile '?' onto a link that already answered this interval — '?' is realtime
+    // (no flow control) and a burst of them is enough to overflow FluidNC's Bluetooth RX.
+    if (this.ready && Date.now() - this.lastRx < pollMs * 0.6) return;
+    // One unanswered '?' in flight is enough on Bluetooth; retry on the next interval.
+    if (this._isBluetooth() && this.pollsSinceRx >= 1) {
+      this.pollsSinceRx++;
       return;
     }
     this.pollsSinceRx++;
@@ -144,7 +155,7 @@ export class GrblLink {
         if (this.ready) { clearInterval(check); resolve(); return; }
         if (!this.running) { clearInterval(check); reject(new Error(this.closeReason || "The controller disconnected.")); return; }
         const dt = Date.now() - t0;
-        if (!nudged && !this.heard && dt > timeoutMs / 2 && this.t.releaseResetLines) { nudged = true; this.t.releaseResetLines(); }
+        if (!nudged && !this.heard && dt > timeoutMs / 2 && this.t.releaseResetLines && !this._isBluetooth()) { nudged = true; this.t.releaseResetLines(); }
         const limit = this.heard ? Math.max(timeoutMs, BOOT_WAIT_MS) : timeoutMs;
         if (dt > limit) { clearInterval(check); reject(new Error(this.heard ? BOOT_STUCK_MSG : NO_REPLY_MSG)); }
       }, 50);
@@ -156,6 +167,7 @@ export class GrblLink {
     this.running = false;
     clearInterval(this.poll);
     this.closeReason = reason || "";
+    if (reason && this._isBluetooth()) noteSerialDrop("bluetooth", /no reply/i.test(reason));
     this.status = { ...this.status, state: "Disconnected", reason: reason || "" };
     this._clearProbeWait();
     resetProbeFilter();
@@ -319,7 +331,11 @@ export class GrblLink {
       const { line, source, got, done } = this.pending[0];
       const n = line.length + 1;
       const used = this.inflight.reduce((a, x) => a + x.n, 0);
-      if (used + n > this.rx && this.inflight.length) break;
+      // Bluetooth's RX window is small and easy to overflow. Keep at most two
+      // lines in flight so a burst at the end of a job cannot pack the radio.
+      const rxCap = this._isBluetooth() ? Math.min(this.rx, 64) : this.rx;
+      if (used + n > rxCap && this.inflight.length) break;
+      if (this._isBluetooth() && this.inflight.length >= 2) break;
       this.pending.shift();
       if (isProbeMove(line)) markProbeStart(this.status.MPos && this.status.MPos[2]);
       this.inflight.push({ n, source, line, got, done });

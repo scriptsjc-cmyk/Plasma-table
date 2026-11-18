@@ -139,6 +139,11 @@ async function readFluidAll() {
     }
   }
   if (any) return { ok: true, pins };
+  // $CD dumps the whole YAML. That burst is enough to wedge FluidNC's Bluetooth
+  // radio, and the pin-path queries above already covered a live FluidNC board.
+  if (gLink() && gLink().t && gLink().t.kind === "bluetooth") {
+    return { ok: false, pins, error: lastErr || "Couldn't read the direction pins." };
+  }
   const dump = await ask("$CD", 8000);
   const parsed = parseDumpPins((dump.lines || []).join("\n"));
   for (const a of AXES) {

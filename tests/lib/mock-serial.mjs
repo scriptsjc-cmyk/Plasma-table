@@ -9,6 +9,10 @@
 //   opts.xmodem     "ok" (default), "nohello", "cancel", "nospace" — FluidNC-like $Xmodem/Receive behaviour
 //   opts.runningFile { path, pct }  already running a local file when the port opens (reconnect mid-cut)
 //   opts.fileStep   percent added to a file run on each '?' (0 = tests drive setFileProgress themselves)
+//   opts.bluetooth  getInfo() has no USB ids (a Windows "Standard Serial over Bluetooth link" port)
+//   opts.rxLimit    small RX buffer in bytes; overflow wedges the radio until powerCycle() (ESP32 SPP)
+//   opts.rxDrainMs  how often one queued RX byte is processed when rxLimit is set (default 20)
+//   opts.rxDrainBytes  bytes processed per drain tick (default 1)
 export function installMockSerial(target, opts = {}) {
   const o = { answer: true, banner: false, state: "Idle", wakeOnRelease: false, slowBoot: 0, xmodem: "ok", fileStep: 0, ...opts };
   const enc = new TextEncoder(), dec = new TextDecoder();
@@ -43,17 +47,44 @@ export function installMockSerial(target, opts = {}) {
       this.sent = ""; this.signals = []; this.state = o.state; this.answer = o.answer;
       this.isOpen = false; this.openOpts = null; this.readable = null; this.writable = null;
       this.fs = {}; this.fileRun = null; this.xm = null; this.lineBuf = [];
+      this.pollCount = 0; this.rxQ = []; this.wedged = false; this.lateWrites = 0; this.drainTimer = 0;
       if (o.runningFile) {
         this.fileRun = { path: o.runningFile.path || "/littlefs/job.nc", pct: o.runningFile.pct || 0, sent: false };
         this.state = o.state && o.state !== "Idle" ? o.state : "Run";
       }
     }
-    getInfo() { return { usbVendorId: 0x10c4, usbProductId: 0xea60 }; }   // CP2102
+    getInfo() { return o.bluetooth ? {} : { usbVendorId: 0x10c4, usbProductId: 0xea60 }; }
+    _startDrain() {
+      if (!o.rxLimit || this.drainTimer) return;
+      this.drainTimer = setInterval(() => this._drainRx(), o.rxDrainMs || 20);
+    }
+    _stopDrain() {
+      if (this.drainTimer) { clearInterval(this.drainTimer); this.drainTimer = 0; }
+    }
+    _wedge() {
+      this.wedged = true;
+      this.answer = false;
+      this.rxQ = [];
+    }
+    _drainRx() {
+      if (this.wedged || !this.isOpen || !this.rxQ.length) return;
+      const n = o.rxDrainBytes || 1;
+      for (let i = 0; i < n && this.rxQ.length; i++) this._byte(this.rxQ.shift());
+    }
+    powerCycle() {
+      this.wedged = false;
+      this.answer = o.answer !== false;
+      this.rxQ = [];
+    }
     async open(openOpts) {
       if (this.isOpen) throw new DOMException("The port is already open.", "InvalidStateError");
       this.openOpts = openOpts; this.isOpen = true;
       this.readable = new ReadableStream({ start: (c) => { this.ctl = c; } });
       this.writable = new WritableStream({ write: (chunk) => this._rx(chunk) });
+      // A wedged SPP socket may appear to accept a new client, but the radio
+      // stays silent until the ESP32 is power-cycled.
+      if (this.wedged) { this.answer = false; return; }
+      this._startDrain();
       if (o.banner) setTimeout(() => this.boot(), 20);
       if (o.slowBoot) this.slow();
     }
@@ -104,9 +135,19 @@ export function installMockSerial(target, opts = {}) {
       if (this._xmHello) { clearTimeout(this._xmHello); this._xmHello = 0; }
     }
     _rx(chunk) {
+      if (!this.isOpen) { this.lateWrites++; return; }
       const bytes = typeof chunk === "string" ? enc.encode(chunk)
         : chunk instanceof Uint8Array ? chunk
         : new Uint8Array(chunk.buffer ? chunk : enc.encode(String(chunk)));
+      for (const b of bytes) if (b === 0x3f) this.pollCount++;
+      if (this.wedged) return;
+      if (o.rxLimit) {
+        for (const b of bytes) {
+          if (this.rxQ.length >= o.rxLimit) { this._wedge(); return; }
+          this.rxQ.push(b);
+        }
+        return;
+      }
       for (const b of bytes) this._byte(b);
     }
     _byte(b) {
@@ -263,13 +304,14 @@ export function installMockSerial(target, opts = {}) {
     }
     unplug() {                       // what Chrome does when the cable comes out
       this._stopXmHello();
+      this._stopDrain();
       this.isOpen = false;
       try { this.ctl.error(new DOMException("The device has been lost.", "NetworkError")); } catch (e) { /* ignore */ }
       this.readable = null; this.writable = null;
       this.dispatchEvent(new Event("disconnect"));
       serial.dispatchEvent(Object.assign(new Event("disconnect"), { port: this }));
     }
-    async close() { this._stopXmHello(); this.isOpen = false; clearInterval(this.bootTimer); try { this.ctl.close(); } catch (e) { /* ignore */ } this.readable = null; this.writable = null; }
+    async close() { this._stopXmHello(); this._stopDrain(); this.isOpen = false; clearInterval(this.bootTimer); try { this.ctl.close(); } catch (e) { /* ignore */ } this.readable = null; this.writable = null; }
   }
   const port = new MockPort();
   const serial = new EventTarget();

@@ -1,6 +1,6 @@
 // Connect / disconnect (USB or Bluetooth serial, and the practice table), keep-awake, and the unload safety stop.
 import { RT } from "./grbl.js";
-import { WebSerialTransport } from "./usbserial.js";
+import { WebSerialTransport, reconnectWaitMs, serialLinkMemory, noteSerialOk } from "./usbserial.js";
 import { SimTransport } from "./sim.js";
 import { M, S } from "../core/state.js";
 import { $, toast } from "../core/dom.js";
@@ -30,7 +30,14 @@ export function setConnected(on, label = "") {
   $("demoInputs").classList.toggle("hidden", !(on && S.demo));
   refreshGate();
   refresh();
-  if (on) loadMotorDir();
+  if (on) {
+    // Pin-path queries (and a $CD fallback) are a burst. On Bluetooth wait until
+    // the link has settled; loadMotorDir itself also skips the YAML dump over BT.
+    const bt = !!(M.grbl && M.grbl.t && M.grbl.t.kind === "bluetooth");
+    const start = () => { if (S.connected) loadMotorDir(); };
+    if (bt) setTimeout(start, 800);
+    else start();
+  }
 }
 async function connectUSB() {
   if (!requireMachine("Link your machine to run jobs")) return;
@@ -39,6 +46,12 @@ async function connectUSB() {
   S.usbBusy = true;
   const t = new WebSerialTransport();
   try {
+    // After a Bluetooth drop, opening immediately can leave the ESP32's SPP socket half-open.
+    const wait = reconnectWaitMs(serialLinkMemory);
+    if (wait) {
+      toast("Waiting a moment before reconnecting Bluetooth…");
+      await new Promise((r) => setTimeout(r, wait));
+    }
     // Always show Chrome's port list on Connect: silently reusing a remembered port fails when the board is on a
     // different port (or a different board is plugged in) and never lets the operator pick the right one.
     try { await t.open(S.cfg.serial.baud || 115200, false); } catch (e) {
@@ -48,10 +61,12 @@ async function connectUSB() {
     }
     toast("Port open – waiting for the controller to answer…");
     await M.connect(t);          // resolves only once the controller has replied (banner or status report)
+    noteSerialOk(t.kind || "usb");
     S.demo = null; S.userDisconnected = false;
-    setConnected(true, "the table");
+    setConnected(true, t.kind === "bluetooth" ? "Bluetooth" : "the table");
   } catch (e) {
-    toast(e.message + (t.portHint ? t.portHint() : ""), true);      // e.g. no reply: wrong port / baud / firmware
+    if (t.kind === "bluetooth" && serialLinkMemory.silent) serialLinkMemory.attempts += 1;
+    toast(e.message + (t.portHint ? t.portHint() : ""), true);      // e.g. no reply: wrong port / baud / firmware / wedged BT
   } finally { S.usbBusy = false; }
 }
 async function connectDemo() {

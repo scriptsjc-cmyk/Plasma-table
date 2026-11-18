@@ -104,10 +104,29 @@ export function onEvent(kind, d) {
       // (no toast: it would only repeat the banner and cover the run numbers, r7 U29)
       if (wasHot && $("lostBar")) {
         const board = M.grbl && M.grbl.job && M.grbl.job.boardRun && (M.grbl.job.phase === "run" || M.grbl.job.unwatched);
-        showLost(board ? LOST_BOARD : LOST_HOT);
+        const bt = !!(M.grbl && M.grbl.t && M.grbl.t.kind === "bluetooth");
+        if (board) {
+          showLost(bt ? {
+            title: LOST_BOARD.title,
+            text: LOST_BOARD.text + " If Connect keeps failing after the table has already stopped, power-cycle the ESP32 — a wedged Bluetooth radio will not come back on its own. Do not power-cycle while a cut is still running on the board.",
+          } : LOST_BOARD);
+        } else {
+          showLost(bt ? {
+            title: LOST_HOT.title,
+            text: LOST_HOT.text + " If Connect does not come back, power-cycle the ESP32 (unplug its power, wait a few seconds, and plug it back in). Restarting only this page will not clear a wedged Bluetooth radio.",
+          } : LOST_HOT);
+        }
       }
-      // USB link gone while idle (unplugged, power off, no answers): still say so loudly, with the reason
-      else if (d.reason && wasLive && !S.userDisconnected && $("lostBar")) showLost({ title: "Connection to the controller lost.", text: `${d.reason} Nothing will move until you reconnect. Check the cable, then press Connect again.` });
+      // USB / Bluetooth link gone while idle (unplugged, power off, no answers): still say so loudly, with the reason
+      else if (d.reason && wasLive && !S.userDisconnected && $("lostBar")) {
+        const bt = !!(M.grbl && M.grbl.t && M.grbl.t.kind === "bluetooth");
+        showLost({
+          title: "Connection to the controller lost.",
+          text: bt
+            ? `${d.reason} Nothing will move until you reconnect. Wait a moment, then press Connect. If the board still does not answer, power-cycle the ESP32 (unplug its power, wait a few seconds, and plug it back in). Restarting only this page will not clear a wedged Bluetooth radio.`
+            : `${d.reason} Nothing will move until you reconnect. Check the cable, then press Connect again.`,
+        });
+      }
     }
   } else if (kind === "log") {
     log(d.text, d.level);
