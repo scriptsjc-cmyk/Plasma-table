@@ -33,21 +33,32 @@ export function viewArea() {
 // On Cut step 1 the canvas is only a preview of the chosen part (centred and fitted).
 // The table, gantry and torch appear from Setup (step 3) onward, when Show machine is on.
 
-export function fit() {
-  if (!S.prepared) return { cls: "", text: "" };
-  if (!S.safety.limits) return { cls: "unknown", text: S.demo ? "Demo: tap here and the edges are set up for you." : "Edges not set up – can't check it fits (Machine setup tab)." };
-  if (!S.connected && !S.safety.referenced) return { cls: "unknown", text: "Connect to the table to check it fits." };    // round 5 item 11: no homing prompt without a machine
-  if (!S.safety.referenced) return { cls: "unknown", text: "Home the machine to check it fits." };
-  const b = S.prepared.stats.bounds, w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
-  const x0 = b[0] + w[0] - ref[0], x1 = b[2] + w[0] - ref[0], y0 = b[1] + w[1] - ref[1], y1 = b[3] + w[1] - ref[1];
+function fitOverflow(bounds, wco, ref, L) {
+  const x0 = bounds[0] + wco[0] - ref[0], x1 = bounds[2] + wco[0] - ref[0];
+  const y0 = bounds[1] + wco[1] - ref[1], y1 = bounds[3] + wco[1] - ref[1];
   const over = [];
   if (x0 < L.x[0] - 0.05) over.push(`${Math.ceil(L.x[0] - x0)} mm too far left`);
   if (x1 > L.x[1] + 0.05) over.push(`${Math.ceil(x1 - L.x[1])} mm too far right`);
   // Y=0 is the back (gantry rail / home); +Y is toward the operator (front).
   if (y0 < L.y[0] - 0.05) over.push(`${Math.ceil(L.y[0] - y0)} mm too far back`);
   if (y1 > L.y[1] + 0.05) over.push(`${Math.ceil(y1 - L.y[1])} mm too far forward`);
-  return over.length ? { cls: "bad", bad: true, text: `✗ Won't fit: ${over.join(", ")}. Move the start point.` }
-    : { cls: "good", text: "✓ Fits on the machine" };
+  return over;
+}
+export function fit() {
+  if (!S.prepared) return { cls: "", text: "" };
+  if (!S.safety.limits) return { cls: "unknown", text: S.demo ? "Demo: tap here and the edges are set up for you." : "Edges not set up – can't check it fits (Machine setup tab)." };
+  if (!S.connected && !S.safety.referenced) return { cls: "unknown", text: "Connect to the table to check it fits." };    // round 5 item 11: no homing prompt without a machine
+  if (!S.safety.referenced) return { cls: "unknown", text: "Home the machine to check it fits." };
+  const b = S.prepared.stats.bounds, w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
+  const over = fitOverflow(b, w, ref, L);
+  if (!over.length) return { cls: "good", text: "✓ Fits on the machine" };
+  let text = `✗ Won't fit: ${over.join(", ")}. Move the start point.`;
+  // If the same part would fit with the sheet corner at the home corner, the
+  // start point is what's wrong — not the part or a sheet that's larger than the edges.
+  if (!fitOverflow(b, ref, ref, L).length) {
+    text += " The start point is away from the home corner. Jog to the sheet's back-left (the home corner) and press Start here.";
+  }
+  return { cls: "bad", bad: true, text };
 }
 export function drawPreview() {
   const cv = $("preview");

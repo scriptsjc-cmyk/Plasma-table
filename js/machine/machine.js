@@ -120,6 +120,25 @@ export class Machine {
     if (top !== null) return [`G53 G0 Z${top.toFixed(3)}`];
     return fallback ? ["G91", `G0 Z${this.cfg.torch.raise_mm}`, "G90"] : [];
   }
+  // After the edges wizard the torch is at the far corner / slat height. Raise
+  // and go back to the home corner so Start here can set the sheet there.
+  _returnTorchToHome(g) {
+    const ref = this.safety && this.safety.ref;
+    if (!ref || !g) return "";
+    const mp = (g.status && g.status.MPos) || [0, 0, 0];
+    if (Math.hypot(mp[0] - ref[0], mp[1] - ref[1]) < 0.5) return "";
+    const top = this.safety.safeTopMachineZ();
+    const z = top !== null ? top : mp[2];
+    const tr = g.t;
+    if (tr && typeof tr.demoTeleport === "function") {
+      // Practice table: snap home even if a $ setting is still flushing, so tests
+      // and “set up the edges for me” are not left waiting for a long rapid.
+      tr.demoTeleport([ref[0], ref[1], z], true);
+    } else {
+      g.sendLines([...this.raiseLines(false), `G53 G90 G0 X${ref[0].toFixed(3)} Y${ref[1].toFixed(3)}`]);
+    }
+    return " The torch has been raised and moved back to the home corner. Put it on the sheet's back-left, then press Start here on the cutting screen.";
+  }
   boundedProbes(lines) {
     const bottom = this.safety.bottomMachineZ();
     if (bottom === null) return lines;
@@ -227,6 +246,9 @@ export class Machine {
         if (this.state() !== "Idle") throw new JobError("Machine must be Idle.");
         this.zeroConfirmed = false;
         this.safety.setReference(g.status.MPos, "manual");
+        // Work 0,0 matches the home corner on the bed picture. Start here still
+        // confirms (or moves) the sheet corner if it isn't at this point.
+        g.send("G10 L20 P1 X0 Y0");
         this.emit("log", { text: "Home corner set by hand.", level: "info" });
         this.emit("safety", this.safety.state());
         break;
@@ -239,6 +261,7 @@ export class Machine {
           g.sendLines([...this.safety.grblTravelSettings(), "$20=1"]);
           note += " Controller soft limits switched on too.";
         }
+        note += this._returnTorchToHome(g);
         this.emit("log", { text: note, level: "info" });
         this.emit("safety", this.safety.state());
         return { ok: true, limits, note };

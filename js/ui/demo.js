@@ -33,6 +33,7 @@ export async function demoEdges() {
     await tp([t.x - 10, t.y - 10, 0]);
     await wait(200);
     H.cmd("limits_save");
+    await until(() => S.safety.limits && S.safety.referenced && M.state() === "Idle", 20000);
     await tp([0, 0, 0]);
     await until(() => S.safety.limits && S.safety.referenced, 3000);
     H.toast("Demo edges set up ✓ (nothing real moved)");

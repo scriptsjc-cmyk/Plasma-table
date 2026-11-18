@@ -72,6 +72,20 @@ export class Safety {
   }
 
   active() { return !!this.limits && this.referenced; }
+  // Width / height of the saved edges (home-relative).
+  span(axis) {
+    if (!this.limits || !this.limits[axis]) return 0;
+    const [lo, hi] = this.limits[axis];
+    return Math.abs(hi - lo);
+  }
+  // True when the torch is well away from the home corner, toward the far edges.
+  // Start here at that point would put the sheet corner there, so a part near
+  // the origin can sit outside the reachable area.
+  awayFromHome(mpos, fraction = 0.5) {
+    if (!this.active()) return false;
+    const r = this.rel(mpos);
+    return Math.abs(r[0]) > this.span("x") * fraction || Math.abs(r[1]) > this.span("y") * fraction;
+  }
 
   clampJog(mpos, axis, dist) {
     if (!this.active()) return dist;

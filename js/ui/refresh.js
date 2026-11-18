@@ -108,7 +108,13 @@ function paintJobCard() {
   }
   setText("jcMat", mat);
   const t = S.cfg && S.cfg.travel_mm, conn = $("connPill").title || "Not connected", badge = $("stateBadge");
-  setText("jcMach", `${conn}${S.connected && badge && badge.textContent ? ` · ${badge.textContent}` : ""}${t ? ` · ${Math.round(t.x)} × ${Math.round(t.y)} mm` : ""}`);
+  const L = S.safety && S.safety.limits, on = !!(L && S.safety.referenced);
+  const ex = on ? Math.round(Math.abs(L.x[1] - L.x[0])) : 0, ey = on ? Math.round(Math.abs(L.y[1] - L.y[0])) : 0;
+  const bed = t ? `${Math.round(t.x)} × ${Math.round(t.y)}` : "";
+  let size = "";
+  if (on) size = ` · reachable ${ex} × ${ey} mm` + (bed && (Math.round(t.x) !== ex || Math.round(t.y) !== ey) ? ` (bed ${bed} mm)` : "");
+  else if (bed) size = ` · ${bed} mm`;
+  setText("jcMach", `${conn}${S.connected && badge && badge.textContent ? ` · ${badge.textContent}` : ""}${size}`);
 }
 export function refresh() {
   paintChrome();

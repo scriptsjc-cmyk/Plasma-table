@@ -13,7 +13,19 @@ import { startOver } from "../make/files.js";
 
 export function bindRun() {
   // step 3
-  $("btnZero").onclick = () => { if (cmd("zero_xy")) { S.zeroSet = true; toast("Start point set ✓"); refresh(); } };
+  $("btnZero").onclick = async () => {
+    const sf = M && M.safety, mp = (S.status && S.status.MPos) || [0, 0, 0];
+    if (sf && sf.awayFromHome && sf.awayFromHome(mp)) {
+      const ok = await askConfirm({
+        title: "The torch is a long way from the home corner",
+        body: "Start here will put the sheet's back-left corner here, not at the home corner. A part near the sheet origin can then sit outside the machine edges. Jog to the home corner (the sheet's back-left) first unless you really want the sheet corner here.",
+        ok: "Use this point anyway",
+        cancel: "Cancel",
+      });
+      if (!ok) return;
+    }
+    if (cmd("zero_xy")) { S.zeroSet = true; toast("Start point set ✓"); refresh(); }
+  };
   $("btnTrace").onclick = () => cmd("trace_outline");
   // step 4
   $("checklist").addEventListener("change", refresh);

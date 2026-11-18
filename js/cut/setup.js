@@ -32,7 +32,25 @@ export function initSetup(host) {
   catch { defaultSheet(); }
   bind();
 }
-function defaultSheet() { const t = H.S.cfg && H.S.cfg.travel_mm; if (t) { sheet.w = t.x; sheet.h = t.y; } }
+function reachableSize() {
+  const sf = H.S && H.S.safety, L = sf && sf.limits;
+  if (!L || !sf.referenced) return null;
+  return { x: Math.abs(L.x[1] - L.x[0]), y: Math.abs(L.y[1] - L.y[0]) };
+}
+function defaultSheet() {
+  const t = H.S.cfg && H.S.cfg.travel_mm, r = reachableSize();
+  if (r && t) { sheet.w = Math.min(t.x, r.x); sheet.h = Math.min(t.y, r.y); }
+  else if (r) { sheet.w = r.x; sheet.h = r.y; }
+  else if (t) { sheet.w = t.x; sheet.h = t.y; }
+}
+function sheetVsEdgesNote() {
+  const r = reachableSize();
+  if (!r) return "";
+  if (sheet.w > r.x + 0.5 || sheet.h > r.y + 0.5) {
+    return ` The sheet (${r1(sheet.w)} × ${r1(sheet.h)} mm) is larger than the reachable area (${r1(r.x)} × ${r1(r.y)} mm). That's fine — only the cut path has to fit inside the machine edges.`;
+  }
+  return "";
+}
 const saveSheet = () => { try { localStorage.setItem(KEY, JSON.stringify(sheet)); } catch { /* ignore */ } };
 // the usable area as the packer and the checks see it: the sheet (or the saved remnant shape), clipped to the machine's work area
 export function region(withClip = true) {
@@ -471,7 +489,7 @@ export function paint(light) {
   $("layoutState").className = "layoutstate " + (a.ok ? "good" : "bad");
   $("layProblems").innerHTML = a.problems.map((p) => `<li>${H.esc(p.text)}</li>`).join("");
   const wa = workArea();
-  $("sheetNote").textContent = `Minimum gap between parts: ${r1(gapMm())} mm (kerf ${r1(H.kerf())} + clearance ${r1(sheet.clearance)}).` + (wa ? "" : " Machine edges aren't set up yet, so the work area isn't drawn.");
+  $("sheetNote").textContent = `Minimum gap between parts: ${r1(gapMm())} mm (kerf ${r1(H.kerf())} + clearance ${r1(sheet.clearance)}).` + (wa ? "" : " Machine edges aren't set up yet, so the work area isn't drawn.") + sheetVsEdgesNote();
   const one = sk.selected();
   $("layoutSel").classList.toggle("hidden", !one);
   if (one) {

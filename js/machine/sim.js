@@ -80,8 +80,8 @@ export class SimTransport {
     return true;
   }
   // demo only: put the pretend torch somewhere instantly (used by "set up the edges for me"). Only when nothing is moving.
-  demoTeleport(p) {
-    if (this.moving || this.queue.length || this.executing || this.homing) return false;
+  demoTeleport(p, force = false) {
+    if (!force && (this.moving || this.queue.length || this.executing || this.homing)) return false;
     this.mpos = [...p];
     return true;
   }
