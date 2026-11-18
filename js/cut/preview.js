@@ -19,7 +19,7 @@ export function wcoNow() {
 }
 const edgesOn = () => !!(S.safety.limits && S.safety.referenced);
 export function toView(mx, my) { return S.safety.referenced ? [mx - S.safety.ref[0], my - S.safety.ref[1]] : [mx, my]; }
-// the machine's reachable area written in the sheet picture's coordinates (the work zero = the sheet's bottom-left corner)
+// the machine's reachable area written in the sheet picture's coordinates (work zero = the sheet corner at 0, 0)
 export function workAreaSheet() {
   if (!edgesOn()) return null;
   const w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
@@ -43,8 +43,9 @@ export function fit() {
   const over = [];
   if (x0 < L.x[0] - 0.05) over.push(`${Math.ceil(L.x[0] - x0)} mm too far left`);
   if (x1 > L.x[1] + 0.05) over.push(`${Math.ceil(x1 - L.x[1])} mm too far right`);
-  if (y0 < L.y[0] - 0.05) over.push(`${Math.ceil(L.y[0] - y0)} mm too far forward`);
-  if (y1 > L.y[1] + 0.05) over.push(`${Math.ceil(y1 - L.y[1])} mm too far back`);
+  // Y=0 is the back (gantry rail / home); +Y is toward the operator (front).
+  if (y0 < L.y[0] - 0.05) over.push(`${Math.ceil(L.y[0] - y0)} mm too far back`);
+  if (y1 > L.y[1] + 0.05) over.push(`${Math.ceil(y1 - L.y[1])} mm too far forward`);
   return over.length ? { cls: "bad", bad: true, text: `✗ Won't fit: ${over.join(", ")}. Move the start point.` }
     : { cls: "good", text: "✓ Fits on the machine" };
 }
@@ -86,7 +87,7 @@ function drawCanvas(cv, main) {
   } else {
     const T = viewArea();
     // room around the table for the machine: X beam along the front, Y arm off its carriage
-    const mg = machineVisible() ? [70, 190, 70, 140] : [0, 0, 0, 0];   // left, front, back, right
+    const mg = machineVisible() ? [70, 190, 70, 140] : [0, 0, 0, 0];   // left, back/rail (Y=0), front (+Y), right
     A = { x: [T.x[0] - mg[0], T.x[1] + mg[3]], y: [T.y[0] - mg[1], T.y[1] + mg[2]], label: T.label, table: T };
     [ox, oy] = originView();
   }

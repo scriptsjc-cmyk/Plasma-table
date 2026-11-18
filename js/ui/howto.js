@@ -5,7 +5,7 @@ const STEPS = [
     "1. On Make a part, pick a simple shape (a rectangle is fine) and type its size.",
     "2. Press Cut this part. That opens the cutting screen on the Part step, where you pick the material and thickness.",
     "3. Tick Practice run – the torch stays off. The header chip says “Practice run · torch off” on a real machine. You can try this without a linked machine.",
-    "4. The part cuts where you place it on the bed. Then press Start here at the sheet's bottom-left corner so the table knows where that corner is (skipped in Practice if it is already set).",
+    "4. The part cuts where you place it on the bed. Then press Start here at the sheet's back-left corner (0, 0 on the layout; top-left of the bed picture on a laptop) so the table knows where that corner is (skipped in Practice if it is already set).",
     "5. Press Start cutting and watch the path. This is the safest first job. The red STOP button (or the space bar) cancels at once.",
   ]},
   { id: "make", title: "Make a part", body: [
@@ -19,7 +19,7 @@ const STEPS = [
     "A red TORCH ON pill in the header lights whenever the controller says the torch is firing.",
   ]},
   { id: "zero", title: "Set the start point (Start here)", body: [
-    "Put the sheet on the slats. On Setup, jog the torch to the sheet's bottom-left corner, at a safe height.",
+    "Put the sheet on the slats. On Setup, jog the torch to the sheet's back-left corner (top-left of the bed picture on a laptop), at a safe height.",
     "Press Start here. That sets the start point. If you skip it, Start is blocked — you could cut in the wrong place.",
     "Use Trace the outline (torch off) to walk the path on the sheet before a real cut.",
   ]},

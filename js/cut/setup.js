@@ -1,7 +1,7 @@
 // Step 3 "Get set up": lay the parts out on the sheet (drag, turn, copy, delete, snap guides, live gaps,
 // red when parts touch / overlap / hang off the sheet or the machine's work area), add parts from the account list or
 // from several drawing files at once (with a quantity for each), then the start point and the final checks.
-// The sheet's bottom-left corner is the work zero, so every part is cut exactly where it sits on the sheet picture.
+// The sheet corner at 0, 0 is the work zero, so every part is cut exactly where it sits on the sheet picture.
 import { segX, pointInPoly, bbox } from "../core/geom.js";
 import { shapeDef } from "../make/sketch.js";
 import { parseDXF } from "../make/dxf.js";
@@ -13,7 +13,7 @@ import { insideRegion } from "./nest.js";
 import { initNestUi, paintNest, nestNow } from "./nestui.js";
 import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
 import { MACH, drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
-import { drawAxisHints } from "./bedview.js";
+import { drawAxisHints, bedViewRotated } from "./bedview.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
@@ -145,9 +145,9 @@ function viewBox(sk) {
   let x1 = wa ? Math.max(sheet.w, wa.x[1]) : (t ? Math.max(sheet.w, t.x) : sheet.w);
   let y1 = wa ? Math.max(sheet.h, wa.y[1]) : (t ? Math.max(sheet.h, t.y) : sheet.h);
   let vx0 = x0, vy0 = y0;
-  // When Show machine is on, leave room for the X beam (front) and Y arm, same margins as the Cut preview.
+  // When Show machine is on, leave room for the X beam (back / home end) and Y arm, same margins as the Cut preview.
   if (machineVisible()) {
-    const mg = [70, 190, 70, 140];                             // left, front, back, right
+    const mg = [70, 190, 70, 140];                             // left, back/rail (Y=0), front (+Y), right
     vx0 -= mg[0]; vy0 -= mg[1]; x1 += mg[3]; y1 += mg[2];
   }
   return [vx0, vy0, x1, y1];
@@ -208,14 +208,15 @@ function drawBg(sk, ctx, S, C, w, h) {
     ctx.setLineDash([8, 5]); ctx.strokeStyle = "#2e8b57"; ctx.lineWidth = 2; ctx.strokeRect(a0, b0, a1 - a0, b1 - b0); ctx.setLineDash([]);
     ctx.fillStyle = "#2e8b57"; ctx.fillText("Machine work area", Math.max(4, a0 + 6), Math.min(h - 6, b1 - 6));
   }
-  // the start point = the sheet's bottom-left corner
+  // the start point = the sheet corner at layout 0, 0 (top-left / back-left on a laptop bed picture)
   const [ox, oy] = S(0, 0);
   ctx.fillStyle = "#c05600"; ctx.beginPath(); ctx.arc(ox, oy, 5, 0, 7); ctx.fill();
   if (H.S.zeroSet) {                                                     // work zero: the sheet corner, not the part
     const [ix, iy] = S(80, 40);                                          // offset into the sheet so the label stays readable when the view is flipped
     ctx.textAlign = ix >= ox ? "left" : "right";
     ctx.textBaseline = iy >= oy ? "top" : "bottom";
-    ctx.fillText("Sheet corner (0, 0)", ox + (ix >= ox ? 8 : -8), oy + (iy >= oy ? 10 : -10));
+    const cornerLab = bedViewRotated() ? "Sheet corner (0, 0) — top-left, back-left of the table" : "Sheet corner (0, 0)";
+    ctx.fillText(cornerLab, ox + (ix >= ox ? 8 : -8), oy + (iy >= oy ? 10 : -10));
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   }
 }

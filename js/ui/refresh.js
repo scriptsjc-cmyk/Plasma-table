@@ -26,6 +26,7 @@ import { matchPreset } from "../machine/settings.js";
 import { paintMotorDir } from "../machine/motordir.js";
 import { paintTorchTest } from "../machine/torchtest.js";
 import { drawSetupBed } from "../machine/setupbed.js";
+import { sheetCornerName } from "../cut/bedview.js";
 
 // The header's state chip. While the E-stop is latched it says "Stopped" (red) whatever the controller reports, so a green
 // "Ready" never sits next to E-STOP ON (r7 U7).
@@ -233,10 +234,17 @@ export function refresh() {
   $("btnZero").disabled = busy || !idle;
   paintMotorDir();
   paintTorchTest();
+  paintBedStartHelp();
   drawPreview();
   drawSetupBed();
 }
 // B5 18: the reasons Start is greyed, as visible text next to the button (the full list is still under "Check, then cut")
+function paintBedStartHelp() {
+  const el = $("bedStartHelp"); if (!el) return;
+  const corner = sheetCornerName({ long: true });
+  el.innerHTML = "The part cuts where you place it on the bed. You do not set a start point on the part. <b>Start here</b> only tells the table where the sheet's "
+    + corner + " is (that corner is 0, 0 on the layout; every cut is measured from there). The torch does not move. <b>Go to start point</b> then goes to where the cut begins.";
+}
 function paintStartWhy(blocked) {
   const el = $("startWhy"); if (!el) return;
   const b = blocked;

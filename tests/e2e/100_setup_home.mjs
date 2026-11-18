@@ -44,6 +44,8 @@ const first = await ev(page, () => {
     rot: window.plasmaTest.bedViewRotated(),
     flip: cv && cv.dataset.flip,
     homeSet: cv && cv.dataset.homeSet,
+    machine: cv && cv.dataset.machine,
+    step: window.plasmaTest.S.cur,
     w: cv && cv.clientWidth,
     h: cv && cv.clientHeight,
     btn: btn && (btn.textContent || "").trim(),
@@ -54,6 +56,7 @@ const first = await ev(page, () => {
 });
 t.check("laptop Machine setup shows a bed canvas", first.laptop && first.tab === "setup" && first.w > 80 && first.h > 80, JSON.stringify(first));
 t.check("the setup bed is Y-flipped on a laptop", first.rot && first.flip === "y", JSON.stringify(first));
+t.check("Machine setup draws the table and gantry even when cutting is still on step 1", first.machine === "on", JSON.stringify(first));
 t.check("home is not set yet, and the note explains no switches / no $H",
   first.homeSet === "0" && /no limit switches/i.test(first.note) && first.hasDollarH && /Set this as home/i.test(first.btn) && /no limit switches/i.test(first.wizard),
   JSON.stringify({ btn: first.btn, note: first.note.slice(0, 400), wizard: first.wizard.slice(0, 240) }));

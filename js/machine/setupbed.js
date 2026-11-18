@@ -50,7 +50,7 @@ export function drawSetupBed() {
   ctx.fillRect(0, 0, w, h);
 
   const T = viewArea();
-  const mg = [70, 190, 70, 140]; // left, front, back, right — room for the gantry
+  const mg = [70, 190, 70, 140]; // left, back/rail (Y=0), front (+Y), right — room for the gantry
   const A = { x: [T.x[0] - mg[0], T.x[1] + mg[3]], y: [T.y[0] - mg[1], T.y[1] + mg[2]], table: T };
   const ax = A.x[1] - A.x[0], ay = A.y[1] - A.y[0];
   const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);

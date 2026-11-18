@@ -1,5 +1,6 @@
-// Bird's-eye table, gantry and torch for the cutting preview (HMM-style: X beam along the front,
-// Y arm cantilevered across the table, torch on a plate on the left face of the arm). Sizes in mm.
+// Bird's-eye table, gantry and torch for the cutting preview (HMM-style: X beam along the back
+// / home end, Y arm cantilevered toward the operator, torch on a plate on the left face of the arm).
+// Sizes in mm.
 import { screen } from "../ui/flow.js";
 import { S } from "../core/state.js";
 import { themeColor } from "../core/dom.js";
@@ -10,7 +11,12 @@ export const MACH = { beamH: 50, armW: 50, plate: 26, torchOff: 30, carW: 190, c
 const edgesOn = () => !!(S.safety && S.safety.limits && S.safety.referenced);
 
 export function isPartPreview() { return screen() === "cut" && Number(S.cur) === 1; }
-export function machineVisible() { return !!S.showMachine && !isPartPreview(); }
+export function machineVisible() {
+  // Machine setup always shows the table, even if Get-to-cutting is still on step 1
+  // (isPartPreview) or the Cut-screen "Show machine" box is off.
+  if (S.tab === "setup") return true;
+  return !!S.showMachine && !isPartPreview();
+}
 
 export function markMachine(cv) {
   if (cv) cv.dataset.machine = machineVisible() ? "on" : "off";

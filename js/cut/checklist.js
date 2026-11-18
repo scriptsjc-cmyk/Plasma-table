@@ -8,6 +8,7 @@ import { $, $$, esc } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
 import { CHECK_LINE } from "../machine/boardrun.js";
 import { isEtchOp, throughCutInEtch } from "./etch.js";
+import { sheetCornerName } from "./bedview.js";
 import { probeDisplayOn } from "../machine/probefilter.js";
 
 // ------------------------------------------------------------------ step 3 (second half): checks
@@ -76,7 +77,7 @@ export function blockers() {
   if (!S.prepared) b.push("No part chosen yet (step 1).");
   if (estopOn()) b.push("E-STOP is ON – press and hold the red button to reset it first.");
   const sm = scoreMarkProblem(); if (sm) b.push(sm);
-  if (S.connected && !S.zeroSet) b.push("Sheet corner has not been set: put the torch on the sheet's bottom-left corner and press Start here. The part already cuts where you placed it.");
+  if (S.connected && !S.zeroSet) b.push("Sheet corner has not been set: put the torch on the sheet's " + sheetCornerName({ long: true }) + " and press Start here. The part already cuts where you placed it.");
   const st = S.status.state;
   if (S.connected && st === "Alarm") b.push("Machine is in alarm – press Unlock at the top.");
   else if (S.connected && st !== "Idle") b.push(`Machine is busy (${st}). Wait for it to stop.`);

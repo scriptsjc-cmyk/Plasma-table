@@ -1,5 +1,6 @@
-// Laptop Setup and Cut: the bed is flipped top-to-bottom (Y only; origin at top-left, +X right, +Y down)
-// so it matches the table. View-only: G-code is unchanged. Drag and jog follow the screen.
+// Laptop Setup and Cut: the bed is flipped top-to-bottom (Y only) so it matches the table as seen from
+// the operator at the FRONT: rail and home (0,0) at the back / top-left, +X right, +Y down toward you.
+// View-only: G-code is unchanged. Drag and jog follow the screen.
 import { T } from "../lib/t.mjs";
 import { startServer, launch, newPage, demoToShape } from "../lib/browser.mjs";
 
@@ -70,6 +71,8 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
   t.check("Setup: sheet corner (0,0) is in the top-left", corners.o[0] < corners.w * 0.45 && corners.o[1] < corners.h * 0.45, JSON.stringify(corners));
   t.check("Setup: the far table corner is toward the bottom-right", corners.far[0] > corners.o[0] && corners.far[1] > corners.o[1], JSON.stringify(corners));
   t.check("Setup: +X / +Y axis hints are drawn", corners.axes === "on", JSON.stringify(corners));
+  const help = await ev(page, () => (document.getElementById("bedStartHelp") || {}).textContent || "");
+  t.check("Setup help names the sheet corner as top-left / back-left", /top-left/i.test(help) && /back-left/i.test(help) && !/bottom-left/i.test(help), help);
 
   const g1 = motionXY(await gcodeOf(page));
   t.check("G-code motion XY is unchanged by the view flip", sameXY(g1, GOLDEN_XY), JSON.stringify(g1.slice(0, 4)));
@@ -255,6 +258,8 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     return { rot: window.plasmaTest.bedViewRotated(), o, w, h, labels, laptop: matchMedia("(min-width: 900px) and (pointer: fine)").matches };
   });
   t.check("phone Setup is not flipped: (0,0) stays bottom-left", !ph.rot && !ph.laptop && ph.o[0] < ph.w * 0.5 && ph.o[1] > ph.h * 0.5, JSON.stringify(ph));
+  const phHelp = await ev(page, () => (document.getElementById("bedStartHelp") || {}).textContent || "");
+  t.check("phone Setup help still says bottom-left", /bottom-left/i.test(phHelp) && !/top-left/i.test(phHelp), phHelp);
   t.check("phone jog pad still shows X+ on the right button", ph.labels.some((s) => /X\+/.test(s)), JSON.stringify(ph));
   await ev(page, () => { if (document.activeElement) document.activeElement.blur(); });
   const x0 = await ev(page, () => Number((window.plasmaTest.S.status.WPos || [0])[0]));

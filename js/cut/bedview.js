@@ -1,6 +1,9 @@
 // Laptop Machine setup and Cut: flip the bed picture top-to-bottom (Y only) so it
-// matches the table as you stand at it. Home / the sheet corner (0, 0) sits at the
-// top-left; +X points right and +Y points down. Jog pads follow the picture.
+// matches the table as seen from where the operator stands (at the FRONT).
+// The X gantry rail runs left-right along the BACK (top of the screen). Home /
+// the sheet corner (0, 0) is the back-left, drawn at the top-left. +X points
+// right along the rail; +Y points toward the operator (down the screen).
+// Jog: Up = away from you = −Y; Down = toward you = +Y; Left/Right = −X/+X.
 // This is a view transform only. Machine coordinates, G-code and commands are unchanged.
 import { isLaptopUi } from "../ui/laptop.js";
 import { screen } from "../ui/flow.js";
@@ -13,6 +16,14 @@ export function bedViewRotated() {
   if (S.tab === "setup") return true;            // Machine setup bed uses the same Y-only flip; jog pads follow
   const step = Number(S.cur);
   return step === 3 || step === 4;
+}
+
+// The sheet / home corner (layout 0, 0) as it appears in the current view.
+// On a laptop bed picture that is the top-left of the screen (the table's back-left).
+// On a phone, or on Make a part, the picture is unflipped and that corner is bottom-left.
+export function sheetCornerName({ long = false } = {}) {
+  if (bedViewRotated()) return long ? "top-left (the back-left corner of the table)" : "top-left";
+  return "bottom-left";
 }
 
 // Involutive Y-only flip (mirror top to bottom). X is unchanged.

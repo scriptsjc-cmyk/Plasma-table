@@ -9,6 +9,7 @@ import { currentSettings } from "./settings.js";
 import { Safety, SafetyError } from "./safety.js";
 import { filterConsoleCommand } from "./admin-machine.js";
 import { probeBlocks } from "./probefilter.js";
+import { sheetCornerName } from "../cut/bedview.js";
 
 export const POSITION_LOST_ALARMS = new Set([1, 3, 10, 13]);
 export { JobError, SafetyError };
@@ -21,7 +22,7 @@ const LATCH_BLOCKED = new Set(["resume", "jog", "jog_dir", "home", "goto_zero", 
 export const ALARM_DEFAULT = "The controller is locked (Alarm) and won't move. Check the torch is clear, then press Unlock (or Home).";
 const ALARM_MSG = "The controller is in Alarm, so it won't move. Press Unlock at the top of the screen first (or Home).";
 const ALARM_BLOCKED = new Set(["jog", "jog_dir", "goto_zero", "raise", "trace_outline", "touchoff_test", "torch_test", "torch_on", "zero_xy", "set_origin"]);
-const NO_ZERO_MSG = "The sheet corner isn't set. Put the torch on the sheet's bottom-left corner and press Start here first. The part already cuts where you placed it.";
+const noZeroMsg = () => "The sheet corner isn't set. Put the torch on the sheet's " + sheetCornerName({ long: true }) + " and press Start here first. The part already cuts where you placed it.";
 
 export class Machine {
   constructor(machineCfg, chart, settingsText, store) {
@@ -326,7 +327,7 @@ export class Machine {
     if (this.estopLatched()) throw new JobError(LATCH_MSG);
     if (this.state() === "Alarm") throw new JobError(ALARM_MSG);
     if (this.state() !== "Idle") throw new JobError(`Machine must be Idle to start (it is ${this.state()}).`);
-    if (!this.zeroConfirmed) throw new JobError(NO_ZERO_MSG);
+    if (!this.zeroConfirmed) throw new JobError(noZeroMsg());
     if (this.startGuard) { const why = this.startGuard(); if (why) throw new JobError(why); }
     const inp = this.grbl.status.inputs || {};
     if (inp.estop) throw new JobError("E-stop is pressed. Release it and press Unlock.");
