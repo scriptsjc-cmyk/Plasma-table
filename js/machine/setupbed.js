@@ -104,6 +104,10 @@ export function drawSetupBed() {
     ctx.fillText(`Torch  X ${fmt(mp[0])}  Y ${fmt(mp[1])}  Z ${fmt(mp[2])} mm`, tx + lx, ty + ly);
     ctx.restore();
   }
+  const torchPx = mp ? [X(toView(mp[0], mp[1])[0]), Y(toView(mp[0], mp[1])[1])] : null;
+  cv._map = { toPx: (x, y) => [X(x), Y(y)], sc, T };
+  cv._home = [X(0), Y(0)];
+  cv._torch = torchPx;
   markMachine(cv);
   cv.dataset.setupBed = "on";
   cv.dataset.homeSet = (S.safety && S.safety.referenced) ? "1" : "0";
