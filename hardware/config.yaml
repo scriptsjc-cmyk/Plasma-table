@@ -159,12 +159,15 @@ axes:
         direction_pin: gpio.26
         disable_pin: NO_PIN
 
-# Torch on/off through a RELAY MODULE (active-low input). M3 turns it on, M5 turns it off.
+# Torch on/off through a relay module. M3 S1 turns it on, M5 turns it off.
 # Never wire gpio.27 to the plasma cutter itself.
-# output_pin gpio.27:low: a LOW from the ESP32 is what the module treats as ON.
+# output_pin is gpio.27 (not :low). FluidNC 4.1.1 does accept :low to invert the
+# pin, but this module is high-trigger: a HIGH from the ESP32 closes the relay.
+# The always-on light on the module is its power LED, not the coil. If Test
+# torch does not close the relay, check the module's high/low jumper is on high.
 # off_on_alarm turns the relay off if an alarm or the hardware E-stop trips.
 Relay:
-  output_pin: gpio.27:low
+  output_pin: gpio.27
   enable_pin: NO_PIN
   direction_pin: NO_PIN
   off_on_alarm: true

@@ -3,8 +3,10 @@
 // The X gantry rail runs left-right along the BACK (top of the screen). Home /
 // the sheet corner (0, 0) is the back-left, drawn at the top-left. +X points
 // right along the rail; +Y points toward the operator (down the screen).
-// Jog: Up = away from you = −Y; Down = toward you = +Y; Left/Right = −X/+X.
-// This is a view transform only. Machine coordinates, G-code and commands are unchanged.
+// Get-to-cutting Setup/Cut jog follows that picture (Up = away = −Y).
+// Machine setup jog stays in machine space, as it did before the bed picture:
+// Up = +Y = toward the gantry rail at the back. That is a display/jog mapping
+// only. Machine coordinates, G-code and the board's Y direction are unchanged.
 import { isLaptopUi } from "../ui/laptop.js";
 import { screen } from "../ui/flow.js";
 import { S } from "../core/state.js";
@@ -42,10 +44,18 @@ export function shiftView(view, dsx, dsy) {
   view.vy += (bedViewRotated() ? -dsy : dsy) * k;
 }
 
+// Picture flip is not the same as jog flip. Machine setup shows the operator
+// view but keeps the pre-bed-picture jog: Up sends machine +Y (toward the rail).
+export function jogFollowsBedView() {
+  if (!bedViewRotated()) return false;
+  try { if (S.tab === "setup") return false; } catch (e) { return false; }
+  return true;
+}
+
 export function jogToMachine(axis, dir) {
   dir = Number(dir);
-  // Y is mirrored on screen, so invert only Y. X matches Machine setup.
-  if (bedViewRotated() && axis === "Y") return [axis, -dir];
+  // Y is mirrored on the Setup/Cut picture, so invert only Y there.
+  if (jogFollowsBedView() && axis === "Y") return [axis, -dir];
   return [axis, dir];
 }
 
@@ -58,7 +68,7 @@ export function screenBoxToWorld(toWorld, sx0, sy0, sx1, sy1) {
 export function visibleWorld(toWorld, w, h) { return screenBoxToWorld(toWorld, 0, 0, w, h); }
 
 export function syncJogPadLabels() {
-  const rot = bedViewRotated();
+  const rot = jogFollowsBedView();
   for (const b of document.querySelectorAll(".j[data-axis]")) {
     const axis = b.dataset.axis;
     if (axis === "Z") continue;
