@@ -201,6 +201,8 @@ export function bindMachineControls() {
   };
   $("btnDemoEstop").onclick = () => { if (S.demo) S.demo.setEstop(!S.demo.estop); };
   $$(".do-home").forEach((b) => (b.onclick = () => cmd("home")));
+  const homeBarBtn = $("btnHomeBarSetup");
+  if (homeBarBtn) homeBarBtn.onclick = () => showTab("setup");
   $$(".do-raise").forEach((b) => (b.onclick = () => cmd("raise")));
   $("btnGoStart").onclick = () => { const at = S.prepared && S.prepared.jobStart; cmd("goto_zero", at && Number.isFinite(at[0]) && Number.isFinite(at[1]) ? { x: at[0], y: at[1] } : {}); };
   $$("[data-cmd]").forEach((b) => (b.onclick = () => cmd(b.dataset.cmd)));

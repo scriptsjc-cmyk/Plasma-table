@@ -105,7 +105,14 @@ export class GrblLink {
     this.poll = setInterval(() => this._tick(), POLL_MS);
   }
   pausePoll() { this.pollPaused = true; }
-  resumePoll() { this.pollPaused = false; }
+  resumePoll() {
+    this.pollPaused = false;
+    // The board is silent during XModem. Start the no-reply timer fresh so a
+    // finished (or failed) transfer is not immediately treated as a dead link.
+    this.lastRx = Date.now();
+    this.pollsSinceRx = 0;
+    this._pump();
+  }
   setRaw(on, onBytes) { if (this.t.setRaw) this.t.setRaw(on, onBytes); }
   attachBoardRunIfActive(previous) { return attachBoardRun(this, this.status, previous); }
 
@@ -116,7 +123,7 @@ export class GrblLink {
     if (!this.running || this.pollPaused) return;
     const wd = this.t.watchdogMs;
     if (wd && this.ready && this.pollsSinceRx >= Math.ceil(wd / POLL_MS) && Date.now() - this.lastRx > wd) {
-      this._closed(`No reply from the controller for ${Math.round(wd / 1000)} s. Check the USB cable and the controller's power.`);
+      this._closed(`No reply from the controller for ${Math.round(wd / 1000)} s. Check the connection (USB cable or Bluetooth) and the controller's power.`);
       this.t.close().catch?.(() => {});
       return;
     }
@@ -289,6 +296,9 @@ export class GrblLink {
   }
 
   _pump() {
+    // A queued $$ / $CD / jog must not be written into an XModem file (and
+    // would also break the handshake). Commands stay queued until resumePoll.
+    if (this.pollPaused) return;
     while (this.pending.length) {
       if (this._gateProbe(this.pending[0])) return;
       const { line, source, got, done } = this.pending[0];

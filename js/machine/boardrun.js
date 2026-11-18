@@ -114,7 +114,9 @@ export function startBoardJob(g, lines) {
   const ac = new AbortController();
   g._uploadAbort = ac;
   const p = uploadThenRun(g, bytes, ac.signal).catch((e) => {
-    if (g.job && g.job.running && g.job.phase === "upload") {
+    // phase is set to "run" just before $LocalFS/Run; a failed start must
+    // still surface the error instead of leaving a silent running job.
+    if (g.job && g.job.running && !g.job.sawFile) {
       g._finishJob("error", uploadErrorMessage(g, e));
     }
   }).finally(() => { if (g._uploadAbort === ac) g._uploadAbort = null; });
@@ -147,9 +149,9 @@ async function uploadThenRun(g, bytes, signal) {
     leftover = pump.drain();
   } catch (e) {
     leftover = pump.drain();
-    if (signal && signal.aborted) {
-      try { await abortXmodem({ write: (b) => g.t.write(b) }); } catch (x) { /* ignore */ }
-    }
+    // Leave XModem receive mode so the board answers '?' again. Otherwise the
+    // 3 s no-reply watchdog would tear the link down and look like a lost cable.
+    try { await abortXmodem({ write: (b) => g.t.write(b) }); } catch (x) { /* ignore */ }
     throw (signal && signal.aborted) ? new Error("Upload cancelled.") : e;
   } finally {
     g.setRaw(false);
@@ -168,10 +170,15 @@ async function uploadThenRun(g, bytes, signal) {
 
 
 function uploadErrorMessage(g, e) {
-  const text = ((g._uploadLogs || []).join("\n") + " " + ((e && e.message) || "")).trim();
+  const msg = (e && e.message) || "";
+  // Sender-side protocol errors stay as they are (including "no XModem handshake").
+  // Don't replace them with a generic "could not store" just because aborting
+  // the transfer made FluidNC print "Reception failed" / error:60.
+  if (/did not start the file transfer|no XModem handshake|did not accept a block|did not confirm the end|Upload cancelled/i.test(msg)) return msg;
+  const text = ((g._uploadLogs || []).join("\n") + " " + msg).trim();
   if (/not enough free space/i.test(text)) return "The table hasn't enough free space for this cut.";
   if (/Reception failed/i.test(text) || /^error/im.test(text)) return "The table could not store the cut.";
-  return (e && e.message) ? e.message : "Couldn't send the cut to the table.";
+  return msg || "Couldn't send the cut to the table.";
 }
 
 function waitUploadOk(g, ms) {

@@ -2,6 +2,7 @@
 import { appendConsole } from "./admin-machine.js";
 import { looksLikeFluidNC } from "./fluidnc.js";
 import { POSITION_LOST_ALARMS } from "./machine.js";
+import { limitsSizeText } from "./safety.js";
 import * as Acc from "../account/account.js";
 import { noteJobEnded } from "../cut/restart.js";
 import { M, S, sketch } from "../core/state.js";
@@ -38,17 +39,18 @@ export function onSafety(sf) {
   $("refState").textContent = sf.referenced ? (sf.ref_mode === "homed" ? "Homed ✓" : "Home corner set ✓") : "Unknown";
   $("refState").className = sf.referenced ? "good" : "todo";      // round 5 look M4: "not set yet" is a to-do, not an alarm
   if (sf.limits) {
-    const span = (a) => Math.round(Math.abs(sf.limits[a][1] - sf.limits[a][0]));
-    $("limState").textContent = `${span("x")} × ${span("y")} mm` + (sf.referenced ? " ✓" : " (home first)");
+    $("limState").textContent = limitsSizeText(sf.limits) + (sf.referenced ? " ✓" : " (set home to use them)");
     $("limState").className = sf.referenced ? "good" : "todo";
   } else { $("limState").textContent = "Not set"; $("limState").className = "todo"; }
-  $("safetyHint").textContent = sf.limits
-    ? "The machine checks every move against these edges. Jogs stop at the edge; parts that don't fit won't start."
-    : "Do this once: it stops the torch ever being driven off the rails or into the slats.";
+  $("safetyHint").textContent = !sf.limits
+    ? "Do this once: it stops the torch ever being driven off the rails or into the slats."
+    : sf.referenced
+      ? "The machine checks every move against these edges. Jogs stop at the edge; parts that don't fit won't start."
+      : `Your edges (${limitsSizeText(sf.limits)}) are still saved in this browser. The table lost its place when the connection dropped, so set home again before you cut — jog to your marked home corner and press “Set this as home (0,0)”. Then press Start here at the sheet corner.`;
   const d = sf.draft || {};
   $("wz1").classList.toggle("done", !!sf.referenced);
-  $("wz2").classList.toggle("done", d.x !== undefined);
-  $("wz3").classList.toggle("done", d.z !== undefined);
+  $("wz2").classList.toggle("done", !!(sf.limits || d.x !== undefined));
+  $("wz3").classList.toggle("done", !!(sf.limits || d.z !== undefined));
   $("wzFar").textContent = d.x !== undefined ? `(${Math.abs(d.x).toFixed(0)} × ${Math.abs(d.y).toFixed(0)} mm)` : "";
   $("wzZ").textContent = d.z !== undefined ? `(${Math.abs(d.z).toFixed(0)} mm down)` : "";
   refresh();

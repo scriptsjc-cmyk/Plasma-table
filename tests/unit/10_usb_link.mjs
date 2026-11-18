@@ -3,6 +3,23 @@ import fs from "node:fs";
 import { mod, SITE } from "../lib/site.mjs";
 import { T } from "../lib/t.mjs";
 import { installMockSerial } from "../lib/mock-serial.mjs";
+// machine.js -> bedview.js -> flow.js registers window listeners at load. Node has no window.
+if (typeof globalThis.window === "undefined") {
+  const body = { dataset: { screen: "boot" } };
+  globalThis.document = {
+    body,
+    documentElement: {},
+    getElementById: () => null,
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    addEventListener() {},
+    removeEventListener() {},
+    activeElement: null,
+  };
+  globalThis.window = globalThis;
+  if (typeof globalThis.addEventListener !== "function") globalThis.addEventListener = () => {};
+  if (typeof globalThis.removeEventListener !== "function") globalThis.removeEventListener = () => {};
+}
 const t = new T("10_usb_link");
 const G = await mod("usbserial"), Mm = await mod("machine");
 const cfg = JSON.parse(fs.readFileSync(SITE + "config/machine.json", "utf8"));
@@ -182,4 +199,37 @@ const lastStatus = (ev) => [...ev].reverse().find(([k]) => k === "status")?.[1];
   t.check("slow boot: reset lines left alone while the board is talking", r.port.signals.length === 0, JSON.stringify(r.port.signals));
   await r.M.disconnect(false);
 }
+
+// edges persist in the store across disconnect / reconnect / a new session;
+// home and work zero are cleared so a reset board is not used with the old frame
+{
+  const store = memStore();
+  const env = {}; const { serial, port } = installMockSerial(env, { answer: true, banner: true });
+  const M = new Mm.Machine(cfg, chart, "", store);
+  const ev = []; M.on((k, d) => ev.push([k, d]));
+  const tr = new G.WebSerialTransport(serial);
+  await tr.open(115200);
+  await M.connect(tr);
+  M.safety.setReference([10, 20, 0], "manual");
+  M.safety.wizardFarCorner([10 + 492, 20 + 586, 0]);
+  M.safety.wizardZBottom([10, 20, -25]);
+  M.safety.wizardSave();
+  t.check("edges: the size is stored in the app (not only on the board)", !!store.getItem("plasma.limits") && Math.abs(M.safety.span("x") - 492) < 1 && Math.abs(M.safety.span("y") - 586) < 1);
+  port.unplug();
+  await until(() => M.state() === "Disconnected", 2500);
+  const env2 = {}; const { serial: s2, port: p2 } = installMockSerial(env2, { answer: true, banner: true });
+  const tr2 = new G.WebSerialTransport(s2);
+  await tr2.open(115200);
+  await M.connect(tr2);
+  t.check("edges: still present after reconnect", !!(M.safety.limits && Math.abs(M.safety.span("x") - 492) < 1 && Math.abs(M.safety.span("y") - 586) < 1));
+  t.check("edges: home was cleared so the old frame is not reused", M.safety.referenced === false && M.safety.ref == null);
+  t.check("edges: work zero must be set again", M.zeroConfirmed === false);
+  const logs = ev.filter(([k]) => k === "log").map(([, d]) => d.text || "").join("\n");
+  t.check("edges: a message says the edges are saved and home must be set again", /still saved/i.test(logs) && /Set home again/i.test(logs), logs.slice(-500));
+  const M2 = new Mm.Machine(cfg, chart, "", store);
+  t.check("edges: a new session loads the saved size from storage", !!(M2.safety.limits && Math.abs(M2.safety.span("x") - 492) < 1 && Math.abs(M2.safety.span("y") - 586) < 1));
+  t.check("edges: a new session does not restore the old home corner", M2.safety.referenced === false);
+  await M.disconnect(false);
+}
+
 process.exit(t.done() ? 1 : 0);

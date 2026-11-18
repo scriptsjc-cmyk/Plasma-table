@@ -71,7 +71,7 @@ function positionStillKnown() {
 // what still has to happen before a resumed cut may start, in plain words (empty = nothing)
 function resumeNeeds() {
   const S = H.S, need = [];
-  if (S.safety && S.safety.limits && !S.safety.referenced) need.push("press Home so the table finds its edges again");
+  if (S.safety && S.safety.limits && !S.safety.referenced) need.push("set home again (Machine setup) so the saved edges can be used");
   if (!S.zeroSet) need.push("move the torch over the start of the work and press Start here to set the start point again");
   return need;
 }

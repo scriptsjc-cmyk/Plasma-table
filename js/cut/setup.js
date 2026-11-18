@@ -32,11 +32,12 @@ export function initSetup(host) {
   catch { defaultSheet(); }
   bind();
 }
-function reachableSize() {
-  const sf = H.S && H.S.safety, L = sf && sf.limits;
-  if (!L || !sf.referenced) return null;
+function savedEdgeSize() {
+  const L = H.S && H.S.safety && H.S.safety.limits;
+  if (!L) return null;
   return { x: Math.abs(L.x[1] - L.x[0]), y: Math.abs(L.y[1] - L.y[0]) };
 }
+function reachableSize() { return savedEdgeSize(); }
 function defaultSheet() {
   const t = H.S.cfg && H.S.cfg.travel_mm, r = reachableSize();
   if (r && t) { sheet.w = Math.min(t.x, r.x); sheet.h = Math.min(t.y, r.y); }
@@ -489,7 +490,11 @@ export function paint(light) {
   $("layoutState").className = "layoutstate " + (a.ok ? "good" : "bad");
   $("layProblems").innerHTML = a.problems.map((p) => `<li>${H.esc(p.text)}</li>`).join("");
   const wa = workArea();
-  $("sheetNote").textContent = `Minimum gap between parts: ${r1(gapMm())} mm (kerf ${r1(H.kerf())} + clearance ${r1(sheet.clearance)}).` + (wa ? "" : " Machine edges aren't set up yet, so the work area isn't drawn.") + sheetVsEdgesNote();
+  const savedEdges = savedEdgeSize();
+  const edgeNote = wa ? "" : (savedEdges
+    ? ` Your edges (${r1(savedEdges.x)} × ${r1(savedEdges.y)} mm) are saved. Set home again to draw them on the sheet.`
+    : " Machine edges aren't set up yet, so the work area isn't drawn.");
+  $("sheetNote").textContent = `Minimum gap between parts: ${r1(gapMm())} mm (kerf ${r1(H.kerf())} + clearance ${r1(sheet.clearance)}).` + edgeNote + sheetVsEdgesNote();
   const one = sk.selected();
   $("layoutSel").classList.toggle("hidden", !one);
   if (one) {

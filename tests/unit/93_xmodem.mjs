@@ -138,6 +138,17 @@ function fluidncReceiver({ noSpace = false, failAt = 0, startWith = CRC_C, hang 
   t.check("checksum/NAK handshake: file matches", String.fromCharCode(...file) === "checksum", String.fromCharCode(...file));
 }
 
+{ // leftover status + FluidNC "Receiving" text must not burn the handshake wait
+  const rec = fluidncReceiver();
+  const io = mockIo(rec.handle);
+  const noise = enc.encode("<Idle|MPos:0.000,0.000,0.000|FS:0,0>\r\n[MSG:INFO: Receiving job.nc via XModem]\r\n");
+  for (const b of noise) io.inject(b);
+  io.inject(CRC_C);
+  const payload = enc.encode("G0 X1\n");
+  const r = await sendXmodem(payload, io, { blockSize: 128, helloMs: 800 });
+  t.check("handshake ignores leftover status and the Receiving line and still sees C", r.bytes === payload.length && rec.started, JSON.stringify(r));
+}
+
 { // no handshake
   const io = mockIo(() => {});
   let err = "";

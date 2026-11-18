@@ -4,6 +4,13 @@
 
 export class SafetyError extends Error {}
 
+export function limitsSizeText(limits) {
+  if (!limits || !limits.x || !limits.y) return "";
+  const x = Math.round(Math.abs(limits.x[1] - limits.x[0]));
+  const y = Math.round(Math.abs(limits.y[1] - limits.y[0]));
+  return `${x} × ${y} mm`;
+}
+
 const AXES = "XYZ";
 
 export class Safety {

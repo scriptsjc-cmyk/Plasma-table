@@ -6,7 +6,7 @@ import { startBoardJob, fileRunActive } from "./boardrun.js";
 import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt, jobPlan, restartLines } from "../cut/job.js";
 import { resolveEtch } from "../cut/etch.js";
 import { currentSettings } from "./settings.js";
-import { Safety, SafetyError } from "./safety.js";
+import { Safety, SafetyError, limitsSizeText } from "./safety.js";
 import { filterConsoleCommand } from "./admin-machine.js";
 import { probeBlocks } from "./probefilter.js";
 import { sheetCornerName } from "../cut/bedview.js";
@@ -55,6 +55,12 @@ export class Machine {
     if (!keepRef) {
       this.safety.clearReference();
       this.emit("safety", this.safety.state());
+      if (this.safety.limits) {
+        this.emit("log", {
+          text: `Your machine edges (${limitsSizeText(this.safety.limits)}) are still saved. Set home again before cutting — the table lost its place when the connection dropped.`,
+          level: "warn",
+        });
+      }
     }
     this.grbl = new GrblLink(transport, this.cfg.rx_buffer_size || 127, (k, d) => this.onGrbl(k, d));
     if (transport.needsHandshake) {       // USB / Bluetooth: an open port is not a connection; wait for the controller to answer

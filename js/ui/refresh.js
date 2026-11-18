@@ -1,6 +1,7 @@
 // The big repaint: refresh() brings every button, banner and lamp in line with the current state.
 import { estopOn, estopPaint, paintLock, screen } from "./flow.js";
 import { ALARM_DEFAULT, POSITION_LOST_ALARMS } from "../machine/machine.js";
+import { limitsSizeText } from "../machine/safety.js";
 import * as Acc from "../account/account.js";
 import { paintDelay } from "../cut/pierce.js";
 import { paintRestart } from "../cut/restart.js";
@@ -108,11 +109,11 @@ function paintJobCard() {
   }
   setText("jcMat", mat);
   const t = S.cfg && S.cfg.travel_mm, conn = $("connPill").title || "Not connected", badge = $("stateBadge");
-  const L = S.safety && S.safety.limits, on = !!(L && S.safety.referenced);
-  const ex = on ? Math.round(Math.abs(L.x[1] - L.x[0])) : 0, ey = on ? Math.round(Math.abs(L.y[1] - L.y[0])) : 0;
+  const L = S.safety && S.safety.limits, edges = limitsSizeText(L), on = !!(L && S.safety.referenced);
   const bed = t ? `${Math.round(t.x)} × ${Math.round(t.y)}` : "";
   let size = "";
-  if (on) size = ` · reachable ${ex} × ${ey} mm` + (bed && (Math.round(t.x) !== ex || Math.round(t.y) !== ey) ? ` (bed ${bed} mm)` : "");
+  if (on) size = ` · reachable ${edges}` + (bed && bed + " mm" !== edges ? ` (bed ${bed} mm)` : "");
+  else if (L) size = ` · edges ${edges} (set home to use them)`;
   else if (bed) size = ` · ${bed} mm`;
   setText("jcMach", `${conn}${S.connected && badge && badge.textContent ? ` · ${badge.textContent}` : ""}${size}`);
 }
@@ -152,7 +153,13 @@ export function refresh() {
 
 
   // banners
-  $("homeBar").classList.toggle("hidden", !(S.connected && S.safety.limits && !S.safety.referenced && S.status.state !== "Home"));
+  const needHome = !!(S.connected && S.safety.limits && !S.safety.referenced && S.status.state !== "Home");
+  $("homeBar").classList.toggle("hidden", !needHome);
+  const homeTxt = $("homeBarText");
+  if (needHome && homeTxt) {
+    const sz = limitsSizeText(S.safety.limits);
+    homeTxt.innerHTML = `<b>Set home again to use your saved edges (${sz}).</b><br>The table lost its place when the connection dropped. Your edges are still saved in this browser. On Machine setup, jog to your marked home corner and press “Set this as home (0,0)”. Then press Start here at the sheet corner.`;
+  }
   const estop = !!(S.status.inputs && S.status.inputs.estop);
   $("estopBar").classList.toggle("hidden", !(S.connected && estop));
   const inAlarm = S.connected && S.status.state === "Alarm" && !estop;

@@ -48,7 +48,10 @@ export function fit() {
   if (!S.prepared) return { cls: "", text: "" };
   if (!S.safety.limits) return { cls: "unknown", text: S.demo ? "Demo: tap here and the edges are set up for you." : "Edges not set up – can't check it fits (Machine setup tab)." };
   if (!S.connected && !S.safety.referenced) return { cls: "unknown", text: "Connect to the table to check it fits." };    // round 5 item 11: no homing prompt without a machine
-  if (!S.safety.referenced) return { cls: "unknown", text: "Home the machine to check it fits." };
+  if (!S.safety.referenced) {
+    const sz = S.safety.limits ? `${Math.round(Math.abs(S.safety.limits.x[1]-S.safety.limits.x[0]))} × ${Math.round(Math.abs(S.safety.limits.y[1]-S.safety.limits.y[0]))} mm` : "your edges";
+    return { cls: "unknown", text: `Your edges (${sz}) are saved. Set home again (Machine setup) to check the part fits.` };
+  }
   const b = S.prepared.stats.bounds, w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
   const over = fitOverflow(b, w, ref, L);
   if (!over.length) return { cls: "good", text: "✓ Fits on the machine" };

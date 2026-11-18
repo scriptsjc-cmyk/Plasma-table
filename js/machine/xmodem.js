@@ -83,18 +83,22 @@ export async function sendXmodem(data, io, opts = {}) {
     ]);
   };
 
-  let useCrc = true, hello = -1, waited = 0;
+  // FluidNC prints "[MSG:INFO: Receiving … via XModem]" then 'C' (every 2 s, 16 tries).
+  // A leftover '?' status report can also arrive here. Ignore those bytes; only the
+  // wall-clock wait counts, or a 40-byte message would burn a 10 s handshake budget.
+  let useCrc = true, hello = -1;
+  const helloMs = opts.helloMs || DLY_HELLO_MS;
   const helloStep = 250;
-  while (waited < (opts.helloMs || DLY_HELLO_MS)) {
+  const deadline = Date.now() + helloMs;
+  while (Date.now() < deadline) {
     thrown();
-    hello = await io.readByte(helloStep);
+    hello = await io.readByte(Math.min(helloStep, Math.max(1, deadline - Date.now())));
     if (hello === CRC_C) { useCrc = true; break; }
     if (hello === NAK) { useCrc = false; break; }
     if (hello === CAN) {
       await io.readByte(1000).catch(() => -1);  // a second CAN is typical; do not reply — 0x18 is soft reset once XModem ends
       throw new Error("The table cancelled the upload.");
     }
-    waited += helloStep;
   }
   if (hello !== CRC_C && hello !== NAK) throw new Error("The table did not start the file transfer (no XModem handshake).");
 

@@ -94,10 +94,14 @@ export function installMockSerial(target, opts = {}) {
     }
     _reset() {
       this.sent += "\x18";
+      this._stopXmHello();
       this.xm = null;
       if (this.fileRun) { this.fileRun = null; }
       this.state = "Idle";
       this.push(BANNER + "\r\n");
+    }
+    _stopXmHello() {
+      if (this._xmHello) { clearTimeout(this._xmHello); this._xmHello = 0; }
     }
     _rx(chunk) {
       const bytes = typeof chunk === "string" ? enc.encode(chunk)
@@ -186,9 +190,24 @@ export function installMockSerial(target, opts = {}) {
     _startXmodem(name) {
       const path = this._canon(name);
       const mode = o.xmodem || "ok";
-      if (mode === "nohello") return;   // never sends 'C'
-      this.xm = { path, expect: 1, held: null, file: [], mode };
-      setTimeout(() => { if (this.xm && this.isOpen) { if (mode === "cancel") { this.pushByte(0x18); this.pushByte(0x18); this.xm = null; this.push("[MSG:INFO: Reception failed or was canceled]\r\nerror:60\r\n"); } else this.pushByte(0x43); } }, 30);
+      this._stopXmHello();
+      // FluidNC: [MSG:INFO: Receiving …] then 'C' every 2 s (16 tries). Status '?' is ignored while in receive.
+      this.xm = { path, expect: 1, held: null, file: [], mode, gotPkt: false };
+      this.push(`[MSG:INFO: Receiving ${path.split("/").pop()} via XModem]\r\n`);
+      if (mode === "nohello") return;   // stay in receive, but never send 'C' (and stay silent to '?')
+      const delay = o.xmodemHelloDelay != null ? o.xmodemHelloDelay : 30;
+      const hello = () => {
+        if (!this.xm || !this.isOpen || this.xm.gotPkt) return;
+        if (mode === "cancel") {
+          this._stopXmHello();
+          this.pushByte(0x18); this.pushByte(0x18); this.xm = null;
+          this.push("[MSG:INFO: Reception failed or was canceled]\r\nerror:60\r\n");
+          return;
+        }
+        this.pushByte(0x43);
+        this._xmHello = setTimeout(hello, 2000);
+      };
+      this._xmHello = setTimeout(hello, delay);
     }
     _xmByte(b) {
       const xm = this.xm; if (!xm) return;
@@ -196,26 +215,36 @@ export function installMockSerial(target, opts = {}) {
       xm.buf.push(b);
       const buf = xm.buf;
       const SOH = 0x01, STX = 0x02, EOT = 0x04, ACK = 0x06, NAK = 0x15, CAN = 0x18, CTRLZ = 0x1A;
+      // Ignore leftover '?', '$$', etc. in front of a frame. Do not treat 0x18
+      // inside a SOH/STX payload as cancel (CRC or data can legally contain it).
+      const inPkt = buf[0] === SOH || buf[0] === STX;
+      if (!inPkt) {
+        while (buf.length && buf[0] !== SOH && buf[0] !== STX && buf[0] !== EOT && buf[0] !== CAN) buf.shift();
+        const canAt = buf.indexOf(CAN);
+        if (canAt >= 0 && buf.indexOf(CAN, canAt + 1) >= 0) {
+          this._stopXmHello();
+          this.pushByte(ACK); this.xm = null;
+          this.push("[MSG:INFO: Reception failed or was canceled]\r\nerror:60\r\n");
+          return;
+        }
+      }
       if (buf.length === 1 && buf[0] === EOT) {
-        if (xm.mode === "nospace") { this.pushByte(CAN); this.pushByte(CAN); this.pushByte(CAN); this.xm = null; this.push("[MSG:INFO: Reception failed: not enough free space on the target filesystem]\r\nerror:60\r\n"); return; }
+        if (xm.mode === "nospace") { this._stopXmHello(); this.pushByte(CAN); this.pushByte(CAN); this.pushByte(CAN); this.xm = null; this.push("[MSG:INFO: Reception failed: not enough free space on the target filesystem]\r\nerror:60\r\n"); return; }
         if (xm.held) {
           let n = xm.held.length; while (n > 0 && xm.held[n - 1] === CTRLZ) n--;
           for (let i = 0; i < n; i++) xm.file.push(xm.held[i]);
         }
         this.fs[xm.path] = Uint8Array.from(xm.file);
+        this._stopXmHello();
         this.pushByte(ACK);
         const n = xm.file.length;
         this.xm = null;
         this.push(`[MSG:INFO: Received ${n} bytes to file ${xm.path}]\r\nok\r\n`);
         return;
       }
-      if (buf.length >= 2 && buf[0] === CAN && buf[1] === CAN) {
-        this.pushByte(ACK); this.xm = null;
-        this.push("[MSG:INFO: Reception failed or was canceled]\r\nerror:60\r\n");
-        return;
-      }
       const head = buf[0];
       if (head !== SOH && head !== STX) { if (buf.length > 8) xm.buf = []; return; }
+      xm.gotPkt = true; this._stopXmHello();
       const size = head === STX ? 1024 : 128;
       const need = 3 + size + 2;
       if (buf.length < need) return;
@@ -233,13 +262,14 @@ export function installMockSerial(target, opts = {}) {
       else ack();
     }
     unplug() {                       // what Chrome does when the cable comes out
+      this._stopXmHello();
       this.isOpen = false;
       try { this.ctl.error(new DOMException("The device has been lost.", "NetworkError")); } catch (e) { /* ignore */ }
       this.readable = null; this.writable = null;
       this.dispatchEvent(new Event("disconnect"));
       serial.dispatchEvent(Object.assign(new Event("disconnect"), { port: this }));
     }
-    async close() { this.isOpen = false; clearInterval(this.bootTimer); try { this.ctl.close(); } catch (e) { /* ignore */ } this.readable = null; this.writable = null; }
+    async close() { this._stopXmHello(); this.isOpen = false; clearInterval(this.bootTimer); try { this.ctl.close(); } catch (e) { /* ignore */ } this.readable = null; this.writable = null; }
   }
   const port = new MockPort();
   const serial = new EventTarget();

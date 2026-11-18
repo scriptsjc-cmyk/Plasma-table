@@ -86,7 +86,7 @@ export function blockers() {
   // Debounced so a one-report noise pulse doesn't flash this warning. startJob
   // still uses the conservative raw-or-shown check, so a genuine trigger cannot start a cut.
   if (probeDisplayOn()) b.push("Floating head is pushed up – check the torch isn't touching anything or stuck.");
-  if (S.safety.limits && !S.safety.referenced) b.push("Machine needs homing – press Home.");
+  if (S.safety.limits && !S.safety.referenced) b.push("Set home again (Machine setup) to use your saved edges.");
   if (fit().bad) b.push("The part doesn't fit the machine – move the parts or the sheet's start corner.");
   for (const t of Setup.blockText()) b.push(t);
   const boxes = $$("#checklist input:not([disabled])");      // the start-point line ticks itself (the blocker above covers it)

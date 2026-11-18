@@ -253,5 +253,62 @@ await test('fromCut', async () => {
 
 });
 
+
+await test('FluidNC-like hello (Receiving text + delayed C) still uploads', async () => {
+
+  const page = await newPage(br, "d1440", { base: srv.base });
+  await enterDemo(page); await dropDemo(page);
+  const err = await usbConnect(page, { answer: true, banner: true, xmodemHelloDelay: 1500 });
+  t.check("delayed hello: connects", err === "", err);
+  await arm(page);
+  await ev(page, () => window.plasmaTest.getM().startJob());
+  await waitJob(page, () => { const j = window.plasmaTest.S.job; return j && j.running && j.boardRun && j.phase === "run"; }, 15000);
+  t.check("delayed hello: the cut starts on the table", (await job(page)).phase === "run");
+  t.check("delayed hello: the link stays up", await ev(page, () => !!(window.plasmaTest.S.connected && window.plasmaTest.getM().grbl && window.plasmaTest.getM().grbl.running)));
+  t.check("delayed hello: no lost-connection banner", !(await vis(page, "lostBar")));
+  await ev(page, () => window.mockPort.finishFile());
+  await waitJob(page, () => window.plasmaTest.S.job && !window.plasmaTest.S.job.running && window.plasmaTest.S.job.result === "done", 8000);
+  await page.context().close();
+
+});
+
+await test('handshake timeout does not drop the connection', async () => {
+
+  const page = await newPage(br, "d1440", { base: srv.base });
+  await enterDemo(page); await dropDemo(page);
+  const err = await usbConnect(page, { answer: true, banner: true, xmodem: "nohello" });
+  t.check("no handshake: connects", err === "", err);
+  await arm(page);
+  await ev(page, () => window.plasmaTest.getM().startJob());
+  await waitJob(page, () => { const j = window.plasmaTest.S.job; return j && !j.running && j.result === "error"; }, 20000);
+  const j = await job(page);
+    t.check("no handshake: the error is about the transfer, not a lost cable",
+    /did not start the file transfer|no XModem handshake/i.test(j.message || "") && !/Connection to the controller lost|No reply from the controller/i.test(j.message || ""),
+    j.message);
+  await sleep(4000);
+  const later = await ev(page, () => {
+    const M = window.plasmaTest.getM(), g = M && M.grbl, p = window.mockPort;
+    const bar = document.getElementById("lostBar");
+    return {
+      connected: !!window.plasmaTest.S.connected,
+      running: !!(g && g.running),
+      closeReason: (g && g.closeReason) || (window.plasmaTest.S.status && window.plasmaTest.S.status.reason) || "",
+      pollPaused: g && g.pollPaused,
+      state: M && M.state(),
+      xm: !!(p && p.xm),
+      lostHidden: !!(bar && bar.classList.contains("hidden")),
+    };
+  });
+  t.check("no handshake: the link stays up after the failed upload",
+    later.connected && later.running && !later.xm && !later.pollPaused, JSON.stringify(later));
+  t.check("no handshake: no lost-connection banner", later.lostHidden, JSON.stringify(later));
+t.check("no handshake: fallback to run from the laptop is offered", await vis(page, "btnStreamFallback") || await ev(page, () => {
+    const b = document.getElementById("btnStreamFallback");
+    return !!(b && !b.classList.contains("hidden"));
+  }));
+  await page.context().close();
+
+});
+
 await br.close(); await srv.close();
 process.exit(t.done() ? 1 : 0);
