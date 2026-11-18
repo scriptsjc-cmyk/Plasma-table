@@ -3,10 +3,10 @@
 // The X gantry rail runs left-right along the BACK (top of the screen). Home /
 // the sheet corner (0, 0) is the back-left, drawn at the top-left. +X points
 // right along the rail; +Y points toward the operator (down the screen).
-// Get-to-cutting Setup/Cut jog follows that picture (Up = away = −Y).
-// Machine setup jog stays in machine space, as it did before the bed picture:
-// Up = +Y = toward the gantry rail at the back. That is a display/jog mapping
-// only. Machine coordinates, G-code and the board's Y direction are unchanged.
+// Every laptop jog pad follows that picture: Up = away = −Y (toward the rail);
+// Down = +Y (toward the operator); Left/Right = −X/+X. The board Y pin is
+// gpio.23:low so machine +Y physically moves toward the operator. This is a
+// view/jog mapping only. Generated G-code XY is unchanged.
 import { isLaptopUi } from "../ui/laptop.js";
 import { screen } from "../ui/flow.js";
 import { S } from "../core/state.js";
@@ -44,18 +44,11 @@ export function shiftView(view, dsx, dsy) {
   view.vy += (bedViewRotated() ? -dsy : dsy) * k;
 }
 
-// Picture flip is not the same as jog flip. Machine setup shows the operator
-// view but keeps the pre-bed-picture jog: Up sends machine +Y (toward the rail).
-export function jogFollowsBedView() {
-  if (!bedViewRotated()) return false;
-  try { if (S.tab === "setup") return false; } catch (e) { return false; }
-  return true;
-}
-
 export function jogToMachine(axis, dir) {
   dir = Number(dir);
-  // Y is mirrored on the Setup/Cut picture, so invert only Y there.
-  if (jogFollowsBedView() && axis === "Y") return [axis, -dir];
+  // Y is mirrored on the laptop bed picture, so invert only Y. X is unchanged.
+  // Machine setup uses the same mapping as Get-to-cutting Setup and Cut.
+  if (bedViewRotated() && axis === "Y") return [axis, -dir];
   return [axis, dir];
 }
 
@@ -68,7 +61,7 @@ export function screenBoxToWorld(toWorld, sx0, sy0, sx1, sy1) {
 export function visibleWorld(toWorld, w, h) { return screenBoxToWorld(toWorld, 0, 0, w, h); }
 
 export function syncJogPadLabels() {
-  const rot = jogFollowsBedView();
+  const rot = bedViewRotated();
   for (const b of document.querySelectorAll(".j[data-axis]")) {
     const axis = b.dataset.axis;
     if (axis === "Z") continue;

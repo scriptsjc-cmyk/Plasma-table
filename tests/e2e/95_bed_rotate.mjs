@@ -227,13 +227,13 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
     const down = [...document.querySelectorAll("#setupView .j[data-axis='Y'][data-dir='-1'] small")].map((el) => el.textContent);
     return { map: window.plasmaTest.jogToMachine("Y", 1), up, down };
   });
-  t.check("Machine setup: the up jog button stays Y+ (jog is not flipped with the picture)",
-    msJog.map[0] === "Y" && msJog.map[1] === 1 && msJog.up.some((s) => /Y\+/.test(s)) && msJog.down.some((s) => /Y−|Y-/.test(s)),
+  t.check("Machine setup: the up jog button is Y−, same mapping as Setup/Cut",
+    msJog.map[0] === "Y" && msJog.map[1] === -1 && msJog.up.some((s) => /Y−|Y-/.test(s)) && msJog.down.some((s) => /Y\+/.test(s)),
     JSON.stringify(msJog));
   a = await ev(page, () => { const w = window.plasmaTest.S.status.WPos || [0, 0, 0]; return { x: w[0], y: w[1] }; });
   await page.keyboard.down("ArrowUp"); await sleep(120); await page.keyboard.up("ArrowUp"); await sleep(900);
   b = await ev(page, () => { const w = window.plasmaTest.S.status.WPos || [0, 0, 0]; return { x: w[0], y: w[1] }; });
-  t.check("Machine setup: ArrowUp jogs machine +Y (toward the gantry, as before the bed-picture flip)", b.y > a.y, JSON.stringify({ a, b }));
+  t.check("Machine setup: ArrowUp jogs machine −Y (toward the rail at the back)", b.y < a.y, JSON.stringify({ a, b }));
 
   // Cut step: Y-flip, torch marker maps through the flipped view
   await ev(page, () => { const tab = document.querySelector(".tab[data-tab='cut']"); if (tab) tab.click(); });

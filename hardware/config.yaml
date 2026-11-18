@@ -122,7 +122,9 @@ axes:
       pulloff_mm: 2
       standard_stepper:
         step_pin: gpio.22:low
-        direction_pin: gpio.23
+        # gpio.23:low so machine +Y is toward the operator (front). Y=0 is the
+        # back / gantry rail. Do not drop :low to "fix" a jog-arrow direction.
+        direction_pin: gpio.23:low
         disable_pin: NO_PIN
     # If the gantry is driven by TWO Y motors (not assumed here), add motor1:
     # motor1:
