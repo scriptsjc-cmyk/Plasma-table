@@ -332,7 +332,7 @@ export class Machine {
     if (inp.estop) throw new JobError("E-stop is pressed. Release it and press Unlock.");
     if (probeBlocks(inp.probe)) throw new JobError("The floating head is pushed up. Check the torch isn't touching anything or stuck.");
     if (this.safety.limits && !this.safety.referenced && this.requireReference)
-      throw new JobError("The machine doesn't know where its edges are yet. Press Home (or 'Torch is at the home corner') first.");
+      throw new JobError("The machine doesn't know where its edges are yet. On Machine setup, press “Set this as home (0,0)” first.");
     const problem = this.safety.jobCheck(this.prepared.stats.bounds, this.wco());
     if (problem) throw new JobError(problem);
     const fromCut = Math.max(1, Math.trunc(Number(opts.fromCut) || 1));

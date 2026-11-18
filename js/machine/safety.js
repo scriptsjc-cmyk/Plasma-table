@@ -35,7 +35,7 @@ export class Safety {
   rel(mpos) { return mpos.map((m, i) => m - this.ref[i]); }
 
   needRef() {
-    if (!this.referenced) throw new SafetyError("The machine doesn't know where it is yet. Press Home (or 'Torch is at the home corner') first.");
+    if (!this.referenced) throw new SafetyError("The machine doesn't know where it is yet. On Machine setup, press “Set this as home (0,0)” first.");
   }
   wizardFarCorner(mpos) {
     this.needRef();

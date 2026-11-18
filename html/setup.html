@@ -1,5 +1,6 @@
 <!-- Machine setup. Loaded into the shell at start-up. -->
 <section id="setupView" class="view hidden">
+  <div id="setupCards">
   <div class="card">
     <h1>Machine edges (crash protection)</h1>
     <div class="grid2 status2">
@@ -8,8 +9,8 @@
     </div>
     <p class="muted small" id="safetyHint"></p>
     <ol class="wizard" id="wizard">
-      <li id="wz1"><p><b>Find home.</b> Press Home. No home switches? Move the torch to your marked home corner, raised right up, then press “Torch is at home corner”.</p>
-        <div class="wzbtns"><button class="do-home small">Home</button><button id="btnRef" class="small">Torch is at home corner</button></div></li>
+      <li id="wz1"><p><b>Set home (0,0).</b> This table has no limit switches, so it cannot find home by itself. Jog the torch to your marked home corner, raised right up, then press “Set this as home (0,0)”. The motors do not move. The bed picture marks that corner.</p>
+        <div class="wzbtns"><button type="button" id="btnRef" class="small accent">Set this as home (0,0)</button></div></li>
       <li id="wz2"><p><b>Far corner.</b> Move to the furthest corner the torch can safely reach. <span id="wzFar" class="muted"></span></p>
         <div class="wzbtns"><button class="small" data-cmd="limits_far">Set far corner</button></div></li>
       <li id="wz3"><p><b>Lowest point.</b> No sheet on. Lower the torch onto a slat (1 mm steps at the end) until the <b>Floating head</b> light comes on. <span id="wzZ" class="muted"></span></p>
@@ -59,7 +60,7 @@
       <button type="button" id="btnTorchTest" class="warn" aria-pressed="false">Test torch</button>
     </div>
     <p class="muted small">Touch-off test: the torch finds the sheet and stops at pierce height, no arc.
-      Test torch: hold to fire over scrap, let go to stop. It also stops after 2 seconds.</p>
+      Test torch: hold to fire over scrap, let go to stop. It stays on for as long as you hold the button.</p>
   </div>
 
   <div class="card admin-only" id="controllerCard">
@@ -74,5 +75,11 @@
       <input id="consoleIn" class="grow" placeholder="G-code or $ command" autocomplete="off" autocapitalize="characters">
       <button id="btnConsoleSend">Send</button>
     </form>
+  </div>
+  </div>
+  <div id="setupBedWrap">
+    <h2>Bed and home</h2>
+    <canvas id="setupBed" width="640" height="400" aria-label="Machine bed, home corner and torch position"></canvas>
+    <p class="muted small" id="setupHomeNote"></p>
   </div>
 </section>

@@ -204,7 +204,14 @@ export function bindMachineControls() {
   $$(".do-raise").forEach((b) => (b.onclick = () => cmd("raise")));
   $("btnGoStart").onclick = () => { const at = S.prepared && S.prepared.jobStart; cmd("goto_zero", at && Number.isFinite(at[0]) && Number.isFinite(at[1]) ? { x: at[0], y: at[1] } : {}); };
   $$("[data-cmd]").forEach((b) => (b.onclick = () => cmd(b.dataset.cmd)));
-  $("btnRef").onclick = async () => { if (await askConfirm({ title: "Set the home corner?", body: "Is the torch exactly at the home corner, raised right up?", ok: "Yes", cancel: "Cancel" })) cmd("set_reference"); };
+  $("btnRef").onclick = async () => {
+    if (await askConfirm({
+      title: "Set this as home (0,0)?",
+      body: "Is the torch exactly at your marked home corner, raised right up? The motors will not move. The bed picture will treat this position as Home 0,0. This table has no limit switches, so this is how home is set.",
+      ok: "Set home",
+      cancel: "Cancel",
+    })) cmd("set_reference");
+  };
   $("btnClearLimits").onclick = async () => { if (await askConfirm({ title: "Clear the saved edges?", body: "Crash protection will be off until you set them again.", ok: "Clear edges", cancel: "Cancel", danger: true })) cmd("limits_clear"); };
   $("btnTouchTest").onclick = () => cmd("touchoff_test", { material: S.material, thickness: S.thickness, overrides: overrides() });
   // Test torch is hold-to-fire (js/machine/torchtest.js); Space and a plain click never light it.

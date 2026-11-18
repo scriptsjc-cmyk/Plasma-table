@@ -25,7 +25,7 @@ export function workAreaSheet() {
   const w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
   return { x: [L.x[0] - w[0] + ref[0], L.x[1] - w[0] + ref[0]], y: [L.y[0] - w[1] + ref[1], L.y[1] - w[1] + ref[1]] };
 }
-function viewArea() {
+export function viewArea() {
   if (edgesOn()) return { x: S.safety.limits.x, y: S.safety.limits.y, label: "machine edges" };
   const t = S.cfg.travel_mm;
   return { x: [0, t.x], y: [0, t.y], label: "table" };

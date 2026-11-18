@@ -263,7 +263,7 @@ t.check("releasing Test torch sends M5 and clears TORCH ON",
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
 await pressTorch();
 await sleep(2200);
-const auto = await ev(page, (start) => {
+const heldLong = await ev(page, (start) => {
   const T = window.plasmaTest;
   const b = document.getElementById("btnTorchTest");
   const log = T.S.demo.log.slice(start);
@@ -276,10 +276,32 @@ const auto = await ev(page, (start) => {
     torch: !!(T.S.demo.torch),
   };
 }, n);
+t.check("Test torch stays on past 2 seconds while still held",
+  heldLong.lit && heldLong.label === "TORCH ON" && heldLong.hadM3 && !heldLong.hadM5 && heldLong.torch,
+  JSON.stringify(heldLong));
+n = await ev(page, () => window.plasmaTest.S.demo.log.length);
+await ev(page, () => {
+  const g = window.plasmaTest.getM().grbl;
+  if (!g) return;
+  if (g.pausePoll) g.pausePoll();
+  g.lastRx = Date.now() - 4000;
+});
+await sleep(700);
+const keep = await ev(page, (start) => {
+  const T = window.plasmaTest;
+  const b = document.getElementById("btnTorchTest");
+  const log = T.S.demo.log.slice(start);
+  return {
+    lit: T.torchTestState().lit,
+    label: (b.textContent || "").trim(),
+    hadM5: log.some((l) => /M5/.test(l)),
+    torch: !!(T.S.demo.torch),
+  };
+}, n);
+t.check("Test torch turns off if status reports stop arriving",
+  !keep.lit && keep.label === "Test torch" && keep.hadM5 && !keep.torch,
+  JSON.stringify(keep));
 await releaseTorch();
-t.check("Test torch auto-off sends M5 after 2 seconds",
-  !auto.lit && auto.label === "Test torch" && auto.hadM3 && auto.hadM5 && !auto.torch,
-  JSON.stringify(auto));
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
 await ev(page, () => {

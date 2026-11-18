@@ -14,6 +14,7 @@ import { syncPhoneUi } from "../make/phonesheet.js";
 import { renderProTools, setShapeFs } from "../make/protools.js";
 import { renderShapeForm } from "../make/shapeform.js";
 import { drawPreview } from "../cut/preview.js";
+import { drawSetupBed } from "../machine/setupbed.js";
 import { renderChecklist } from "../cut/checklist.js";
 import { paintChrome, refresh, renderQuickBar, showSource, useShape } from "../core/hooks.js";
 import { resetPreviewCam } from "../cut/previewnav.js";
@@ -115,6 +116,7 @@ export function showTab(name) {
   S.tab = name;
   document.body.dataset.tab = (scr === "cut" && name === "setup") ? "setup" : (scr === "cut" ? "cut" : "");
   if (name === "cut") drawPreview();
+  if (name === "setup") drawSetupBed();
   syncJogPadLabels();
 }
 export function canGo(n) {

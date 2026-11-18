@@ -1,5 +1,6 @@
 // Machine setup: hold-to-fire Test torch. pointerdown sends M3; pointerup / leave /
-// blur / hide / disconnect send M5 at once. Hard auto-off after 2 s. Space never fires it.
+// cancel / lost capture / blur / hide / disconnect / E-STOP send M5 at once.
+// Stays on for as long as the button is held. Space never fires it.
 import { isLaptopUi } from "../ui/laptop.js";
 import { estopOn } from "../ui/flow.js";
 import { M, S } from "../core/state.js";
@@ -7,7 +8,8 @@ import { $ } from "../core/dom.js";
 import { askConfirm } from "../core/safeprompt.js";
 import { cmd } from "./access.js";
 
-const MAX_MS = 2000;
+// A few missed 100 ms status polls means the link is dead — treat as release.
+const KEEPALIVE_MS = 1500;
 const TICKS = [
   "Earth clamp on",
   "Area clear, hands away",
@@ -15,7 +17,7 @@ const TICKS = [
   "Air on",
 ];
 
-const state = { lit: false, armed: false, timer: 0 };
+const state = { lit: false, armed: false, keep: 0 };
 
 function jobBusy() { return !!(S.job && S.job.running) || !!(M && M.jobRunning && M.jobRunning()); }
 function isAlarm() { return /alarm/i.test((S.status && S.status.state) || ""); }
@@ -41,7 +43,7 @@ export function torchTestEnabled() { return !torchTestWhy(); }
 async function confirmFirstUse() {
   return askConfirm({
     title: "Fire the torch?",
-    body: "Hold Test torch to fire, and let go to stop. It also stops after 2 seconds.\n\nTorch over scrap, earth clamp on, hands clear. STOP stays available.",
+    body: "Hold Test torch to fire, and let go to stop. It stays on for as long as you hold the button.\n\nTorch over scrap, earth clamp on, hands clear. STOP stays available.",
     ok: "I understand",
     cancel: "Cancel",
     danger: true,
@@ -56,8 +58,29 @@ function sendOff() {
   }
 }
 
+function stopKeepalive() {
+  if (state.keep) { clearInterval(state.keep); state.keep = 0; }
+}
+
+function startKeepalive() {
+  stopKeepalive();
+  state.keep = setInterval(() => {
+    if (!state.lit) { stopKeepalive(); return; }
+    if (shouldRelease()) torchTestOff();
+  }, 200);
+}
+
+// Link gone, no status reports, or E-STOP — same as letting go.
+function shouldRelease() {
+  if (!S.connected || !(M && M.grbl) || M.grbl.running === false) return true;
+  if (boardEstop()) return true;
+  const last = M.grbl.lastRx || 0;
+  if (last && Date.now() - last > KEEPALIVE_MS) return true;
+  return false;
+}
+
 export function torchTestOff() {
-  if (state.timer) { clearTimeout(state.timer); state.timer = 0; }
+  stopKeepalive();
   const was = state.lit;
   state.lit = false;
   paint();
@@ -80,10 +103,13 @@ async function startFire(e) {
   if (!r) return;
   state.lit = true;
   paint();
-  state.timer = setTimeout(torchTestOff, MAX_MS);
+  startKeepalive();
 }
 
-export function paintTorchTest() { paint(); }
+export function paintTorchTest() {
+  if (state.lit && shouldRelease()) { torchTestOff(); return; }
+  paint();
+}
 
 function paint() {
   const el = $("btnTorchTest");
@@ -114,6 +140,7 @@ export function bindTorchTest() {
   el.addEventListener("pointerup", () => torchTestOff());
   el.addEventListener("pointerleave", () => torchTestOff());
   el.addEventListener("pointercancel", () => torchTestOff());
+  el.addEventListener("lostpointercapture", () => torchTestOff());
   el.addEventListener("contextmenu", (e) => e.preventDefault());
   el.addEventListener("keydown", (e) => {
     if (isSpaceOrEnter(e)) e.preventDefault(); // never fire from the keyboard

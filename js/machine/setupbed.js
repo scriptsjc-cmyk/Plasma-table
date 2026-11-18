@@ -1,0 +1,111 @@
+// Machine setup bed picture: the table, gantry, home corner and current torch
+// position. Laptop uses the same Y-only flip as the Cut bed view.
+import { S } from "../core/state.js";
+import { $, themeColor } from "../core/dom.js";
+import { drawAxisHints, bedViewRotated } from "../cut/bedview.js";
+import { drawGantry, drawMachineBed, markMachine } from "../cut/machinedraw.js";
+import { toView, viewArea } from "../cut/preview.js";
+
+function fmt(n) {
+  const v = Number(n);
+  return Number.isFinite(v) ? (Math.abs(v) < 0.05 ? "0" : v.toFixed(1)) : "–";
+}
+
+export function homeNoteText() {
+  const mp = (S.status && S.status.MPos) || null;
+  const pos = mp ? `X ${fmt(mp[0])}, Y ${fmt(mp[1])}, Z ${fmt(mp[2])} mm` : "unknown (not connected)";
+  const ref = S.safety && S.safety.referenced ? S.safety.ref : null;
+  const mode = S.safety && S.safety.ref_mode;
+  let home;
+  if (ref) {
+    const how = mode === "homed" ? "after a switch-seeking $H" : "where the torch was when you set it";
+    home = `Home 0,0 on the picture is ${how} (controller reports machine X ${fmt(ref[0])}, Y ${fmt(ref[1])} there).`;
+  } else {
+    home = "Home is not set yet. Until you set it, the controller reports 0,0 at wherever the head was when it powered on — that may not be a real corner.";
+  }
+  return `This table has no limit switches, so it cannot find home by itself. Jog the torch to your marked home corner (raised right up) and press “Set this as home (0,0)”. The motors do not move.\n\n$H (Home all) is not used: the FluidNC config has no homing cycles or switch pins, so $H would raise an alarm (“No homing cycles defined”). A single-axis $HX with no switch would search the full travel for a pin that is not there.\n\nCurrent machine position: ${pos}.\n${home}`;
+}
+
+export function paintSetupHomeNote() {
+  const el = $("setupHomeNote");
+  if (!el) return;
+  el.textContent = homeNoteText();
+}
+
+export function drawSetupBed() {
+  paintSetupHomeNote();
+  const cv = $("setupBed");
+  if (!cv || !cv.offsetParent) return;
+  const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  const box = cv.parentElement;
+  const w = Math.max(200, (box && box.clientWidth) || cv.clientWidth || 480);
+  const h = Math.max(200, (box && (box.clientHeight - ($("setupHomeNote") ? $("setupHomeNote").offsetHeight + 12 : 0))) || cv.clientHeight || 320);
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  }
+  cv.style.width = w + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = themeColor("--cad-canvas", "#FFFFFF");
+  ctx.fillRect(0, 0, w, h);
+
+  const T = viewArea();
+  const mg = [70, 190, 70, 140]; // left, front, back, right — room for the gantry
+  const A = { x: [T.x[0] - mg[0], T.x[1] + mg[3]], y: [T.y[0] - mg[1], T.y[1] + mg[2]], table: T };
+  const ax = A.x[1] - A.x[0], ay = A.y[1] - A.y[0];
+  const pad = 12, sc = Math.min((w - 2 * pad) / ax, (h - 2 * pad) / ay);
+  const offX = (w - ax * sc) / 2, offY = (h - ay * sc) / 2;
+  const rot = bedViewRotated();
+  const X0 = (x) => offX + (x - A.x[0]) * sc, Y0 = (y) => h - offY - (y - A.y[0]) * sc;
+  const X = (x) => X0(x), Y = (y) => rot ? h - Y0(y) : Y0(y);
+
+  // Force the machine drawing on (Machine setup always shows the table).
+  const prev = S.showMachine;
+  S.showMachine = true;
+  try {
+    drawMachineBed(ctx, T, X, Y, sc);
+    drawGantry(ctx, T, X, Y, sc, { toView });
+    drawAxisHints(ctx, (x, y) => [X(x), Y(y)]);
+  } finally { S.showMachine = prev; }
+
+  // Home 0,0 is the view origin: the set home corner, or controller power-up 0,0 if not set.
+  const [hx, hy] = [X(0), Y(0)];
+  ctx.save();
+  ctx.strokeStyle = themeColor("--go", "#0A6A32");
+  ctx.fillStyle = themeColor("--go", "#0A6A32");
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(hx - 14, hy); ctx.lineTo(hx + 14, hy);
+  ctx.moveTo(hx, hy - 14); ctx.lineTo(hx, hy + 14);
+  ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx, hy, 5, 0, 7); ctx.fill();
+  ctx.font = "bold 13px Barlow, system-ui";
+  const homeTop = rot || hy < h * 0.4;
+  ctx.textAlign = hx < w * 0.55 ? "left" : "right";
+  ctx.textBaseline = homeTop ? "top" : "bottom";
+  const hxOff = hx < w * 0.55 ? 12 : -12;
+  const hyOff = homeTop ? 12 : -12;
+  const homeLabel = (S.safety && S.safety.referenced)
+    ? "Home 0,0 — machine thinks it is here"
+    : "Controller 0,0 (power-up — home not set)";
+  ctx.fillText(homeLabel, hx + hxOff, hy + hyOff);
+  ctx.restore();
+
+  const mp = S.status && S.status.MPos;
+  if (mp) {
+    const [vx, vy] = toView(mp[0], mp[1]);
+    const [tx, ty] = [X(vx), Y(vy)];
+    ctx.save();
+    ctx.fillStyle = themeColor("--text", "#1F2A37");
+    ctx.font = "12px Barlow, system-ui";
+    ctx.textAlign = tx < w * 0.55 ? "left" : "right";
+    ctx.textBaseline = ty < h * 0.5 ? "top" : "bottom";
+    const lx = tx < w * 0.55 ? 16 : -16, ly = ty < h * 0.5 ? 18 : -18;
+    ctx.fillText(`Torch  X ${fmt(mp[0])}  Y ${fmt(mp[1])}  Z ${fmt(mp[2])} mm`, tx + lx, ty + ly);
+    ctx.restore();
+  }
+  markMachine(cv);
+  cv.dataset.setupBed = "on";
+  cv.dataset.homeSet = (S.safety && S.safety.referenced) ? "1" : "0";
+  cv.dataset.flip = rot ? "y" : "off";
+}

@@ -195,17 +195,25 @@ async function setupPage(prof, { connect = false, step = 3 } = {}) {
   b = await snap();
   t.check("Z jog is not inverted (PageUp still raises Z)", b.z > a.z, JSON.stringify({ a, b }));
 
-  // Machine setup (opened from the menu) has no bed picture: jog stays in machine space
+  // Machine setup (opened from the menu) now has a bed picture; laptop uses the same Y-only flip. +X is unchanged.
   await ev(page, () => { const home = document.getElementById("btnHome"); if (home) home.click(); });
   await sleep(150);
   await ev(page, () => { const b = document.getElementById("menuSetup"); if (b) b.click(); });
   await sleep(250);
-  const ms = await ev(page, () => ({
-    rot: window.plasmaTest.bedViewRotated(),
-    tab: window.plasmaTest.S.tab,
-    labels: [...document.querySelectorAll(".j[data-axis='X'][data-dir='1'] small")].map((s) => s.textContent),
-  }));
-  t.check("Machine setup is not flipped; the right button is X+ again", !ms.rot && ms.tab === "setup" && ms.labels.some((s) => /X\+/.test(s)), JSON.stringify(ms));
+  const ms = await ev(page, () => {
+    const cv = document.getElementById("setupBed");
+    const rot = window.plasmaTest.bedViewRotated();
+    // Map view (0,0) through the same Y flip the drawer uses, from the canvas dataset + size.
+    const w = cv.clientWidth, h = cv.clientHeight;
+    return {
+      rot,
+      tab: window.plasmaTest.S.tab,
+      flip: cv && cv.dataset.flip,
+      shown: !!(cv && cv.offsetParent && w > 80 && h > 80),
+      labels: [...document.querySelectorAll(".j[data-axis='X'][data-dir='1'] small")].map((s) => s.textContent),
+    };
+  });
+  t.check("Machine setup bed is Y-flipped on a laptop; the right button is still X+", ms.rot && ms.tab === "setup" && ms.flip === "y" && ms.shown && ms.labels.some((s) => /X\+/.test(s)), JSON.stringify(ms));
   await ev(page, () => { if (document.activeElement) document.activeElement.blur(); });
   a = await ev(page, () => { const w = window.plasmaTest.S.status.WPos || [0, 0, 0]; return { x: w[0], y: w[1] }; });
   await page.keyboard.down("ArrowRight"); await sleep(120); await page.keyboard.up("ArrowRight"); await sleep(900);

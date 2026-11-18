@@ -25,3 +25,30 @@ body:not(.laptop-ui) #motorDirCard { display: none !important; }
   font-weight: 700;
   animation: torchpulse 1s ease-in-out infinite;
 }
+
+#setupBedWrap { margin-top: 16px; }
+#setupBedWrap h2 { margin: 0 0 8px; font-size: var(--fs-lg); }
+#setupBed { display: block; width: 100%; height: auto; background: var(--cad-canvas, #fff); border: 1px solid var(--line); border-radius: var(--r); }
+#setupHomeNote { white-space: pre-wrap; margin: 10px 0 0; }
+
+/* Laptop: cards on the left, bed picture on the right (same idea as the Cut screen). */
+body.laptop-ui #setupView:not(.hidden) {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: stretch;
+}
+body.laptop-ui #setupCards { min-width: 0; overflow: auto; }
+body.laptop-ui #setupBedWrap {
+  margin-top: 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body.laptop-ui #setupBed { flex: 1 1 auto; min-height: 280px; height: auto; }
+body.app-shell.laptop-ui #setupView:not(.hidden) {
+  height: calc(100dvh - var(--topbar-h, 56px));
+  overflow: hidden;
+}
+body.app-shell.laptop-ui #setupBedWrap { overflow: auto; }

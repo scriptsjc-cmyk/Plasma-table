@@ -1,6 +1,6 @@
-// Laptop Setup and Cut only: flip the bed picture top-to-bottom (Y only) so it
-// matches the table as you stand at it. The sheet corner (0, 0) sits at the
-// top-left; +X points right (same as Machine setup) and +Y points down.
+// Laptop Machine setup and Cut: flip the bed picture top-to-bottom (Y only) so it
+// matches the table as you stand at it. Home / the sheet corner (0, 0) sits at the
+// top-left; +X points right and +Y points down. Jog pads follow the picture.
 // This is a view transform only. Machine coordinates, G-code and commands are unchanged.
 import { isLaptopUi } from "../ui/laptop.js";
 import { screen } from "../ui/flow.js";
@@ -10,7 +10,7 @@ export function bedViewRotated() {
   if (typeof window === "undefined") return false;
   try { if (!isLaptopUi()) return false; } catch (e) { return false; }
   if (screen() !== "cut") return false;
-  if (S.tab === "setup") return false;           // Machine setup has no bed picture; its jog stays in machine space
+  if (S.tab === "setup") return true;            // Machine setup bed uses the same Y-only flip; jog pads follow
   const step = Number(S.cur);
   return step === 3 || step === 4;
 }

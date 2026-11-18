@@ -24,6 +24,14 @@ board: ESP32 DevKitC V1 30-pin
 
 # Do not require homing before jogging. Turn must_home on after limit
 # switches are fitted, tested, and homing cycles are enabled below.
+# Homing: every axis has cycle: 0 and limit_* pins NO_PIN (no switches fitted).
+# In FluidNC 4.1.1, cycle 0 means the axis is left out of $H (Home all).
+# $H with no cycle 1+ axes logs "No homing cycles defined" and goes to Alarm;
+# it does not move and does not set machine zero. Do not run $HX/$HY/$HZ
+# either: with cycle 0 that still seeks a switch for the full travel.
+# cycle: -1 (set_mpos_only) would assign mpos_mm without moving, but $H-all
+# still alarms if no cycle 1+ axes remain. Home is set from the app:
+# jog to the corner and press “Set this as home (0,0)”.
 start:
   must_home: false
   check_limits: false
@@ -151,11 +159,12 @@ axes:
         direction_pin: gpio.26
         disable_pin: NO_PIN
 
-# Torch on/off through a RELAY MODULE. M3 turns it on, M5 turns it off.
+# Torch on/off through a RELAY MODULE (active-low input). M3 turns it on, M5 turns it off.
 # Never wire gpio.27 to the plasma cutter itself.
+# output_pin gpio.27:low: a LOW from the ESP32 is what the module treats as ON.
 # off_on_alarm turns the relay off if an alarm or the hardware E-stop trips.
 Relay:
-  output_pin: gpio.27
+  output_pin: gpio.27:low
   enable_pin: NO_PIN
   direction_pin: NO_PIN
   off_on_alarm: true
