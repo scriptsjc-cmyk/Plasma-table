@@ -156,7 +156,12 @@ export function initFlow(host) {
   }
   $("btnHome").onclick = () => { if (!navLocked()) showScreen("menu"); };
   $("menuMake").onclick = () => showScreen("make");
-  $("menuCut").onclick = () => showScreen("cut");
+  $("menuCut").onclick = () => {
+    // Always the Cut tab. Entering the cut screen used to restore a leftover
+    // Machine setup tab, so Menu > Cut sent people back to setup.
+    showScreen("cut");
+    import("./nav.js").then((n) => n.showTab("cut"));
+  };
   if ($("menuSetup")) $("menuSetup").onclick = () => {
     showScreen("cut");
     import("./nav.js").then((n) => n.showTab("setup"));

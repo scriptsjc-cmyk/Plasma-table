@@ -82,7 +82,9 @@ export function onScreen(name, prev) {
     goStep(1);
     syncModeSwitch(); renderProTools(); renderShapeForm(); renderQuickBar();
   } else if (name === "cut") {
-    showTab(S.tab === "setup" ? "setup" : "cut");
+    // Menu > Cut (and any other entry to this screen) is Get to cutting,
+    // never a stale Machine setup tab from the last visit.
+    showTab("cut");
     goStep(S.prepared && S.cutStep >= 3 ? Math.min(S.cutStep, S.job ? 4 : 3) : 1);
     renderMaterials();
   }
