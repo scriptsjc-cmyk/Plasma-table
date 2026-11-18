@@ -15,6 +15,7 @@ import { LOST_BOARD } from "./boardrun.js";
 import { goStep } from "../ui/nav.js";
 import { log } from "./console.js";
 import { probeDisplayOn } from "./probefilter.js";
+import { torchTestLit } from "./torchtest.js";
 
 function onStatus(st) {
   S.status = st;
@@ -29,7 +30,7 @@ export function renderLamps(st) {
     const k = el.dataset.in;
     // Probe lamp is debounced so electrical noise doesn't flicker it. Other
     // inputs (especially E-stop) stay immediate.
-    const on = k === "torch" ? !!st.torch : k === "probe" ? probeDisplayOn() : !!inp[k];
+    const on = k === "torch" ? !!(st.torch || torchTestLit()) : k === "probe" ? probeDisplayOn() : !!inp[k];
     el.classList.toggle("on", on);
     if (el.closest(".mini") && k === "estop") el.textContent = on ? "E-STOP!" : "E-stop OK";
   });

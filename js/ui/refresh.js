@@ -25,7 +25,7 @@ import { liveProgress } from "../cut/progress.js";
 import { ampsNow } from "../cut/material.js";
 import { matchPreset } from "../machine/settings.js";
 import { paintMotorDir } from "../machine/motordir.js";
-import { paintTorchTest } from "../machine/torchtest.js";
+import { paintTorchTest, torchTestLit } from "../machine/torchtest.js";
 import { drawSetupBed } from "../machine/setupbed.js";
 import { sheetCornerName } from "../cut/bedview.js";
 
@@ -44,7 +44,7 @@ export function paintChrome() {
   try { syncHeaderButtons(); } catch (e) { /* ignore */ }
   const b = document.querySelector(".topbar");
   if (b) document.documentElement.style.setProperty("--topbar-h", Math.ceil(b.getBoundingClientRect().height) + "px");
-  const torch = !!(S.status && S.status.torch);
+  const torch = !!(S.status && S.status.torch) || torchTestLit();
   const pill = $("torchPill");
   if (pill) {
     pill.hidden = !S.connected;       // no TORCH OFF until a machine is connected
@@ -235,13 +235,16 @@ export function refresh() {
     }
   }
   const t = $("torchBig");
-  t.textContent = S.status.torch ? "TORCH ON" : "TORCH OFF";
-  t.classList.toggle("on", !!S.status.torch);
+  const torchOn = !!(S.status && S.status.torch) || torchTestLit();
+  t.textContent = torchOn ? "TORCH ON" : "TORCH OFF";
+  t.classList.toggle("on", torchOn);
 
   // movement controls are off while a job runs
   const busy = !!(S.job && S.job.running), idle = S.status.state === "Idle";
   $$(".j, .steps button, .do-home, .do-raise, #btnGoStart, #setupView button").forEach((el) => {
-    if (el.id !== "btnDisconnect") el.disabled = busy;
+    // Never disable Test torch here: flipping disabled mid-hold fires
+    // pointercancel and would send M5 while the button is still held.
+    if (el.id !== "btnDisconnect" && el.id !== "btnTorchTest") el.disabled = busy;
   });
   $("btnTrace").disabled = busy || !(S.prepared && idle);
   $("btnZero").disabled = busy || !idle;

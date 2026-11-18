@@ -1,6 +1,7 @@
-// Machine setup: hold-to-fire Test torch. pointerdown sends M3; pointerup / leave /
-// cancel / lost capture / blur / hide / disconnect / E-STOP send M5 at once.
-// Stays on for as long as the button is held. Space never fires it.
+// Machine setup: hold-to-fire Test torch. pointerdown sends M3; pointerup /
+// cancel / lost capture / blur / hide / disconnect / E-STOP / lost status send M5.
+// Pointer capture keeps a hold stable: a small mouse/touchpad move (pointerleave)
+// must not toggle the relay. Space never fires it.
 import { isLaptopUi } from "../ui/laptop.js";
 import { estopOn } from "../ui/flow.js";
 import { M, S } from "../core/state.js";
@@ -8,8 +9,10 @@ import { $ } from "../core/dom.js";
 import { askConfirm } from "../core/safeprompt.js";
 import { cmd } from "./access.js";
 
-// A few missed 100 ms status polls means the link is dead — treat as release.
-const KEEPALIVE_MS = 1500;
+// Treat a dead link as a release, but never sooner than the transport's own
+// no-reply watchdog (3 s on USB/Bluetooth). A tighter 1.5 s cutoff was firing
+// M5 during ordinary Bluetooth lag, so the relay would not stay on.
+const KEEPALIVE_FLOOR_MS = 3000;
 const TICKS = [
   "Earth clamp on",
   "Area clear, hands away",
@@ -54,12 +57,20 @@ async function confirmFirstUse() {
 function sendOff() {
   if (!(M && M.grbl)) return;
   try { M.command({ cmd: "torch_off" }); } catch (e) {
-    try { M.grbl.send("M5"); } catch (e2) { /* already gone */ }
+    try {
+      if (typeof M.grbl.writeNow === "function") M.grbl.writeNow("M5");
+      else M.grbl.send("M5");
+    } catch (e2) { /* already gone */ }
   }
 }
 
 function stopKeepalive() {
   if (state.keep) { clearInterval(state.keep); state.keep = 0; }
+}
+
+function keepaliveMs() {
+  const wd = M && M.grbl && M.grbl.t && Number(M.grbl.t.watchdogMs);
+  return Math.max(KEEPALIVE_FLOOR_MS, Number.isFinite(wd) ? wd : 0);
 }
 
 function startKeepalive() {
@@ -70,12 +81,12 @@ function startKeepalive() {
   }, 200);
 }
 
-// Link gone, no status reports, or E-STOP — same as letting go.
+// Link gone, no status reports for the watchdog window, or E-STOP — same as letting go.
 function shouldRelease() {
   if (!S.connected || !(M && M.grbl) || M.grbl.running === false) return true;
   if (boardEstop()) return true;
   const last = M.grbl.lastRx || 0;
-  if (last && Date.now() - last > KEEPALIVE_MS) return true;
+  if (last && Date.now() - last > keepaliveMs()) return true;
   return false;
 }
 
@@ -104,6 +115,10 @@ async function startFire(e) {
   state.lit = true;
   paint();
   startKeepalive();
+  // Keep receiving pointerup/cancel even if the pointer leaves the button.
+  if (e && e.pointerId != null) {
+    try { (e.currentTarget || $("btnTorchTest")).setPointerCapture(e.pointerId); } catch (err) { /* not a pointer event */ }
+  }
 }
 
 export function paintTorchTest() {
@@ -115,17 +130,17 @@ function paint() {
   const el = $("btnTorchTest");
   if (!el) return;
   if (state.lit) {
-    el.disabled = false;
+    if (el.disabled) el.disabled = false;
     el.classList.add("torch-live");
-    el.textContent = "TORCH ON";
-    el.setAttribute("aria-pressed", "true");
+    if (el.textContent !== "TORCH ON") el.textContent = "TORCH ON";
+    if (el.getAttribute("aria-pressed") !== "true") el.setAttribute("aria-pressed", "true");
     return;
   }
   const why = torchTestWhy();
-  el.disabled = !!why;
+  if (el.disabled !== !!why) el.disabled = !!why;
   el.classList.remove("torch-live");
-  el.textContent = "Test torch";
-  el.setAttribute("aria-pressed", "false");
+  if (el.textContent !== "Test torch") el.textContent = "Test torch";
+  if (el.getAttribute("aria-pressed") !== "false") el.setAttribute("aria-pressed", "false");
 }
 
 function isSpaceOrEnter(e) {
@@ -138,7 +153,8 @@ export function bindTorchTest() {
   el.dataset.torchBound = "1";
   el.addEventListener("pointerdown", (e) => { startFire(e); });
   el.addEventListener("pointerup", () => torchTestOff());
-  el.addEventListener("pointerleave", () => torchTestOff());
+  // Not pointerleave: a 1 px mouse/touchpad move, or the label changing to
+  // TORCH ON, would otherwise send M5 while the button is still held.
   el.addEventListener("pointercancel", () => torchTestOff());
   el.addEventListener("lostpointercapture", () => torchTestOff());
   el.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -152,6 +168,8 @@ export function bindTorchTest() {
   document.addEventListener("visibilitychange", () => { if (document.hidden) torchTestOff(); });
   paint();
 }
+
+export function torchTestLit() { return !!state.lit; }
 
 export function torchTestState() {
   return {

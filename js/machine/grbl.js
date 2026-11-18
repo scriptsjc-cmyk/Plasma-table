@@ -175,6 +175,21 @@ export class GrblLink {
     this.pending.push({ line, source });
     this._pump();
   }
+  // The lamp must follow a just-sent M3/M5 at once. Waiting for |A:S| in the next
+  // status report is too slow (and flickery) over a laggy Bluetooth link.
+  _noteTorchCommand(line) {
+    if (/^M5\b/i.test(line)) { this.status.torch = false; this._torchAccAt = 0; }
+    else if (/^M[34]\b/i.test(line)) { this.status.torch = true; this._torchAccAt = Date.now(); }
+    else return;
+    this._emit("status", this.status);
+  }
+  // Immediate line, even when pollPaused is holding the regular queue.
+  writeNow(line) {
+    line = String(line).trim();
+    if (!line) return;
+    this.t.write(line + "\n");
+    this._noteTorchCommand(line);
+  }
   // send one line and wait for its ok / error, with the lines the controller printed before it (e.g. a $ setting's value).
   // masked: the console shows "> $Name=********" instead of the line (passwords).
   ask(line, { masked = false, timeout = 5000 } = {}) {
@@ -309,6 +324,7 @@ export class GrblLink {
       if (isProbeMove(line)) markProbeStart(this.status.MPos && this.status.MPos[2]);
       this.inflight.push({ n, source, line, got, done });
       this.t.write(line + "\n");
+      this._noteTorchCommand(line);
       if (source === "job" && this.job) this.job.sent++;
       else if (source === "manual") this._emit("log", { text: "> " + line, level: "tx" });
       else if (source === "masked") this._emit("log", { text: "> " + line.split("=")[0] + "=********", level: "tx" });

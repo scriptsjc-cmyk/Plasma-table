@@ -181,7 +181,13 @@ export class Machine {
     if (!g) throw new JobError("Not connected. Press Connect.");
     if (LATCH_BLOCKED.has(cmd) && this.estopLatched()) throw new JobError(LATCH_MSG);
     switch (cmd) {
-      case "torch_off": g.send("M5"); return { ok: true };
+      case "torch_off":
+        // Bypass the queued pump: Test torch must be able to send M5 while
+        // status polling is paused (a dead-link check), and a queued M5
+        // would also be stuck behind pollPaused during an XModem upload.
+        if (typeof g.writeNow === "function") g.writeNow("M5");
+        else g.send("M5");
+        return { ok: true };
       case "hold": g.hold(); return { ok: true };
       case "resume": g.resume(); return { ok: true };
       case "stop": this.zeroConfirmed = false; g.stop(); return { ok: true };       // a stop (soft reset) can lose the place: work zero must be confirmed again
