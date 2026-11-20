@@ -193,8 +193,10 @@ function etchBody(text) {
   const cam = A.designToGcode([rect, score], { kerf: 1.5, leadIn: 3, name: "etched", etch: resolved });
   const job = A.prepareJob(cam.gcode, { ...cut(), etch: resolved, cut_height_mm: 1.5 }, A.machine, false);
   const body = etchBody(job.lines);
-  t.check("F1: prepared plasma etch has a moving lead-in before M3",
-    /etch lead-in \(already moving\)/.test(body) && body.search(/etch lead-in/) < body.search(/\bM3\b/),
+  t.check("F1: prepared plasma etch approaches with a rapid, then M3, then a G1 onto the mark",
+    /etch lead-in start/.test(body) && /already moving onto the mark/.test(body)
+    && body.search(/G0 .*etch lead-in start/) < body.search(/\bM3\b/)
+    && body.search(/\bM3\b/) < body.search(/already moving onto the mark/),
     body, "F1-LEAD");
   t.check("F1: prepared etch height is above cut height",
     etchHeightProblem(resolved, 1.5) === "" && resolved.plasma.height_mm > 1.5,

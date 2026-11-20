@@ -197,26 +197,34 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
           throw new JobError("Etch height must be above cut height (it starts at cut height + 1.5 mm — a starting point, test on scrap).");
         }
         out.push("; --- plasma etch (no pierce delay) ---");
-        if (dryRun) out.push("G4 P0");
-        else {
+        if (dryRun) {
+          out.push("G4 P0");
+          out.push(`M3 S${fmt(torch.spindle_s)}`);
+        } else {
           out.push("G91",
             `G38.2 Z-${fmt(probe.probe_distance_mm)} F${fmt(probe.probe_feed)}`,
             `G0 Z${fmt(probe.switch_offset_mm + etchHeight)}`,
             "G90");
-          // Start already moving: a short lead at etch height, then M3, then the rest of the path.
+          // Moving start: approach the mark with a rapid (torch off), fire the torch, then
+          // a short G1 onto the path so the arc is already moving when the mark begins.
+          // A G1 before M3 was unsafe (feed move with the torch off) and also didn't work
+          // on GRBL — the lead finished and stopped before M3 ran.
           const lead = peekNextXY(lines, idx, x, y);
           if (lead && posKnown) {
             const len = Math.hypot(lead.x - x, lead.y - y);
             if (len > 0.05) {
               const d = Math.min(ETCH_LEAD_MM, len);
-              const t = d / len;
-              const lx = x + (lead.x - x) * t, ly = y + (lead.y - y) * t;
-              out.push("; etch lead-in (already moving)");
-              out.push(`G1 X${fmt(lx)} Y${fmt(ly)} F${fmt(etchFeed)}`);
-              x = lx; y = ly;
+              const ux = (lead.x - x) / len, uy = (lead.y - y) / len;
+              const sx = x - ux * d, sy = y - uy * d;
+              out.push(`G0 X${fmt(sx)} Y${fmt(sy)} ; etch lead-in start`);
+              out.push(`M3 S${fmt(torch.spindle_s)}`);
+              out.push(`G1 X${fmt(x)} Y${fmt(y)} F${fmt(etchFeed)} ; already moving onto the mark`);
+            } else {
+              out.push(`M3 S${fmt(torch.spindle_s)}`);
             }
+          } else {
+            out.push(`M3 S${fmt(torch.spindle_s)}`);
           }
-          out.push(`M3 S${fmt(torch.spindle_s)}`);
         }
         out.push(`G1 F${fmt(etchFeed)}`);
       } else {
