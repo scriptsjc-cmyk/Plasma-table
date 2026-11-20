@@ -1729,7 +1729,87 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     cursor: pointer;
   }
   body:not(.machine-connected)[data-screen="cut"][data-step="3"] #btnOriginOpts { display: none; }
+
+  /* Centre: 52px summary strip and canvas chips */
+  body[data-screen="cut"][data-step="3"] .previewDock {
+    flex: none;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    height: 52px;
+    min-height: 52px;
+    max-height: 52px;
+    overflow: hidden;
+    padding: 0 8px;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="3"] .previewDock > #qbWhy,
+  body[data-screen="cut"][data-step="3"] .previewDock > #jobStats,
+  body[data-screen="cut"][data-step="3"] .previewDock > #exportRow { display: none !important; }
+  body[data-screen="cut"][data-step="3"] .previewDock > #fit {
+    position: static;
+    flex: none;
+    font-size: 12px;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    max-width: 28%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body[data-screen="cut"][data-step="3"] .previewDock > #fit:empty { display: none; }
+  body[data-screen="cut"][data-step="3"] #playRow {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    gap: 6px;
+  }
+  body[data-screen="cut"][data-step="3"] #playRow.hidden { display: none; }
+  body[data-screen="cut"][data-step="3"] #playRow button { min-height: 32px; padding: 2px 8px; font-size: 12px; }
+  body[data-screen="cut"][data-step="3"] #jobCard {
+    display: flex;
+    flex: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    box-shadow: none;
+  }
+  body[data-screen="cut"][data-step="3"] #jobCard dl { display: flex; gap: 10px; margin: 0; align-items: baseline; }
+  body[data-screen="cut"][data-step="3"] #jobCard dl > div:nth-child(1),
+  body[data-screen="cut"][data-step="3"] #jobCard dl > div:nth-child(4),
+  body[data-screen="cut"][data-step="3"] #jobCard dl > div:nth-child(5) { display: none; }
+  body[data-screen="cut"][data-step="3"] #jobCard dt { display: none; }
+  body[data-screen="cut"][data-step="3"] #jobCard dd { margin: 0; font-size: 13px; font-weight: 650; white-space: nowrap; }
+  body[data-screen="cut"][data-step="3"] #kerfNote { flex: none; margin: 0; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #dragChip {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 2px 8px;
+    font-size: 12px;
+    background: color-mix(in srgb, var(--well) 92%, transparent);
+    border-radius: var(--r);
+    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+    white-space: nowrap;
+  }
+  body[data-screen="cut"][data-step="3"] #dragChip.hidden { display: none !important; }
+  body[data-screen="cut"][data-step="3"] #showMachWrap.showmach {
+    top: 8px;
+    right: 8px;
+    left: auto;
+  }
 }
+
 
 /* Shared popover card (Nest, start-point options). Never covers STOP. */
 .is-setup-pop {

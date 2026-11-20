@@ -244,6 +244,7 @@
     <div class="previewPane">
       <canvas id="preview"></canvas>
       <p id="previewHint" class="preview-hint hidden" hidden>Pick a part on the left</p>
+      <p id="dragChip" class="canvas-chip hidden"><span class="info-label">Drag a part to place it</span><button type="button" class="info-i" data-tip="Drag a part to place it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet." aria-label="More about moving parts on the bed"></button></p>
       <label class="showmach" id="showMachWrap"><input type="checkbox" id="showMach" checked> Show machine</label>
       <div id="picTools" class="pictools" role="group" aria-label="Picture">
         <button type="button" id="btnPicFit" class="small" aria-label="Zoom to fit" title="Show the whole part (pinch or scroll to zoom)">🔍<span class="picword"> Zoom to fit</span></button>
@@ -252,7 +253,7 @@
       <div class="previewDock">
       <p id="qbWhy" class="qbwhy hidden" role="status" aria-live="polite"></p>
       <div id="fit" class="fit"></div>
-      <p id="kerfNote" class="muted small kerfnote">Kerf: part edges sit half a kerf outside the drawn line, holes half a kerf inside.</p>
+      <p id="kerfNote" class="muted small kerfnote has-info"><span class="info-label">Kerf allowed for</span><button type="button" class="info-i" data-tip="Kerf allowed for: part edges sit half a kerf outside the drawn line, holes half a kerf inside." aria-label="More about kerf"></button><span class="info-body"> Part edges sit half a kerf outside the drawn line, holes half a kerf inside.</span></p>
       <div id="jobStats" class="stats"></div>
       <!-- laptop cutting screen (css/screen-cut.css): the job and the machine at a glance, under the bed picture (in place of #jobStats); filled by refresh() -->
       <section id="jobCard" class="jobcard" aria-label="Job and machine">

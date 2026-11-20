@@ -39,7 +39,13 @@ function restore(el, key) {
   h.parent.insertBefore(el, h.next);
 }
 
+function paintCanvasChips() {
+  const chip = $("dragChip");
+  if (chip) chip.classList.toggle("hidden", !(isSetupLaptop() && document.body.dataset.step === "3"));
+}
 export function placeSetupColumns() {
+  paintCanvasChips();
+
   const layout = $("layoutCard");
   const check = $("checkCard");
   const pane = document.querySelector("#cutView .previewPane");
