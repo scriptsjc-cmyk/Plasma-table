@@ -19,18 +19,23 @@ await ev(page, () => {
   T.setAppMode("advanced", { persist: false, autoFs: false });
 });
 
-// Account bar Setup button is visible on a laptop and opens Machine setup from Make
+// Machine setup lives in the Account and settings menu, reachable from Make and Cut
+await ev(page, () => document.getElementById("btnTopMenu").click());
+await sleep(150);
 const bar = await ev(page, () => {
   const b = document.getElementById("btnBarSetup");
+  const menu = document.getElementById("topMenu");
   const r = b && b.getBoundingClientRect();
   const cs = b && getComputedStyle(b);
+  const mcs = menu && getComputedStyle(menu);
   return {
+    menuOpen: !!(menu && mcs && mcs.display !== "none"),
     shown: !!(b && cs.display !== "none" && r && r.width > 0 && r.height > 0),
     label: (b && (b.getAttribute("aria-label") || b.title || b.textContent) || "").trim(),
     text: (b && b.textContent || "").trim(),
   };
 });
-t.check("account bar has a small Machine setup button", bar.shown && /Machine setup/i.test(bar.label) && /Setup/i.test(bar.text), JSON.stringify(bar));
+t.check("Account and settings menu has a Machine setup item", bar.menuOpen && bar.shown && /Machine setup/i.test(bar.label) && /Setup/i.test(bar.text), JSON.stringify(bar));
 await ev(page, () => document.getElementById("btnBarSetup").click());
 await sleep(250);
 const onSetup = await ev(page, () => {

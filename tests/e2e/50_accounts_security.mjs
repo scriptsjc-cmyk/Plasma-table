@@ -61,6 +61,7 @@ async function signIn(p, email, pw = "letmein1") {
 async function claim(p, code) {   // main menu -> account pill -> "Link a machine"
   if (await p.locator("#migrateDlg:not(.hidden)").count()) await p.click("#migrateNo");
   await closeDialogs(p);
+  if (!(await p.locator("#acctPill").isVisible())) await p.click("#btnTopMenu");
   await p.click("#acctPill"); await p.waitForSelector("#accountDlg:not(.hidden)"); await p.click("#btnOpenClaim");
   await p.waitForSelector("#claimDlg:not(.hidden)"); await p.fill("#claimCode", code); await p.click("#formClaim [type=submit]"); await sleep(900);
 }
@@ -139,7 +140,8 @@ try {
     t.check("a rejected claim shows the server message and stays unlinked", /not recognised/i.test(await toastText(p)) && !/Your machine is linked/.test(await linkedText(p)), `${await toastText(p)} | ${await linkedText(p)}`, "CLAIM-ERR");
     // sign out wipes the linked flag and returns to the gate
     await closeDialogs(p);
-    await p.click("#acctPill"); await p.waitForSelector("#accountDlg:not(.hidden)"); await p.click("#btnSignOut"); await sleep(700);
+    if (!(await p.locator("#acctPill").isVisible())) await p.click("#btnTopMenu");
+  await p.click("#acctPill"); await p.waitForSelector("#accountDlg:not(.hidden)"); await p.click("#btnSignOut"); await sleep(700);
     const meta2 = await p.evaluate(() => localStorage.getItem("plasma.account.meta"));
     t.check("sign-out clears the cached machine link", !/serials":\["/.test(meta2 || "") && !/"linked":true/.test(meta2 || ""), meta2);
     t.check("sign-out returns to the sign-in page", (await scr(p)) === "login", await scr(p), "GATE");

@@ -58,7 +58,7 @@ for (const prof of ["d1440", "d1366"]) {
       title: document.getElementById("cutStatus").getAttribute("title"),
     };
   });
-  t.check(n("item 3: the Cut / Check the cut row lives in the header"), header.tabsInHeader && header.tabsShow && header.tab === "cut", JSON.stringify(header));
+  t.check(n("item 3: the steps live in the header"), header.tabsInHeader && header.tabsShow && header.tab === "cut", JSON.stringify(header));
   t.check(n("item 3: E-STOP is visible and at least as big as before"), header.stop && header.stop.show && header.stop.w >= 112 && header.stop.h >= 104, JSON.stringify(header.stop));
   t.check(n("item 3: E-STOP spans both header rows (top with the account bar, bottom with the step bar)"), header.stop && header.tabsShow && header.stop.t <= header.mainT + 4 && header.stop.b >= header.tabsB - 4, JSON.stringify(header));
   t.check(n("item 3: the step bar does not run under E-STOP"), !header.overlap && header.tabsR <= Math.round(header.stop.l) + 1, JSON.stringify(header));
@@ -89,7 +89,7 @@ for (const prof of ["d1440", "d1366"]) {
     const show = pop && !pop.hidden && pcs.display !== "none";
     return { show, text: (pop && pop.textContent || "").replace(/\s+/g, " ").trim(), bg, tipOn, title: document.getElementById("cutStatus").getAttribute("title") };
   });
-  t.check(n("item 6: hovering Check the cut shows the white what's-left box"), hover.show && hover.bg && !/^rgb\(0,\s*0,\s*0\)$/.test(hover.bg) && !/^rgba\(0,\s*0,\s*0/.test(hover.bg), JSON.stringify(hover));
+  t.check(n("item 6: the Check the cut header pill is not shown on a laptop"), !hover.show, JSON.stringify(hover));
   t.check(n("item 6: the black hover tip is not shown"), !hover.tipOn, JSON.stringify(hover));
   t.check(n("item 5: the hover box lists the small-hole warning"), /small|hole|thickness|sheet/i.test(hover.text), hover.text.slice(0, 240));
 

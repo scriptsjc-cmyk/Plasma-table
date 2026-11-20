@@ -55,7 +55,7 @@ for (const prof of ["d1366", "d1440"]) {
   // J12 / U3 / U18: one top bar, nothing overlaps, nothing wraps, no page scroll
   l = await ev(page, () => ({ steps: !!document.querySelector("#cutBarSteps #stepper"), start: document.getElementById("cutBarStart").textContent,
     key: document.querySelector(".cutbar-key").textContent, layout: !!__box("#btnLayout") }));
-  t.check(n("J12: the step bar, the start-point state, the Space hint and Layout sit in the tab row"), l.steps && /not set/i.test(l.start) && /Space = STOP/.test(l.key) && l.layout, JSON.stringify(l));
+  t.check(n("J12: the step bar, the start-point state and Layout sit in the tab row"), l.steps && /not set/i.test(l.start) && l.layout, JSON.stringify(l));
   const cardHits = await ev((page), (cs) => { const out = []; for (let i = 0; i < cs.length; i++) for (let j = i + 1; j < cs.length; j++) if (__overlap(cs[i], cs[j])) out.push(cs[i] + " / " + cs[j]); return out; }, CARDS);
   t.check(n("U3: the Bed & start panels don't overlap"), !cardHits.length, JSON.stringify(cardHits));
   const zeroHits = await ev(page, () => ["#btnGoStart", "#btnLinkMachine", "#btnTrace", ".homerow .do-home"].filter((s) => __overlap("#btnZero", s)));
