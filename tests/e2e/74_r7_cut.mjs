@@ -67,9 +67,9 @@ for (const prof of ["d1366", "d1440"]) {
   t.check(n("U18: plain card names (no step numbers)"), await ev(page, () => [...document.querySelectorAll(".setupcard > summary > b")].every((b) => !/^\d\s·/.test(b.textContent))));
   t.check(n("STOP is the largest control; no page scroll"), !(await ev(page, () => __stopBiggest())).length && await ev(page, () => __noPageScroll()));
 
-  // J13 / U28: one tick box, "Show me" links
-  l = await ev(page, () => ({ boxes: document.querySelectorAll("#checklist input:not([disabled])").length, jumps: [...document.querySelectorAll("#blockers .blocker-jump")].map((b) => b.textContent) }));
-  t.check(n("J13: one tick box to confirm the checks"), l.boxes === 1, JSON.stringify(l));
+  // J13 / U28: no on-page tick list; Start opens a short reminder. Blockers still have "Show me".
+  l = await ev(page, () => ({ boxes: document.querySelectorAll("#checkCard input:not([disabled])").length, hint: (document.getElementById("checkHint") || {}).textContent || "", jumps: [...document.querySelectorAll("#blockers .blocker-jump")].map((b) => b.textContent) }));
+  t.check(n("J13: Check card has no tick boxes; Start will ask for a short confirm"), l.boxes === 0 && /Press Start/i.test(l.hint) && /touch off/i.test(l.hint), JSON.stringify(l));
   t.check(n("U28: blockers have short 'Show me' links"), l.jumps.length > 0 && l.jumps.every((s) => s === "Show me"), JSON.stringify(l));
 
   // J4: arrows move the torch toward the matching screen direction (laptop Setup/Cut is Y-flipped, so
@@ -192,7 +192,6 @@ for (const prof of ["d1440", "d1366", "phone844x390"]) {
     estop: document.getElementById("estopBar").getAttribute("role"), alarm: document.getElementById("alarmBar").getAttribute("role"), toast: document.getElementById("toast").getAttribute("role") }));
   t.check("U22: the cutting screen has an h1; banners are alerts, toasts a status", /Cut/.test(l.h1 || "") && l.estop === "alert" && l.alarm === "alert" && l.toast === "status", JSON.stringify(l));
   await ev(page, () => { document.getElementById("btnZero").click(); }); await sleep(300);
-  await ev(page, () => { const c = document.querySelector('#checklist input[data-chk="1"]'); c.click(); }); await sleep(200);
   const startReady = await ev(page, () => {
     const b = document.getElementById("btnStart");
     return { disabled: !!(b && (b.disabled || b.getAttribute("aria-disabled") === "true")), why: (b && (b.getAttribute("data-why") || b.getAttribute("aria-describedby") && (document.getElementById(b.getAttribute("aria-describedby")) || {}).textContent)) || "", lock: (window.plasmaTest.motorDirState && window.plasmaTest.motorDirState().lockWhy) || "", referenced: !!(window.plasmaTest.S.safety && window.plasmaTest.S.safety.referenced), zero: !!window.plasmaTest.S.zeroSet };

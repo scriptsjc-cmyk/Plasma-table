@@ -60,7 +60,7 @@ await ev(page, () => {
 await sleep(250);
 
 const vis = await ev(page, () => {
-  const check = (document.getElementById("checklist") || {}).innerText || "";
+  const check = ((document.getElementById("checkHint") || {}).innerText || "") + " " + ((document.getElementById("checkZero") || {}).innerText || "") + " " + ((document.getElementById("checklist") || {}).innerText || "");
   const kerf = document.getElementById("kerfNote");
   const kcs = kerf && getComputedStyle(kerf);
   const play = document.getElementById("playRow");

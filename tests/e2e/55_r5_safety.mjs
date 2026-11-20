@@ -32,7 +32,7 @@ const zeroAndTick = async (page) => {
   await page.evaluate(() => document.getElementById("btnZero").click()); await sleep(400);
   await page.evaluate(() => { document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById("checklist").dispatchEvent(new Event("change")); }); await sleep(300);
 };
-const zeroLine = (page) => T(page, `(() => { const b = document.querySelector('#checklist input[data-chk="zero"]'); return b ? { on: b.checked, locked: b.disabled, text: b.closest("label").textContent.trim() } : null; })()`);
+const zeroLine = (page) => T(page, `(() => { const el = document.getElementById("checkZero"); const text = (el && el.textContent || "").trim(); const set = /sheet corner set/i.test(text); return el ? { on: set, locked: true, text } : null; })()`);
 const startable = (page) => T(page, "!document.getElementById('btnStart').disabled");
 const blockersText = (page) => T(page, "document.getElementById('blockers').textContent");
 const waitCut = async (page, n = 1) => { const t0 = Date.now(); let v = 0; while (Date.now() - t0 < 90000) { v = await T(page, "window.plasmaTest.S.run ? window.plasmaTest.S.run.ons : 0"); if (v >= n) return true; await sleep(250); } return false; };

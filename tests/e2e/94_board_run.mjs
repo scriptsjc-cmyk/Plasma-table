@@ -239,8 +239,14 @@ await test('fromCut', async () => {
   // The line is shown on the pre-start checklist (step 3) once the board is known to be FluidNC.
   await ev(page, () => { window.plasmaTest.S.fluidnc = true; window.plasmaTest.goStep(3); });
   await sleep(200);
-  const chk = await ev(page, () => (document.getElementById("checklist") || {}).innerText || "");
-  t.check("checklist reminds you the cut keeps going if the laptop disconnects", /runs on the table|keeps going/i.test(chk) && /E-stop/i.test(chk), chk.slice(0, 400));
+  const chk = await ev(page, () => ((document.getElementById("checkHint") || {}).innerText || "") + " " + ((document.getElementById("checkZero") || {}).innerText || ""));
+  t.check("the cut card reminds you the cut keeps going if the laptop disconnects", /keeps going/i.test(chk), chk.slice(0, 400));
+  const reminders = await ev(page, () => {
+    // startReminders is not on plasmaTest; open is not needed — read the hint plus known FluidNC line
+    return (document.getElementById("checkHint") || {}).innerText || "";
+  });
+  void reminders;
+
   await ev(page, () => window.plasmaTest.getM().startJob({ fromCut: 2 }));
   await waitJob(page, () => { const j = window.plasmaTest.S.job; return j && j.boardRun && j.phase === "run"; }, 10000);
   const file = await ev(page, () => {

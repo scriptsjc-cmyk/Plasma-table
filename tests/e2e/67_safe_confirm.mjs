@@ -32,9 +32,15 @@ const snap = async (page, name) => { await sleep(200); await page.screenshot({ p
   // the machine lock (access.js) still sees the practice table, everything else sees a real machine
   await page.evaluate(() => { const S = window.plasmaTest.S, sim = S.demo;
     Object.defineProperty(S, "demo", { configurable: true, get: () => (/access\.js/.test(new Error().stack) ? sim : null) });
-    document.getElementById("btnStart").click();
-    Object.defineProperty(S, "demo", { configurable: true, writable: true, enumerable: true, value: sim }); });
+    document.getElementById("btnStart").click(); });
   await page.waitForSelector("#safeDlg:not(.hidden)", { timeout: 8000 });
+  const first = await T(page, "document.getElementById('safeDlgTitle').textContent");
+  if (/Before you cut/i.test(first || "")) {
+    await T(page, "document.getElementById('safeDlgOk').click()");
+    await page.waitForFunction(() => /Start without homing/i.test((document.getElementById("safeDlgTitle") || {}).textContent || ""), null, { timeout: 8000 });
+  }
+  await page.evaluate(() => { const S = window.plasmaTest.S, sim = S.demo;
+    try { Object.defineProperty(S, "demo", { configurable: true, writable: true, enumerable: true, value: window.__demoSim || sim }); } catch (e) { S.demo = sim; } });
   const prompt = await T(page, "({ title: document.getElementById('safeDlgTitle').textContent, body: document.getElementById('safeDlgBody').textContent, focus: document.activeElement && document.activeElement.id })");
   ck("Start without saved edges warns and asks to confirm", /Start without homing/.test(prompt.title) && /No table edges are saved/.test(prompt.body), JSON.stringify(prompt));
   ck("Cancel is focused on the confirm", prompt.focus === "safeDlgCancel", JSON.stringify(prompt));
