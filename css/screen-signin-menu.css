@@ -62,7 +62,7 @@ body.app-shell .banner { max-width: none; margin: 0; border-radius: 0; flex: non
   body.app-shell.running-job .stepPane { max-height: none; flex: 1; }
 }
 /* ===================================================================================================== ROUND 2 ===================================================================================================== */
-.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 /* ---- ROUND 2: editing an imported drawing, save over / copy, undo bar */
 .undosave { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: var(--z-bar); display: flex; gap: 8px; align-items: center; background: var(--panel, var(--c-1f2a37)); color: var(--fg, var(--c-eee)); border: 1px solid var(--accent, var(--c-4aa3ff)); border-radius: 10px; padding: 8px 12px; box-shadow: 0 6px 24px var(--c-black-53); max-width: calc(100vw - 20px); font-size: var(--fs-s); }
 .undosave.hidden { display: none; }
