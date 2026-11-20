@@ -154,6 +154,12 @@ function renderSpeed() {
   $("spNote").innerHTML = note;
   $("spNote").className = "spnote" + (off ? " warn" : "");
   $("matTip").textContent = MAT_TIPS[S.material] || "";
+  const tipBtn = $("matTipInfo");
+  if (tipBtn) {
+    const tip = MAT_TIPS[S.material] || "";
+    tipBtn.dataset.tip = tip;
+    tipBtn.classList.toggle("hidden", !tip);
+  }
 }
 export function setSpeed(v) {
   const sl = $("spSlider");

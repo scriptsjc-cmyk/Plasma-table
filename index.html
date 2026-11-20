@@ -251,6 +251,7 @@
       <p id="previewHint" class="preview-hint hidden" hidden>Pick a part on the left</p>
       <p id="dragChip" class="canvas-chip hidden"><span class="info-label">Drag a part to place it</span><button type="button" class="info-i" data-tip="Drag a part to place it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet." aria-label="More about moving parts on the bed"></button></p>
       <p id="fitChip" class="canvas-chip hidden"></p>
+      <p id="pathLegend" class="canvas-chip hidden"><span class="info-label">Torch path</span><button type="button" class="info-i" data-tip="Orange: torch path. Amber dashed: etch. Grey: your part. Dots: where it pierces." aria-label="More about the colours on the cut preview"></button></p>
       <label class="showmach" id="showMachWrap"><input type="checkbox" id="showMach" checked> Show machine</label>
       <div id="picTools" class="pictools" role="group" aria-label="Picture">
         <button type="button" id="btnPicFit" class="small" aria-label="Zoom to fit" title="Show the whole part (pinch or scroll to zoom)">🔍<span class="picword"> Zoom to fit</span></button>
@@ -329,7 +330,7 @@
         <ul id="warnings" class="warnings"></ul>
         <div class="nav">
           <span></span>
-          <button class="next xl" data-go="3" id="next1" disabled>Next →</button>
+          <button class="next xl" data-go="3" id="next1" disabled>Next<span class="next-setup">: Setup</span> →</button>
         </div>
       </div>
 

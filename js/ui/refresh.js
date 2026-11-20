@@ -140,7 +140,7 @@ export function refresh() {
   $("fit").title = f.cls === "unknown" ? "Open Machine setup" : "";
   const fitChip = $("fitChip");
   const demoHint = !!(f && f.text && /^Demo:/.test(f.text));
-  const onSetup = document.body.dataset.screen === "cut" && String(S.cur) === "3";
+  const onSetup = document.body.dataset.screen === "cut" && (String(S.cur) === "3" || String(S.cur) === "1");
   if (fitChip) {
     if (onSetup && demoHint) {
       fitChip.textContent = f.text;
@@ -163,6 +163,11 @@ export function refresh() {
   updatePlayRow(); paintRestart(); paintDelay(); paintGuide(); paintJobCard(); paintCutBar(); paintCutStatus(); paintCutPanels(); placeSetupColumns();
   if ($("btnEditDrawing")) $("btnEditDrawing").classList.toggle("hidden", !(S.design && !S.design.straight && S.src === "file" && S.design.contours && S.design.contours.length));
   paintBedStatus();
+  const legend = $("pathLegend");
+  if (legend) {
+    const show = document.body.dataset.screen === "cut" && String(S.cur) === "1";
+    legend.classList.toggle("hidden", !show);
+  }
   $$("#stepper li").forEach((li) => (li.style.opacity = canGo(Number(li.dataset.step)) ? 1 : 0.4));
 
   // start button + reasons
