@@ -1317,7 +1317,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
    inside the step — popovers hold anything that does not fit. */
 @media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid {
-    grid-template-columns: 300px minmax(0, 1fr) 380px !important;
+    grid-template-columns: var(--s3-cols, 300px minmax(0, 1fr) 380px) !important;
     grid-template-rows: minmax(0, 1fr) auto auto !important;
     grid-template-areas: none !important;
     gap: 12px !important;
@@ -1328,7 +1328,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     display: contents !important;
   }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane {
-    grid-column: 2;
+    grid-column: var(--s3-bed, 2);
     grid-row: 1 / -1;
     min-width: 0;
     min-height: 0;
@@ -1342,7 +1342,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 
   /* Left: Sheet & parts fills the column */
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #layoutCard {
-    grid-column: 1;
+    grid-column: var(--s3-side, 1);
     grid-row: 1 / -1;
     max-height: none;
     min-height: 0;
@@ -1351,21 +1351,21 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   }
   /* Right: Torch takes remaining height; checklist and Start sit under it */
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #zeroCard {
-    grid-column: 3;
+    grid-column: var(--s3-main, 3);
     grid-row: 1;
     min-height: 0;
     overflow: hidden;
     align-self: stretch;
   }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard {
-    grid-column: 3;
+    grid-column: var(--s3-main, 3);
     grid-row: 2;
     max-height: none;
     overflow: hidden;
     align-self: stretch;
   }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav {
-    grid-column: 3;
+    grid-column: var(--s3-main, 3);
     grid-row: 3;
     padding: 0;
     position: static;
@@ -1701,9 +1701,14 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     right: 8px;
     bottom: 60px;
     z-index: 3;
+    width: auto;
+    max-width: 140px;
+    min-width: 0;
     min-height: 32px;
+    height: auto;
     padding: 2px 8px;
     font-size: 12px;
+    flex: none;
   }
   body[data-screen="cut"][data-step="3"] .previewPane > #layZoom { right: 8px; bottom: 96px; }
 
@@ -1868,3 +1873,8 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 @media not all and (min-width: 1200px), (max-height: 559px), (hover: none) {
   #demoTag, #connMenu { display: none !important; }
 }
+
+/* Fit / zoom / picked-part tools belong on Setup only; never outsize STOP on Cut */
+body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layFit,
+body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layZoom,
+body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display: none !important; }

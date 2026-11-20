@@ -94,7 +94,7 @@ async function watchSends(page, on) {
   await goBed(page, { connect: false });
   const s0 = await snap(page);
   const a0 = jobOf(s0.lines, s0.jobStart, s0.box);
-  ck("offline: the card leads with 'The part cuts where you place it on the bed'", /The part cuts where you place it on the bed/i.test(s0.help) && /Connect the table/.test(s0.title), { title: s0.title, zs: s0.zs, help: s0.help.slice(0, 180) });
+  ck("offline: the card leads with 'The part cuts where you place it on the bed'", /The part cuts where you place it on the bed/i.test(s0.help) && /Torch/.test(s0.title), { title: s0.title, zs: s0.zs, help: s0.help.slice(0, 180) });
   ck("offline: it does not ask him to set the start on the part", !/Connect to the table to set it/i.test(s0.zs) && /place it/i.test(s0.zs), s0.zs);
   await dragX(page, 80);
   const s1 = await snap(page);
@@ -180,7 +180,7 @@ for (const prof of ["d1366", "d1440"]) {
   await shot(page, `75-j15-practice-${prof}`);
   // wrap check for the new copy at this size
   const wraps = await ev(page, () => {
-    const sels = ["#zeroCard > summary > b", "#cutBarStart", "#btnGoStart", "#btnZero"];
+    const sels = ["#zeroCard > summary > b", "#btnGoStart", "#btnZero"];
     const lines = (e) => {
       const tops = []; const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
       for (let n = w.nextNode(); n; n = w.nextNode()) {
@@ -192,7 +192,7 @@ for (const prof of ["d1366", "d1440"]) {
     };
     return sels.map((s) => document.querySelector(s)).filter((e) => e && e.getClientRects().length && lines(e) > 1).map((e) => (e.id || e.tagName) + ":" + e.textContent.trim().slice(0, 50));
   });
-  ck(`${prof}: Connect the table, Go to start point and Start here stay on one line`, !wraps.length, wraps);
+  ck(`${prof}: Go to start point and Start here stay on one line`, !wraps.length, wraps);
   await page.ctx.close();
 }
 

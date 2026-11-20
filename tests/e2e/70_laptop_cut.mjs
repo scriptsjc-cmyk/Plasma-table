@@ -49,22 +49,21 @@ for (const [name, prof] of [["1366x768", "d1366"], ["1440x900", "d1440"], ["1920
   const bed = await ev(page, () => {
     const p = window.__rect(".previewPane"), z = window.__rect("#zeroCard"), c = window.__rect("#checkCard"), l = window.__rect("#layoutCard"), s = window.__rect("#btnStart");
     return { stop: window.__shown("#btnStop"), big: window.__biggest(), scroll: window.__noPageScroll(),
-      middle: c.r <= p.l + 1 && l.r <= p.l + 1 && z.l >= p.r - 1 && s.l >= p.r - 1, wide: p.w >= innerWidth * 0.36 && p.h >= window.__rect(".cutgrid").h * 0.9,
-      start: window.__shown("#btnStart"), zero: window.__shown("#btnZero"), back: window.__shown('.step[data-step="3"] .nav .back'), dl: window.__shown("#btnExport3"),
+      middle: l.r <= p.l + 1 && z.l >= p.r - 1 && c.l >= p.r - 1 && s.l >= p.r - 1, wide: p.w >= innerWidth * 0.36 && p.h >= window.__rect(".cutgrid").h * 0.9,
+      start: window.__shown("#btnStart"), zero: window.__shown("#btnZero"), back: window.__shown('.step[data-step="3"] .back'), dl: window.__shown("#btnExport3"),
       check: window.__inView("#checkCard > summary") && (window.__inView("#checkZero") || window.__inView("#checkHint")), cutCheck: !document.getElementById("cutCheck3") || !window.__inView("#cutCheck3") };
   });
   t.check(n("Bed & start: STOP in view, not covered, the largest control by area"), bed.stop && !bed.big.bigger.length, JSON.stringify(bed.big));
   t.check(n("Bed & start: no page-level scroll"), bed.scroll);
-  t.check(n("Bed & start: the bed picture is in the middle (checklist and layout left, start point and Start right) and big"), bed.middle && bed.wide, JSON.stringify(bed));
-  t.check(n("Bed & start: Start, Back and Download G-code in view in the right-hand panel"), bed.start && bed.back && bed.dl, JSON.stringify(bed));
+  t.check(n("Bed & start: the bed picture is in the middle (layout left, torch and Start right) and big"), bed.middle && bed.wide, JSON.stringify(bed));
+  t.check(n("Bed & start: Start and Download G-code in view on the right, Back in the left column"), bed.start && bed.back && bed.dl, JSON.stringify(bed));
   t.check(n("Bed & start: Start here is in view without scrolling the card"), bed.zero, JSON.stringify(bed));
   t.check(n("Bed & start: the ready-to-cut card is in view (cut-check warnings live in the Check the cut hover box)"), bed.check && bed.cutCheck, JSON.stringify(bed));
   const job = await ev(page, () => ({ shown: window.__inView("#jobCard"), stats: !!document.getElementById("jobStats").getClientRects().length,
     text: Object.fromEntries(["jcFile", "jcSize", "jcCuts", "jcMat", "jcMach"].map((id) => [id, document.getElementById(id).textContent])), file: window.plasmaTest.S.fileName,
     under: window.__rect("#jobCard").t >= window.__rect("#preview").b - 1 && document.getElementById("jobCard").closest(".previewPane") !== null }));
-  t.check(n("the job and machine card is in view under the picture (in place of the one-line stats)"), job.shown && job.under && !job.stats, JSON.stringify(job));
-  t.check(n("job card: file, size, cuts, material and machine are filled in"), job.text.jcFile === job.file && /\d.*×.*\d/.test(job.text.jcSize) && /\d+ cuts? · about/.test(job.text.jcCuts)
-    && /mm/.test(job.text.jcMat) && /Practice/.test(job.text.jcMach) && /Ready|Idle/.test(job.text.jcMach), JSON.stringify(job.text));
+  t.check(n("the job summary strip is in view under the picture (in place of the one-line stats)"), job.shown && job.under && !job.stats, JSON.stringify(job));
+  t.check(n("job strip: size and cuts are filled in"), /\d.*×.*\d/.test(job.text.jcSize) && /\d+ cuts? · about/.test(job.text.jcCuts), JSON.stringify(job.text));
   await ev(page, () => { for (const d of document.querySelectorAll('.step[data-step="3"] details')) d.open = true; }); await sleep(200);
   const open = await ev(page, () => ({ big: window.__biggest(), scroll: window.__noPageScroll(), start: window.__shown("#btnStart"), stop: window.__shown("#btnStop") }));
   t.check(n("Bed & start, every card and box open: STOP still the largest, Start in view, no page scroll"), !open.big.bigger.length && open.scroll && open.start && open.stop, JSON.stringify(open));

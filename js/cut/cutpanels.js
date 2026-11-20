@@ -145,7 +145,7 @@ export function setArrange(on) {
   on = !!on && active() && !liveJob();
   document.body.classList.toggle("cut-arrange", on);
   const b = $("btnLayout"); if (b) { b.setAttribute("aria-pressed", String(on)); b.textContent = on ? "Done" : "Layout"; }
-  const r = $("btnLayoutReset"); if (r) r.classList.toggle("hidden", !on);
+  const r = $("btnLayoutReset"); if (r) { r.hidden = !on; r.classList.toggle("hidden", !on); }
   paintCovers();
 }
 export function resetLayout() { L = DEFAULT(); savePrefs({ cutLayout: null }, userId()); try { localStorage.removeItem(legacyKey()); } catch (e) { /* ignore */ } apply(); }
@@ -158,7 +158,11 @@ export function paintCutPanels() {
   b.hidden = !useful;
   b.classList.toggle("hidden", !useful);
   const r = $("btnLayoutReset");
-  if (r && !useful) { r.hidden = true; r.classList.add("hidden"); }
+  if (r) {
+    const show = useful && arranging();
+    r.hidden = !show;
+    r.classList.toggle("hidden", !show);
+  }
   b.disabled = liveJob() || !useful;
   b.title = liveJob() ? "Not while a job is running" : "Move and resize the panels";
   if (arranging() && (liveJob() || !active())) setArrange(false);

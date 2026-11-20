@@ -41,7 +41,7 @@ function restore(el, key) {
 
 function paintCanvasChips() {
   const chip = $("dragChip");
-  if (chip) chip.classList.toggle("hidden", !(isSetupLaptop() && document.body.dataset.step === "3"));
+  if (chip) chip.classList.toggle("hidden", !(isSetupLaptop() && document.body.dataset.screen === "cut" && document.body.dataset.step === "3"));
 }
 export function placeSetupColumns() {
   paintCanvasChips();
@@ -61,7 +61,7 @@ export function placeSetupColumns() {
   remember(hint, "hint");
   const disc = $("btnDisconnect"), link = $("btnLinkMachine"), menu = $("connMenu");
   remember(disc, "disc"); remember(link, "link");
-  if (isSetupLaptop()) {
+  if (isSetupLaptop() && document.body.dataset.screen === "cut" && document.body.dataset.step === "3") {
     if (menu && disc && disc.parentNode !== menu) menu.appendChild(disc);
     if (menu && link && link.parentNode !== menu) menu.appendChild(link);
     if (layout && mat && mat.parentNode !== layout) layout.appendChild(mat);

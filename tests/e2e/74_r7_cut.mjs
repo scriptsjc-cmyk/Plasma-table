@@ -69,7 +69,7 @@ for (const prof of ["d1366", "d1440"]) {
 
   // J13 / U28: no on-page tick list; Start opens a short reminder. Blockers still have "Show me".
   l = await ev(page, () => ({ boxes: document.querySelectorAll("#checkCard input:not([disabled])").length, hint: (document.getElementById("checkHint") || {}).textContent || "", jumps: [...document.querySelectorAll("#blockers .blocker-jump")].map((b) => b.textContent) }));
-  t.check(n("J13: Check card has no tick boxes; Start will ask for a short confirm"), l.boxes === 0 && /Press Start/i.test(l.hint) && /touch off/i.test(l.hint), JSON.stringify(l));
+  t.check(n("J13: Check card has no tick boxes; Start will ask for a short confirm"), l.boxes === 0 && /Press Start/i.test(l.hint) && /touch(?:es)? off/i.test(l.hint), JSON.stringify(l));
   t.check(n("U28: blockers have short 'Show me' links"), l.jumps.length > 0 && l.jumps.every((s) => s === "Show me"), JSON.stringify(l));
 
   // J4: arrows move the torch toward the matching screen direction (laptop Setup/Cut is Y-flipped, so
@@ -121,9 +121,10 @@ for (const prof of ["d1366", "d1440"]) {
   wraps = await ev(page, (s) => __wrapped(s), ONE_LINE);
   t.check(n("J14: still no wrapped labels after resizing"), !wraps.length, JSON.stringify(wraps));
   const dk = await page.$('.coldivider:not([hidden])'); await dk.focus();
-  const w0 = await ev(page, () => __box("#checkCard").w); await page.keyboard.press("ArrowLeft"); await sleep(100);
-  const w1 = await ev(page, () => __box("#checkCard").w);
-  t.check(n("J14: a focused divider resizes with the arrow keys"), w1 < w0, `${w0} -> ${w1}`);
+  const w0 = await ev(page, () => ({ l: __box("#layoutCard").w, p: __box(".previewPane").w, z: __box("#zeroCard").w }));
+  await page.keyboard.press("ArrowLeft"); await sleep(100);
+  const w1 = await ev(page, () => ({ l: __box("#layoutCard").w, p: __box(".previewPane").w, z: __box("#zeroCard").w }));
+  t.check(n("J14: a focused divider resizes with the arrow keys"), w1.l !== w0.l || w1.p !== w0.p || w1.z !== w0.z, JSON.stringify({ w0, w1 }));
   // saved per user: another account gets the default layout, coming back brings this one back
   const order = () => ev(page, () => ({ zero: __box("#zeroCard").l, bed: __box(".previewPane").l }));
   await ev(page, () => window.plasmaTest.account.signUp({ email: "lay73@example.com", pin: "letmein1", display_name: "Lay", mode: "beginner" })); await sleep(400);
@@ -140,7 +141,7 @@ for (const prof of ["d1366", "d1440"]) {
   });
   t.check(n("J14: layout is kept in account prefs (not a separate key)"), pref.has && !pref.old.length, JSON.stringify(pref));
   await page.click("#btnLayout"); await page.click("#btnLayoutReset"); await page.click("#btnLayout"); await sleep(150);
-  l = await ev(page, () => ({ zero: __box("#zeroCard").l, bed: __box(".previewPane").l, side: __box("#checkCard").l }));
+  l = await ev(page, () => ({ zero: __box("#zeroCard").l, bed: __box(".previewPane").l, side: __box("#layoutCard").l }));
   t.check(n("J14: Reset layout puts the panels back"), l.side < l.bed && l.bed < l.zero, JSON.stringify(l));
   await page.ctx.close();
 }

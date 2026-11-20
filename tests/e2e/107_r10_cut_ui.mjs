@@ -106,7 +106,7 @@ const ready = await ev(page, () => {
   };
 });
 t.check("Start is enabled after home and Start here, with no on-page tick list",
-  ready.enabled && ready.boxes === 0 && /touch off/i.test(ready.hint) && /Sheet corner set/i.test(ready.zero),
+  ready.enabled && ready.boxes === 0 && /touch(?:es)? off/i.test(ready.hint) && /Sheet corner set/i.test(ready.zero),
   JSON.stringify(ready));
 
 await ev(page, () => document.getElementById("btnStart").click());
@@ -125,7 +125,7 @@ const pop = await ev(page, () => {
 });
 t.check("Start opens a short safety reminder with one confirm button",
   pop.open && pop.compact && /Before you cut/i.test(pop.title) && /Everything's correct/i.test(pop.ok)
-    && pop.lines.length >= 4 && pop.lines.some((s) => /touch off/i.test(s)) && !pop.long,
+    && pop.lines.length >= 4 && pop.lines.some((s) => /touch(?:es)? off/i.test(s)) && !pop.long,
   JSON.stringify(pop));
 
 await page.keyboard.press("Escape");

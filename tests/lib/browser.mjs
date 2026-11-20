@@ -20,6 +20,7 @@ export function startServer({ port = 0, delay = 0, headers = {}, site = SITE } =
 export const PROFILES = {
   desktop: { viewport: { width: 1280, height: 900 } },
   d1366: { viewport: { width: 1366, height: 768 } },
+  d1536: { viewport: { width: 1536, height: 750 } },
   d1440: { viewport: { width: 1440, height: 900 } },
   desktop1920: { viewport: { width: 1920, height: 1080 } },
   iphone14: { ...devices["iPhone 14"], safariLike: true },
