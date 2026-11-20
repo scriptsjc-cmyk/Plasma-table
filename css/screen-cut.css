@@ -24,15 +24,15 @@ canvas#preview.placing { touch-action: none; }
 .checklist .checkwhat { display: block; font-weight: 500; }
 .checklist .checkwhat::before { content: "· "; font-weight: 700; }
 .checklist .checknote { padding: 2px 8px; font-weight: 650; color: var(--muted); }
-.bigpct { font-size: 64px; font-weight: 700; line-height: 1; margin: 10px 0; font-variant-numeric: tabular-nums; }
+.bigpct { font-size: var(--fs-pct); font-weight: 700; line-height: 1; margin: 10px 0; font-variant-numeric: tabular-nums; }
 .runnums { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 6px 0 10px; }
 .runnums > div:last-child { text-align: right; }
 .runnums .bigpct { margin: 0; }
 /* Round 5 (safety): phone on its side while cutting: % done, time left and the bar stay in view above Pause */
-body.short-land #runTitle { font-size: 15px; margin: 0 0 2px; }
+body.short-land #runTitle { font-size: var(--fs-m); margin: 0 0 2px; }
 body.short-land .runnums { margin: 0 0 4px; gap: 8px; }
-body.short-land[data-screen="cut"] .step[data-step="4"] .runnums .bigpct, body.short-land .bigleft { font-size: 34px; }
-body.short-land .runnums span { font-size: 12px; }
+body.short-land[data-screen="cut"] .step[data-step="4"] .runnums .bigpct, body.short-land .bigleft { font-size: var(--fs-readout); }
+body.short-land .runnums span { font-size: var(--fs-xs); }
 body.short-land .progress { height: 10px; }
 /* r7 U11: the link dropped mid-cut: the panel stops counting and says the job state is unknown */
 #running.linklost #runTitle, #running.linklost #runInfo { color: var(--alarm-text); font-weight: 700; }
@@ -45,7 +45,7 @@ body.short-land .progress { height: 10px; }
 .cutcheck { margin-top: 14px; padding: 12px 14px; border-radius: var(--r); background: var(--well); border: 1px solid var(--line); }
 .cutcheck .cchead { font-size: var(--fs-lg); font-weight: 650; margin-bottom: 6px; }
 @media (orientation: landscape) and (max-height: 540px) {
-  body.short-land .stats, body.short-land .fit { margin-top: 2px; font-size: 12px; }
+  body.short-land .stats, body.short-land .fit { margin-top: 2px; font-size: var(--fs-xs); }
   body.short-land #fit,
   body.short-land #jobStats,
   body.short-land #exportRow {
@@ -54,8 +54,8 @@ body.short-land .progress { height: 10px; }
     border: 1px solid var(--line); border-radius: var(--r); padding: 2px 6px;
   }
   body.short-land #exportRow { bottom: 4px; gap: 4px; }
-  body.short-land #jobStats { bottom: 44px; font-size: 11px; }
-  body.short-land #fit { top: 4px; bottom: auto; font-size: 11px; padding: 2px 6px; }
+  body.short-land #jobStats { bottom: 44px; font-size: var(--fs-xs); }
+  body.short-land #fit { top: 4px; bottom: auto; font-size: var(--fs-xs); padding: 2px 6px; }
 }
 /* ================= ROUND 3: parts folders + batch DXF import ================= */
 #exportRow { margin-top: 8px; }
@@ -66,9 +66,9 @@ body.short-land .progress { height: 10px; }
   .stop { padding: 8px 10px; min-width: 52px; letter-spacing: 0.4px; }
 }
 .signupchart i { display: block; flex: 1; background: var(--accent); min-height: 2px; border-radius: 2px 2px 0 0; }
-.annrow .muted, .userrow .muted { font-size: 12px; }
+.annrow .muted, .userrow .muted { font-size: var(--fs-xs); }
 .edgepanel h3 { margin: 0 0 6px; }
-.adv-set .muted { font-size: 12px; }
+.adv-set .muted { font-size: var(--fs-xs); }
 @media (max-width: 640px) {
   .admtab, .edgepanel button, #announceBar button { min-height: 44px; }
 }
@@ -76,7 +76,7 @@ body.short-land .progress { height: 10px; }
   .admtab { min-height: 36px; }
 }
 .checkmat { margin: 0 0 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 650; }
-.checkzero { margin: 0 0 6px; font-size: 14px; font-weight: 650; }
+.checkzero { margin: 0 0 6px; font-size: var(--fs-s); font-weight: 650; }
 #checkHint { margin: 0 0 8px; }
 @media (orientation: landscape) and (max-height: 540px) {
   /* landscape: compact stats, don't cover 28% of the canvas */
@@ -85,7 +85,7 @@ body.short-land .progress { height: 10px; }
   body.short-land #exportRow {
     position: static; left: auto; right: auto;
   }
-  body.short-land .stats, body.short-land .fit { font-size: 12px; margin-top: 2px; }
+  body.short-land .stats, body.short-land .fit { font-size: var(--fs-xs); margin-top: 2px; }
   body.short-land .exportrow { gap: 4px; }
 }
 /* phone run screen: STOP is the biggest control and stays in view */
@@ -104,8 +104,8 @@ body.shape-fs #jobStats, body.shape-fs #exportRow { display: none !important; }
 body.app-shell .previewDock { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
   padding: 4px 6px 2px; flex: none; border-top: 1px solid var(--line); background: var(--card); min-height: 32px; }
 body.app-shell .previewDock .fit, body.app-shell .previewDock .stats, body.app-shell .previewDock .exportrow { margin: 0; }
-body.app-shell .previewDock .fit { font-size: 13px; font-weight: 650; }
-body.app-shell .previewDock .stats { font-size: 12px; gap: 2px 12px; }
+body.app-shell .previewDock .fit { font-size: var(--fs-s); font-weight: 650; }
+body.app-shell .previewDock .stats { font-size: var(--fs-xs); gap: 2px 12px; }
 body.app-shell .previewDock .exportrow { gap: 6px; }
 body.app-shell .previewDock .small { min-height: 36px; padding: 4px 8px; }
 body.app-shell .drop { min-height: 88px; padding: 10px; }
@@ -136,12 +136,12 @@ body.pro-mode .matpreset-wrap { display: flex; flex-direction: column; gap: 4px;
 body.pro-mode #materials, body.pro-mode .step[data-step="2"] > h3 { /* keep chips as a compact backup */ }
 body.pro-mode details.guide:not(.adjust) { display: none; }
 /* ---- STOP: the biggest control at every width (72 x 72 minimum on phones) ---- */
-.stop { min-height: 56px; min-width: 88px; font-size: 20px; }
+.stop { min-height: 56px; min-width: 88px; font-size: var(--fs-stop-phone); }
 @media (max-width: 899px) {
-  #btnStop.stop { min-height: 72px; min-width: 72px; width: 80px; font-size: 20px; padding: 6px; }
+  #btnStop.stop { min-height: 72px; min-width: 72px; width: 80px; font-size: var(--fs-stop-phone); padding: 6px; }
 }
 @media (min-width: 900px) {
-  #btnStop.stop { min-height: 60px; min-width: 100px; font-size: 22px; }
+  #btnStop.stop { min-height: 60px; min-width: 100px; font-size: var(--fs-stop-make); }
 }
 body.short-land #btnStop.stop { min-height: 72px; min-width: 72px; }
 /* ---- playable preview ---- */
@@ -149,7 +149,7 @@ body.short-land #btnStop.stop { min-height: 72px; min-width: 72px; }
 .playrow.hidden { display: none; }
 .playrow button { min-height: 44px; flex: none; }
 .playrow input[type="range"] { flex: 1 1 auto; min-width: 60px; accent-color: var(--accent); height: 28px; }
-.playtime { flex: none; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.playtime { flex: none; font-size: var(--fs-s); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* ---- Pro: cut list, CAM panel, toolbar, delay row ---- */
 .cutlist { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; max-height: 240px; overflow: auto; }
 .cutlist li { display: flex; align-items: center; gap: 8px; background: var(--well); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; min-height: 40px; }
@@ -157,51 +157,51 @@ body.short-land #btnStop.stop { min-height: 72px; min-width: 72px; }
 .cutlist label { flex: 1; display: flex; align-items: center; gap: 8px; margin: 0; min-height: 36px; }
 .cutlist label b { min-width: 22px; text-align: right; }
 .cutlist .mv { display: flex; gap: 2px; }
-.cutlist .mv button { min-height: 32px; min-width: 32px; padding: 0 6px; font-size: 12px; }
+.cutlist .mv button { min-height: 32px; min-width: 32px; padding: 0 6px; font-size: var(--fs-xs); }
 .campanel, .cutlistcard, .delayrow, .startcut { margin-top: 10px; }
 .campanel h3, .cutlistcard h3 { margin: 0 0 6px; }
 .delayrow .row { margin-top: 4px; }
 .delayrow button { min-height: 48px; }
 .startcut { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 8px 12px; }     /* round 5 item 21: a normal option, not a warning */
-.startcut select { min-height: 44px; font-size: 16px; }
+.startcut select { min-height: 44px; font-size: var(--fs-m); }
 .restartbox { background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); padding: 10px 12px; margin: 10px 0; }
-.restartbox select { min-height: 48px; font-size: 18px; }
-.guidehead #ghTitle { display: block; font-size: 26px; font-weight: 800; line-height: 1.15; margin: 2px 0; }
+.restartbox select { min-height: 48px; font-size: var(--fs-l); }
+.guidehead #ghTitle { display: block; font-size: var(--fs-xl); font-weight: 800; line-height: 1.15; margin: 2px 0; }
 body.beginner .drop { min-height: 0; padding: 14px 12px; }
 body.beginner #recentWrap h3 { display: none; }
 body.beginner #btnStart:not(:disabled) { background: var(--go); border-color: var(--go); color: var(--on-go); }
 /* step 2: material */
-body.beginner .matline { font-size: 18px; margin: 0 0 10px; }
-body.beginner #materials button { min-height: 76px; font-size: 22px; }
+body.beginner .matline { font-size: var(--fs-l); margin: 0 0 10px; }
+body.beginner #materials button { min-height: 76px; font-size: var(--fs-xl); }
 body.beginner #thicknesses { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
-body.beginner #thicknesses button { min-height: 64px; font-size: 20px; }
+body.beginner #thicknesses button { min-height: 64px; font-size: var(--fs-l); }
 body.beginner #cutCheck2, body.beginner .step[data-step="2"] details, body.beginner .step[data-step="2"] .matpreset-wrap { display: none !important; }
-body.beginner .amps .big { font-size: 40px; }
-body.beginner #btnZero { min-height: 72px; font-size: 22px; }
-body.beginner #btnTrace { min-height: 56px; font-size: 16px; }
+body.beginner .amps .big { font-size: var(--fs-readout-l); }
+body.beginner #btnZero { min-height: 72px; font-size: var(--fs-xl); }
+body.beginner #btnTrace { min-height: 56px; font-size: var(--fs-m); }
 /* step 4 / 5 */
-body.beginner .checklist label { font-size: 18px; padding: 10px 6px; min-height: 52px; }
+body.beginner .checklist label { font-size: var(--fs-l); padding: 10px 6px; min-height: 52px; }
 body.beginner .step[data-step="3"] #startCutRow { display: none; }
 body.beginner .step[data-step="3"] #startCutRow:not(.hidden) { display: block; }
-body.beginner .step[data-step="4"] .runnums .bigpct { font-size: 56px; }
+body.beginner .step[data-step="4"] .runnums .bigpct { font-size: var(--fs-pct); }
 body.pro-mode .amps { padding: 6px 10px; }
-body.pro-mode .amps .big { font-size: 24px; }
-body.pro-mode .stepPane h3 { font-size: 13px; margin: 8px 0 4px; letter-spacing: 0; }
-body.pro-mode .campanel input, body.pro-mode .adjust input, body.pro-mode .cutlistcard input[type="number"] { min-height: 36px; font-size: 14px; }
+body.pro-mode .amps .big { font-size: var(--fs-xl); }
+body.pro-mode .stepPane h3 { font-size: var(--fs-s); margin: 8px 0 4px; letter-spacing: 0; }
+body.pro-mode .campanel input, body.pro-mode .adjust input, body.pro-mode .cutlistcard input[type="number"] { min-height: 36px; font-size: var(--fs-s); }
 body.pro-mode .s2cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 14px; }
 @media (min-width: 1100px) {
   body.pro-mode .s2cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
 }
 body.pro-mode .s2a > *:first-child, body.pro-mode .s2b > *:first-child { margin-top: 0; }
 body.pro-mode .step[data-step="3"] .jogmount { margin-top: 4px; }
-body.pro-mode .checklist label { min-height: 36px; padding: 4px 6px; font-size: 14px; }
+body.pro-mode .checklist label { min-height: 36px; padding: 4px 6px; font-size: var(--fs-s); }
 @media (max-width: 899px) {
-  .guidehead #ghTitle { font-size: 22px; }
-  .bgmore button { min-height: 52px; font-size: 16px; }
+  .guidehead #ghTitle { font-size: var(--fs-xl); }
+  .bgmore button { min-height: 52px; font-size: var(--fs-m); }
 }
 @media (min-width: 900px) and (max-height: 800px) {
-  .guidehead #ghTitle { font-size: 22px; }
-  .bgmore button { min-height: 50px; font-size: 16px; }
+  .guidehead #ghTitle { font-size: var(--fs-xl); }
+  .bgmore button { min-height: 50px; font-size: var(--fs-m); }
 }
 body.beginner .previewDock .exportrow { display: none; }
 @media (min-width: 900px) {
@@ -218,21 +218,21 @@ body.beginner[data-step="3"] #exportRow, body.beginner[data-step="4"] #exportRow
   body.beginner .previewDock { position: static !important; max-height: none !important; background: var(--card) !important; }
 }
 @media (orientation: landscape) and (max-height: 540px) {
-  body.short-land .guidehead #ghTitle { font-size: 18px; margin: 0; }
+  body.short-land .guidehead #ghTitle { font-size: var(--fs-l); margin: 0; }
   body.short-land .bgmore { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
-  body.short-land .bgmore button { min-height: 44px; font-size: 13px; padding: 4px; }
+  body.short-land .bgmore button { min-height: 44px; font-size: var(--fs-s); padding: 4px; }
 }
 /* Beginner position step: arrows on the left, Start here on the right (laptop); readouts and lamps are not needed */
 body.beginner .jogwrap .small-pos, body.beginner .jogwrap .lamps.mini { display: none; }
-body.beginner #zeroState { font-size: 14px; }
+body.beginner #zeroState { font-size: var(--fs-s); }
 @media (min-width: 900px) {
   body.beginner .zerobody { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); align-content: start; gap: 8px 14px; }
   body.beginner .zerobody .jogmount { grid-column: 1; grid-row: 1 / span 3; }
   body.beginner .zerobody > :not(.zeroscroll), body.beginner .zeroscroll > :not(.jogmount) { grid-column: 2; }
 }
 @media (max-height: 800px) {
-  body.beginner .checklist label { min-height: 44px; padding: 6px; font-size: 16px; }
-  body.beginner #materials button { min-height: 60px; font-size: 20px; }
+  body.beginner .checklist label { min-height: 44px; padding: 6px; font-size: var(--fs-m); }
+  body.beginner #materials button { min-height: 60px; font-size: var(--fs-l); }
   body.beginner #thicknesses button { min-height: 52px; }
 }
 @media (max-width: 899px) and (orientation: portrait) {
@@ -252,36 +252,36 @@ body.pro-mode .speedrow { gap: 8px; }
 /* ---- ROUND 2: step 3 "Get set up" (sheet layout + start point + checks) */
 .zeroscroll { display: contents; }     /* the start-point card's scrolling part on a laptop (below); elsewhere its children lay out as before */
 .setupcard { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; padding: 6px 10px; background: var(--card); }
-.setupcard > summary { cursor: pointer; padding: 6px 0; min-height: 44px; font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; list-style: none; }
+.setupcard > summary { cursor: pointer; padding: 6px 0; min-height: 44px; font-size: var(--fs-m); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; list-style: none; }
 .setupcard > summary::-webkit-details-marker { display: none; }
 .setupcard > summary::before { content: "▾"; color: var(--muted, #667); }
 .setupcard:not([open]) > summary::before { content: "▸"; }
-.layoutstate { font-size: 13px; font-weight: 600; }
+.layoutstate { font-size: var(--fs-s); font-weight: 600; }
 .layoutstate.good { color: var(--ok-text); }
 .layoutstate.bad { color: #c42b1c; }
 .sheetrow { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 4px 0; }
-.sheetrow label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
-.sheetrow input { width: 86px; padding: 8px; font-size: 16px; }
+.sheetrow label { display: flex; align-items: center; gap: 6px; font-size: var(--fs-s); }
+.sheetrow input { width: 86px; padding: 8px; font-size: var(--fs-m); }
 .sheetrow .unitin { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .laybtns { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
-.laybtns button { flex: 1 1 140px; min-height: 52px; font-size: 16px; }
+.laybtns button { flex: 1 1 140px; min-height: 52px; font-size: var(--fs-m); }
 .layoutsel { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px; }
 .layoutsel.hidden { display: none; }
 .laytools { display: flex; flex-wrap: wrap; gap: 6px; }
-.laytools button { flex: 1 1 88px; min-height: 48px; font-size: 15px; }
+.laytools button { flex: 1 1 88px; min-height: 48px; font-size: var(--fs-m); }
 .layangle, .layfine, .laygrid { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 6px 0; }
-.layangle input { width: 90px; padding: 8px; font-size: 16px; }
+.layangle input { width: 90px; padding: 8px; font-size: var(--fs-m); }
 .layfine button { min-width: 44px; min-height: 44px; }
-.layproblems { margin: 6px 0 0; padding-left: 18px; color: #c42b1c; font-size: 14px; }
+.layproblems { margin: 6px 0 0; padding-left: 18px; color: #c42b1c; font-size: var(--fs-s); }
 .layproblems:empty { display: none; }
 .addlist .addrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .addlist .qty { display: flex; align-items: center; gap: 6px; }
-.addlist .qty input { width: 64px; padding: 8px; font-size: 16px; }
+.addlist .qty input { width: 64px; padding: 8px; font-size: var(--fs-m); }
 .addsaved { overflow: auto; display: flex; flex-direction: column; gap: 2px; max-height: max(22dvh, 130px); }
 #addPartsDlg .shapelib-card { max-height: calc(100dvh - 24px); overflow: auto; }
 body.beginner #zeroCard .keyhint { display: none; }
 body.pro-mode .setupcard { margin: 4px 0; padding: 2px 8px; }
-body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
+body.pro-mode .setupcard > summary { font-size: var(--fs-s); padding: 3px 0; }
 @media (min-width: 1100px) {
   body.pro-mode .zerobody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 12px; }
   body.pro-mode .zerobody .jogmount { grid-row: 1 / span 3; }
@@ -302,13 +302,13 @@ body[data-step="3"] #exportRow { display: none; }
 @media (max-width: 599px) and (orientation: portrait) {
   body.turn-on:not(.turn-upright)[data-screen="cut"][data-step="3"]:not(.job-live):has(.tab[data-tab="cut"].sel) .turnoverlay { display: flex; position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
   body.turn-on:not(.turn-upright)[data-screen="cut"][data-step="3"] .topbar { z-index: 2147483001; }
-  body.turn-on .turnoverlay .turnicon { font-size: 72px; line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
-  body.turn-on .turnoverlay .turntext { font-size: 26px; font-weight: 700; }
-  .turnoverlay .turnhint { margin: 0; max-width: 300px; font-size: 15px; color: #c9d4df; }
-  .turnoverlay .turnupright { min-height: 48px; padding: 8px 20px; font-size: 16px; color: #fff; background: transparent; border: 1px solid #8fa3b8; }
+  body.turn-on .turnoverlay .turnicon { font-size: var(--fs-icon-xl); line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
+  body.turn-on .turnoverlay .turntext { font-size: var(--fs-xl); font-weight: 700; }
+  .turnoverlay .turnhint { margin: 0; max-width: 300px; font-size: var(--fs-m); color: #c9d4df; }
+  .turnoverlay .turnupright { min-height: 48px; padding: 8px 20px; font-size: var(--fs-m); color: #fff; background: transparent; border: 1px solid #8fa3b8; }
 }
 @media (max-width: 899px) and (orientation: portrait) {
-  body[data-step="3"] .previewDock .fit { font-size: 12px; margin: 0; }
+  body[data-step="3"] .previewDock .fit { font-size: var(--fs-xs); margin: 0; }
 }
 /* the import dialog always fits under the top bar: the file list scrolls, the Import button stays on screen */
 .impdlg { z-index: 125; align-items: flex-start; padding: 6px; }
@@ -338,7 +338,7 @@ body[data-step="3"] #exportRow { display: none; }
   .impintro { display: none; }
   .impmeta { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 10px; }
   .impdlg .shapelib-head { margin-bottom: 2px; position: sticky; top: 0; background: var(--well); z-index: 2; }
-  .impdlg .shapelib-head h2 { font-size: 18px; margin: 0; }
+  .impdlg .shapelib-head h2 { font-size: var(--fs-l); margin: 0; }
   .impdlg .unitall { margin: 0; }
   .impdlg .improw { padding: 3px 6px; }
   .impdlg #impGo { min-height: 44px; }
@@ -356,28 +356,28 @@ body[data-step="3"] #exportRow { display: none; }
 }
 @media (max-width: 560px) {
   .topmenu .modesw-btn { flex: 1; }
-  .topmenu .modesw-btn[data-mode="beginner"] { font-size: 14px; }
-  #topMenu #connPill, body.demo-on #topMenu #connPill { max-width: none; font-size: 13px; white-space: normal; }
-  body.beginner[data-step="3"] .guidehead #ghTitle { font-size: 18px; }
+  .topmenu .modesw-btn[data-mode="beginner"] { font-size: var(--fs-s); }
+  #topMenu #connPill, body.demo-on #topMenu #connPill { max-width: none; font-size: var(--fs-s); white-space: normal; }
+  body.beginner[data-step="3"] .guidehead #ghTitle { font-size: var(--fs-l); }
 }
 @media (min-width: 561px) and (max-width: 899px) {
   /* arrow only; it keeps its "Back to the main menu" label */
   #btnHome.homebtn { min-width: 44px; padding-left: 10px; padding-right: 10px; }
-  #connPill, body.demo-on #connPill { max-width: 10em; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #connPill, body.demo-on #connPill { max-width: 10em; font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
-.startwhy { flex: 1 1 100%; order: 9; margin: 2px 0 0; font-size: 14px; line-height: 1.3; font-weight: 650; color: var(--warn-text); overflow-wrap: anywhere; }
-body.short-land .startwhy { font-size: 12px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.startwhy { flex: 1 1 100%; order: 9; margin: 2px 0 0; font-size: var(--fs-s); line-height: 1.3; font-weight: 650; color: var(--warn-text); overflow-wrap: anywhere; }
+body.short-land .startwhy { font-size: var(--fs-xs); line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .startwhy.hidden { display: none; }
 /* round 5 item 15: on a phone the Start row wraps, so the reason goes straight under Start and Download G-code moves below it */
 @media (max-width: 560px) { .step[data-step="3"] > .nav #btnExport3 { order: 10; } }
-body.short-land .step[data-step="3"] > .nav button { min-height: 44px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
-body.short-land .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; min-height: 48px; }   /* round 5 (look H2): a slim row leaves the height to "Start here" and the checklist */
+body.short-land .step[data-step="3"] > .nav button { min-height: 44px; padding: 4px 10px; font-size: var(--fs-s); width: auto; margin: 0; }
+body.short-land .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: var(--fs-m); min-height: 48px; }   /* round 5 (look H2): a slim row leaves the height to "Start here" and the checklist */
 @media (max-width: 899px) and (orientation: portrait) {
-  body.app-shell .step[data-step="3"] > .nav button { min-height: 44px; padding: 4px 10px; font-size: 14px; width: auto; margin: 0; }
-  body.app-shell .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: 15px; }
+  body.app-shell .step[data-step="3"] > .nav button { min-height: 44px; padding: 4px 10px; font-size: var(--fs-s); width: auto; margin: 0; }
+  body.app-shell .step[data-step="3"] > .nav #btnStart { flex: 1 1 120px; max-width: none; font-size: var(--fs-m); }
 }
 .topbar .pill, .topbar .modesw-btn { font-weight: 650; }
-.topbar .pill { font-size: 13px; }
+.topbar .pill { font-size: var(--fs-s); }
 #acctPill.pill, #acctPill.pill.in {
   background: transparent;
   border-color: transparent;
@@ -434,7 +434,7 @@ body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
   border-radius: 0;
   background: var(--card);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0;
   text-align: left;
@@ -454,7 +454,7 @@ body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
   gap: 2px;
   margin: 0;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 650;
   color: var(--muted);
 }
@@ -463,16 +463,16 @@ body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
   width: 100%;
   min-height: 30px;
   padding: 2px 6px;
-  font-size: 16px;
+  font-size: var(--fs-m);
   font-variant-numeric: tabular-nums;
   color: var(--text);
   background: var(--well);
   border: 1px solid var(--line-strong);
   border-radius: var(--r);
 }
-#ptInspector .pt-empty p { margin: 4px 0 0; font-size: 13px; color: var(--text); }
-#ptInspector .pt-empty .muted { color: var(--muted); font-size: 12px; font-weight: 500; }
-#ptInspector .pt-layers-empty { font-size: 12px; padding: 4px 0; }
+#ptInspector .pt-empty p { margin: 4px 0 0; font-size: var(--fs-s); color: var(--text); }
+#ptInspector .pt-empty .muted { color: var(--muted); font-size: var(--fs-xs); font-weight: 500; }
+#ptInspector .pt-layers-empty { font-size: var(--fs-xs); padding: 4px 0; }
 #ptInspector .pt-layer {
   flex: 1 1 auto;
   min-width: 0;
@@ -483,7 +483,7 @@ body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
   margin: 0;
   padding: 2px 6px;
   text-align: left;
-  font-size: 13px;
+  font-size: var(--fs-s);
   font-weight: 650;
   color: var(--text);
   background: var(--well);
@@ -501,7 +501,7 @@ body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
   align-items: center;
   gap: 4px;
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 650;
   color: var(--muted);
 }
@@ -524,25 +524,25 @@ body[data-screen="make"] #pickPane { display: none; }
 body[data-screen="cut"] #exportRow, body[data-screen="cut"] #showMachWrap.hidden { display: none; }
 body[data-screen="cut"][data-step="1"] .previewDock .stats { display: none; }
 .makebar .modesw-btn { min-height: 40px; min-width: 88px; font-weight: 700; }
-body[data-screen="cut"] .stepper li span { width: 30px; height: 30px; font-size: 15px; }
+body[data-screen="cut"] .stepper li span { width: 30px; height: 30px; font-size: var(--fs-m); }
 body[data-screen="cut"] .drop { min-height: 0; padding: 18px 12px; }
-body[data-screen="cut"] .nav .next, body[data-screen="cut"] #btnStart { flex: 1 1 auto; max-width: none; min-height: 64px; font-size: 20px; font-weight: 800; background: var(--accent); border-color: var(--accent); color: var(--on-accent); border-radius: 12px; }
+body[data-screen="cut"] .nav .next, body[data-screen="cut"] #btnStart { flex: 1 1 auto; max-width: none; min-height: 64px; font-size: var(--fs-l); font-weight: 800; background: var(--accent); border-color: var(--accent); color: var(--on-accent); border-radius: 12px; }
 body[data-screen="cut"] .nav .next:disabled, body[data-screen="cut"] #btnStart:disabled { background: var(--well); border-color: var(--line-strong); color: var(--muted); }
 body[data-screen="cut"] #btnStart:not(:disabled) { background: var(--go); border-color: var(--go); color: var(--on-go); }
-body[data-screen="cut"] .nav .back { min-height: 64px; min-width: 96px; font-size: 18px; }
-body[data-screen="cut"] .matline { font-size: 17px; margin: 0 0 8px; }
-body[data-screen="cut"] #materials button { min-height: 64px; font-size: 20px; }
+body[data-screen="cut"] .nav .back { min-height: 64px; min-width: 96px; font-size: var(--fs-l); }
+body[data-screen="cut"] .matline { font-size: var(--fs-l); margin: 0 0 8px; }
+body[data-screen="cut"] #materials button { min-height: 64px; font-size: var(--fs-l); }
 body[data-screen="cut"] #thicknesses { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }     /* round 5 item 22: equal chips, every row the same width */
 #thicknesses button { white-space: nowrap; }
-body[data-screen="cut"] #thicknesses button { min-height: 56px; font-size: 18px; }
-body[data-screen="cut"] .amps .big { font-size: 34px; }
-body[data-screen="cut"] #btnZero { min-height: 64px; font-size: 20px; }
-body[data-screen="cut"] #btnTrace { min-height: 52px; font-size: 16px; }
-body[data-screen="cut"] .checklist label { font-size: 17px; padding: 8px 6px; min-height: 48px; }
-body[data-screen="cut"] .step[data-step="4"] .runnums .bigpct { font-size: 56px; }
+body[data-screen="cut"] #thicknesses button { min-height: 56px; font-size: var(--fs-l); }
+body[data-screen="cut"] .amps .big { font-size: var(--fs-readout); }
+body[data-screen="cut"] #btnZero { min-height: 64px; font-size: var(--fs-l); }
+body[data-screen="cut"] #btnTrace { min-height: 52px; font-size: var(--fs-m); }
+body[data-screen="cut"] .checklist label { font-size: var(--fs-l); padding: 8px 6px; min-height: 48px; }
+body[data-screen="cut"] .step[data-step="4"] .runnums .bigpct { font-size: var(--fs-pct); }
 .pickpane h3:first-child { margin-top: 0; }
 .pickrow { gap: 10px; margin-top: 10px; }
-.pickrow button { flex: 1 1 180px; min-height: 56px; font-size: 17px; }
+.pickrow button { flex: 1 1 180px; min-height: 56px; font-size: var(--fs-l); }
 .bedstatus { margin: 10px 0 0; padding: 8px 12px; background: var(--ok-bg); color: var(--ok-text); border: 1px solid var(--go); border-radius: var(--r); font-weight: 650; }
 .bedstatus button { margin-left: 8px; }
 .connectcard .xl { min-height: 56px; }
@@ -557,7 +557,7 @@ body[data-screen="cut"] .delayrow { display: block; }
   line-height: 1; letter-spacing: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #btnStop.estop:hover { background: transparent; filter: none; }
 #btnStop.estop .estop-svg { width: 72px; height: 72px; display: block; overflow: visible; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
-#btnStop.estop .estop-label { font-size: 12px; font-weight: 900; letter-spacing: .08em; margin-top: -6px; padding: 1px 7px; border-radius: 6px; background: var(--stop); color: #fff; white-space: nowrap; }
+#btnStop.estop .estop-label { font-size: var(--fs-stop-badge); font-weight: 900; letter-spacing: .08em; margin-top: -6px; padding: 1px 7px; border-radius: 6px; background: var(--stop); color: #fff; white-space: nowrap; }
 #btnStop .es-top { transform: translateY(-7px); transition: transform .16s cubic-bezier(.3, 1.7, .5, 1); transform-origin: 60px 56px; }
 #btnStop .es-shadow { transition: opacity .12s, transform .16s; transform-origin: 60px 70px; }
 #btnStop .es-on, #btnStop .es-hi { transition: opacity .15s; }
@@ -567,7 +567,7 @@ body[data-screen="cut"] .delayrow { display: block; }
 #btnStop.pressed .es-hi { opacity: .18; }
 #btnStop.pressed .es-shadow { opacity: .15; transform: scale(.7); }
 #btnStop.pressed { border-color: var(--stop); background: rgba(196, 43, 28, .12); animation: esPulse 1.1s ease-in-out infinite; }
-#btnStop.pressed .estop-label { background: #7a0b08; font-size: 13px; }
+#btnStop.pressed .estop-label { background: #7a0b08; font-size: var(--fs-stop-badge-s); }
 @media (prefers-reduced-motion: reduce) {
   #btnStop.pressed { animation: none; }
   #btnStop .es-top, #btnStop .es-shadow { transition: none; }
@@ -578,18 +578,18 @@ body[data-screen="cut"] .delayrow { display: block; }
 @media (min-width: 900px) {
   #btnStop.estop { min-width: 92px; min-height: 92px; }
   #btnStop.estop .estop-svg { width: 84px; height: 84px; }
-  #btnStop.estop .estop-label { font-size: 13px; }
+  #btnStop.estop .estop-label { font-size: var(--fs-stop-badge-s); }
 }
 body.short-land #btnStop.estop { min-width: 72px; min-height: 72px; padding: 0 4px; }
 body.short-land #btnStop.estop .estop-svg { width: 58px; height: 58px; }
-body.short-land #btnStop.estop .estop-label { font-size: 13px; margin-top: -5px; }
+body.short-land #btnStop.estop .estop-label { font-size: var(--fs-stop-badge-s); margin-top: -5px; }
 /* Saving and downloading are part of making a part, in both modes */
 body[data-screen="make"].beginner #btnSavePartQuick, body[data-screen="make"].beginner #btnExport { display: inline-flex; }
 @media (min-width: 900px) {
   #btnStop.estop { min-width: 84px; min-height: 84px; }
   #btnStop.estop .estop-svg { width: 72px; height: 72px; }
 }
-body.short-land .tabs .tab { min-height: 44px; padding-top: 2px; padding-bottom: 2px; font-size: 14px; }
+body.short-land .tabs .tab { min-height: 44px; padding-top: 2px; padding-bottom: 2px; font-size: var(--fs-s); }
 body.short-land .topbar .topmenu .pill { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .holeadd button { min-height: 44px; }
 /* r7 U4: a phone on its side keeps the cutting header on one row: the account is in the menu, so its pill steps aside here */
@@ -600,7 +600,7 @@ body.short-land[data-screen="cut"] #layoutCard .sheetrow, body.short-land[data-s
 #connectLock .locknote { color: var(--text); font-weight: 600; }
 /* r7 U6: the banner's Unlock is disabled while the E-stop is latched, and says why beside it */
 .unlockwhy { display: none; }
-body.estop-latched .unlockwhy { display: block; flex: 0 1 220px; font-size: 13px; font-weight: 600; line-height: 1.25; }
+body.estop-latched .unlockwhy { display: block; flex: 0 1 220px; font-size: var(--fs-s); font-weight: 600; line-height: 1.25; }
 /* the E-stop reset is a press-and-hold: show it while it is being held */
 #btnStop.holding { filter: brightness(1.25); }
 /* Round 5 (safety): while a machine is connected, nothing covers STOP on the cutting screen. The header that holds it is lifted above
@@ -610,8 +610,8 @@ body.machine-connected[data-screen="cut"] .numpad,
 body.machine-connected[data-screen="cut"] .shapelib { top: var(--topbar-h, 56px) !important; }
 /* ...and with it showing, the "Practice table" pill gives way (ellipsis) instead of running under it */
 body.short-land[data-screen="cut"] #topMenu #connPill { flex: 0 1 auto; min-width: 0; }
-.dimops button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; font-size: 20px; font-weight: 700; }
-.dimops button.go { flex: 1.6 1 0; font-size: 16px; }
+.dimops button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; font-size: var(--fs-l); font-weight: 700; }
+.dimops button.go { flex: 1.6 1 0; font-size: var(--fs-m); }
 .warnline { color: #8a5a00; margin-top: 2px; }
 body.short-land .dimedit label { margin-bottom: 2px; }
 .mtdlg.kind-letters .mt-plate { display: none; }
@@ -625,8 +625,8 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 /* ===== B5 35-37: live torch/arc panel, job origin + saved start points, cut-test coupon ===== */
 .livepanel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0 0 4px; }
 .livepanel .lp { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 4px 8px; min-width: 0; }
-.livepanel .lp span { display: block; font-size: 12px; color: var(--muted); }
-.livepanel .lp b { display: block; font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+.livepanel .lp span { display: block; font-size: var(--fs-xs); color: var(--muted); }
+.livepanel .lp b { display: block; font-size: var(--fs-m); line-height: 1.2; overflow-wrap: anywhere; }
 .livepanel .lp.nc b { font-weight: 500; font-style: italic; color: var(--muted); }
 .livepanel .lp.ok { border-color: var(--go); background: var(--ok-bg); }
 .livepanel .lp.ok b { color: var(--ok-text); }
@@ -653,7 +653,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 .couponresult .resbtns { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
 .couponresult .resbtns button { flex: 1 1 140px; min-height: 48px; }
 .couponresult .resbtns button.sel { background: var(--accent-weak); border-color: var(--accent); font-weight: 700; }
-.couponresult label { display: flex; flex-direction: column; gap: 2px; flex: 1 1 140px; font-size: 13px; }
+.couponresult label { display: flex; flex-direction: column; gap: 2px; flex: 1 1 140px; font-size: var(--fs-s); }
 .couponresult input { min-height: 44px; }
 @media (max-width: 520px) {
   .livepanel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -661,15 +661,15 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 @media (max-height: 460px) {
   .livepanel .lp {
     padding: 1px 5px; }
-  .livepanel .lp span { font-size: 11px; }
+  .livepanel .lp span { font-size: var(--fs-xs); }
   .livepanel .lp b {
-    font-size: 12.5px;
+    font-size: var(--fs-xs);
     line-height: 1.15; }
   .lpnote { display: none; }
   .livepanel { gap: 4px; margin-bottom: 3px; }
   .lostarc { display: flex; align-items: center; gap: 8px; padding: 4px 8px; margin: 3px 0 5px; }
-  .lostarc p { margin: 0; font-size: 13px; line-height: 1.25; flex: 1 1 auto; }
-  .lostarc button { flex: 0 0 auto; min-height: 44px; max-width: 38%; padding: 4px 8px; font-size: 14px; }
+  .lostarc p { margin: 0; font-size: var(--fs-s); line-height: 1.25; flex: 1 1 auto; }
+  .lostarc button { flex: 0 0 auto; min-height: 44px; max-width: 38%; padding: 4px 8px; font-size: var(--fs-s); }
 }
 /* Hover styles only on hover-capable pointers, so a touch doesn't leave a tab looking selected */
 @media (hover: hover) {
@@ -684,7 +684,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 .cutmore-btn, .runpos, .cutsheet { display: none; }
 @media (max-width: 899px), (orientation: landscape) and (max-height: 540px) {
   body[data-screen="cut"] .cutmore-btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; flex: none;
-    min-width: 64px; min-height: 52px; padding: 4px 10px; font-size: 15px; font-weight: 700; }
+    min-width: 64px; min-height: 52px; padding: 4px 10px; font-size: var(--fs-m); font-weight: 700; }
   .cutmore-btn .ico { width: 22px; height: 22px; }
   .cutmore-btn[aria-expanded="true"] { background: var(--accent-weak); border-color: var(--accent); }
   body[data-screen="cut"] .previewPane { position: relative; }
@@ -692,8 +692,8 @@ body.short-land .dimedit label { margin-bottom: 2px; }
     background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
   .cutsheet-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px;
     padding: 2px 2px 2px 12px; border-bottom: 1px solid var(--line); }
-  .cutsheet-head h2 { margin: 0; font-size: 16px; }
-  #cutSheetClose { min-width: 44px; min-height: 44px; font-size: 18px; }
+  .cutsheet-head h2 { margin: 0; font-size: var(--fs-m); }
+  #cutSheetClose { min-width: 44px; min-height: 44px; font-size: var(--fs-l); }
   .cutsheet-body { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 8px 10px 10px;
     display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
   .cutsheet-body > * { margin: 0; }
@@ -722,10 +722,10 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   #running > #livePanel, #running > #lpNote, #running > #liveSpeedBox, #running > #runHelp { display: none; }
   body[data-screen="cut"] #running .runpos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 6px 0; }
   #running .runpos div { padding: 2px 8px; display: flex; align-items: center; gap: 6px; }
-  #running .runpos span { display: inline; font-size: 13px; }
-  #running .runpos b { font-size: 22px; }
+  #running .runpos span { display: inline; font-size: var(--fs-s); }
+  #running .runpos b { font-size: var(--fs-xl); }
   #running .torchbig { margin: 6px 0; padding: 6px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
-  #running #runInfo { margin: 4px 0 0; font-size: 14px; }
+  #running #runInfo { margin: 4px 0 0; font-size: var(--fs-s); }
   body.running-job .runctl { padding: 6px 0 2px; align-items: stretch; }
   .runctl #btnPause { flex: 1 1 auto; max-width: 160px; min-height: 56px; }
   .runctl .cutmore-btn { min-height: 56px; }
@@ -739,18 +739,18 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.short-land[data-screen="cut"] #running > * { grid-column: 1 / -1; }
   body.short-land[data-screen="cut"] #running > .runpos { grid-column: 1; }
   body.short-land[data-screen="cut"] #running > .torchbig { grid-column: 2; }
-  body.short-land[data-screen="cut"] #running > .runpos b { font-size: 18px; }
+  body.short-land[data-screen="cut"] #running > .runpos b { font-size: var(--fs-l); }
 }
 @media (orientation: landscape) and (max-height: 360px), (max-width: 899px) and (orientation: portrait) and (max-height: 700px) {
   /* small phones: tighter numbers, every line still there */
-  body[data-screen="cut"] #running #runTitle { font-size: 15px; margin: 0; }
+  body[data-screen="cut"] #running #runTitle { font-size: var(--fs-m); margin: 0; }
   body[data-screen="cut"] #running .runnums { margin: 0 0 4px; }
-  body[data-screen="cut"] #running .runnums .bigpct, body[data-screen="cut"] #running .bigleft { font-size: 32px; }
+  body[data-screen="cut"] #running .runnums .bigpct, body[data-screen="cut"] #running .bigleft { font-size: var(--fs-readout); }
   body[data-screen="cut"] #running .progress { height: 10px; }
-  body[data-screen="cut"] #running #runInfo { font-size: 12px; margin: 2px 0 0; }
+  body[data-screen="cut"] #running #runInfo { font-size: var(--fs-xs); margin: 2px 0 0; }
   body[data-screen="cut"] #running .runpos { margin: 4px 0; }
-  body[data-screen="cut"] #running .runpos b { font-size: 18px; }
-  body[data-screen="cut"] #running .torchbig { margin: 4px 0; min-height: 40px; padding: 4px; font-size: 16px; }
+  body[data-screen="cut"] #running .runpos b { font-size: var(--fs-l); }
+  body[data-screen="cut"] #running .torchbig { margin: 4px 0; min-height: 40px; padding: 4px; font-size: var(--fs-m); }
   body.running-job[data-screen="cut"] .runctl { padding-top: 4px; }
   body[data-screen="cut"] .runctl #btnPause, body[data-screen="cut"] .runctl .cutmore-btn { min-height: 52px; }
 }
@@ -767,10 +767,10 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"] #cutView .stepPane button.xl, body[data-screen="cut"] #cutView .stepPane .nav button,
   body[data-screen="cut"] #cutView #btnZero, body[data-screen="cut"] #cutView #materials button, body[data-screen="cut"] #cutView #thicknesses button,
   body[data-screen="cut"] #cutView .laybtns button, body[data-screen="cut"] #cutView .pickrow button {
-    min-height: 52px; padding: 4px 10px; font-size: 16px; }
+    min-height: 52px; padding: 4px 10px; font-size: var(--fs-m); }
   body[data-screen="cut"] #cutView #btnTrace, body[data-screen="cut"] #cutView .pickrow button, body[data-screen="cut"] #cutView #camReset,
   body[data-screen="cut"] #cutView .nestbox button, body[data-screen="cut"] #cutView .woform button, body[data-screen="cut"] #cutView #btnChangeMat,
-  body[data-screen="cut"] #cutView #done button { font-size: 14px; padding: 4px 8px; }
+  body[data-screen="cut"] #cutView #done button { font-size: var(--fs-s); padding: 4px 8px; }
 }
 @media (max-width: 899px) and (orientation: portrait) {
   /* Setup upright: the layout canvas marks the grid "editing", which picked up Make's three-row picture / tools / step grid
@@ -788,12 +788,12 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"] .topbar-main { row-gap: 4px; }
   body[data-screen="cut"] .topbar-main::after { content: ""; flex-basis: 100%; order: 10; height: 0; }
   body[data-screen="cut"] #stateBadge, body[data-screen="cut"] #torchPill { order: 11; }
-  body[data-screen="cut"] #stateBadge:not(.hidden), body[data-screen="cut"] #torchPill:not([hidden]) { font-size: 13px; padding: 0 10px; }
+  body[data-screen="cut"] #stateBadge:not(.hidden), body[data-screen="cut"] #torchPill:not([hidden]) { font-size: var(--fs-s); padding: 0 10px; }
 }
 @media (orientation: landscape) and (max-height: 540px) {
   /* phone on its side: once connected the connection pill keeps a short word next to its dot (colour alone isn't a label) */
   body.short-land[data-screen="cut"] #connPill.on { width: auto; max-width: none; min-width: 44px; padding: 0 10px; gap: 4px; }
-  body.short-land[data-screen="cut"] #connPill.on::after { content: "Connected"; font-size: 13px; }
+  body.short-land[data-screen="cut"] #connPill.on::after { content: "Connected"; font-size: var(--fs-s); }
   body.short-land.demo-on[data-screen="cut"] #connPill.on::after { content: "Practice"; }
   /* (layout.css forces these to inline-block on its side; centre the word as upright) */
   body.short-land[data-screen="cut"] #stateBadge:not(.hidden), body.short-land[data-screen="cut"] #torchPill:not([hidden]) { display: inline-flex !important; }
@@ -814,8 +814,8 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   /* STOP: the mushroom and the word side by side */
   body[data-screen="cut"] #btnStop.estop { flex-direction: row; gap: 8px; width: clamp(208px, 14vw, 260px); min-width: 208px; min-height: 86px; padding: 4px 12px; }
   body[data-screen="cut"] #btnStop.estop .estop-svg { width: 76px; height: 76px; }
-  body[data-screen="cut"] #btnStop.estop .estop-label { font-size: 24px; margin: 0; padding: 6px 12px; border-radius: 8px; }
-  body[data-screen="cut"] #btnStop.pressed .estop-label { font-size: 19px; line-height: 1.05; padding: 4px 8px; white-space: normal; text-align: center; }
+  body[data-screen="cut"] #btnStop.estop .estop-label { font-size: var(--fs-stop-label); margin: 0; padding: 6px 12px; border-radius: 8px; }
+  body[data-screen="cut"] #btnStop.pressed .estop-label { font-size: var(--fs-stop-pressed); line-height: 1.05; padding: 4px 8px; white-space: normal; text-align: center; }
   /* r7 J12: the tab row holds, after a divider, the step bar, the start-point state, the Space hint and Layout (js/cut/cutbar.js) */
   body[data-screen="cut"] .tabs { align-items: stretch; gap: 4px; }
   body[data-screen="cut"] .tabs:has(.tab[data-tab="cut"].sel) .cutbar { display: flex; }
@@ -823,10 +823,10 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .cutbar-steps { flex: 0 1 480px; min-width: 300px; align-self: stretch; display: flex; }
   .cutbar-steps #stepper { flex: 1 1 auto; padding: 0; background: transparent; }
   .cutbar-steps #stepper li { min-height: 32px; padding: 0 6px 2px; white-space: nowrap; }
-  .cutbar-start { flex: none; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; border: 1px solid var(--line); background: var(--well); color: var(--muted); }
+  .cutbar-start { flex: none; padding: 4px 10px; border-radius: 999px; font-size: var(--fs-s); font-weight: 700; white-space: nowrap; border: 1px solid var(--line); background: var(--well); color: var(--muted); }
   .cutbar-start[data-state="set"] { color: var(--ok-text); background: var(--ok-bg); border-color: var(--go); }
   .cutbar-start[data-state="unset"] { color: var(--warn-text); background: var(--warn-bg); border-color: var(--warn); }
-  .cutbar-key { flex: 0 1 auto; min-width: 0; margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cutbar-key { flex: 0 1 auto; min-width: 0; margin-left: auto; font-size: var(--fs-xs); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cutbar-layout { flex: none; min-height: 32px; padding: 2px 12px; }
   body[data-screen="cut"]:not([data-step="3"]):not([data-step="4"]) .cutbar-layout { display: none; }
   body.cut-arrange .cutbar-key { display: none; }
@@ -838,8 +838,8 @@ body.short-land .dimedit label { margin-bottom: 2px; }
     background: var(--well); border: 1px solid var(--line); border-radius: var(--r); }
   .jobcard dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2px 16px; margin: 0; }
   .jobcard dl > div { min-width: 0; display: flex; gap: 8px; align-items: baseline; }
-  .jobcard dt { flex: none; width: 60px; font-size: 12px; font-weight: 700; color: var(--muted); }
-  .jobcard dd { margin: 0; min-width: 0; font-size: 13px; line-height: 1.35; font-weight: 650; color: var(--text);
+  .jobcard dt { flex: none; width: 60px; font-size: var(--fs-xs); font-weight: 700; color: var(--muted); }
+  .jobcard dd { margin: 0; min-width: 0; font-size: var(--fs-s); line-height: 1.35; font-weight: 650; color: var(--text);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .jobcard dl > div:last-child { grid-column: 1 / -1; }
 
@@ -854,7 +854,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .arrcover[hidden], .coldivider[hidden] { display: none; }
   .arrcover .row { gap: 8px; flex-wrap: nowrap; }
   .arrcover .row button { white-space: nowrap; }
-  .arrcover .arrname { font-size: 16px; white-space: nowrap; }
+  .arrcover .arrname { font-size: var(--fs-m); white-space: nowrap; }
   .arrcover.dragging { opacity: .5; }
   .arrcover.dropon { background: color-mix(in srgb, var(--accent) 16%, var(--card)); }
   /* Setup:   cut check   |                 | start point: connect, home, X / Y / Z, jog, Start here
@@ -870,7 +870,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > * { min-width: 0; margin: 0; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .setupcard { min-height: 0; overflow: auto; overscroll-behavior: contain; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 { grid-column: var(--s3-side, 1); grid-row: 1; max-height: 22dvh; overflow: auto; padding: 8px 12px; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 .cchead { font-size: 15px; margin-bottom: 4px; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 .cchead { font-size: var(--fs-m); margin-bottom: 4px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3:empty { display: none; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #layoutCard { grid-column: var(--s3-side, 1); grid-row: 2; max-height: 26dvh; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard { grid-column: var(--s3-side, 1); grid-row: 3 / 5; }
@@ -879,14 +879,14 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav { grid-column: var(--s3-main, 3); grid-row: 4; padding: 0; position: static;
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnStart { grid-column: 1 / -1; grid-row: 1; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy { grid-column: 1 / -1; margin: 0; font-size: 13px; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav button:not(#btnStart) { min-height: 44px; font-size: 15px; white-space: nowrap; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy { grid-column: 1 / -1; margin: 0; font-size: var(--fs-s); }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav button:not(#btnStart) { min-height: 44px; font-size: var(--fs-m); white-space: nowrap; }
   /* the layout card: compact fields and buttons */
   body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label { flex-direction: column; align-items: stretch; gap: 2px; font-size: 13px; white-space: nowrap; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label { flex-direction: column; align-items: stretch; gap: 2px; font-size: var(--fs-s); white-space: nowrap; }
   body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow .unit { display: none; }   /* sizes are in mm; the bed's corner label says so */
-  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow input { flex: 1 1 auto; width: 100%; min-width: 0; min-height: 34px; padding: 4px 6px; font-size: 14px; }
-  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns button { flex: 1 1 auto; min-height: 40px; padding: 4px 8px; font-size: 14px; white-space: nowrap; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow input { flex: 1 1 auto; width: 100%; min-width: 0; min-height: 34px; padding: 4px 6px; font-size: var(--fs-s); }
+  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns button { flex: 1 1 auto; min-height: 40px; padding: 4px 8px; font-size: var(--fs-s); white-space: nowrap; }
   /* the start-point card: compact. Its controls scroll inside it and Start here sits in its own row at the bottom, so it is always in
      view and never covers Link a machine or Go to start point (r7 U3) */
   body[data-screen="cut"][data-step="3"] #zeroCard[open] { display: flex; flex-direction: column; overflow: hidden; }
@@ -897,29 +897,29 @@ body.short-land .dimedit label { margin-bottom: 2px; }
     padding-bottom: 14px; mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); }   /* soft edge where more is below */
   body[data-screen="cut"][data-step="3"] .zerobody > :not(.zeroscroll), body[data-screen="cut"][data-step="3"] .zeroscroll > * { margin: 0; flex: none; }
   body[data-screen="cut"][data-step="3"] .zerobody .connectcard { padding: 8px 10px; }
-  body[data-screen="cut"][data-step="3"] .zerobody .connectcard .xl { min-height: 44px; font-size: 15px; }
+  body[data-screen="cut"][data-step="3"] .zerobody .connectcard .xl { min-height: 44px; font-size: var(--fs-m); }
   body[data-screen="cut"][data-step="3"] #connectLock { margin-top: 8px; flex-wrap: nowrap; }
-  body[data-screen="cut"][data-step="3"] #connectLock .locknote { flex: 1 1 auto; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #connectLock .locknote { flex: 1 1 auto; font-size: var(--fs-s); }
   body[data-screen="cut"][data-step="3"] #connectLock .xl { flex: none; }
   /* r7 J4: with a keyboard, the arrows move the torch; say so once connected */
-  body.machine-connected[data-screen="cut"] #zeroCard .keyhint { display: block; font-size: 12px; }
+  body.machine-connected[data-screen="cut"] #zeroCard .keyhint { display: block; font-size: var(--fs-xs); }
   body:not(.machine-connected)[data-screen="cut"] #zeroCard .keyhint { display: none; }
   body[data-screen="cut"][data-step="3"] .homerow { gap: 6px; flex-wrap: nowrap; }
-  body[data-screen="cut"][data-step="3"] .homerow button { min-height: 38px; padding: 4px 8px; font-size: 13px; white-space: nowrap; }
+  body[data-screen="cut"][data-step="3"] .homerow button { min-height: 38px; padding: 4px 8px; font-size: var(--fs-s); white-space: nowrap; }
   /* a clean cut check is one line: the head and the tick side by side */
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3:has(> p.ok) { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
   body[data-screen="cut"][data-step="3"] #cutCheck3 .cchead { margin: 0; }
   body[data-screen="cut"][data-step="3"] #cutCheck3 p.ok { margin: 0; }
   body[data-screen="cut"][data-step="3"] #cutCheck3:has(> p.ok) .cchead span, body[data-screen="cut"][data-step="3"] #cutCheck3 .okmore { display: none; }
   body[data-screen="cut"][data-step="3"] .jogwrap .pos div { padding: 4px 10px; }
-  body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: 22px; }
-  body[data-screen="cut"][data-step="3"] .jog .j { min-height: 44px; font-size: 18px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: var(--fs-xl); }
+  body[data-screen="cut"][data-step="3"] .jog .j { min-height: 44px; font-size: var(--fs-l); }
   /* the checklist fits a mouse: 24px boxes, slim rows */
   body[data-screen="cut"][data-step="3"] #checkCard > summary { padding-top: 0; }
   body[data-screen="cut"][data-step="3"] .checkmat { flex-wrap: nowrap; justify-content: space-between; white-space: nowrap; }
-  body[data-screen="cut"][data-step="3"] .checkmat button { min-height: 32px; font-size: 13px; padding: 2px 8px; }
+  body[data-screen="cut"][data-step="3"] .checkmat button { min-height: 32px; font-size: var(--fs-s); padding: 2px 8px; }
   body[data-screen="cut"][data-step="3"] .checklist { gap: 4px; }
-  body[data-screen="cut"][data-step="3"] .checklist label { min-height: 36px; padding: 4px 8px; gap: 10px; font-size: 15px; }
+  body[data-screen="cut"][data-step="3"] .checklist label { min-height: 36px; padding: 4px 8px; gap: 10px; font-size: var(--fs-m); }
   body[data-screen="cut"][data-step="3"] .checklist input { width: 24px; height: 24px; min-width: 24px; min-height: 24px; }
 
   /* Cut: the picture | the run panel */
@@ -935,7 +935,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   #running > #runInfo { grid-area: info; margin: 0; }
   body[data-screen="cut"] #running > .runpos { grid-area: pos; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
   #running > .runpos div { display: flex; align-items: baseline; gap: 6px; padding: 4px 8px; }
-  #running > .runpos span { display: inline; font-size: 14px; }
+  #running > .runpos span { display: inline; font-size: var(--fs-s); }
   #running > .runpos b { font-size: clamp(24px, 2vw, 36px); }
   #running > .torchbig { grid-area: torch; margin: 0; }
   #running > #liveSpeedBox { grid-area: speed; margin: 0; }
@@ -949,13 +949,13 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   #running > #lpNote { grid-area: note; margin: 0; }
   #running > #lpNote:empty { display: none; }
   #running > .runctl { grid-area: ctl; position: sticky; bottom: 0; z-index: 2; margin: 0; padding: 4px 0; background: var(--card); }
-  #running > #runHelp { grid-area: help; margin: 0; font-size: 12px; line-height: 1.35; }
+  #running > #runHelp { grid-area: help; margin: 0; font-size: var(--fs-xs); line-height: 1.35; }
 
   /* STOP stays the biggest: no other cutting-screen button is wider than 300px or taller than 56px */
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button,
   body[data-screen="cut"][data-step="4"] #cutView .stepPane button { max-width: 300px; }
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button.xl, body[data-screen="cut"][data-step="4"] #cutView .stepPane button.xl { min-height: 48px; max-height: 56px; }
-  body[data-screen="cut"][data-step="3"] #cutView #btnTrace { min-height: 44px; padding: 4px 10px; font-size: 14px; }
+  body[data-screen="cut"][data-step="3"] #cutView #btnTrace { min-height: 44px; padding: 4px 10px; font-size: var(--fs-s); }
   body[data-screen="cut"][data-step="4"] .runctl #btnPause { flex: 0 1 300px; min-height: 56px; }
 }
 
@@ -1058,9 +1058,9 @@ body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important;
 
 .ampsdl { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 8px 0 0; }
 .ampsdl > div { display: contents; }
-.ampsdl dt { color: var(--muted); font-size: 12px; font-weight: 700; }
+.ampsdl dt { color: var(--muted); font-size: var(--fs-xs); font-weight: 700; }
 .ampsdl dd { margin: 0; font-weight: 650; }
-.ampsdl .est, .ampssrc { color: var(--muted); font-weight: 500; font-size: 12px; }
+.ampsdl .est, .ampssrc { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .ampssrc { margin: 8px 0 0; }
 
 /* tabs: Machine setup tab is gone; keep the Cut tab from stretching */
@@ -1187,7 +1187,7 @@ body[data-screen="cut"][data-step="4"] #showMachWrap.showmach {
   display: flex !important;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1.2;
   padding: 2px 7px;
   min-height: 0;
@@ -1215,7 +1215,7 @@ body.short-land[data-screen="cut"] #connPill { display: none !important; }
   padding: 8px 10px;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--fs-m);
   line-height: 1.35;
   background: #F5C542;
   color: #1a1400;
@@ -1247,7 +1247,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body:not(.short-land)[data-screen="cut"] #btnStop.estop .estop-label {
     background: transparent;
     color: var(--on-stop);
-    font-size: 28px;
+    font-size: var(--fs-stop);
     font-weight: 800;
     letter-spacing: 0.08em;
     margin: 0;
@@ -1267,7 +1267,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   }
   body:not(.short-land)[data-screen="cut"] #btnStop.pressed .estop-label {
     background: transparent;
-    font-size: 28px;
+    font-size: var(--fs-stop);
     padding: 0;
   }
 
@@ -1292,7 +1292,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body:not(.short-land)[data-screen="make"].stop-needed #btnStop.estop .estop-label {
     background: transparent;
     color: var(--on-stop);
-    font-size: 22px;
+    font-size: var(--fs-stop-make);
     font-weight: 800;
     letter-spacing: 0.08em;
     margin: 0;
@@ -1377,7 +1377,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnStart { grid-column: 2; grid-row: 1; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnExport3 { grid-column: 1; grid-row: 1; }
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy { grid-column: 1 / -1; margin: 0; font-size: 13px; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy { grid-column: 1 / -1; margin: 0; font-size: var(--fs-s); }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav .back { display: none; } /* moved under the left column in a later pass; keep in the DOM */
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnMore3 { display: none; }
 
@@ -1439,7 +1439,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     flex-direction: column;
     align-items: stretch;
     gap: 2px;
-    font-size: 13px;
+    font-size: var(--fs-s);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1468,7 +1468,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     padding: 2px 8px;
     border: 1px solid var(--line);
     border-radius: 999px;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     line-height: 1.2;
     background: var(--card);
   }
@@ -1504,7 +1504,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] #connectCard #connectLock { display: none; }
   body[data-screen="cut"][data-step="3"] #connectCard { padding: 8px 0 0; border: 0; background: none; }
   body[data-screen="cut"][data-step="3"] #connectCard .row { display: flex; gap: 8px; }
-  body[data-screen="cut"][data-step="3"] #connectCard .xl { flex: 1 1 0; min-height: 44px; font-size: 15px; }
+  body[data-screen="cut"][data-step="3"] #connectCard .xl { flex: 1 1 0; min-height: 44px; font-size: var(--fs-m); }
 
   body[data-screen="cut"][data-step="3"] .zerobody {
     display: grid;
@@ -1536,11 +1536,11 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] #btnZero {
     grid-column: 1 / -1;
     min-height: 44px;
-    font-size: 16px;
+    font-size: var(--fs-m);
     width: 100%;
   }
-  body[data-screen="cut"][data-step="3"] #btnGoStart { grid-column: 1; min-height: 36px; font-size: 13px; }
-  body[data-screen="cut"][data-step="3"] #btnTrace { grid-column: 2; min-height: 36px; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #btnGoStart { grid-column: 1; min-height: 36px; font-size: var(--fs-s); }
+  body[data-screen="cut"][data-step="3"] #btnTrace { grid-column: 2; min-height: 36px; font-size: var(--fs-s); }
   body:not(.machine-connected)[data-screen="cut"][data-step="3"] #connectCard { grid-row: 1; }
 
   /* Jog wrap: pad on the left, readout + step size on the right */
@@ -1579,13 +1579,13 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(7) { grid-area: xp; }
   body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(10) { grid-area: ym; }
   body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(12) { grid-area: zm; }
-  body[data-screen="cut"][data-step="3"] .jogwrap .jog .j { min-height: 36px; height: 36px; font-size: 15px; padding: 0; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .j { min-height: 36px; height: 36px; font-size: var(--fs-m); padding: 0; }
   body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home {
     width: 100%;
     min-height: 36px;
     height: 36px;
     padding: 0 4px;
-    font-size: 12px;
+    font-size: var(--fs-xs);
   }
   body[data-screen="cut"][data-step="3"] .jogwrap .pos,
   body.beginner[data-screen="cut"][data-step="3"] .jogwrap .small-pos {
@@ -1601,7 +1601,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     align-items: center;
   }
   body[data-screen="cut"][data-step="3"] .jogwrap .pos div { min-width: 0; padding: 0 4px; overflow: visible; }
-  body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: 14px; line-height: 1.1; white-space: nowrap; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: var(--fs-s); line-height: 1.1; white-space: nowrap; }
   body[data-screen="cut"][data-step="3"] .jogwrap .steps {
     grid-column: 2;
     grid-row: 2;
@@ -1610,12 +1610,12 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     gap: 4px;
     margin: 0;
   }
-  body[data-screen="cut"][data-step="3"] .jogwrap .steps button { flex: 1 1 0; min-height: 32px; padding: 2px 4px; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .steps button { flex: 1 1 0; min-height: 32px; padding: 2px 4px; font-size: var(--fs-s); }
   body[data-screen="cut"][data-step="3"] .jogwrap .keyhint {
     grid-column: 2;
     grid-row: 3;
     margin: 0;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     line-height: 1.3;
   }
 
@@ -1644,7 +1644,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     flex-wrap: nowrap;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: var(--fs-s);
     line-height: 1.2;
     padding: 2px 0;
     white-space: nowrap;
@@ -1676,7 +1676,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     cursor: pointer;
     text-align: left;
   }
-  body[data-screen="cut"][data-step="3"] #checkHint { margin: 2px 0 6px; padding: 0 10px; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #checkHint { margin: 2px 0 6px; padding: 0 10px; font-size: var(--fs-s); }
 
   /* Left: Sheet & parts compact column */
   body[data-screen="cut"][data-step="3"] #layoutCard > summary { padding: 6px 10px 4px; display: flex; align-items: center; gap: 8px; }
@@ -1692,7 +1692,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     gap: 6px;
     margin: 8px 0;
   }
-  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns button { margin: 0; min-height: 38px; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns button { margin: 0; min-height: 38px; font-size: var(--fs-s); }
   body[data-screen="cut"][data-step="3"] #layoutCard .nest-cell { display: flex; align-items: center; gap: 4px; min-width: 0; }
   body[data-screen="cut"][data-step="3"] #layoutCard .nest-cell #btnNestPop { flex: 1 1 auto; }
   body[data-screen="cut"][data-step="3"] #layoutCard .nest-cell .info-i { pointer-events: auto; }
@@ -1704,11 +1704,11 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] #gapInfo { pointer-events: auto; }
   body[data-screen="cut"][data-step="3"] .gridsnap { display: flex; gap: 4px; padding: 0 0 6px; }
   body[data-screen="cut"][data-step="3"] .gridsnap button {
-    flex: 1 1 0; min-height: 32px; padding: 2px 4px; font-size: 12px;
+    flex: 1 1 0; min-height: 32px; padding: 2px 4px; font-size: var(--fs-xs);
     border: 1px solid var(--line); background: var(--card); border-radius: var(--r);
   }
   body[data-screen="cut"][data-step="3"] .gridsnap button.is-on { background: var(--accent-weak); border-color: var(--accent); font-weight: 600; }
-  body[data-screen="cut"][data-step="3"] #layoutCard .checkmat { margin-top: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .checkmat { margin-top: 8px; font-size: var(--fs-s); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   body[data-screen="cut"][data-step="3"] #layoutCard .checkmat::before { content: "Material · "; font-weight: 600; }
   body[data-screen="cut"][data-step="3"] #layoutCard #startCutRow { margin: 6px 0; }
   body[data-screen="cut"][data-step="3"] #layoutCard #startCutNote .info-label { /* short line stays */ }
@@ -1736,7 +1736,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     min-height: 32px;
     height: auto;
     padding: 2px 8px;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     flex: none;
   }
   body[data-screen="cut"][data-step="3"] .previewPane > #layZoom { right: 8px; bottom: 96px; }
@@ -1767,7 +1767,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     border: 0;
     color: var(--text);
     text-decoration: underline;
-    font-size: 13px;
+    font-size: var(--fs-s);
     cursor: pointer;
   }
   body:not(.machine-connected)[data-screen="cut"][data-step="3"] #btnOriginOpts { display: none; }
@@ -1792,7 +1792,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] .previewDock > #fit {
     position: static;
     flex: none;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     padding: 0;
     background: none;
     box-shadow: none;
@@ -1810,7 +1810,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     gap: 6px;
   }
   body[data-screen="cut"][data-step="3"] #playRow.hidden { display: none; }
-  body[data-screen="cut"][data-step="3"] #playRow button { min-height: 32px; padding: 2px 8px; font-size: 12px; }
+  body[data-screen="cut"][data-step="3"] #playRow button { min-height: 32px; padding: 2px 8px; font-size: var(--fs-xs); }
   body[data-screen="cut"][data-step="3"] #jobCard {
     display: flex;
     flex: none;
@@ -1825,8 +1825,8 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] #jobCard dl > div:nth-child(4),
   body[data-screen="cut"][data-step="3"] #jobCard dl > div:nth-child(5) { display: none; }
   body[data-screen="cut"][data-step="3"] #jobCard dt { display: none; }
-  body[data-screen="cut"][data-step="3"] #jobCard dd { margin: 0; font-size: 13px; font-weight: 650; white-space: nowrap; }
-  body[data-screen="cut"][data-step="3"] #kerfNote { flex: none; margin: 0; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #jobCard dd { margin: 0; font-size: var(--fs-s); font-weight: 650; white-space: nowrap; }
+  body[data-screen="cut"][data-step="3"] #kerfNote { flex: none; margin: 0; font-size: var(--fs-s); }
   body[data-screen="cut"][data-step="3"] #dragChip {
     position: absolute;
     top: 8px;
@@ -1838,7 +1838,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     gap: 4px;
     margin: 0;
     padding: 2px 8px;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     background: color-mix(in srgb, var(--well) 92%, transparent);
     border-radius: var(--r);
     box-shadow: 0 1px 2px rgba(0,0,0,.12);
@@ -1857,7 +1857,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     gap: 4px;
     margin: 0;
     padding: 2px 8px;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     background: color-mix(in srgb, var(--well) 92%, transparent);
     border-radius: var(--r);
     box-shadow: 0 1px 2px rgba(0,0,0,.12);
@@ -1876,7 +1876,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     gap: 6px;
     min-width: 0;
   }
-  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-icon { font-size: 18px; line-height: 1; }
+  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-icon { font-size: var(--fs-l); line-height: 1; }
 }
 
 /* Below 1440px wide, Download G-code is an icon so it never overlaps Start cutting. */
@@ -1931,12 +1931,12 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 @media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
   body[data-screen="cut"] .conn-wrap { display: inline-flex; position: relative; align-items: center; gap: 6px; }
   body.app-shell #demoAcctBar { display: none !important; }
-  #demoTag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn); }
+  #demoTag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 700; background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn); }
   #demoTag.hidden { display: none !important; }
   .conn-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 90; min-width: 180px; padding: 8px; background: var(--card, #fff); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent); display: flex; flex-direction: column; gap: 6px; }
   .conn-menu.hidden, .conn-menu[hidden] { display: none !important; }
   .conn-menu #btnDisconnect,
-  .conn-menu #btnLinkMachine { min-height: 40px; width: 100%; font-size: 14px; margin: 0; }
+  .conn-menu #btnLinkMachine { min-height: 40px; width: 100%; font-size: var(--fs-s); margin: 0; }
   /* connPill stays visible; the wrap takes its place in the header flex */
   body[data-screen="cut"] #connWrap #connPill { display: inline-flex; }
 }
@@ -2013,7 +2013,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     position: relative;
   }
   body[data-screen="cut"][data-step="1"] .part-col > h3 { margin: 0; font-size: var(--fs-lg); }
-  body[data-screen="cut"][data-step="1"] #bedStatus { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; white-space: nowrap; }
+  body[data-screen="cut"][data-step="1"] #bedStatus { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-s); white-space: nowrap; }
   body[data-screen="cut"][data-step="1"] #bedStatus.hidden { display: none; }
   body[data-screen="cut"][data-step="1"] #drop.drop {
     margin: 0;
@@ -2034,7 +2034,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   }
   body[data-screen="cut"][data-step="1"] .pickrow .xl {
     min-height: 44px;
-    font-size: 13px;
+    font-size: var(--fs-s);
     margin: 0;
     padding: 6px 8px;
     white-space: nowrap;
@@ -2047,7 +2047,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     border: 0;
     box-shadow: none;
     text-decoration: underline;
-    font-size: 13px;
+    font-size: var(--fs-s);
     font-weight: 650;
     justify-content: flex-start;
   }
@@ -2069,7 +2069,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   }
   body[data-screen="cut"][data-step="1"] #materials.choice button {
     min-height: 36px;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     padding: 4px 6px;
     border-radius: 0;
     white-space: nowrap;
@@ -2077,7 +2077,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="1"] #materials.choice button:first-child { border-radius: var(--r) 0 0 var(--r); }
   body[data-screen="cut"][data-step="1"] #materials.choice button:last-child { border-radius: 0 var(--r) var(--r) 0; }
   body[data-screen="cut"][data-step="1"] .mat-col > h3 + * { }
-  body[data-screen="cut"][data-step="1"] .mat-col h3:nth-of-type(2) { margin: 4px 0 0; font-size: 13px; font-weight: 650; }
+  body[data-screen="cut"][data-step="1"] .mat-col h3:nth-of-type(2) { margin: 4px 0 0; font-size: var(--fs-s); font-weight: 650; }
   body[data-screen="cut"][data-step="1"] #thicknesses.choice {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2088,20 +2088,20 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     min-height: 36px;
     height: 36px;
     padding: 0 4px;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     margin: 0;
   }
   body[data-screen="cut"][data-step="1"] #ampsCard.amps {
     margin: 0;
     padding: 6px 8px;
-    font-size: 13px;
+    font-size: var(--fs-s);
     line-height: 1.35;
   }
-  body[data-screen="cut"][data-step="1"] #ampsCard .big { font-size: 18px; }
+  body[data-screen="cut"][data-step="1"] #ampsCard .big { font-size: var(--fs-l); }
   body[data-screen="cut"][data-step="1"] #ampsCard .ampsdl > div:nth-child(n+4),
   body[data-screen="cut"][data-step="1"] #ampsCard .ampsnote { display: none; }
   body[data-screen="cut"][data-step="1"] #ampsCard .ampssrc.has-info {
-    display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: 12px;
+    display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: var(--fs-xs);
   }
   body[data-screen="cut"][data-step="1"] #speedBox {
     display: flex;
@@ -2167,7 +2167,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     gap: 4px;
     margin: 0;
     padding: 2px 8px;
-    font-size: 12px;
+    font-size: var(--fs-xs);
     background: color-mix(in srgb, var(--well) 92%, transparent);
     border-radius: var(--r);
     box-shadow: 0 1px 2px rgba(0,0,0,.12);
@@ -2244,7 +2244,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   body[data-screen="cut"][data-step="1"] #speedBox { margin-top: 4px; }
-  body[data-screen="cut"][data-step="1"] .ampsdl { margin: 2px 0; font-size: 12px; }
+  body[data-screen="cut"][data-step="1"] .ampsdl { margin: 2px 0; font-size: var(--fs-xs); }
   body[data-screen="cut"][data-step="1"] #dryRun { margin: 2px 0 8px; }
   /* Check-cut chip in the torch card should not sit under Start-here options */
   body[data-screen="cut"][data-step="3"] #btnOriginOpts { margin-bottom: 6px; }
@@ -2256,7 +2256,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   body[data-screen="cut"][data-step="1"] .mat-col > h3 { padding-right: 160px; }
   body[data-screen="cut"][data-step="1"] .mat-col #matTipInfo { margin-right: 120px; }
-  body[data-screen="cut"][data-step="1"] .ampsdl { display: grid; margin: 2px 0; font-size: 12px; }
+  body[data-screen="cut"][data-step="1"] .ampsdl { display: grid; margin: 2px 0; font-size: var(--fs-xs); }
   body[data-screen="cut"][data-step="1"] .ampsdl > div:nth-child(n+4) { display: none; }
   body[data-screen="cut"][data-step="1"] #speedBox { margin-bottom: 52px; }
   body[data-screen="cut"][data-step="3"] #btnOriginOpts {
@@ -2437,7 +2437,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop .estop-label,
   body.app-shell:not(.short-land)[data-screen="cut"] #btnStop.pressed .estop-label,
   body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.pressed .estop-label {
-    font-size: 22px;
+    font-size: var(--fs-stop-make);
     margin: 0;
     padding: 4px 8px;
     white-space: nowrap;
@@ -2658,7 +2658,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     border-radius: 999px;
     border: 1px solid var(--line);
     background: var(--card, #fff);
-    font-size: 12px;
+    font-size: var(--fs-xs);
     font-weight: 650;
     box-shadow: 0 1px 2px color-mix(in srgb, #000 12%, transparent);
   }
@@ -2729,7 +2729,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home {
     min-height: 32px;
     height: 32px;
-    font-size: 13px;
+    font-size: var(--fs-s);
   }
   body[data-screen="cut"][data-step="3"] .jogwrap .pos,
   body.beginner[data-screen="cut"][data-step="3"] .jogwrap .small-pos {
@@ -2755,7 +2755,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     align-items: center;
     margin: 0 0 0 4px;
     padding: 0;
-    font-size: 11px;
+    font-size: var(--fs-xs);
   }
   body[data-screen="cut"][data-step="3"] #zeroCard > summary .keyhint .info-label,
   body[data-screen="cut"][data-step="3"] #zeroCard > summary .keyhint .info-body { display: none; }
@@ -2771,7 +2771,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     width: 100%;
     min-height: 36px;
     height: 36px;
-    font-size: 15px;
+    font-size: var(--fs-m);
     margin: 0;
   }
   body[data-screen="cut"][data-step="3"] #beforeCut {
@@ -2799,13 +2799,13 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     border: 1px solid var(--line);
     border-radius: var(--r);
     box-shadow: 0 4px 16px color-mix(in srgb, #000 12%, transparent);
-    font-size: 12px;
+    font-size: var(--fs-xs);
   }
   body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnGoStart { top: 72px; }
   body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnTrace { top: 104px; }
   body:not(.machine-connected)[data-screen="cut"][data-step="3"] #connectCard .xl {
     min-height: 40px;
-    font-size: 14px;
+    font-size: var(--fs-s);
   }
   body[data-screen="cut"][data-step="3"] .jogwrap,
   body.beginner[data-screen="cut"][data-step="3"] .jogwrap {

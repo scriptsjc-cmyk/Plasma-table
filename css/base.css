@@ -6,7 +6,7 @@
 
 * { box-sizing: border-box; }
 button, select, input, textarea { font: inherit; color: inherit; }
-input, select, textarea { font-size: 16px; }
+input, select, textarea { font-size: var(--fs-m); }
 /* 16px stops iPhone Safari zooming the page */
 h1 { font-size: var(--fs-2xl); margin: 0 0 12px; font-weight: 650; letter-spacing: -0.02em; }
 h2 { font-size: var(--fs-xl); margin: 0 0 10px; font-weight: 650; letter-spacing: -0.02em; }
@@ -77,7 +77,7 @@ input[type=checkbox] { width: 44px; height: 44px; min-width: 44px; min-height: 4
 .steps button.sel { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .checklist input { width: 44px; height: 44px; min-width: 44px; min-height: 44px; flex: none; }
 .numpad-keys button.wide { grid-column: span 2; }
-.cadfields input { width: 100%; min-height: var(--tap); font-size: 18px; box-sizing: border-box; }
+.cadfields input { width: 100%; min-height: var(--tap); font-size: var(--fs-l); box-sizing: border-box; }
 .cadfields input[type=checkbox] { width: 44px; min-width: 44px; max-width: 44px; height: 44px; }
 .cadfields label.check { flex-direction: row; align-items: center; gap: 10px; color: var(--text); font-size: var(--fs-md); font-weight: 650; }
 .shapelib-head h2 { margin: 0; font-size: var(--fs-xl); }

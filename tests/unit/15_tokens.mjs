@@ -24,4 +24,12 @@ ck("dark theme go / on-go keep a dark label on the bright green", varOf(dark, "g
 const layout = fs.readFileSync(SITE + "css/layout.css", "utf8") + fs.readFileSync(SITE + "css/screen-cut.css", "utf8");
 ck("alarm and warning banners use the text tokens, not leftover hex", /\.banner\.red[^}]*color:\s*var\(--alarm-text\)/.test(layout) && /\.banner\.amber[^}]*color:\s*var\(--warn-text\)/.test(layout) && !/#7A1A12|#7A3B00/.test(layout));
 
+// r13 section 3: every font size comes from a token (relative em sizes are allowed; only tokens.css holds px values).
+const cssDir = SITE + "css/";
+const others = fs.readdirSync(cssDir).filter((f) => f.endsWith(".css") && f !== "tokens.css");
+const rawFont = [];
+for (const f of others) fs.readFileSync(cssDir + f, "utf8").split("\n").forEach((ln, i) => { if (/font-size:\s*[0-9.]+(px|rem)\b/.test(ln)) rawFont.push(f + ":" + (i + 1)); });
+ck("no px or rem font sizes outside tokens.css (use --fs-xs/s/m/l/xl or a named STOP / readout token)", rawFont.length === 0, rawFont.slice(0, 10).join(", "));
+ck("the type scale is five sizes: xs 12, s 13, m 15, l 18, xl 24", ["xs:12px", "s:13px", "m:15px", "l:18px", "xl:24px"].every((p) => { const [k, v] = p.split(":"); return varOf(light, "fs-" + k) === v; }));
+
 process.exit(t.done() ? 1 : 0);

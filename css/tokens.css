@@ -59,10 +59,20 @@
   --cad-score: #c27c0e;
   --cad-mark: #6a4fc9;
 
-  /* typographic scale: four sizes (xs aliases sm, 2xl aliases xl) and an 8px spacing scale */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --cond: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --fs-xs: 13px; --fs-sm: 13px; --fs-md: 15px; --fs-lg: 18px; --fs-xl: 22px; --fs-2xl: 22px;
+  /* r13 type scale: five text sizes, plus named sizes for the big readouts. Every font-size in the CSS uses one of these.
+     --fs-sm / --fs-md / --fs-lg / --fs-2xl are the older names and point at the same steps. */
+  --fs-xs: 12px; --fs-s: 13px; --fs-m: 15px; --fs-l: 18px; --fs-xl: 24px;
+  --fs-sm: var(--fs-s); --fs-md: var(--fs-m); --fs-lg: var(--fs-l); --fs-2xl: var(--fs-xl);
+  /* STOP has its own sizes so the token pass never changes it: the laptop STOP word, the Make-screen STOP, the cut-screen
+     label beside the icon, the pressed label, and the small badge under the round icon. */
+  --fs-stop: 28px; --fs-stop-make: 22px; --fs-stop-label: 24px; --fs-stop-pressed: 19px;
+  --fs-stop-badge: 12px; --fs-stop-badge-s: 13px; --fs-stop-phone: 20px;
+  --fs-readout: 34px;     /* amps, time left, speed and keypad numbers */
+  --fs-readout-l: 44px;   /* the big time-left / speed readouts */
+  --fs-pct: 56px;         /* the cutting % done */
+  --fs-icon-xl: 72px;     /* the turn-your-phone icon */
   --space: 8px; --space-2: 16px; --space-3: 24px;
   --r: 8px;
   --tap: 44px;

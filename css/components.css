@@ -33,7 +33,7 @@
   border-radius: var(--r); padding: 14px; box-shadow: 0 16px 40px rgba(16, 24, 40, .18);
   overflow: auto; max-height: min(92dvh, 100%); }
 .numpad-label { font-size: var(--fs-sm); color: var(--muted); margin-bottom: 6px; }
-.numpad-value { font-size: 32px; font-weight: 700; min-height: 48px; padding: 6px 10px; background: var(--card);
+.numpad-value { font-size: var(--fs-readout); font-weight: 700; min-height: 48px; padding: 6px 10px; background: var(--card);
   border: 1px solid var(--line); border-radius: var(--r); letter-spacing: .5px; word-break: break-all; }
 .numpad-keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
 .numpad-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -90,9 +90,9 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
 @media (pointer: coarse) {
   .cutlist .mv button { min-height: 44px; min-width: 44px; }
   .cutlist label { min-height: 44px; }
-  .settab, .admtab, .movesel, body.pro-mode .choice.small button { min-height: 44px; font-size: 14px; }
-  .modesw-btn { font-size: 14px; }
-  .qb-group { font-size: 13px; }
+  .settab, .admtab, .movesel, body.pro-mode .choice.small button { min-height: 44px; font-size: var(--fs-s); }
+  .modesw-btn { font-size: var(--fs-s); }
+  .qb-group { font-size: var(--fs-s); }
 }
 
 /* In-app confirm: sits under the header so STOP stays visible and clickable. */
@@ -101,23 +101,23 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
 .safedlg:not(.hidden) { animation: safedlg-in .2s ease; }
 .safedlg-card { background: var(--well); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 16px; width: min(480px, 100%); box-shadow: 0 8px 24px rgba(16, 24, 40, .2); animation: safedlg-card-in .2s ease; }
 .safedlg-card.is-compact { width: min(360px, 100%); padding: 12px 14px; }
-.safedlg-card.is-compact h2 { font-size: 1.05rem; margin-bottom: 6px; }
-.safedlg-card.is-compact p { margin-bottom: 8px; font-size: 14px; }
+.safedlg-card.is-compact h2 { font-size: var(--fs-l); margin-bottom: 6px; }
+.safedlg-card.is-compact p { margin-bottom: 8px; font-size: var(--fs-s); }
 .safedlg-card h2 { margin: 0 0 8px; font-size: var(--fs-lg); }
 .safedlg-card p { margin: 0 0 10px; white-space: pre-wrap; }
-.safedlg-lines { margin: 0 0 12px; padding-left: 1.15em; font-size: 15px; line-height: 1.35; }
+.safedlg-lines { margin: 0 0 12px; padding-left: 1.15em; font-size: var(--fs-m); line-height: 1.35; }
 .safedlg-lines li { margin: 0 0 4px; }
 .safedlg-lines.hidden, .safedlg-card p.hidden { display: none; }
 .safedlg-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .safedlg-actions button { min-height: var(--tap); }
 .safedlg-card.is-compact .safedlg-actions { margin-top: 4px; }
-.safedlg-card.is-compact .safedlg-actions button { min-height: 40px; padding: 6px 12px; font-size: 14px; }
+.safedlg-card.is-compact .safedlg-actions button { min-height: 40px; padding: 6px 12px; font-size: var(--fs-s); }
 .safedlg-ticks { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
 .safedlg-ticks.hidden { display: none; }
 .safedlg-tick { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs); cursor: pointer; }
 .safedlg-tick input { margin-top: 3px; }
 .safedlg-card.is-compact .safedlg-ticks { gap: 4px; margin-bottom: 8px; }
-.safedlg-card.is-compact .safedlg-tick { font-size: 14px; }
+.safedlg-card.is-compact .safedlg-tick { font-size: var(--fs-s); }
 .safedlg-card.is-compact .safedlg-tick input { width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin-top: 2px; flex: none; }
 @keyframes safedlg-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes safedlg-card-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }

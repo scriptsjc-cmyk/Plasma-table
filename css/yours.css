@@ -43,7 +43,7 @@ body.yours-btns-large { --tool-h: 52px; --tool-minw: 72px; --tool-fs: 13px; --to
 .cutgrid.with-qb #quickBar .qb-group {
   display: flex !important; flex: 0 0 auto !important; width: auto !important;
   align-items: center; padding: 0 6px; margin: 0 2px 0 6px;
-  border-left: 1px solid var(--line); font-size: 10px; letter-spacing: 0;
+  border-left: 1px solid var(--line); font-size: var(--fs-xs); letter-spacing: 0;
   color: var(--muted); white-space: nowrap;
 }
 .cutgrid.with-qb #quickBar .qb-group:first-of-type { border-left: 0; margin-left: 0; }
@@ -51,7 +51,7 @@ body.yours-btns-large { --tool-h: 52px; --tool-minw: 72px; --tool-fs: 13px; --to
   flex: 0 0 132px !important; width: 132px !important; margin: 0 !important;
   display: flex; align-items: center;
 }
-.cutgrid.with-qb #quickBar .qb-search input { width: 100%; min-height: var(--tool-h, 36px); font-size: 14px; }
+.cutgrid.with-qb #quickBar .qb-search input { width: 100%; min-height: var(--tool-h, 36px); font-size: var(--fs-s); }
 #quickBar.quickbar button,
 .cutgrid.with-qb #quickBar.quickbar button,
 body.app-shell .cutgrid.with-qb #quickBar button {
@@ -167,14 +167,14 @@ html, body.app-shell { overscroll-behavior-x: none; }
 
 #quickBarWrap .scrollrow-more {
   flex: 0 0 36px; width: 36px; min-height: var(--tap); border: 0; border-left: 1px solid var(--line);
-  background: var(--well); color: var(--text); font-size: 22px; font-weight: 700; cursor: pointer;
+  background: var(--well); color: var(--text); font-size: var(--fs-xl); font-weight: 700; cursor: pointer;
 }
 #quickBarWrap .scrollrow-more[hidden] { display: none; }
 .cutgrid.with-qb #quickBar .qb-search { display: flex; align-items: stretch; align-self: stretch; gap: 4px; width: auto; max-width: 42px; overflow: hidden; }
 .cutgrid.with-qb #quickBar .qb-search input { width: 0; min-width: 0; opacity: 0; pointer-events: none; border: 0; padding: 0; }
 #quickBarWrap.search-open .qb-search, .cutgrid.with-qb #quickBar .qb-search:focus-within { max-width: 180px; }
 #quickBarWrap.search-open .qb-search input, .cutgrid.with-qb #quickBar .qb-search:focus-within input { width: 120px; min-width: 80px; opacity: 1; pointer-events: auto; padding: 4px 8px; border: 1px solid var(--line); }
-.qb-search-btn { min-width: 36px !important; width: 36px; min-height: 100%; height: auto; border: 0; background: transparent; cursor: pointer; font-size: 16px; align-self: stretch; display: flex; align-items: center; justify-content: center; }
+.qb-search-btn { min-width: 36px !important; width: 36px; min-height: 100%; height: auto; border: 0; background: transparent; cursor: pointer; font-size: var(--fs-m); align-self: stretch; display: flex; align-items: center; justify-content: center; }
 
 /* Portrait Pro: pin the toolbar under the picture so the canvas can grow; hide empty inspector gap */
 @media (max-width: 699px) and (orientation: portrait) {
@@ -202,7 +202,7 @@ body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.ph
   flex-wrap: wrap !important;
   white-space: normal;
   padding: 4px 2px !important;
-  font-size: 11px !important;
+  font-size: var(--fs-xs) !important;
 }
 body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #quickBar.quickbar button kbd {
   display: none !important;
@@ -341,7 +341,7 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
     height: auto !important;
     flex-direction: column !important;
     padding: 4px 2px !important;
-    font-size: 11px !important;
+    font-size: var(--fs-xs) !important;
   }
   body.yours-toolbar-left.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .previewPane,
   body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .previewPane {
@@ -473,21 +473,21 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
     padding: 0;
   }
   body.pro-mode[data-screen="make"] #sheetSizeBox h3,
-  body.advanced-mode[data-screen="make"] #sheetSizeBox h3 { font-size: 13px; margin: 0 0 4px; }
+  body.advanced-mode[data-screen="make"] #sheetSizeBox h3 { font-size: var(--fs-s); margin: 0 0 4px; }
   body.pro-mode[data-screen="make"] #srcShape > .insp-size.has-info,
   body.advanced-mode[data-screen="make"] #srcShape > .insp-size.has-info {
     display: flex;
     align-items: center;
     gap: 6px;
     margin: 6px 0 0;
-    font-size: 12px;
+    font-size: var(--fs-xs);
   }
   body.pro-mode[data-screen="make"] #srcShape .shapeform input,
   body.pro-mode[data-screen="make"] #srcShape .shapeform select {
     min-height: 28px;
-    font-size: 13px;
+    font-size: var(--fs-s);
   }
-  body.pro-mode[data-screen="make"] #srcShape .shapeform label { font-size: 12px; gap: 2px; }
+  body.pro-mode[data-screen="make"] #srcShape .shapeform label { font-size: var(--fs-xs); gap: 2px; }
   body.pro-mode[data-screen="make"] #srcShape .shapeform { padding: 4px 8px; margin-top: 0; }
   body.pro-mode[data-screen="make"] #srcShape .shapeform > .selhead { margin: 0 0 4px; }
 }

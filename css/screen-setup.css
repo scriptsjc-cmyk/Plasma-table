@@ -71,7 +71,7 @@ body.laptop-ui #setupView .setup-tabs {
 body.laptop-ui #setupView .setup-tabs [data-setup-tab] {
   min-height: 36px;
   padding: 0 6px;
-  font-size: 13px;
+  font-size: var(--fs-s);
   font-weight: 650;
 }
 body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
@@ -111,13 +111,13 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
     gap: 6px;
   }
   body.laptop-ui #setupView .lamp { padding: 6px 8px; }
-  body.laptop-ui #setupView .lamp span { font-size: 11px; }
+  body.laptop-ui #setupView .lamp span { font-size: var(--fs-xs); }
   body.laptop-ui #setupView #log { max-height: 120px; overflow: hidden; }
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] h1 { font-size: 16px; margin: 0 0 4px; }
-  body.laptop-ui #setupView .wizard { font-size: 13px; gap: 4px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] h1 { font-size: var(--fs-m); margin: 0 0 4px; }
+  body.laptop-ui #setupView .wizard { font-size: var(--fs-s); gap: 4px; }
   body.laptop-ui #setupView .wzbtns button { min-height: 32px; }
   body.laptop-ui #setupBedWrap .jogmount { margin-top: 8px; flex: 0 0 auto; }
   body.laptop-ui #setupView[data-setup-tab="edges"] .jogwrap .j { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
@@ -150,7 +150,7 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.laptop-ui #setupView #safetyHint { margin: 0 0 4px; font-size: 12px; }
+  body.laptop-ui #setupView #safetyHint { margin: 0 0 4px; font-size: var(--fs-xs); }
   body.laptop-ui #setupView .wizard li { margin: 0; }
   body.laptop-ui #setupView .wizard p { margin: 0 0 2px; }
   body.laptop-ui #setupBedWrap .jogmount .jogwrap { transform: scale(0.86); transform-origin: top right; }
@@ -179,10 +179,10 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
 }
 
 @media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] h1 { font-size: 15px; margin-bottom: 2px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] h1 { font-size: var(--fs-m); margin-bottom: 2px; }
   body.laptop-ui #setupView .status2 div { padding: 6px 8px; }
-  body.laptop-ui #setupView #safetyHint { font-size: 11px; margin-bottom: 2px; }
-  body.laptop-ui #setupView .wizard { font-size: 12px; gap: 2px; }
+  body.laptop-ui #setupView #safetyHint { font-size: var(--fs-xs); margin-bottom: 2px; }
+  body.laptop-ui #setupView .wizard { font-size: var(--fs-xs); gap: 2px; }
   body.laptop-ui #setupView .wzbtns button { min-height: 28px; padding: 0 10px; }
 }
 
@@ -255,7 +255,7 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
     background: none;
     border: 0;
   }
-  body.laptop-ui #setupView .status2 span { display: inline; font-size: 13px; }
+  body.laptop-ui #setupView .status2 span { display: inline; font-size: var(--fs-s); }
   body.laptop-ui #setupView .status2 span::after { content: ":"; }
-  body.laptop-ui #setupView .status2 b { font-size: 13px; }
+  body.laptop-ui #setupView .status2 b { font-size: var(--fs-s); }
 }
