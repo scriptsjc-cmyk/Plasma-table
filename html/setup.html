@@ -1,6 +1,13 @@
 <!-- Machine setup. Loaded into the shell at start-up. -->
-<section id="setupView" class="view hidden">
+<section id="setupView" class="view hidden" data-setup-tab="edges">
   <div id="setupCards">
+  <div class="setup-tabs" role="tablist" aria-label="Machine setup">
+    <button type="button" role="tab" data-setup-tab="edges" aria-selected="true" class="on">Edges</button>
+    <button type="button" role="tab" data-setup-tab="motors" aria-selected="false">Motors</button>
+    <button type="button" role="tab" data-setup-tab="torch" aria-selected="false">Torch &amp; sensors</button>
+    <button type="button" role="tab" data-setup-tab="controller" aria-selected="false">Controller</button>
+  </div>
+  <div class="setup-pane" data-setup-pane="edges">
   <div class="card">
     <h1>Usable machine edges (crash protection)</h1>
     <div class="grid2 status2">
@@ -21,7 +28,9 @@
     </ol>
     <div class="jogmount"></div>
   </div>
+  </div>
 
+  <div class="setup-pane" data-setup-pane="motors">
   <div class="card" id="motorDirCard">
     <h2>Motor direction</h2>
     <p class="muted small has-info"><span class="info-label">Each axis is Stock or Reversed.</span><button type="button" class="info-i" data-tip="Each axis is Stock (as shipped) or Reversed. If a + jog moves the head the wrong way, tick Reversed for that axis. Restart the board afterwards — jog and cut stay locked until then, then we’ll do a short test (X right, Y towards you, Z up)." aria-label="More about motor direction"></button><span class="info-body"> If a + jog moves the head the wrong way, tick Reversed for that axis. Restart the board afterwards — jog and cut stay locked until then, then we’ll do a short test (X right, Y towards you, Z up).</span></p>
@@ -41,7 +50,9 @@
       </div>
     </div>
   </div>
+  </div>
 
+  <div class="setup-pane" data-setup-pane="torch">
   <div class="card">
     <h2>Inputs (live)</h2>
     <p class="muted small has-info"><span class="info-label">A light comes on when that input is active.</span><button type="button" class="info-i" data-tip="A light comes on when that input is active. Press each switch by hand to check it&#x27;s wired right." aria-label="More about the input lamps"></button><span class="info-body"> Press each switch by hand to check it's wired right.</span></p>
@@ -72,7 +83,9 @@
     <p class="muted small" id="torchTestCutterNote">Touch-start: no arc in air — this checks the relay and air only.</p>
     <p class="muted small hidden" id="torchTestBtNote">If the Bluetooth link drops while the torch is on, use the hardware E-stop. Reconnecting the app may not be enough.</p>
   </div>
+  </div>
 
+  <div class="setup-pane" data-setup-pane="controller">
   <div class="card admin-only" id="controllerCard">
     <h2>Controller</h2>
     <div class="row">
@@ -87,9 +100,10 @@
     </form>
   </div>
   </div>
+  </div>
   <div id="setupBedWrap">
     <h2>Bed and home</h2>
     <canvas id="setupBed" width="640" height="400" aria-label="Machine bed, home corner and torch position"></canvas>
-    <p class="muted small" id="setupHomeNote"></p>
+    <p class="muted small has-info" id="setupHomeNote"><span class="info-label"></span><button type="button" class="info-i" data-tip="" aria-label="More about homing and $H"></button><span class="info-body"></span></p>
   </div>
 </section>

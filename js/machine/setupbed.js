@@ -5,6 +5,7 @@ import { $, themeColor } from "../core/dom.js";
 import { drawAxisHints, bedViewRotated } from "../cut/bedview.js";
 import { drawGantry, drawMachineBed, markMachine } from "../cut/machinedraw.js";
 import { toView, viewArea } from "../cut/preview.js";
+import { setInfoText } from "../ui/hovertip.js";
 
 function fmt(n) {
   const v = Number(n);
@@ -26,13 +27,50 @@ export function homeNoteText() {
   return `This table has no limit switches, so it cannot find home by itself. Jog the torch to your marked home corner (raised right up) and press “Set this as home (0,0)”. The motors do not move.\n\n$H (Home all) is not used: the FluidNC config has no homing cycles or switch pins, so $H would raise an alarm (“No homing cycles defined”). A single-axis $HX with no switch would search the full travel for a pin that is not there.\n\nCurrent machine position: ${pos}.\n${home}`;
 }
 
+export function homeNoteShort() {
+  const full = homeNoteText();
+  // Visible copy keeps the safety explanation and the live position; $H / homing-cycle
+  // technical detail stays in the “i” tip (and in .info-body for textContent checks).
+  const a = full.indexOf("$H (Home all) is not used:");
+  const b = full.indexOf("Current machine position:");
+  if (a >= 0 && b > a) return (full.slice(0, a).trimEnd() + "\n\n" + full.slice(b)).trim();
+  return full;
+}
+
 export function paintSetupHomeNote() {
   const el = $("setupHomeNote");
   if (!el) return;
-  el.textContent = homeNoteText();
+  const full = homeNoteText();
+  setInfoText(el, homeNoteShort(), full, "More about homing and $H");
+}
+
+const SETUP_TABS = ["edges", "motors", "torch", "controller"];
+export function setSetupTab(name) {
+  const tab = SETUP_TABS.includes(name) ? name : "edges";
+  const view = $("setupView");
+  if (view) view.dataset.setupTab = tab;
+  view && view.querySelectorAll(".setup-tabs [data-setup-tab]").forEach((b) => {
+    const on = b.getAttribute("data-setup-tab") === tab;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+}
+
+export function bindSetupTabs() {
+  const view = $("setupView");
+  if (!view || view.dataset.tabsBound) return;
+  view.dataset.tabsBound = "1";
+  if (!view.dataset.setupTab) view.dataset.setupTab = "edges";
+  view.addEventListener("click", (e) => {
+    const b = e.target.closest(".setup-tabs [data-setup-tab]");
+    if (!b) return;
+    setSetupTab(b.getAttribute("data-setup-tab"));
+  });
+  setSetupTab(view.dataset.setupTab);
 }
 
 export function drawSetupBed() {
+  bindSetupTabs();
   paintSetupHomeNote();
   const cv = $("setupBed");
   if (!cv || !cv.offsetParent) return;

@@ -59,3 +59,58 @@ body.app-shell.laptop-ui #setupBedWrap { overflow: auto; }
 #setupView .card:has(#btnTorchTest) .row { margin: 0 0 6px; gap: 8px; }
 #setupView .card:has(#btnTorchTest) .muted.small { margin: 0 0 4px; }
 #btnTorchTest, #btnTouchTest { min-height: 40px; padding: 6px 12px; }
+
+.setup-tabs { display: none; }
+body.laptop-ui #setupView .setup-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0 0 8px;
+  flex: 0 0 auto;
+}
+body.laptop-ui #setupView .setup-tabs [data-setup-tab] {
+  min-height: 36px;
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 650;
+}
+body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
+  border-color: var(--accent);
+  background: var(--accent-weak, var(--well));
+}
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.app-shell.laptop-ui #setupView:not(.hidden) {
+    height: calc(100dvh - var(--topbar-h, 56px));
+    overflow: hidden;
+  }
+  body.laptop-ui #setupCards {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  body.laptop-ui #setupView[data-setup-tab="edges"] .setup-pane:not([data-setup-pane="edges"]),
+  body.laptop-ui #setupView[data-setup-tab="motors"] .setup-pane:not([data-setup-pane="motors"]),
+  body.laptop-ui #setupView[data-setup-tab="torch"] .setup-pane:not([data-setup-pane="torch"]),
+  body.laptop-ui #setupView[data-setup-tab="controller"] .setup-pane:not([data-setup-pane="controller"]) {
+    display: none;
+  }
+  body.laptop-ui #setupView .setup-pane {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  body.laptop-ui #setupView .setup-pane .card { margin-top: 0; }
+  body.laptop-ui #setupView .setup-pane .card + .card { margin-top: 8px; }
+  body.laptop-ui #setupBedWrap { overflow: hidden; }
+  body.laptop-ui #setupHomeNote { margin: 6px 0 0; }
+  body.laptop-ui #setupView .wizard { gap: 6px; margin-top: 8px; }
+  body.laptop-ui #setupView .lamps.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  body.laptop-ui #setupView .lamp { padding: 6px 8px; }
+  body.laptop-ui #setupView .lamp span { font-size: 11px; }
+  body.laptop-ui #setupView #log { max-height: 120px; overflow: hidden; }
+}
