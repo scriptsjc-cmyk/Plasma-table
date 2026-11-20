@@ -214,6 +214,7 @@ const PRECACHE = [
   "js/ui/nav.js",
   "js/ui/refresh.js",
   "js/ui/scrollrow.js",
+  "js/ui/transition.js",
   "js/ui/viewport.js",
   "js/ui/whyoff.js",
   "js/ui/whytip.js",

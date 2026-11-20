@@ -175,3 +175,19 @@ button.info-i:active:not(:disabled) { transform: none; filter: none; }
     border: 0;
   }
 }
+
+/* r13 section 2: transitions. js/ui/transition.js adds .tx-* for a moment after a screen, step or tab change; popovers and the
+   header menu ease in from CSS alone. Opacity and transform only, so nothing around them moves; 0.15 s or less. Nothing animates
+   while a job runs or is paused (body.running-job / .job-live) or with reduced motion. STOP is never given a .tx-* class. */
+@keyframes txFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes txFwd { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes txBack { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+@keyframes txPop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.running-job):not(.job-live) .tx-fade { animation: txFade .12s var(--ease) backwards; }
+  body:not(.running-job):not(.job-live) .tx-fwd { animation: txFwd var(--motion) var(--ease) backwards; }
+  body:not(.running-job):not(.job-live) .tx-back { animation: txBack var(--motion) var(--ease) backwards; }
+  body:not(.running-job):not(.job-live) .tx-pop,
+  body:not(.running-job):not(.job-live) :is(.head-pop, .conn-menu, .exportpop, .qb-more):not(.hidden),
+  body:not(.running-job):not(.job-live) .topbar.menu-open .topmenu { animation: txPop .12s var(--ease) backwards; transform-origin: top center; }
+}

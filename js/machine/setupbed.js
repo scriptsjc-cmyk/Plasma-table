@@ -7,6 +7,7 @@ import { drawGantry, drawMachineBed, markMachine } from "../cut/machinedraw.js";
 import { toView, viewArea } from "../cut/preview.js";
 import { setInfoText } from "../ui/hovertip.js";
 import { isShellLaptop } from "../ui/laptop.js";
+import { enter } from "../ui/transition.js";
 
 function fmt(n) {
   const v = Number(n);
@@ -49,7 +50,9 @@ const SETUP_TABS = ["edges", "motors", "torch", "controller"];
 export function setSetupTab(name) {
   const tab = SETUP_TABS.includes(name) ? name : "edges";
   const view = $("setupView");
+  const was = view && view.dataset.setupTab;
   if (view) view.dataset.setupTab = tab;
+  if (view && was && was !== tab) enter(view.querySelector(`.setup-pane[data-setup-pane="${tab}"]`), "fade");
   view && view.querySelectorAll(".setup-tabs [data-setup-tab]").forEach((b) => {
     const on = b.getAttribute("data-setup-tab") === tab;
     b.classList.toggle("on", on);
