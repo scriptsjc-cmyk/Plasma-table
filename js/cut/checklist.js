@@ -39,6 +39,7 @@ export function checkItems() {
 export function renderChecklist() {
   const dry = S.prepared && S.prepared.dry_run;
   $("checklist").innerHTML = `<li class="autochk"><label><input type="checkbox" data-chk="zero" disabled> <span>${esc(zeroLineText())}</span></label></li>`
+    + `<li class="checknote">The first pierce will touch off (find the sheet) before the arc starts. You can try this with Touch-off test in Machine setup.</li>`
     + (dry ? `<li class="checknote">Practice run: the torch stays off.</li>` : "")
     + `<li class="onecheck"><label><input type="checkbox" data-chk="1"> <span><b>I've checked:</b>${checkItems().map((t) => `<span class="checkwhat">${esc(t)}</span>`).join("")}</span></label></li>`;
   const cm = $("checkMat");
