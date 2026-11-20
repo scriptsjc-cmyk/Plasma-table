@@ -640,6 +640,8 @@ body.pro-mode:not(.beginner) #cutView:has(#ptInspector) > .cutgrid { grid-column
 body[data-screen="boot"] .topbar, body[data-screen="login"] .topbar { display: none; }
 /* chrome that only belongs on one screen */
 #btnHome, #btnStop, #connPill, #torchPill, #stateBadge, #practiceChip, .tabs, #estopBar, #alarmBar, #lostBar, #homeBar, #stepper, #makeBar { display: none; }
+/* Make a part is for designing: hide STOP unless a machine is on or a job is running/paused (class set in js/ui/header.js). */
+body[data-screen="make"].stop-needed #btnStop { display: flex; }
 body[data-screen="cut"] #connPill { display: inline-block; }
 body[data-screen="cut"] .tabs { display: flex; }
 body[data-screen="cut"] #stepper { display: flex; }

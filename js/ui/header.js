@@ -1,16 +1,21 @@
 // Hide the whole Porta Plazma account bar on Make and Cut. A faint logo in the corner brings it back.
-// On Cut, STOP stays a fixed floating control (same size, top-right). On Make it can hide with the
-// bar unless a machine is connected or a job is running, in which case it floats too.
+// On Cut, STOP stays a fixed floating control (same size, top-right). On Make a part, STOP is hidden
+// unless a machine is connected (real or practice) or a job is running/paused — then it shows, and
+// it floats with the bar hidden just as on Cut.
 import { $ } from "../core/dom.js";
 import { applyChrome, getPrefs, savePrefs } from "../core/prefs.js";
 import { S } from "../core/state.js";
 
 export function headerHidden() { return !!getPrefs().hideHeader; }
 
+export function stopRequired() {
+  return !!(S && (S.connected || (S.job && (S.job.running || S.job.paused))));
+}
+
 function stopMustFloat() {
   const scr = (document.body && document.body.dataset && document.body.dataset.screen) || "";
   if (scr === "cut") return true;
-  if (scr === "make" && S && (S.connected || (S.job && S.job.running))) return true;
+  if (scr === "make" && stopRequired()) return true;
   return false;
 }
 
@@ -23,7 +28,10 @@ export function setHeaderHidden(on) {
 export function syncHeaderButtons() {
   const hidden = headerHidden();
   const show = $("btnShowHeader"), hide = $("btnHideHeader"), stop = $("btnStop");
-  if (document.body) document.body.classList.toggle("header-stop-float", !!(hidden && stopMustFloat()));
+  if (document.body) {
+    document.body.classList.toggle("stop-needed", stopRequired());
+    document.body.classList.toggle("header-stop-float", !!(hidden && stopMustFloat()));
+  }
   if (show) { show.classList.toggle("hidden", !hidden); show.hidden = !hidden; }
   if (hide) { hide.classList.toggle("hidden", hidden); hide.hidden = hidden; }
   // Never allow a style or class to hide or shrink STOP when it must stay up.

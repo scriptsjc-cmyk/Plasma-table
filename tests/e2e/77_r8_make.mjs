@@ -53,6 +53,40 @@ for (const prof of ["d1440", "d1366"]) {
   await ev(page, () => window.plasmaTest.setShapeFs(true));
   t.check(n("item 10: setShapeFs is a no-op — body is never shape-fs"), await ev(page, () => !document.body.classList.contains("shape-fs") && !window.plasmaTest.S.shapeFs));
 
+  const stopState = () => ev(page, () => {
+    const b = document.getElementById("btnStop");
+    if (!b) return { shown: false };
+    const cs = getComputedStyle(b), r = b.getBoundingClientRect();
+    return {
+      screen: document.body.dataset.screen,
+      connected: !!window.plasmaTest.S.connected,
+      job: !!(window.plasmaTest.S.job && (window.plasmaTest.S.job.running || window.plasmaTest.S.job.paused)),
+      shown: cs.display !== "none" && cs.visibility !== "hidden" && !b.hidden && r.width > 2 && r.height > 2,
+    };
+  });
+  const stopOff = await stopState();
+  t.check(n("Make a part hides STOP when no machine is connected and no job is running"), stopOff.screen === "make" && !stopOff.connected && !stopOff.job && !stopOff.shown, JSON.stringify(stopOff));
+
+  await ev(page, () => { window.plasmaTest.showScreen("cut"); const b = document.getElementById("btnDemo"); if (b) b.click(); });
+  await page.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 8000 });
+  await ev(page, () => window.plasmaTest.showScreen("make"));
+  await sleep(200);
+  const stopOn = await stopState();
+  t.check(n("Make a part shows STOP while the practice table is connected"), stopOn.screen === "make" && stopOn.connected && stopOn.shown, JSON.stringify(stopOn));
+  const cutStop = await ev(page, () => {
+    window.plasmaTest.showScreen("cut");
+    const b = document.getElementById("btnStop");
+    const cs = getComputedStyle(b), r = b.getBoundingClientRect();
+    return { screen: document.body.dataset.screen, shown: cs.display !== "none" && !b.hidden && r.width > 2 && r.height > 2 };
+  });
+  t.check(n("STOP stays on Get to cutting while the practice table is connected"), cutStop.screen === "cut" && cutStop.shown, JSON.stringify(cutStop));
+  await ev(page, () => { const b = document.getElementById("btnDisconnect"); if (b) b.click(); });
+  await page.waitForFunction(() => !window.plasmaTest.S.connected, null, { timeout: 8000 });
+  await ev(page, () => window.plasmaTest.showScreen("make"));
+  await sleep(200);
+  const stopAgain = await stopState();
+  t.check(n("Make a part hides STOP again after disconnecting"), stopAgain.screen === "make" && !stopAgain.connected && !stopAgain.shown, JSON.stringify(stopAgain));
+
   // item 12: add, don't replace
   await ev(page, () => { const s = window.plasmaTest.sketch; s.clear(); });
   await ev(page, () => {

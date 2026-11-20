@@ -162,7 +162,7 @@ async function init() {
   initFlow({
     signedIn: () => Acc.isSignedIn(), bypass: testBypass(),
     stop: () => { try { torchTestOff(); } catch (e) { /* ignore */ } if (M && M.grbl) cmd("stop"); },       // soft reset + Test-torch M5
-    jobLive: navBusy, dialogOpen: () => !!document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden), .numpad:not(.hidden)"),
+    jobLive: navBusy, connected: () => !!S.connected, dialogOpen: () => !!document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden), .numpad:not(.hidden)"),
     hardwareEstop: () => !!(S.connected && S.status && S.status.inputs && S.status.inputs.estop),
     toast, refresh, onScreen,
     // the E-stop may only be released when it is safe to: the machine's own E-stop is let go, the torch is off and nothing is moving

@@ -25,9 +25,16 @@ function typingTarget(el) {
   return false;
 }
 const isSpace = (e) => e.key === " " || e.code === "Space";
+// Space is STOP on the cutting screen, and on any screen once a machine is connected or a job is live.
+function spaceStopsHere() {
+  if (screen() === "cut") return true;
+  if (H && H.connected && H.connected()) return true;
+  if (H && H.jobLive && H.jobLive()) return true;
+  return false;
+}
 window.addEventListener("keydown", (e) => {
   if (!H) return;
-  if (!isSpace(e) || screen() !== "cut") return;
+  if (!isSpace(e) || !spaceStopsHere()) return;
   if (!H.jobLive() && (typingTarget(e.target) || typingTarget(document.activeElement))) return;   // typing a space in a box is not an E-stop (unless a job is live)
   e.preventDefault(); e.stopImmediatePropagation();
   const a = document.activeElement;
@@ -35,7 +42,7 @@ window.addEventListener("keydown", (e) => {
   if (!e.repeat) estopPress("space");
 }, true);
 window.addEventListener("keyup", (e) => {
-  if (!H || !isSpace(e) || screen() !== "cut" || typingTarget(e.target)) return;
+  if (!H || !isSpace(e) || !spaceStopsHere() || typingTarget(e.target)) return;
   e.preventDefault();
 }, true);
 
