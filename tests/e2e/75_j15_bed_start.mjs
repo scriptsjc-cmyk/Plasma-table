@@ -2,7 +2,7 @@
 // cut) by exactly that offset. Work zero (the sheet corner) is not moved or sent again. Covers the
 // practice table, the not-connected state, a saved start point, and Go to start point.
 import { T } from "../lib/t.mjs";
-import { startServer, launch, newPage, demoToShape, shot } from "../lib/browser.mjs";
+import { startServer, launch, newPage, demoToShape, ensurePracticeHomed, shot } from "../lib/browser.mjs";
 import { analyze } from "../lib/analyze.mjs";
 
 const t = new T("75_j15_bed_start");
@@ -15,6 +15,7 @@ const ck = (n, ok, info) => t.check(n, ok, info == null ? "" : (typeof info === 
 async function goBed(page, { connect = false } = {}) {
   if (connect) {
     await demoToShape(page, { stay: "cut" });
+    await ensurePracticeHomed(page);
   } else {
     await ev(page, () => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(3); });
     await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
@@ -127,7 +128,9 @@ for (const prof of ["d1366", "d1440"]) {
   await watchSends(page, true);
   await ev(page, () => document.getElementById("btnZero").click()); await sleep(400);
   const afterZero = await snap(page);
-  ck(`${prof} practice: Start here sets the sheet corner, not the part`, afterZero.zeroSet && /Sheet corner set/i.test(afterZero.zs) && /place it/i.test(afterZero.zs), afterZero.zs);
+  const afterMeta = await ev(page, () => ({ referenced: !!(window.plasmaTest.S.safety && window.plasmaTest.S.safety.referenced), lock: (window.plasmaTest.motorDirState && window.plasmaTest.motorDirState().lockWhy) || "" }));
+  ck(`${prof} practice: Start here sets the sheet corner, not the part`, afterZero.zeroSet && afterMeta.referenced && !afterMeta.lock && /Sheet corner set/i.test(afterZero.zs) && /place it/i.test(afterZero.zs) && !/lost its place/i.test(afterZero.zs), { zs: afterZero.zs, ...afterMeta });
+
   await shot(page, `75-j15-practice-${prof}-start`);
 
   const beforeDragSent = (await watchSends(page, false) || []).length;

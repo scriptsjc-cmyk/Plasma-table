@@ -74,6 +74,28 @@ export async function demoToShape(page, { stay = "make" } = {}) {
   await page.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 10000 });
   if (stay === "make") await page.evaluate(() => { const T = window.plasmaTest; T.showScreen("menu"); T.showScreen("make"); T.setShapeFs(false); });
 }
+// Home the practice table so F7 "sheet corner set" copy is valid (home known),
+// and a normal connect is not confused with an unfinished motor-direction test.
+export async function ensurePracticeHomed(page, { timeout = 20000 } = {}) {
+  const already = await page.evaluate(() => !!(window.plasmaTest.S.safety && window.plasmaTest.S.safety.referenced));
+  if (already) return true;
+  await page.evaluate(() => {
+    const T = window.plasmaTest, M = T.getM && T.getM();
+    if (T.S.status && /alarm/i.test(T.S.status.state || "")) {
+      try { if (M && typeof M.command === "function") M.command({ cmd: "unlock" }); } catch (e) { /* ignore */ }
+    }
+    if (M && typeof M.command === "function") M.command({ cmd: "home" });
+    else {
+      const b = document.querySelector(".do-home") || document.getElementById("btnHomeBarSetup");
+      if (b) b.click();
+    }
+  });
+  await page.waitForFunction(() => {
+    const T = window.plasmaTest;
+    return !!(T.S.safety && T.S.safety.referenced) && T.getM().state() === "Idle";
+  }, null, { timeout });
+  return true;
+}
 // click/tap a canvas point given in canvas CSS px
 export async function tapCanvas(page, sx, sy) {
   const bb = await page.locator("#preview").boundingBox();

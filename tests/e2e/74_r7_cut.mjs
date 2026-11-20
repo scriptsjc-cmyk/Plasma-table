@@ -3,7 +3,7 @@
 // 1440x900 (U3, U18), Show me links (U28), the Stopped chip (U7), STOP closes a confirm (U6), link lost (U11), Space in a number box
 // (U27), an h1 and announced banners (U22), practice runs without the homing question (U24); on a phone on its side one header row
 // signed in (U4) and a short Bed & start with sheet size in More (U8); upright, the turn cover leaves Menu and STOP clear (U2, U10).
-import { T } from "../lib/t.mjs"; import { startServer, launch, newPage, demoToShape, PROFILES, shot } from "../lib/browser.mjs";
+import { T } from "../lib/t.mjs"; import { startServer, launch, newPage, demoToShape, ensurePracticeHomed, PROFILES, shot } from "../lib/browser.mjs";
 import { devices } from "playwright";
 
 const t = new T("74_r7_cut"); const srv = await startServer(); const br = await launch();
@@ -41,6 +41,7 @@ async function bedPage(prof, query) {
   await page.evaluate(PAGE);
   await demoToShape(page, { stay: "cut" });
   await page.waitForFunction(() => window.plasmaTest.getM().state() === "Idle", null, { timeout: 10000 }).catch(() => {});
+  await ensurePracticeHomed(page);
   await ev(page, () => { window.plasmaTest.goStep(3); const a = document.getElementById("layAuto"); if (a) a.click(); }); await sleep(500);
   return page;
 }
@@ -98,10 +99,10 @@ for (const prof of ["d1366", "d1440"]) {
   await ev(page, () => { const sk = window.plasmaTest.sketch; for (const it of sk.items) it.x += 40; sk.commit(); }); await sleep(500);
   const m1 = await ev(page, () => window.plasmaTest.Setup.startMarkAt());
   const j1 = await jobSnap();
-  l = await ev(page, () => ({ zero: window.plasmaTest.S.zeroSet, bar: document.getElementById("cutBarStart").textContent, zs: document.getElementById("zeroState").textContent }));
+  l = await ev(page, () => ({ zero: window.plasmaTest.S.zeroSet, referenced: !!(window.plasmaTest.S.safety && window.plasmaTest.S.safety.referenced), bar: document.getElementById("cutBarStart").textContent, zs: document.getElementById("zeroState").textContent, lock: (window.plasmaTest.motorDirState && window.plasmaTest.motorDirState().lockWhy) || "" }));
   t.check(n("J15: 'Cut starts here' moves with the part"), m0 && m1 && Math.abs(m1[0] - m0[0] - 40) < 0.6 && Math.abs(m1[1] - m0[1]) < 0.6, JSON.stringify([m0, m1]));
   t.check(n("J15: the job start (first pierce) follows the part"), j0.jobStart && j1.jobStart && Math.abs(j1.jobStart[0] - j0.jobStart[0] - 40) < 0.6 && Math.abs(j1.jobStart[1] - j0.jobStart[1]) < 0.6, JSON.stringify([j0, j1]));
-  t.check(n("J15: the start point stays set after moving parts, and says so"), l.zero && /set/i.test(l.bar) && /place it/i.test(l.zs), JSON.stringify(l));
+  t.check(n("J15: the start point stays set after moving parts, and says so"), l.zero && l.referenced && !l.lock && /Sheet corner set/i.test(l.bar) && /Sheet corner set/i.test(l.zs) && /place it/i.test(l.zs) && !/lost its place/i.test(l.zs), JSON.stringify(l));
   t.check(n("J15: moving the part does not send a machine zero or move"), JSON.stringify(j0.wco) === JSON.stringify(j1.wco) && JSON.stringify(j0.wpos) === JSON.stringify(j1.wpos), JSON.stringify([j0, j1]));
 
   // J14: Layout mode, move a panel, resize, saved, reset; STOP never moves
@@ -192,6 +193,11 @@ for (const prof of ["d1440", "d1366", "phone844x390"]) {
   t.check("U22: the cutting screen has an h1; banners are alerts, toasts a status", /Cut/.test(l.h1 || "") && l.estop === "alert" && l.alarm === "alert" && l.toast === "status", JSON.stringify(l));
   await ev(page, () => { document.getElementById("btnZero").click(); }); await sleep(300);
   await ev(page, () => { const c = document.querySelector('#checklist input[data-chk="1"]'); c.click(); }); await sleep(200);
+  const startReady = await ev(page, () => {
+    const b = document.getElementById("btnStart");
+    return { disabled: !!(b && (b.disabled || b.getAttribute("aria-disabled") === "true")), why: (b && (b.getAttribute("data-why") || b.getAttribute("aria-describedby") && (document.getElementById(b.getAttribute("aria-describedby")) || {}).textContent)) || "", lock: (window.plasmaTest.motorDirState && window.plasmaTest.motorDirState().lockWhy) || "", referenced: !!(window.plasmaTest.S.safety && window.plasmaTest.S.safety.referenced), zero: !!window.plasmaTest.S.zeroSet };
+  });
+  t.check("U24: Start is not locked by the motor direction test when direction was not changed", !startReady.disabled && !startReady.lock && startReady.referenced && startReady.zero, JSON.stringify(startReady));
   await page.click("#btnStart"); await sleep(400);
   l = await ev(page, () => ({ dlg: !document.getElementById("safeDlg").classList.contains("hidden"), step: window.plasmaTest.S.cur }));
   t.check("U24: a practice run starts without the homing question", !l.dlg && l.step === 4, JSON.stringify(l));
