@@ -2393,3 +2393,56 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     white-space: nowrap;
   }
 }
+
+
+/* r13: one fixed STOP size and place on every laptop screen that shows it.
+   It no longer stretches down the two-row Cut header or grows with viewport width
+   on Machine setup, so the operator's hand always goes to the same spot. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.app-shell:not(.short-land)[data-screen="cut"] .topbar,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] .topbar,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="setup"] .topbar,
+  body.app-shell:not(.short-land)[data-screen="make"].stop-needed .topbar {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    position: relative;
+  }
+  body.app-shell:not(.short-land)[data-screen="cut"] #btnStop.estop,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="setup"] #btnStop.estop,
+  body.app-shell:not(.short-land)[data-screen="make"].stop-needed #btnStop.estop,
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop {
+    box-sizing: border-box;
+    grid-row: 1;
+    grid-column: 2;
+    align-self: start;
+    justify-self: end;
+    flex: none;
+    flex-direction: row;
+    gap: 8px;
+    width: 168px;
+    min-width: 168px;
+    max-width: 168px;
+    height: 88px;
+    min-height: 88px;
+    max-height: 88px;
+    margin: 0;
+    padding: 4px 8px;
+  }
+  body.app-shell:not(.short-land)[data-screen="cut"] #btnStop.estop .estop-svg,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop .estop-svg,
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop .estop-svg {
+    width: 72px;
+    height: 72px;
+  }
+  body.app-shell:not(.short-land)[data-screen="cut"] #btnStop.estop .estop-label,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop .estop-label,
+  body.app-shell:not(.short-land)[data-screen="cut"] #btnStop.pressed .estop-label,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.pressed .estop-label {
+    font-size: 22px;
+    margin: 0;
+    padding: 4px 8px;
+    white-space: nowrap;
+    line-height: 1;
+  }
+}
