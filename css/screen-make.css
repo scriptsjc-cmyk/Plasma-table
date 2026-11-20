@@ -19,10 +19,10 @@
 .shapeform h4 { margin: 14px 0 0; font-size: var(--fs-sm); color: var(--muted); font-weight: 650; }
 .cutcheck:empty { display: none; }
 .cutcheck .cchead span { font-size: var(--fs-sm); color: var(--muted); font-weight: 400; }
-.cutcheck li.error b { background: var(--alarm); color: #fff; }
-.cutcheck li.warn b { background: var(--warn); color: #fff; }
-.cutcheck li.info b { background: var(--accent); color: #fff; }
-.cutcheck li.error { color: #7a1a12; }
+.cutcheck li.error b { background: var(--alarm); color: var(--c-white); }
+.cutcheck li.warn b { background: var(--warn); color: var(--c-white); }
+.cutcheck li.info b { background: var(--accent); color: var(--c-white); }
+.cutcheck li.error { color: var(--c-7a1a12); }
 /* variants — wrap so nothing sits off-screen */
 .varbox { margin: 0 0 12px; }
 .varbox h4 { margin: 0 0 8px; font-size: var(--fs-sm); color: var(--muted); font-weight: 650; }
@@ -65,7 +65,7 @@ body.beginner #proTools { display: none !important; }
 #announceBar.sev-warning { background: var(--warn-bg); border: 1px solid var(--warn); color: var(--warn-text); }
 /* ---- UX2: contrast, sticky chrome, palette, editor, settings ---- */
 .warntext { color: var(--warn-text); font-weight: 650; margin: 8px 0; }
-.pill.torch.on { background: var(--alarm); border-color: var(--alarm); color: #fff; animation: torchpulse 1s ease-in-out infinite; }
+.pill.torch.on { background: var(--alarm); border-color: var(--alarm); color: var(--c-white); animation: torchpulse 1s ease-in-out infinite; }
 @media (max-width: 899px) and (orientation: portrait) {
   /* phone portrait: fixed bottom palette, keep canvas in view */
   body:not(.short-land) .cutgrid.with-qb #quickBar.quickbar {
@@ -209,18 +209,18 @@ body.bg-picked .bgmore { display: none; }
   body.beginner .nav .next, body.beginner #btnStart { min-height: 64px; font-size: var(--fs-l); }
 }
 .fsbar #fsSave { margin-left: 6px; }
-#btnEditDrawing { border-color: var(--accent, #4aa3ff); }
+#btnEditDrawing { border-color: var(--accent, var(--c-4aa3ff)); }
 @media (max-width: 899px) and (orientation: portrait) {
   /* phone portrait, step 3: the picture and the controls both need room, so the long help line goes and the nav scrolls with the content */
   body.beginner[data-step="3"] #ghHelp { display: none; }
   body.beginner[data-step="3"] .guidehead { padding-top: 4px; padding-bottom: 6px; }
 }
 .pftoggle .caret { width: 1em; display: inline-block; }
-.pthumb { width: 56px; height: 44px; color: var(--accent, #2a6cf0); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.pthumb { width: 56px; height: 44px; color: var(--accent, var(--c-2a6cf0)); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .pthumb.none { color: var(--muted); font-size: var(--fs-l); }
 .pthumb.sm { width: 34px; height: 26px; padding: 1px; vertical-align: middle; }
-.errchip { color: var(--danger, #c0392b); font-weight: 650; }
-.warnchip { color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 1px 6px; }
+.errchip { color: var(--danger, var(--c-c0392b)); font-weight: 650; }
+.warnchip { color: var(--c-8a5a00); background: var(--c-fff4d6); border-radius: 6px; padding: 1px 6px; }
 @media (max-width: 560px) {
   .topbar.menu-open .topmenu { display: flex; }
   .topmenu .modesw { display: flex; width: 100%; }
@@ -414,7 +414,7 @@ body.short-land .dimedit .dimops { margin-top: 4px; }
 .mtdlg { z-index: var(--z-popover); }
 .mtdlg .shapelib-card { max-height: calc(100dvh - 24px); overflow: auto; display: flex; flex-direction: column; gap: 8px; }
 .mtdlg textarea { width: 100%; min-height: 64px; resize: vertical; }
-.mtdlg canvas { width: 100%; height: auto; max-height: 34dvh; border: 1px solid var(--line, #cbd5df); border-radius: 10px; background: #fff; }
+.mtdlg canvas { width: 100%; height: auto; max-height: 34dvh; border: 1px solid var(--line, var(--c-cbd5df)); border-radius: 10px; background: var(--c-white); }
 .mtdlg .mt-pro { display: none; }
 .mtdlg.is-pro .mt-pro { display: block; }
 .mtdlg.is-pro .mt-guide, .mtdlg.is-pro .mt-step { display: none; }
@@ -427,7 +427,7 @@ body.short-land .dimedit .dimops { margin-top: 4px; }
   .mt-view { position: sticky; top: 0; }
 }
 .mt-step { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; margin-right: 6px; border-radius: 50%;
-  background: var(--accent); color: #fff; font-size: var(--fs-s); font-weight: 700; flex: none; }
+  background: var(--accent); color: var(--c-white); font-size: var(--fs-s); font-weight: 700; flex: none; }
 .tiles button.mktool i { font-style: normal; font-weight: 700; }
 @media (max-height: 560px) {
   .mtdlg canvas { max-height: 24dvh; }
@@ -896,7 +896,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 .presetbrowser {
   position: fixed; left: 0; right: 0; bottom: 0; top: var(--topbar-h, 56px); z-index: var(--z-dialog-top);
   display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, #000 35%, transparent);
+  background: color-mix(in srgb, var(--c-black) 35%, transparent);
   opacity: 0; pointer-events: none;
   transition: opacity 180ms ease;
 }
@@ -959,7 +959,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 .toolbarcustom {
   position: fixed; inset: 0; z-index: var(--z-bar);
   display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, #000 35%, transparent);
+  background: color-mix(in srgb, var(--c-black) 35%, transparent);
   opacity: 0; pointer-events: none;
   transition: opacity 180ms ease;
 }
@@ -1110,7 +1110,7 @@ body.beginner[data-screen="make"] .guidehead #ghStep { display: none !important;
 body:not(.beginner) #btnSimpleSnap { display: none; }
 #btnSimpleSnap.on, #btnDragPan.on { outline: none; }
 #btnSimpleSnap:focus-visible, #btnDragPan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.hovertip { position: fixed; z-index: var(--z-hovertip); max-width: 280px; padding: 6px 10px; background: #1a1a1a; color: #fff; font-size: var(--fs-s); line-height: 1.35; border-radius: 6px; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.hovertip { position: fixed; z-index: var(--z-hovertip); max-width: 280px; padding: 6px 10px; background: var(--c-1a1a1a); color: var(--c-white); font-size: var(--fs-s); line-height: 1.35; border-radius: 6px; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 .makecheck-pick { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin: 8px 0; }
 .makecheck-field { display: flex; flex-direction: column; gap: 6px; }
 .makecheck-lab { font-weight: 650; }
@@ -1138,7 +1138,7 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
 .fold3d-wrap {
   border: 1px solid var(--line);
   border-radius: var(--r);
-  background: #e8edf2;
+  background: var(--c-e8edf2);
   overflow: hidden;
 }
 .fold3d-wrap { position: relative; }
@@ -1148,7 +1148,7 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
   height: 180px;
   touch-action: none;
   cursor: grab;
-  background: #e8edf2;
+  background: var(--c-e8edf2);
 }
 .fold3d-expand {
   position: absolute;
@@ -1170,7 +1170,7 @@ body:not(.laptop-ui) .fold3d-expand { display: none !important; }
 .fold3d-lb {
   position: fixed; inset: 0; z-index: var(--z-lightbox);
   display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, #000 45%, transparent);
+  background: color-mix(in srgb, var(--c-black) 45%, transparent);
   padding: 16px;
 }
 .fold3d-lb[hidden] { display: none !important; }
@@ -1178,7 +1178,7 @@ body:not(.laptop-ui) .fold3d-expand { display: none !important; }
   position: relative;
   width: min(80vw, 1100px);
   height: min(70vh, 720px);
-  background: #e8edf2;
+  background: var(--c-e8edf2);
   border: 1px solid var(--line-strong);
   border-radius: 14px;
   box-shadow: var(--shadow);
@@ -1186,7 +1186,7 @@ body:not(.laptop-ui) .fold3d-expand { display: none !important; }
 }
 .fold3d-lb-inner canvas.fold3d {
   display: block; width: 100%; height: 100%;
-  touch-action: none; cursor: grab; background: #e8edf2;
+  touch-action: none; cursor: grab; background: var(--c-e8edf2);
 }
 .fold3d-lb-close {
   position: absolute; top: 8px; right: 8px; z-index: 2;
@@ -1218,14 +1218,14 @@ body.phone-ui .fold3d-host:not(:has(details[open])) .fold3d-sum {
   bottom: 4px;
   gap: 6px;
   padding: 2px 6px;
-  background: #e8edf2;
+  background: var(--c-e8edf2);
   border: 1px solid var(--line);
   border-radius: var(--r);
 }
 body.phone-ui .fold3d-box {
   border: 1px solid var(--line);
   border-radius: var(--r);
-  background: #e8edf2;
+  background: var(--c-e8edf2);
 }
 body.phone-ui .fold3d-sum {
   display: flex;
@@ -1273,8 +1273,8 @@ body.laptop-ui .fold3d-wrap canvas.fold3d { height: 300px; }
   overflow-wrap: anywhere;
   line-height: 1.2;
 }
-.cc-error { color: var(--cad-danger, #c42b1c); }
-.cc-warn { color: var(--cad-lock, #c05600); }
+.cc-error { color: var(--cad-danger, var(--c-c42b1c)); }
+.cc-warn { color: var(--cad-lock, var(--c-c05600)); }
 #makeCheckOut li[data-gi]:hover { text-decoration: underline; }
 
 /* C34: drawing export drops below the Make header button, not above it off the screen. */
@@ -1402,12 +1402,12 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   border: 0; background: color-mix(in srgb, var(--card) 85%, transparent);
   border-radius: 999px; font-size: var(--fs-m); line-height: 1;
 }
-.pb-fav.on { color: #c05600; }
+.pb-fav.on { color: var(--c-c05600); }
 
 .shortcut-sheet {
   position: fixed; inset: 0; z-index: var(--z-shortcuts);
   display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, #000 35%, transparent);
+  background: color-mix(in srgb, var(--c-black) 35%, transparent);
   min-width: 0; padding: 16px;
 }
 .shortcut-sheet.hidden { display: none !important; }
@@ -1957,7 +1957,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     min-height: 36px;
     padding: 4px 10px;
     border: 1px solid var(--line);
-    background: var(--card, #fff);
+    background: var(--card, var(--c-white));
     border-radius: var(--r);
     font-weight: 650;
   }
@@ -1971,10 +1971,10 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     display: flex;
     flex-direction: column;
     gap: 6px;
-    background: var(--card, #fff);
+    background: var(--card, var(--c-white));
     border: 1px solid var(--line);
     border-radius: var(--r);
-    box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent);
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--c-black) 18%, transparent);
   }
   .head-pop.hidden, .head-pop[hidden] { display: none; }
   .head-pop button, .head-pop label {
@@ -2013,8 +2013,8 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 1px 2px color-mix(in srgb, #000 25%, transparent);
+    background: var(--c-white);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--c-black) 25%, transparent);
     transition: transform 0.15s ease;
   }
   #makeSnapPop #skGuides:checked { background: var(--go); }
@@ -2024,7 +2024,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 
   #makeBar .modesw-btn, #editorSwitch .modesw-btn {
     border: 1px solid var(--line);
-    background: var(--card, #fff);
+    background: var(--card, var(--c-white));
     border-radius: var(--r);
     color: var(--text);
     font-weight: 650;
@@ -2063,9 +2063,9 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     height: 100%;
     min-height: 0;
     overflow: hidden;
-    border: 1px solid var(--line, #c8c8c8);
+    border: 1px solid var(--line, var(--c-c8c8c8));
     border-radius: 12px;
-    background: var(--card, #fff);
+    background: var(--card, var(--c-white));
   }
   .presetbrowser .pb-tile {
     grid-column: 1;

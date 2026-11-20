@@ -176,10 +176,10 @@ h3 .muted.small { text-transform: none; font-weight: 400; }
 canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px solid var(--line); background: var(--cad-canvas); }
 /* toast */
 .toast { position: fixed; left: 50%; top: calc(var(--topbar-h, 56px) + 10px); transform: translateX(-50%); background: var(--text);
-  color: #fff; font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: var(--z-toast);
+  color: var(--c-white); font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: var(--z-toast);
   box-shadow: 0 8px 24px rgba(16, 24, 40, .2); max-width: min(92vw, 480px);
   pointer-events: none; /* a toast must never swallow a tap meant for STOP or the quick bar */ }
-.toast.err { background: var(--toast-err, var(--stop)); color: #fff; }
+.toast.err { background: var(--toast-err, var(--stop)); color: var(--c-white); }
 /* sits just under the header (STOP stays clear above it) and above claim/account dialogs (z-index 120) so an error is visible; never over Start, Save or the readouts at the bottom */
 @media (max-width: 899px) {
   /* phones: choices first until a drawing exists */
@@ -481,7 +481,7 @@ body.demo-on #connPill { background: var(--warn-bg); border-color: var(--warn); 
   body.demo-on #connPill { max-width: 40vw; font-size: var(--fs-xs); }
 }
 .whytip { position: fixed; z-index: var(--z-tip); max-width: min(280px, calc(100vw - 16px)); padding: 8px 10px;
-  background: #1f2a37; color: #fff; border-radius: 6px; font-size: var(--fs-s); font-weight: 650; line-height: 1.35;
+  background: var(--c-1f2a37); color: var(--c-white); border-radius: 6px; font-size: var(--fs-s); font-weight: 650; line-height: 1.35;
   box-shadow: 0 8px 24px rgba(16, 24, 40, .28); pointer-events: none; }
 .whytip.hidden { display: none; }
 button.secondary, .fit-demo-btn { background: var(--well); border: 1px solid var(--line-strong); color: var(--text); font-weight: 650; }

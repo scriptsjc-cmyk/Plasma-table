@@ -38,6 +38,7 @@ for (const f of others) fs.readFileSync(cssDir + f, "utf8").split("\n").forEach(
   if (/#[0-9a-fA-F]{3,8}\b(?![-\w])/.test(ln.replace(/\/\*.*?\*\//g, ""))) rawHex.push(f + ":" + (i + 1));
   const z = ln.match(/z-index:\s*(\d+)/); if (z && +z[1] >= 10) rawZ.push(f + ":" + (i + 1));
 });
+ck("no hex colours outside tokens.css", rawHex.length === 0, rawHex.slice(0, 10).join(", "));
 ck("no page-level z-index numbers outside tokens.css (10 and up use a --z- token)", rawZ.length === 0, rawZ.slice(0, 10).join(", "));
 ck("STOP sits above the header in the layer scale", parseInt(varOf(light, "z-stop")) > parseInt(varOf(light, "z-header")));
 

@@ -46,7 +46,7 @@ button.switch:hover:not(:disabled) { background: var(--accent-weak); border-colo
 button.switch .switch-track { width: 40px; height: 24px; border-radius: 999px; background: var(--line-strong);
   position: relative; flex: none; transition: background var(--motion) var(--ease); }
 button.switch .switch-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
-  border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.25);
+  border-radius: 50%; background: var(--c-white); box-shadow: 0 1px 2px rgba(16,24,40,.25);
   transition: transform var(--motion) var(--ease); }
 button.switch[aria-pressed="true"] .switch-track,
 button.switch[aria-checked="true"] .switch-track { background: var(--go); }

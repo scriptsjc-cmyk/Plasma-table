@@ -75,7 +75,7 @@
 #cadDialog .numpad-row { position: relative; z-index: 3; }
 #cadOk, #cadCancel { position: relative; z-index: 4; }
 body.pro-mode .choice { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
-.okchip { color: var(--go, #1e8e3e); font-weight: 650; }
+.okchip { color: var(--go, var(--c-1e8e3e)); font-weight: 650; }
 #acctPill.pill::before {
   content: "";
   width: 8px; height: 8px; border-radius: 50%;
