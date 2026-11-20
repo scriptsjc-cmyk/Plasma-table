@@ -402,8 +402,8 @@ body.app-shell .nav { margin-top: 8px; }
   body.app-shell:not(.short-land) .cutgrid,
   body.app-shell:not(.short-land) .cutgrid.with-qb,
   body.app-shell:not(.short-land) .cutgrid.editing {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1.3fr) minmax(0, 0.9fr) minmax(0, 1fr);
     grid-template-areas: "preview" "tools" "step";
     gap: 6px;
@@ -471,7 +471,7 @@ body.pro-mode kbd { font: 10px/1.2 ui-monospace, Menlo, Consolas, monospace; bor
 @media (max-width: 400px) {
   #connPill { max-width: 5.5em; }
 }
-#torchPill[hidden] { display: none !important; }
+#torchPill[hidden] { display: none; }
 .appfoot { text-align: center; color: var(--muted); padding: 2px 12px 4px; font-size: var(--fs-xs); line-height: 1.3;     /* round 5 look Low 2: readable; when it is hidden (short screens) Settings → About still has the version */ flex: none; }
 body.shape-fs .appfoot { display: none; }
 body.short-land .topbar { padding-top: 2px; padding-bottom: 2px; }
@@ -557,7 +557,7 @@ body.short-land .appfoot { display: none; }
 .topmenu { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; flex-wrap: nowrap; }
 @media (max-width: 560px) {
   .topbar { flex-wrap: nowrap; align-items: center; }
-  .topbar-main { flex-wrap: wrap !important; align-items: center; overflow: visible; gap: 4px 8px; }
+  .topbar-main { flex-wrap: wrap; align-items: center; overflow: visible; gap: 4px 8px; }
   /* wraps, so Ready / TORCH OFF never fall off the edge */
   #btnTopMenu { display: inline-flex; align-items: center; justify-content: center; }
   .topmenu {
@@ -584,7 +584,7 @@ body.short-land .appfoot { display: none; }
   #torchPill, #stateBadge { flex: none; }
   body.app-shell:not(.short-land)[data-step="3"] .cutgrid,
   body.app-shell.beginner:not(.short-land)[data-step="3"] .cutgrid {
-    grid-template-rows: minmax(min(210px, 28dvh), 1.2fr) minmax(min(140px, 20dvh), 1fr) !important;
+    grid-template-rows: minmax(min(210px, 28dvh), 1.2fr) minmax(min(140px, 20dvh), 1fr);
   }
   .appfoot { display: none; }
 }
@@ -611,7 +611,7 @@ body.short-land .appfoot { display: none; }
 }
 #torchPill { max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap; }
 /* TORCH ON / TORCH OFF is never cut short */
-body.short-land[data-screen="cut"] #stateBadge:not(.hidden), body.short-land[data-screen="cut"] #torchPill:not([hidden]) { display: inline-block !important; }
+body.short-land[data-screen="cut"] #stateBadge:not(.hidden), body.short-land[data-screen="cut"] #torchPill:not([hidden]) { display: inline-block; }
 /* the Ready / Paused / Alarm word and TORCH ON / TORCH OFF always stay on a phone on its side (round 5 safety: other chips shrink first) */
 /* round 5 look M5 / item 19: on a phone on its side, once connected the connection pill is just its dot (Ready already says it is
    connected, PRACTICE RUN says nothing will cut), so the name and STOP keep their full width */
@@ -698,7 +698,7 @@ body[data-screen="cut"] #topModeSwitch { display: none !important; }
 /* Portrait cutting step 1: choose the part first; collapse the empty bed until a part is loaded */
 @media (max-width: 699px) and (orientation: portrait) {
   body[data-screen="cut"][data-step="1"] .previewPane { display: none; }
-  body[data-screen="cut"][data-step="1"] .cutgrid { grid-template-areas: "step" !important; grid-template-columns: 1fr !important; grid-template-rows: minmax(0, 1fr) !important; }
+  body[data-screen="cut"][data-step="1"] .cutgrid { grid-template-areas: "step"; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); }
   /* Make (Pro) Save / Download / Dialect stay on-screen */
   body[data-screen="make"] #exportRow, body[data-screen="make"] .exportrow { flex-wrap: wrap; overflow: auto; max-width: 100%; }
 }
@@ -727,11 +727,11 @@ body.header-hidden[data-screen="cut"] .topbar-main {
 }
 body.header-hidden[data-screen="make"] .topbar-main > :not(#btnShowHeader),
 body.header-hidden[data-screen="cut"] .topbar-main > :not(#btnShowHeader) {
-  display: none !important;
+  display: none;
 }
 body.header-hidden[data-screen="make"] #btnShowHeader,
 body.header-hidden[data-screen="cut"] #btnShowHeader {
-  display: inline-flex !important;
+  display: inline-flex;
   position: fixed;
   top: max(8px, env(safe-area-inset-top, 0px));
   left: max(8px, env(safe-area-inset-left, 0px));
@@ -780,13 +780,13 @@ body.header-hidden[data-screen="cut"] #btnShowHeader:focus-visible::after {
    Make: it floats too only when a machine is connected or a job is running (class set in js/ui/header.js). */
 body.header-hidden[data-screen="cut"] #btnStop,
 body.header-hidden.header-stop-float #btnStop {
-  position: fixed !important;
+  position: fixed;
   top: max(4px, env(safe-area-inset-top, 0px));
   right: max(8px, env(safe-area-inset-right, 0px));
   left: auto;
   z-index: var(--z-pin-stop);
   pointer-events: auto;
-  display: flex !important;
+  display: flex;
   margin: 0;
 }
 /* The corner logo and a floating STOP keep their size and place; content leaves a gap so they don't cover tools. */
@@ -802,10 +802,10 @@ body.header-hidden[data-screen="cut"] #demoAcctBar,
 body.header-hidden[data-screen="cut"] .banner {
   margin-right: calc(var(--stop-float-w, 0px) + 16px + env(safe-area-inset-right, 0px));
 }
-#btnShowHeader.hidden, #btnHideHeader.hidden { display: none !important; }
+#btnShowHeader.hidden, #btnHideHeader.hidden { display: none; }
 #btnHideHeader { flex: none; }
 @media (orientation: landscape) and (max-height: 540px) {
-  #btnHideHeader { display: none !important; }
+  #btnHideHeader { display: none; }
 }
 
 /* 44px touch targets that are not in screen-cut.css */
@@ -879,7 +879,7 @@ body[data-tab="setup"] #btnBarSetup { background: var(--accent-weak); }
 .preview-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   margin: 0; padding: 16px; pointer-events: none; text-align: center; font-size: var(--fs-lg); font-weight: 650;
   color: var(--muted); z-index: 2; }
-.preview-hint[hidden], .preview-hint.hidden { display: none !important; }
+.preview-hint[hidden], .preview-hint.hidden { display: none; }
 
 /* Step 1: keep "Set the plasma to" above the sticky Next bar */
 body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
@@ -913,7 +913,7 @@ body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
   .topmenu .iconbtn span { margin-left: 0.35em; }
   /* Cut header: steps stay; the Cut tab and Space hint drop out of the bar. Check cut stays. */
   body[data-screen="cut"] .tabs .tab,
-  body[data-screen="cut"] .cutbar-key { display: none !important; }
+  body[data-screen="cut"] .cutbar-key { display: none; }
 }
 
 /* panels and screens ease in; respect reduced motion via the base.css rule */
