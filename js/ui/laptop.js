@@ -43,6 +43,35 @@ function restoreNode(el, homeKey) {
   if (!el || !h || !h.parent) return;
   safeInsert(h.parent, el, h.next);
 }
+function tuckSelectSnap(onAdv) {
+  const selPop = $("makeSelectPop"), snapPop = $("makeSnapPop");
+  const selWrap = $("makeSelectWrap"), snapWrap = $("makeSnapWrap");
+  const all = $("skAll"), clr = $("skClear"), snap = $("skSnap"), guides = $("skGuides");
+  const tools = document.querySelector(".sktools");
+  const opts = document.querySelector(".skopts");
+  if (selWrap) selWrap.classList.toggle("hidden", !onAdv);
+  if (snapWrap) snapWrap.classList.toggle("hidden", !onAdv);
+  if (onAdv && selPop && snapPop) {
+    if (all) safeInsert(selPop, all, null);
+    if (clr) safeInsert(selPop, clr, null);
+    const snapLab = snap && snap.closest("label");
+    if (snapLab) safeInsert(snapPop, snapLab, null);
+    const guideLab = guides && guides.closest("label");
+    if (guideLab) safeInsert(snapPop, guideLab, null);
+  } else {
+    if (tools && all) safeInsert(tools, all, ($("skFit") && $("skFit").nextElementSibling) || null);
+    if (tools && clr) safeInsert(tools, clr, null);
+    if (opts && snap) {
+      const snapLab = snap.closest("label");
+      if (snapLab) safeInsert(opts, snapLab, opts.firstChild);
+    }
+    if (opts && guides) {
+      const guideLab = guides.closest("label");
+      if (guideLab) safeInsert(opts, guideLab, null);
+    }
+  }
+}
+
 export function placeMakeBar() {
   const bar = $("makeBar");
   const tabs = document.querySelector(".topbar .tabs") || document.querySelector("header .tabs") || document.querySelector(".tabs");
@@ -77,6 +106,8 @@ export function placeMakeBar() {
       restoreNode(tools, skToolsHome);
     }
   }
+  if (onAdv) tuckSelectSnap(true);
+  else tuckSelectSnap(false);
   // The Cut header is a two-row grid: menu + STOP on row 1, .tabs (Part / Setup / Cut / Layout) on row 2.
   // Moving .tabs into .topbar-main puts Layout on the same row as the connection chip and they overlap at 1280.
   if (tabs) {
@@ -85,9 +116,47 @@ export function placeMakeBar() {
   }
 }
 
+function closeHeadPops() {
+  for (const id of ["makeSelectPop", "makeSnapPop"]) {
+    const pop = $(id);
+    if (!pop) continue;
+    pop.classList.add("hidden");
+    pop.hidden = true;
+  }
+  for (const id of ["btnSelectMenu", "btnSnapMenu"]) {
+    const b = $(id);
+    if (b) b.setAttribute("aria-expanded", "false");
+  }
+}
+function bindHeadMenus() {
+  const toggle = (btnId, popId) => {
+    const btn = $(btnId), pop = $(popId);
+    if (!btn || !pop || btn.dataset.bound) return;
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = pop.classList.contains("hidden");
+      closeHeadPops();
+      if (open) {
+        pop.classList.remove("hidden");
+        pop.hidden = false;
+        btn.setAttribute("aria-expanded", "true");
+      }
+    });
+  };
+  toggle("btnSelectMenu", "makeSelectPop");
+  toggle("btnSnapMenu", "makeSnapPop");
+  document.addEventListener("click", (e) => {
+    if (e.target.closest && e.target.closest(".head-dd")) return;
+    closeHeadPops();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeHeadPops(); });
+}
+
 export function bindLaptopUi() {
   syncLaptopUi();
   placeMakeBar();
+  bindHeadMenus();
   try {
     const mq = window.matchMedia(LAPTOP_MQ);
     const on = () => { syncLaptopUi(); placeMakeBar(); };

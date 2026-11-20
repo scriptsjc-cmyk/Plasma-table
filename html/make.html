@@ -3,6 +3,14 @@
 <div id="makeBar" class="makebar">
     <h1>Make a part</h1>
     <div id="qbPinned" class="qb-pinned" role="group" aria-label="Edit the drawing"></div>
+    <div id="makeSelectWrap" class="head-dd hidden">
+      <button type="button" id="btnSelectMenu" class="small" aria-expanded="false" aria-haspopup="true" aria-controls="makeSelectPop">Select</button>
+      <div id="makeSelectPop" class="head-pop hidden" hidden role="menu"></div>
+    </div>
+    <div id="makeSnapWrap" class="head-dd hidden">
+      <button type="button" id="btnSnapMenu" class="small" aria-expanded="false" aria-haspopup="true" aria-controls="makeSnapPop">Snap</button>
+      <div id="makeSnapPop" class="head-pop hidden" hidden role="menu"></div>
+    </div>
     <button type="button" id="btnSimpleSnap" class="switch simplesnap" role="switch" aria-checked="false" aria-pressed="false" title="Snap: shapes click neatly to the grid, edges and centres so they line up exactly"><span class="switch-track" aria-hidden="true"></span><span class="switch-label">Snap</span></button>
     <button type="button" id="btnDragPan" class="switch dragpan" role="switch" aria-checked="false" aria-pressed="false" title="Drag selects: drag a box on empty canvas to pick every part it covers. Click to switch to pan. Space never pans — Space is STOP."><span class="switch-track" aria-hidden="true"></span><span class="switch-label">Drag selects</span></button>
     <button type="button" id="btnMakeImport" class="small makeimp" title="Open a DXF or SVG drawing and add its parts to this sheet">Open DXF / SVG</button>

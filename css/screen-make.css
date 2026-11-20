@@ -1108,7 +1108,8 @@ body.beginner[data-screen="make"] .guidehead #ghStep { display: none !important;
 
 /* r8: Simple-only Snap, box-select/pan toggle, hover tips, check-cut dialog */
 body:not(.beginner) #btnSimpleSnap { display: none; }
-#btnSimpleSnap.on, #btnDragPan.on { outline: 2px solid var(--accent, #2a6); }
+#btnSimpleSnap.on, #btnDragPan.on { outline: none; }
+#btnSimpleSnap:focus-visible, #btnDragPan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hovertip { position: fixed; z-index: 9999; max-width: 280px; padding: 6px 10px; background: #1a1a1a; color: #fff; font-size: 13px; line-height: 1.35; border-radius: 6px; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 .makecheck-pick { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin: 8px 0; }
 .makecheck-field { display: flex; flex-direction: column; gap: 6px; }
@@ -1925,4 +1926,104 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   /* leave room above the pinned Cut this part button */
   body.pro-mode[data-screen="make"] #srcShape,
   body.advanced-mode[data-screen="make"] #srcShape { padding-bottom: 8px; }
+}
+
+
+/* r13: Make header — icon-only logo under 1440, Select / Snap menus, Line-up as a
+   switch, secondary buttons for Advanced tools / Preset parts, no wrap on edit buttons. */
+@media (min-width: 1280px) and (max-width: 1439px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="make"] .brand #machineName { display: none; }
+}
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="make"] .topbar #makeBar #qbPinned {
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+  }
+  body[data-screen="make"] .topbar #makeBar > .sktools,
+  body[data-screen="make"] .topbar #makeBar > .skopts { display: none; }
+  .head-dd { position: relative; flex: none; }
+  .head-dd.hidden { display: none; }
+  .head-dd > button {
+    min-height: 36px;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    background: var(--card, #fff);
+    border-radius: var(--r);
+    font-weight: 650;
+  }
+  .head-pop {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    min-width: 200px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: var(--card, #fff);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent);
+  }
+  .head-pop.hidden, .head-pop[hidden] { display: none; }
+  .head-pop button, .head-pop label {
+    min-height: 36px;
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+  }
+  /* Line-up guides: the same switch look as Drag selects, still the #skGuides checkbox */
+  #makeSnapPop label.check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 4px 6px;
+    cursor: pointer;
+  }
+  #makeSnapPop #skGuides {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 40px;
+    height: 24px;
+    margin: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--line-strong);
+    position: relative;
+    flex: none;
+    cursor: pointer;
+  }
+  #makeSnapPop #skGuides::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px color-mix(in srgb, #000 25%, transparent);
+    transition: transform 0.15s ease;
+  }
+  #makeSnapPop #skGuides:checked { background: var(--go); }
+  #makeSnapPop #skGuides:checked::after { transform: translateX(16px); }
+  #makeSnapPop #skGuides:focus { outline: none; }
+  #makeSnapPop #skGuides:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  #makeBar .modesw-btn, #editorSwitch .modesw-btn {
+    border: 1px solid var(--line);
+    background: var(--card, #fff);
+    border-radius: var(--r);
+    color: var(--text);
+    font-weight: 650;
+    padding: 4px 10px;
+    min-height: 36px;
+  }
+  #makeBar .modesw-btn.sel, #editorSwitch .modesw-btn.sel {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
 }
