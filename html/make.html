@@ -11,7 +11,7 @@
       <button type="button" id="btnMakeExport" class="small makeexp" title="Save the current drawing as DXF or SVG (the design, not the cut path)">Export DXF / SVG</button>
       <div id="makeExportPop" class="exportpop hidden" hidden role="dialog" aria-labelledby="makeExportTitle">
         <p id="makeExportTitle" class="exportpop-title">Save the drawing</p>
-        <p class="muted small">This is the design geometry, not the kerfed toolpath. Arcs stay as arcs.</p>
+        <p class="muted small has-info"><span class="info-label">This is the design geometry.</span><button type="button" class="info-i" data-tip="This is the design geometry, not the kerfed toolpath. Arcs stay as arcs." aria-label="More about the exported drawing"></button><span class="info-body"> not the kerfed toolpath. Arcs stay as arcs.</span></p>
         <div class="row wrap exportpop-actions">
           <button type="button" id="makeExpDxf" class="accent">DXF (R12)</button>
           <button type="button" id="makeExpSvg">SVG</button>
@@ -47,7 +47,7 @@
 </template>
 <template data-slot="make-editor">
 <div id="srcShape" class="hidden">
-          <p class="muted small skhelp beginner-help">Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</p>
+          <p class="muted small skhelp beginner-help has-info"><span class="info-label">Click a shape to pick it.</span><button type="button" class="info-i" data-tip="Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them." aria-label="More about editing shapes"></button><span class="info-body"> drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</span></p>
           <p id="makeSelStatus" class="makeselstatus" aria-live="polite"></p>
           <div class="sktools">
             <button id="skUndo" title="Undo (Ctrl+Z)">↶ Undo</button><button id="skRedo" title="Redo (Ctrl+Y)">↷ Redo</button>
@@ -133,7 +133,7 @@
           <div id="proTools" class="protools hidden"></div>
           <h3 class="addtiles">Add a part</h3>
           <div id="shapeTiles" class="tiles small addtiles"></div>
-          <h3 class="addtiles">Add holes <span class="muted small">(pick a part first and they land in its middle)</span></h3>
+          <h3 class="addtiles">Add holes <span class="muted small has-info"><span class="info-label">(pick a part first)</span><button type="button" class="info-i" data-tip="Pick a part first and the holes land in its middle." aria-label="More about adding holes"></button><span class="info-body"> and they land in its middle</span></span></h3>
           <div id="holeTiles" class="tiles small addtiles"></div>
           <div id="shapeForm" class="shapeform"></div>
           <div id="sheetSizeBox" class="sheetsize">
@@ -178,7 +178,7 @@
             <label>Up<input id="cpY" type="number" min="1" value="1" inputmode="numeric"></label>
             <label>Gap (mm)<input id="cpGap" type="number" min="0" value="10" inputmode="decimal"></label>
           </div>
-          <p class="muted small">All sizes in mm and are the finished part – the cut width is allowed for automatically.</p>
+          <p class="muted small has-info"><span class="info-label">All sizes are in mm, finished size.</span><button type="button" class="info-i" data-tip="All sizes in mm and are the finished part – the cut width is allowed for automatically." aria-label="More about sizes and cut width"></button><span class="info-body"> All sizes in mm and are the finished part – the cut width is allowed for automatically.</span></p>
         </div>
 </template>
 <template data-slot="make-dialogs">

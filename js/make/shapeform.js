@@ -17,6 +17,7 @@ import { clickVerb } from "../ui/laptop.js";
 import { isFoldPart, mountFoldView } from "./fold3d.js";
 import { flangeShapeKeys } from "./flange-tables.js";
 import { tableToHtml, openSheetTable } from "./sheetopts.js";
+import { setInfoText } from "../ui/hovertip.js";
 
 let editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
@@ -71,7 +72,12 @@ export function paintGuide() {
   const gh = $("guideHead"); if (!gh || !mk || !beg) return;
   $("ghStep").textContent = "Make a part";
   $("ghTitle").textContent = has ? "Set the size" : "Pick a template";
-  $("ghHelp").textContent = has ? "Type how big it should be, turn it, add holes. When it looks right, press Cut this part." : clickVerb() + " a template and fill in the numbers, or open Advanced tools to draw freely.";
+  const helpEl = $("ghHelp");
+  if (helpEl) {
+    const help = has ? "Type how big it should be, turn it, add holes. When it looks right, press Cut this part." : clickVerb() + " a template and fill in the numbers, or open Advanced tools to draw freely.";
+    const short = has ? "Type how big it should be." : clickVerb() + " a template and fill in the numbers.";
+    setInfoText(helpEl, short, help, has ? "More about setting the size" : "More about picking a template");
+  }
   gh.style.setProperty("--prog", has ? "100%" : "0%");
 }
 const HOLE_ADDERS = [["slothole", "Slot hole"], ["cornerholes", "Corner holes (4)"], ["holerow", "Row of holes"], ["boltcircle", "Ring of holes"], ["holegrid", "Grid of holes"]];

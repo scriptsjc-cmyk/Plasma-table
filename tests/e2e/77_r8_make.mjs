@@ -244,6 +244,19 @@ for (const prof of ["d1440", "d1366"]) {
   t.check(n("Make canvas still draws the grid"), bedBox.gridText, JSON.stringify(bedBox));
   t.check(n("Fit frames the part on Make, not a 1300 × 800 mm bed"), bedBox.inside && bedBox.frac > 0.15, JSON.stringify(bedBox));
 
+  const makeTips = await ev(page, () => {
+    const vis = (b) => { if (!b) return false; const r = b.getBoundingClientRect(), cs = getComputedStyle(b); return cs.display !== "none" && r.width > 8 && r.height > 8; };
+    const gh = document.querySelector("#ghHelp button.info-i, #guideHead button.info-i");
+    const sk = document.querySelector(".skhelp button.info-i");
+    return {
+      ghVis: vis(gh),
+      ghTip: (gh && gh.getAttribute("data-tip")) || "",
+      ghShort: (((document.getElementById("ghHelp") || {}).querySelector(".info-label")) || {}).textContent || "",
+      skTip: (sk && sk.getAttribute("data-tip")) || "",
+    };
+  });
+  t.check(n("Make a part puts the size guide’s long help behind an information icon"), makeTips.ghVis && /Type how big it should be|template and fill in the numbers/i.test(makeTips.ghShort) && /add holes|draw freely|Cut this part/i.test(makeTips.ghTip) && /drag to move/i.test(makeTips.skTip), JSON.stringify(makeTips));
+
   // Advanced: Snap toggle hidden, Check cut still there, no extra Simple explainer required
   await ev(page, () => { window.plasmaTest.setAppMode("pro", { persist: false, autoFs: false }); window.plasmaTest.setShapeFs(false); });
   await sleep(200);
@@ -258,6 +271,13 @@ for (const prof of ["d1440", "d1366"]) {
   });
   t.check(n("item 16: Advanced does not show the Simple Snap explainer button"), !pro.simpleSnap, JSON.stringify(pro));
   t.check(n("item 13: Check cut stays in Advanced"), pro.check);
+
+  const proTips = await ev(page, () => {
+    const vis = (b) => { if (!b) return false; const r = b.getBoundingClientRect(), cs = getComputedStyle(b); return cs.display !== "none" && r.width > 8 && r.height > 8; };
+    const sizes = [...document.querySelectorAll("button.info-i")].find((b) => /cut width is allowed/i.test(b.getAttribute("data-tip") || ""));
+    return { sizes: vis(sizes), tip: (sizes && sizes.getAttribute("data-tip")) || "" };
+  });
+  t.check(n("Advanced Make puts the finished-size note behind an information icon"), proTips.sizes && /cut width is allowed/i.test(proTips.tip), JSON.stringify(proTips));
   t.check(n("item 10: Advanced is not full-screen"), !pro.fs);
 
   await shot(page, `77-r8-make-pro-${prof}`);
