@@ -136,6 +136,8 @@ export function refresh() {
   }
   $("fit").style.cursor = f.cls === "unknown" ? "pointer" : "";
   $("fit").title = f.cls === "unknown" ? "Open Machine setup" : "";
+  const kn = $("kerfNote");
+  if (kn) kn.classList.toggle("hidden", !S.prepared || screen() !== "cut" || Number(S.cur) < 2);
   if (S.prepared) {
     const st = S.prepared.stats;
     $("jobStats").innerHTML = `<span><b>${esc(S.fileName)}</b></span><span>Size <b>${jobSize(S.prepared)}</b></span>
