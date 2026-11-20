@@ -198,6 +198,52 @@ for (const prof of ["d1440", "d1366"]) {
 
   await shot(page, `77-r8-make-simple-${prof}`);
 
+  // Make a part is for designing: no machine-bed / drawing-sheet outline on the CAD canvas. Keep the grid. Fit still frames the part.
+  const bedBox = await ev(page, () => {
+    const T = window.plasmaTest;
+    const sk = T.sketch;
+    T.showScreen("make");
+    T.setShapeFs(false);
+    sk.clear();
+    sk.add("rect", true);
+    const it = sk.items[0];
+    it.p.w = 80; it.p.h = 40; it.x = 0; it.y = 0;
+    sk.fitView();
+    const sh = T.drawingSheet();
+    const label = `${sh.w} × ${sh.h} mm`;
+    const texts = [];
+    const rects = [];
+    const ctx = sk.cv.getContext("2d");
+    const ft = ctx.fillText.bind(ctx);
+    const sr = ctx.strokeRect.bind(ctx);
+    ctx.fillText = (s, x, y) => { texts.push(String(s)); return ft(s, x, y); };
+    ctx.strokeRect = (x, y, w, h) => { rects.push([x, y, w, h]); return sr(x, y, w, h); };
+    const [sx0, sy0] = sk.toScreen(0, sh.h), [sx1, sy1] = sk.toScreen(sh.w, 0);
+    sk.draw();
+    ctx.fillText = ft;
+    ctx.strokeRect = sr;
+    const near = (a, b) => Math.abs(a - b) < 1.5;
+    const hasBedRect = rects.some(([x, y, w, h]) => near(x, sx0) && near(y, sy0) && near(w, sx1 - sx0) && near(h, sy1 - sy0));
+    const b = sk.boxOf(it);
+    const corners = [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]].map(([x, y]) => sk.toScreen(x, y));
+    const [cw, ch] = sk.size();
+    const xs = corners.map((c) => c[0]), ys = corners.map((c) => c[1]);
+    const pw = Math.max(...xs) - Math.min(...xs), ph = Math.max(...ys) - Math.min(...ys);
+    const frac = Math.min(pw / cw, ph / ch);
+    const inside = Math.min(...xs) > 4 && Math.min(...ys) > 4 && Math.max(...xs) < cw - 4 && Math.max(...ys) < ch - 4;
+    return {
+      screen: document.body.dataset.screen,
+      label,
+      hasBedLabel: texts.some((s) => s.trim() === label),
+      hasBedRect,
+      gridText: texts.some((s) => /grid/i.test(s)),
+      frac, inside, cw, ch, pw, ph,
+    };
+  });
+  t.check(n("Make canvas does not draw the machine bed outline or its size label"), bedBox.screen === "make" && !bedBox.hasBedLabel && !bedBox.hasBedRect, JSON.stringify(bedBox));
+  t.check(n("Make canvas still draws the grid"), bedBox.gridText, JSON.stringify(bedBox));
+  t.check(n("Fit frames the part on Make, not a 1300 × 800 mm bed"), bedBox.inside && bedBox.frac > 0.15, JSON.stringify(bedBox));
+
   // Advanced: Snap toggle hidden, Check cut still there, no extra Simple explainer required
   await ev(page, () => { window.plasmaTest.setAppMode("pro", { persist: false, autoFs: false }); window.plasmaTest.setShapeFs(false); });
   await sleep(200);

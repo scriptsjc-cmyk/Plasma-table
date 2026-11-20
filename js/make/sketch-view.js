@@ -141,7 +141,10 @@ export class ViewMethods {
       ctx.fillStyle = C.label; ctx.font = "11px Barlow, system-ui";
       ctx.textAlign = "right"; ctx.fillText(`${prefs.grid ? "grid " + G + " mm" : "grid off"} · snap ${this.opts.snap ? this.opts.snap + " mm" : "off"}`, w - 8, h - 8); ctx.textAlign = "start";
     }
-    if (!this.layout) {
+    // The machine / drawing-sheet outline belongs on Get to cutting, where parts are placed on the sheet.
+    // Make a part is for designing, so only the grid is drawn there.
+    const onMake = typeof document !== "undefined" && document.body && document.body.dataset.screen === "make";
+    if (!this.layout && !onMake) {
       const sh = drawingSheet();
       const [sx0, sy0] = S(0, sh.h), [sx1, sy1] = S(sh.w, 0);
       ctx.strokeStyle = C.gridMajor; ctx.lineWidth = 1.5; ctx.setLineDash([]);
