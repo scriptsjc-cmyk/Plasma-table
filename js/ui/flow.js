@@ -162,10 +162,12 @@ export function initFlow(host) {
     showScreen("cut");
     import("./nav.js").then((n) => n.showTab("cut"));
   };
-  if ($("menuSetup")) $("menuSetup").onclick = () => {
+  const openMachineSetup = () => {
     showScreen("cut");
     import("./nav.js").then((n) => n.showTab("setup"));
   };
+  if ($("menuSetup")) $("menuSetup").onclick = openMachineSetup;
+  if ($("btnBarSetup")) $("btnBarSetup").onclick = openMachineSetup;
   try { history.replaceState({ s: "boot" }, "", location.href); } catch (e) { /* ignore */ }
   window.addEventListener("popstate", (e) => {
     const cur = screen();

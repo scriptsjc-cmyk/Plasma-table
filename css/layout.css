@@ -846,3 +846,12 @@ body[data-screen="make"] .step[data-step="1"] > .nav {
 /* Sign-in wordmark stays in the box and centred */
 .loginbrand { display: flex; flex-direction: column; align-items: center; }
 .loginbrand .loginmark { object-fit: contain; }
+
+/* Small Machine setup control in the account bar (laptop; in the overflow menu on a phone). */
+#btnBarSetup { gap: 4px; }
+#btnBarSetup .ico { width: 18px; height: 18px; }
+#btnBarSetup span { font-size: 13px; }
+@media (max-width: 899px) {
+  #btnBarSetup span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+}
+body[data-tab="setup"] #btnBarSetup { background: var(--accent-weak); }

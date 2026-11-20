@@ -119,6 +119,7 @@
   <button id="acctPill" class="pill acct" title="Account">Sign in</button>
   <button type="button" id="btnHowto" class="pill iconbtn" title="How to use" aria-label="How to use"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-help"></use></svg></button>
   <button type="button" id="btnSettings" class="pill iconbtn" title="Settings" aria-label="Settings"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><use href="#i-gear"></use></svg></button>
+  <button type="button" id="btnBarSetup" class="pill iconbtn barsetup" title="Machine setup" aria-label="Machine setup"><svg class="ico" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 8h6V4H4v4zm10 12h6v-4h-6v4zM4 20h6v-8H4v8zm10-8h6V4h-6v8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Setup</span></button>
   <button id="connPill" class="pill off" title="Connection">● Not connected</button>
   <span id="practiceChip" class="pill chip practice hidden">Practice run · torch off</span>
   </div>
@@ -361,6 +362,7 @@
   <div class="safedlg-card">
     <h2 id="safeDlgTitle"></h2>
     <p id="safeDlgBody"></p>
+    <ul id="safeDlgLines" class="safedlg-lines hidden"></ul>
     <div id="safeDlgTicks" class="safedlg-ticks hidden"></div>
     <p id="safeDlgNote" class="muted small hidden"></p>
     <div class="row safedlg-actions">
