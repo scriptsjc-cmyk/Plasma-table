@@ -12,7 +12,7 @@ body.app-shell #setupView { overflow: auto; }
 .wizard { margin: 12px 0 0; padding-left: 22px; display: grid; gap: 12px; }
 
 /* Motor direction: laptop Machine setup only. Three compact toggles in one row. */
-body:not(.laptop-ui) #motorDirCard { display: none !important; }
+body:not(.laptop-ui) #motorDirCard { display: none; }
 #motorDirCard .motor-dir-row { display: flex; flex-wrap: wrap; gap: 4px 28px; margin: 8px 0 0; }
 #motorDirCard .motor-dir-row .check { margin-top: 0; min-height: 44px; }
 #motorDirCard #motorDirNote { margin-top: 8px; }
