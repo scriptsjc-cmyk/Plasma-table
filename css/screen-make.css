@@ -2027,3 +2027,41 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     color: var(--on-accent);
   }
 }
+
+
+/* r13: favourite star sits inside the card; category labels stay on one line. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  .presetbrowser .pbcats button {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    justify-content: flex-start;
+  }
+  .presetbrowser .pb-tilewrap {
+    display: block;
+    position: relative;
+    min-height: 0;
+  }
+  .presetbrowser .pb-tile {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 108px;
+    height: 100%;
+    padding: 8px 8px 8px 8px;
+  }
+  .presetbrowser .pb-fav {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 2;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    margin: 0;
+    border: 0;
+    background: color-mix(in srgb, var(--card, #fff) 88%, transparent);
+    border-radius: 999px;
+  }
+}

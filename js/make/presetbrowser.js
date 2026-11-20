@@ -46,7 +46,7 @@ function renderPresetBrowser() {
   const q = (qEl && qEl.value || "").trim();
   const groups = allGroups();
   const cats = [{ id: "favs", name: "Favourites" }, { id: "recent", name: "Recent" }, { id: "all", name: "All" }, ...groups];
-  catsEl.innerHTML = cats.map((c) => `<button type="button" role="tab" aria-selected="${c.id === cat ? "true" : "false"}" data-pbcat="${esc(c.id)}" class="${c.id === cat ? "on" : ""}">${esc(c.name)}</button>`).join("");
+  catsEl.innerHTML = cats.map((c) => `<button type="button" role="tab" aria-selected="${c.id === cat ? "true" : "false"}" data-pbcat="${esc(c.id)}" class="${c.id === cat ? "on" : ""}" title="${esc(c.name)}">${esc(c.name)}</button>`).join("");
   let ids;
   const favs = listFavs(), recent = listRecent();
   if (cat === "favs") ids = favs.slice();
@@ -59,7 +59,7 @@ function renderPresetBrowser() {
   const list = ids.map((id) => presetOrShape(id) || PRESET_SHAPES.find((s) => s.id === id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
   const empty = cat === "favs" ? "Star parts to keep them here." : cat === "recent" ? "Parts you pick will show up here." : `No parts match “${esc(q)}”.`;
-  const per = pageSizeFor(grid, { minW: 168, minH: 148, gap: 12, fallback: 8 });
+  const per = pageSizeFor(grid, { minW: 128, minH: 108, gap: 10, fallback: 8 });
   const sliced = slicePage(list, page, per);
   page = sliced.page;
   grid.innerHTML = sliced.items.length
@@ -72,7 +72,7 @@ function renderPresetBrowser() {
   if (!list.length) { const bar = $("pbPage"); if (bar) bar.hidden = true; }
   // Measure after layout so the first open uses a real page size, not the fallback.
   requestAnimationFrame(() => {
-    const again = pageSizeFor(grid, { minW: 168, minH: 148, gap: 12, fallback: 8 });
+    const again = pageSizeFor(grid, { minW: 128, minH: 108, gap: 10, fallback: 8 });
     if (again !== per) renderPresetBrowser();
   });
 }
@@ -120,6 +120,15 @@ export function bindPresetBrowser() {
   });
   el.addEventListener("click", (e) => { if (e.target === el) closePresetBrowser(); });
   bindPager($("pbPage"), () => page, (n) => { page = n; renderPresetBrowser(); });
+  const grid = $("pbGrid");
+  if (grid && !grid._pbRo && typeof ResizeObserver !== "undefined") {
+    let last = 0;
+    grid._pbRo = new ResizeObserver(() => {
+      const next = pageSizeFor(grid, { minW: 128, minH: 108, gap: 10, fallback: 8 });
+      if (next !== last) { last = next; renderPresetBrowser(); }
+    });
+    grid._pbRo.observe(grid);
+  }
   bindPagerKeys(el, () => el && !el.classList.contains("hidden") && !el.hidden, () => page, (n) => { page = n; renderPresetBrowser(); });
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && el && !el.classList.contains("hidden")) { e.preventDefault(); closePresetBrowser(); }
