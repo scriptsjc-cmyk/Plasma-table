@@ -2125,6 +2125,8 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     gap: 8px;
   }
   body.beginner[data-screen="make"] #shapeForm > .selhead { margin: 0; }
+  /* No shape picked yet: no empty size box. */
+  body.beginner[data-screen="make"] #shapeForm:empty { display: none; }
   body.beginner[data-screen="make"] #srcShape #shapeForm .grid2 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

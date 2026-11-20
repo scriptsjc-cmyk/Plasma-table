@@ -861,6 +861,8 @@ body[data-screen="make"] .step[data-step="1"] > .nav {
 @media (orientation: landscape) {
   /* Disabled "Pick a template to continue" is just noise in landscape — hide it. */
   body[data-screen="make"] #next1:disabled { display: none; }
+  /* ...and its empty bar (border line) with it. */
+  body[data-screen="make"] .step[data-step="1"] > .nav:has(> #next1:disabled) { display: none; }
 }
 
 /* Sign-in wordmark stays in the box and centred */
