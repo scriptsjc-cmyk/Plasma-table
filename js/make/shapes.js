@@ -706,7 +706,7 @@ export function shapeThumb(sh, w = 64, h = 48) {
     if (!pts.length) return "";
     return pts.map((pt, i) => `${i ? "L" : "M"}${(ox + pt[0] * s).toFixed(2)},${(oy - pt[1] * s).toFixed(2)}`).join(" ") + " Z";
   }).join(" ");
-  const flat = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><path d="${d}" fill="currentColor" fill-rule="evenodd"></path></svg>`;
+  const flat = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true"><path d="${d}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" fill-rule="evenodd"></path></svg>`;
   if (isFoldPart(sh)) {
     try {
       const three = foldTileSvg(sh, flat, w, h, p);

@@ -17,14 +17,20 @@ export function paintMakeHeaderTools() {
   if (snap && sketch) {
     const on = !!sketch.opts.snap;
     snap.setAttribute("aria-pressed", on ? "true" : "false");
+    snap.setAttribute("aria-checked", on ? "true" : "false");
     snap.classList.toggle("on", on);
   }
   const pan = $("btnDragPan");
   if (pan) {
     const dragPans = !!getPrefs().emptyDragPan;
-    pan.setAttribute("aria-pressed", dragPans ? "false" : "true");
-    pan.classList.toggle("on", !dragPans);
-    pan.textContent = dragPans ? "Drag pans" : "Drag selects";
+    const selects = !dragPans;
+    pan.setAttribute("aria-pressed", selects ? "true" : "false");
+    pan.setAttribute("aria-checked", selects ? "true" : "false");
+    pan.classList.toggle("on", selects);
+    const lab = pan.querySelector(".switch-label");
+    const text = dragPans ? "Drag pans" : "Drag selects";
+    if (lab) lab.textContent = text;
+    else if (!pan.querySelector(".switch-track")) pan.textContent = text;
     pan.title = dragPans
       ? "Drag pans: dragging empty canvas pans the view. Click to switch to box select. Space never pans — Space is STOP."
       : "Drag selects: drag a box on empty canvas to pick every part it covers. Click to switch to pan. Space never pans — Space is STOP.";

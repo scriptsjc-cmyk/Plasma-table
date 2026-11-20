@@ -3,8 +3,8 @@
 <div id="makeBar" class="makebar">
     <h1>Make a part</h1>
     <div id="qbPinned" class="qb-pinned" role="group" aria-label="Edit the drawing"></div>
-    <button type="button" id="btnSimpleSnap" class="small simplesnap" aria-pressed="false" title="Snap: shapes click neatly to the grid, edges and centres so they line up exactly">Snap</button>
-    <button type="button" id="btnDragPan" class="small dragpan" aria-pressed="false" title="Drag selects: drag a box on empty canvas to pick every part it covers. Click to switch to pan. Space never pans — Space is STOP.">Drag selects</button>
+    <button type="button" id="btnSimpleSnap" class="switch simplesnap" role="switch" aria-checked="false" aria-pressed="false" title="Snap: shapes click neatly to the grid, edges and centres so they line up exactly"><span class="switch-track" aria-hidden="true"></span><span class="switch-label">Snap</span></button>
+    <button type="button" id="btnDragPan" class="switch dragpan" role="switch" aria-checked="false" aria-pressed="false" title="Drag selects: drag a box on empty canvas to pick every part it covers. Click to switch to pan. Space never pans — Space is STOP."><span class="switch-track" aria-hidden="true"></span><span class="switch-label">Drag selects</span></button>
     <button type="button" id="btnMakeImport" class="small makeimp" title="Open a DXF or SVG drawing and add its parts to this sheet">Open DXF / SVG</button>
     <input type="file" id="makeImpFiles" accept=".dxf,.svg" multiple hidden>
     <span class="makeexp-wrap">

@@ -77,7 +77,7 @@ body.beginner #proTools { display: none !important; }
 }
 /* palette groups */
 .qb-group { flex: 0 0 100%; width: 100%; font-size: 11px; font-weight: 700; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .04em; padding: 6px 4px 2px; }
+  letter-spacing: 0; padding: 6px 4px 2px; }
 .qb-search { flex: 1 1 100%; width: 100%; margin: 0 0 4px; }
 .qb-search input { width: 100%; min-height: 44px; font-size: 16px; }
 @media (min-width: 900px) {
@@ -148,17 +148,18 @@ body.pro-mode .beginner-only { display: none !important; }
 .sizescale input { max-width: 110px; }
 /* ===================================================================================================== BEGINNER One thing at a time. Big plain buttons, short sentences, advanced things not on the page at all. */
 .guidehead { position: relative; margin: 0; padding: 12px 16px 14px; background: var(--accent-weak); border-bottom: 1px solid var(--line); }
-.guidehead b { display: block; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent-text); }
+.guidehead b { display: block; font-size: 13px; font-weight: 800; letter-spacing: 0; color: var(--accent-text); }
 .guidehead p { margin: 2px 0 0; font-size: 17px; line-height: 1.35; }
 .guidehead::after { content: ""; position: absolute; left: 0; bottom: 0; height: 5px; width: calc(var(--prog, 0%) + 12%); background: var(--accent); border-radius: 0 3px 3px 0; transition: width .25s; }
 /* step 1: shapes first */
 .bgpick { margin: 0 0 10px; }
 .bgshapes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .bgshapes button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 112px;
-  padding: 10px 6px; background: var(--well); border: 2px solid var(--line-strong); border-radius: 12px; font-size: 17px; font-weight: 700; }
+  padding: 10px 6px; background: var(--well); border: 2px solid var(--line-strong); border-radius: var(--r); font-size: 17px; font-weight: 700; }
 .bgshapes button i { font-style: normal; display: block; color: var(--text); line-height: 0; }
 .bgshapes button.sel { border-color: var(--accent); background: var(--accent-weak); }
-.bgmore { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.bgmore { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 10px; }
+.bgmore button { min-height: 112px; border-radius: var(--r); }
 body.beginner .drop .small { display: none; }
 body.beginner #srcShape > *:not(#shapeForm):not(#cutCheck):not(#cutSummary) { display: none !important; }
 body.beginner .shapeform .tip { font-size: 16px; }
@@ -287,8 +288,7 @@ body.shape-fs[data-screen="make"] .fsbar { top: calc(var(--topbar-h, 56px) + 5px
   margin: 4px 0 2px;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--text);
 }
 #ptInspector h3 .ico { width: 14px; height: 14px; }

@@ -104,10 +104,9 @@ body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-wi
 .menubig.go { background: var(--go); border-color: var(--go); color: var(--on-go); }
 .menubig.go span { color: var(--on-go); opacity: .9; }
 .menubig:hover { filter: brightness(1.04); }
-/* round 5 item 13: "Your parts" is the third, smaller choice under the two big ones */
-.menubtns #menuParts { grid-column: 1 / -1; min-height: 72px; flex-direction: row; justify-content: center; gap: 12px; padding: 10px 14px; }
-.menubtns #menuParts b { font-size: 22px; }
-.menubtns #menuParts .ico { width: 32px; height: 32px; }
+/* four cards in a neat 2×2: Make, Go to cutting, Your parts, Machine setup */
+.menubtns #menuParts, .menubtns #menuSetup { min-height: 190px; }
+.menubig { border-radius: var(--r); }
 /* round 5 item 27: one quiet status row under the cards: machine link, then the last few saved parts */
 .menustatus { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 14px; }
 .menustatus p { margin: 0; }
