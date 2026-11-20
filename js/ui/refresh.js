@@ -13,6 +13,7 @@ import * as Setup from "../cut/setup.js";
 import { M, S, sketch } from "../core/state.js";
 import { $, $$, clock, esc, fmtTime, placeToast } from "../core/dom.js";
 import { formatLen } from "../core/prefs.js";
+import { setInfoText } from "./hovertip.js";
 import { blockers, overlayLive, paintZeroWarn } from "../cut/checklist.js";
 import { etchPausePrompts } from "../cut/etch.js";
 import { drawPreview, fit, wcoNow } from "../cut/preview.js";
@@ -269,8 +270,9 @@ export function refresh() {
 function paintBedStartHelp() {
   const el = $("bedStartHelp"); if (!el) return;
   const corner = sheetCornerName({ long: true });
-  el.innerHTML = "The part cuts where you place it on the bed. You do not set a start point on the part. <b>Start here</b> only tells the table where the sheet's "
-    + corner + " is (that corner is 0, 0 on the layout; every cut is measured from there). The torch does not move. <b>Go to start point</b> then goes to where the cut begins.";
+  const full = "The part cuts where you place it on the bed. You do not set a start point on the part. Start here only tells the table where the sheet's "
+    + corner + " is (that corner is 0, 0 on the layout; every cut is measured from there). The torch does not move. Go to start point then goes to where the cut begins.";
+  setInfoText(el, "The part cuts where you place it on the bed.", full, "More about Start here");
 }
 function paintStartWhy(blocked) {
   const el = $("startWhy"); if (!el) return;

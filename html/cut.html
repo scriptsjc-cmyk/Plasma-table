@@ -61,7 +61,7 @@
               <div><span>slower</span><span id="spRange"></span><span>faster</span></div>
               <p id="spNote" class="spnote"></p>
             </div>
-            <p class="muted small">Leave a box empty to use the recommended value shown in it as “Auto”.</p>
+            <p class="muted small has-info"><span class="info-label">Leave a box empty for the recommended Auto value.</span><button type="button" class="info-i" data-tip="Leave a box empty to use the recommended value shown in it as “Auto”." aria-label="More about Auto values"></button><span class="info-body"> Leave a box empty to use the recommended value shown in it as “Auto”.</span></p>
             <div class="grid2">
               <label>Cut width / kerf (mm)<input id="ovKerf" type="number" step="0.1" inputmode="decimal"></label>
               <label>Lead-in (mm)<input id="ovLead" type="number" step="0.5" inputmode="decimal"></label>
@@ -77,7 +77,7 @@
                 <label>Lead-out (mm)<input id="camOut" type="number" min="0" max="30" step="0.5" value="0" inputmode="decimal"></label>
                 <label>Overcut (mm)<input id="camOver" type="number" min="0" max="30" step="0.5" value="0" inputmode="decimal"></label>
               </div>
-              <p class="muted small">Drag the green start dot or the orange tab dots on the picture to move them.</p>
+              <p class="muted small has-info"><span class="info-label">Drag the start and tab dots on the picture.</span><button type="button" class="info-i" data-tip="Drag the green start dot or the orange tab dots on the picture to move them." aria-label="More about start and tab dots"></button><span class="info-body"> Drag the green start dot or the orange tab dots on the picture to move them.</span></p>
               <div class="row wrap"><button type="button" id="camReset" class="small">Reset starts and tabs</button></div>
             </div>
             <div id="cutListCard" class="cutlistcard hidden">
@@ -121,7 +121,7 @@
               <button type="button" id="remDel" class="small danger" title="Delete the picked saved remnant">Delete</button>
             </div>
           </details>
-          <p class="muted small beginner-help">Drag a part to move it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet.</p>
+          <p class="muted small beginner-help has-info"><span class="info-label">Drag a part to move it.</span><button type="button" class="info-i" data-tip="Drag a part to move it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet." aria-label="More about moving parts on the bed"></button><span class="info-body"> Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet.</span></p>
           <div id="layoutSel" class="layoutsel hidden">
             <div class="selhead"><b id="laySelName">Part</b></div>
             <div class="skbtns laytools">
@@ -151,7 +151,7 @@
           <summary><b>Connect the table</b> <span id="zeroState" class="layoutstate muted small">The part cuts where you place it.</span></summary>
           <div class="zerobody">
           <div class="zeroscroll">
-            <p class="muted small" id="bedStartHelp">The part cuts where you place it on the bed. You do not set a start point on the part. <b>Start here</b> only tells the table where the sheet's top-left (the back-left corner of the table) is (that corner is 0, 0 on the layout; every cut is measured from there). The torch does not move. <b>Go to start point</b> then goes to where the cut begins.</p>
+            <p class="muted small has-info" id="bedStartHelp"><span class="info-label">The part cuts where you place it on the bed.</span><button type="button" class="info-i" data-tip="The part cuts where you place it on the bed. You do not set a start point on the part. Start here only tells the table where the sheet&#x27;s top-left (the back-left corner of the table) is (that corner is 0, 0 on the layout; every cut is measured from there). The torch does not move. Go to start point then goes to where the cut begins." aria-label="More about Start here"></button><span class="info-body"> You do not set a start point on the part. <b>Start here</b> only tells the table where the sheet's top-left (the back-left corner of the table) is (that corner is 0, 0 on the layout; every cut is measured from there). The torch does not move. <b>Go to start point</b> then goes to where the cut begins.</span></p>
             <div id="connectCard" class="connectcard">
               <div class="row wrap">
                 <button id="btnConnect" class="xl go">Connect (USB or Bluetooth)</button>
@@ -162,7 +162,7 @@
                 <p id="connectLockText" class="locknote">Or, to cut for real:</p>
                 <button type="button" id="btnLinkMachine" class="xl go">Link a machine</button>
               </div>
-              <p id="connectHelp" class="muted small">USB and Bluetooth need Chrome or Edge on a computer. Safari and Firefox can't talk to the table. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as "Standard Serial over Bluetooth link"). Close the FluidNC installer or any other program using the port first.</p>
+              <p id="connectHelp" class="muted small has-info"><span class="info-label">USB and Bluetooth need Chrome or Edge on a computer.</span><button type="button" class="info-i" data-tip="USB and Bluetooth need Chrome or Edge on a computer. Safari and Firefox can&#x27;t talk to the table. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as &quot;Standard Serial over Bluetooth link&quot;). Close the FluidNC installer or any other program using the port first." aria-label="More about connecting"></button><span class="info-body"> Safari and Firefox can't talk to the table. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as "Standard Serial over Bluetooth link"). Close the FluidNC installer or any other program using the port first.</span></p>
             </div>
             <div class="row wrap homerow">
               <button class="do-home">⌂ Home</button>
@@ -170,7 +170,7 @@
               <button id="btnGoStart">Go to start point</button>
             </div>
             <div class="jogmount"></div>
-            <p class="muted small keyhint">Keyboard: arrows move the torch, Page Up / Page Down raise and lower it. Tap for one step, hold to glide; Shift goes slow.</p>
+            <p class="muted small keyhint has-info"><span class="info-label">Keyboard jogs the torch.</span><button type="button" class="info-i" data-tip="Keyboard: arrows move the torch, Page Up / Page Down raise and lower it. Tap for one step, hold to glide; Shift goes slow." aria-label="More about keyboard jogging"></button><span class="info-body"> Keyboard: arrows move the torch, Page Up / Page Down raise and lower it. Tap for one step, hold to glide; Shift goes slow.</span></p>
             <details id="originCard" class="originbox">
               <summary>Job origin &amp; saved start points</summary>
               <p class="muted small"><span id="originNow"></span> Pick a different spot to measure from:</p>
@@ -199,7 +199,7 @@
             <select id="startCut" aria-label="Start from cut number"></select>
           </label>
           <p id="resumeWhy" class="warntext small hidden" role="status"></p>
-          <p class="muted small" id="startCutNote">Cuts before this one are skipped. The torch rapids there with the arc off and pierces fresh at that cut's start.</p>
+          <p class="muted small has-info" id="startCutNote"><span class="info-label">Cuts before this one are skipped.</span><button type="button" class="info-i" data-tip="Cuts before this one are skipped. The torch rapids there with the arc off and pierces fresh at that cut&#x27;s start." aria-label="More about starting from a later cut"></button><span class="info-body"> The torch rapids there with the arc off and pierces fresh at that cut's start.</span></p>
         </div>
           <div id="blockers" class="blockers"></div>
         </details>
@@ -236,7 +236,7 @@
               <button id="lsDown" class="xl grow">− Slower</button>
               <button id="lsUp" class="xl grow">+ Faster</button>
             </div>
-            <p class="muted small">Sparks spraying up out of the top = too fast. Dripping straight down = too slow.</p>
+            <p class="muted small has-info"><span class="info-label">Watch the sparks for speed.</span><button type="button" class="info-i" data-tip="Sparks spraying up out of the top = too fast. Dripping straight down = too slow." aria-label="More about cut speed and sparks"></button><span class="info-body"> Sparks spraying up out of the top = too fast. Dripping straight down = too slow.</span></p>
             <div id="delayRow" class="delayrow">
               <div>Pierce delay <b id="liveDelay">–</b></div>
               <div class="row">

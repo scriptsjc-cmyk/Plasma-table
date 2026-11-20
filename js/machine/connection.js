@@ -11,6 +11,7 @@ import { requireMachine } from "./access.js";
 import { loadMotorDir, noteMotorDirRestarted } from "./motordir.js";
 import { torchTestOff } from "./torchtest.js";
 import { showTab } from "../ui/nav.js";
+import { setInfoText } from "../ui/hovertip.js";
 
 // ------------------------------------------------------------------ connection
 export function setConnected(on, label = "") {
@@ -106,9 +107,13 @@ export async function keepAwake(on) {
 function paintConnectHelp() {
   const el = $("connectHelp"); if (!el) return;
   const ok = WebSerialTransport.supported();
-  el.textContent = ok
+  const full = ok
     ? "USB and Bluetooth need Chrome or Edge on a computer. Safari and Firefox can't talk to the table. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as \"Standard Serial over Bluetooth link\"). Close the FluidNC installer or any other program using the port first."
     : "This browser can't use USB or Bluetooth. Open this page in Chrome or Edge on a computer — Safari and Firefox don't support the connection the table needs.";
+  const short = ok
+    ? "USB and Bluetooth need Chrome or Edge on a computer."
+    : "This browser can't use USB or Bluetooth.";
+  setInfoText(el, short, full, "More about connecting");
 }
 export function bindConnection() {
   paintConnectHelp();

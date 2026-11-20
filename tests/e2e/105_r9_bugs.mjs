@@ -115,6 +115,15 @@ await sleep(200);
 const s4 = await ev(page, () => (document.getElementById("connectHelp") || {}).textContent || "");
 t.check("ME-S4: Connect help names Safari, Firefox, USB and Bluetooth", /Safari/i.test(s4) && /Firefox/i.test(s4) && /Bluetooth/i.test(s4) && /Chrome or Edge/i.test(s4), s4.slice(0, 220));
 
+const s4tip = await ev(page, () => {
+  const el = document.getElementById("connectHelp");
+  const btn = el && el.querySelector("button.info-i");
+  const r = btn && btn.getBoundingClientRect(), cs = btn && getComputedStyle(btn);
+  const vis = !!(btn && cs && cs.display !== "none" && r.width > 8);
+  return { vis, tip: (btn && btn.getAttribute("data-tip")) || "", short: ((el && el.querySelector(".info-label")) || {}).textContent || "" };
+});
+t.check("ME-S4: Connect help’s long text sits behind an information icon", s4tip.vis && /Safari/i.test(s4tip.tip) && /Chrome or Edge/i.test(s4tip.short), JSON.stringify(s4tip));
+
 const s2 = await ev(page, () => {
   const note = (document.getElementById("sheetNote") || {}).textContent || "";
   const setupBtn = document.getElementById("menuSetup");
