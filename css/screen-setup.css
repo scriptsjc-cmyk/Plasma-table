@@ -177,3 +177,11 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
   body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] { overflow: visible; }
   body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] .card { overflow: visible; padding-bottom: 4px; }
 }
+
+@media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] h1 { font-size: 15px; margin-bottom: 2px; }
+  body.laptop-ui #setupView .status2 div { padding: 6px 8px; }
+  body.laptop-ui #setupView #safetyHint { font-size: 11px; margin-bottom: 2px; }
+  body.laptop-ui #setupView .wizard { font-size: 12px; gap: 2px; }
+  body.laptop-ui #setupView .wzbtns button { min-height: 28px; padding: 0 10px; }
+}
