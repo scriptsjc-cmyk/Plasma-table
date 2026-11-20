@@ -24,7 +24,8 @@ function placeOriginOpts() {
   if (!btn) return;
   if (!originHome) originHome = { parent: btn.parentNode, next: btn.nextElementSibling };
   const on = isSetupLaptop() && document.body.dataset.screen === "cut" && document.body.dataset.step === "3" && document.body.classList.contains("machine-connected");
-  if (on && pane && btn.parentNode !== pane) pane.appendChild(btn);
+  const row = on && pane ? startChipRow(pane) : null;
+  if (row && btn.parentNode !== row) row.insertBefore(btn, row.firstChild);
   else if (!on && originHome.parent && btn.parentNode !== originHome.parent) {
     const next = (originHome.next && originHome.next.parentNode === originHome.parent) ? originHome.next : null;
     try { originHome.parent.insertBefore(btn, next); } catch (e) { originHome.parent.appendChild(btn); }
@@ -57,6 +58,45 @@ function paintCanvasChips() {
   const chip = $("dragChip");
   if (chip) chip.classList.toggle("hidden", !(isSetupLaptop() && document.body.dataset.screen === "cut" && document.body.dataset.step === "3"));
 }
+// The row of start-point chips on the laptop Setup picture (made once, kept in the picture pane).
+function startChipRow(pane) {
+  let row = $("startChips");
+  if (!row) { row = document.createElement("div"); row.id = "startChips"; row.className = "start-chips"; }
+  if (row.parentNode !== pane) pane.appendChild(row);
+  return row;
+}
+// Pixels to keep clear at the top of the Setup picture: below the canvas chips (Drag…, the fit note, the start-point row).
+export function setupPadTop() {
+  const pane = document.querySelector("#cutView .previewPane"), cv = $("preview");
+  if (!pane || !cv || !isSetupLaptop() || document.body.dataset.screen !== "cut" || document.body.dataset.step !== "3") return 0;
+  const top = cv.getBoundingClientRect().top;
+  let low = 0;
+  for (const el of pane.querySelectorAll(":scope > #dragChip, :scope > #fitChip, :scope > #startChips")) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0 && r.top - top < 120) low = Math.max(low, r.bottom - top);
+  }
+  return low ? Math.round(low + 10) : 0;
+}
+// ...and at the bottom: above the Play bar and Zoom to parts.
+export function setupPadBot() {
+  const pane = document.querySelector("#cutView .previewPane"), cv = $("preview");
+  if (!pane || !cv || !isSetupLaptop() || document.body.dataset.screen !== "cut" || document.body.dataset.step !== "3") return 0;
+  const bot = cv.getBoundingClientRect().bottom;
+  let high = 0;
+  for (const el of pane.querySelectorAll(":scope > #playRow, :scope > #layZoom")) {
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0 && bot - r.top < 120) high = Math.max(high, bot - r.top);
+  }
+  return high ? Math.round(high + 8) : 0;
+}
+let lastPad = null;
+function refitForChips() {
+  const pad = setupPadTop() + "/" + setupPadBot();
+  if (pad === lastPad) return;
+  lastPad = pad;
+  if (sketch && sketch.active && sketch.layout && typeof sketch.fitView === "function") sketch.fitView();
+}
+
 export function placeSetupColumns() {
   paintCanvasChips();
   placeOriginOpts();
@@ -89,8 +129,13 @@ export function placeSetupColumns() {
     if (pane && fit && fit.parentNode !== pane) pane.appendChild(fit);
     if (pane && zoom && zoom.parentNode !== pane) pane.appendChild(zoom);
     if (pane && sel && sel.parentNode !== pane) pane.appendChild(sel);
-    if (pane && goStart && goStart.parentNode !== pane) pane.appendChild(goStart);
-    if (pane && trace && trace.parentNode !== pane) pane.appendChild(trace);
+    // r13: Start point options / Go to start point / Trace outline are one row of chips along the top of the
+    // picture (not a stack over the bed); the bed is fitted below that row (LAYOUT.padTop in setup.js).
+    const row = pane && document.body.classList.contains("machine-connected") ? startChipRow(pane) : null;
+    if (row && goStart && goStart.parentNode !== row) row.appendChild(goStart);
+    if (row && trace && trace.parentNode !== row) row.appendChild(trace);
+    if (!row) { restore(trace, "trace"); restore(goStart, "goStart"); }
+    refitForChips();
     const wrap = $("zeroCard") && $("zeroCard").querySelector(".jogwrap");
     const zsum = $("zeroCard") && $("zeroCard").querySelector("summary");
     if (zsum && hint && hint.parentNode !== zsum) zsum.appendChild(hint);

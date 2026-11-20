@@ -207,6 +207,7 @@ const PRECACHE = [
   "js/ui/icons.js",
   "js/ui/inspector-api.js",
   "js/ui/inspector-ui.js",
+  "js/ui/labelboxes.js",
   "js/ui/labels.js",
   "js/ui/laptop.js",
   "js/ui/menu.js",

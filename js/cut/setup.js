@@ -15,7 +15,8 @@ import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
 import { MACH, drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
 import { drawAxisHints, bedViewRotated } from "./bedview.js";
 import { drawingSheet } from "../core/prefs.js";
-import { placeLayoutToolbar, paintGapTip } from "./setuplayout.js";
+import { placeLayoutToolbar, paintGapTip, setupPadTop, setupPadBot } from "./setuplayout.js";
+import { boxesReset, boxesAdd, textBox, hitsAny } from "../ui/labelboxes.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
@@ -215,6 +216,8 @@ function markMach(sk, m) {
   };
 }
 function drawBg(sk, ctx, S, C, w, h) {
+  const cv = ctx.canvas;
+  boxesReset(cv);
   if (machineVisible()) {
     const m = machineView(S, sk);
     drawMachineBed(ctx, m.T, m.X, m.Y, m.sc);
@@ -241,7 +244,14 @@ function drawBg(sk, ctx, S, C, w, h) {
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
   // Top-right of the sheet, so it does not cover the corner mark at the top-left.
-  ctx.fillText(`${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(8, sr - 6), Math.max(4, st + 6));
+  const title = `${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`;
+  ctx.fillText(title, Math.max(8, sr - 6), Math.max(4, st + 6));
+  boxesAdd(cv, textBox(ctx, title, Math.max(8, sr - 6), Math.max(4, st + 6)));
+  // part numbers are drawn later (drawTop) at each part's centre: keep earlier labels off them too
+  for (const it of sk.items) {
+    const b = sk.boxOf(it), [px, py] = S((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
+    boxesAdd(cv, { l: px - 10, r: px + 10, t: py - 10, b: py + 10, part: true });
+  }
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   const parked = sk.items.filter((it) => sk.boxOf(it)[0] >= sheet.w + 20);
@@ -266,8 +276,18 @@ function drawBg(sk, ctx, S, C, w, h) {
     const [ix, iy] = S(80, 40);                                          // offset into the sheet so the label stays readable when the view is flipped
     ctx.textAlign = ix >= ox ? "left" : "right";
     ctx.textBaseline = iy >= oy ? "top" : "bottom";
-    const cornerLab = bedViewRotated() ? "Sheet corner (0, 0) — top-left, back-left of the table" : "Sheet corner (0, 0)";
-    ctx.fillText(cornerLab, ox + (ix >= ox ? 8 : -8), oy + (iy >= oy ? 10 : -10));
+    const long = bedViewRotated() ? "Sheet corner (0, 0) — top-left, back-left of the table" : "Sheet corner (0, 0)";
+    const short = "Sheet corner (0, 0)";
+    const lx = ox + (ix >= ox ? 8 : -8), dy = iy >= oy ? 1 : -1;
+    // r13: the long name, else the short one, stepping away from the corner until it is clear of the sheet title and part numbers
+    let pick = null;
+    for (const [lab, k] of [[long, 0], [short, 0], [short, 1], [short, 2], [short, 3], [short, 4]]) {
+      const ly = oy + dy * (10 + k * 18);
+      if (!hitsAny(cv, textBox(ctx, lab, lx, ly))) { pick = [lab, ly]; break; }
+    }
+    if (!pick) pick = [short, oy + dy * 10];
+    ctx.fillText(pick[0], lx, pick[1]);
+    boxesAdd(cv, textBox(ctx, pick[0], lx, pick[1]));
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   }
 }
@@ -302,7 +322,7 @@ function drawTop(sk, ctx, S, C) {
     if (Math.hypot(tx - fx, ty - fy) > 26) sk.tag(ctx, `${r1(best.d)}`, (fx + tx) / 2, (fy + ty) / 2 - 8, red ? C.danger : "#51627a");
   }
 }
-const LAYOUT = { get sheet() { return sheet; }, get gap() { return gapMm(); }, analyze, drawBg, drawTop, viewBox };
+const LAYOUT = { get sheet() { return sheet; }, get gap() { return gapMm(); }, analyze, drawBg, drawTop, viewBox, padTop: () => setupPadTop(), padBot: () => setupPadBot() };
 
 // ------------------------------------------------------------------ entering / leaving the step
 const designOk = () => !!(H.S.design && !H.S.design.straight && H.S.design.contours && H.S.design.contours.length);

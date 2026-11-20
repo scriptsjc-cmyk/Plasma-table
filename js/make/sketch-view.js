@@ -23,10 +23,13 @@ export class ViewMethods {
     const [w, h] = this.size(), b = this.layout ? this.layout.viewBox(this) : this.allBox();
     const bw = Math.max(40, b[2] - b[0]), bh = Math.max(40, b[3] - b[1]);
     const rot = bedViewRotated();
-    const padX = 48, padTop = 52, padBot = rot ? 52 : 44;
+    const L = this.layout;
+    const padX = 48, padTop = Math.max(52, (L && L.padTop && L.padTop()) || 0), padBot = Math.max(rot ? 52 : 44, (L && L.padBot && L.padBot()) || 0);
     const s = Math.min((w - padX * 2) / bw, (h - padTop - padBot) / bh);
     // a little extra room at the top for the tappable size label
-    this.view = { s, vx: (b[0] + b[2]) / 2 - w / 2 / s, vy: (b[1] + b[3]) / 2 - h / 2 / s + (padTop - padBot) / 2 / s };
+    // (the bed picture flips y on screen when rotated, so the top/bottom room shifts the other way)
+    const shift = (padTop - padBot) / 2 / s;
+    this.view = { s, vx: (b[0] + b[2]) / 2 - w / 2 / s, vy: (b[1] + b[3]) / 2 - h / 2 / s + (rot ? -shift : shift) };
     this.draw();
   }
   zoomToBox(b) {
