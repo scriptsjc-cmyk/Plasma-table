@@ -1843,10 +1843,15 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.pro-mode[data-screen="make"] #srcShape[data-insp="size"] .insp-arrange,
-  body.advanced-mode[data-screen="make"] #srcShape[data-insp="size"] .insp-arrange { display: none !important; }
+  body.pro-mode[data-screen="make"] #srcShape[data-insp="size"] #shapeForm .insp-arrange,
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="size"] #shapeForm .insp-arrange { display: none !important; }
+  body.pro-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm,
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm { display: block !important; }
   body.pro-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm > :not(.insp-arrange),
   body.advanced-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm > :not(.insp-arrange) { display: none !important; }
+  body.pro-mode[data-screen="make"] .stepPane #srcShape,
+  body.advanced-mode[data-screen="make"] .stepPane #srcShape { overflow: hidden !important; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search { display: none !important; }
   .presetbrowser .pbcats {
     display: grid !important;
     grid-template-columns: 1fr 1fr;
@@ -1854,4 +1859,10 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     gap: 4px;
   }
   .presetbrowser .pbcats button { min-height: 24px; font-size: 11px; padding: 0 6px; }
+}
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.beginner[data-screen="make"] #srcShape { overflow: hidden !important; }
+  body.beginner[data-screen="make"] #srcShape .skbtns.holeadd,
+  body.beginner[data-screen="make"] #srcShape p.tip { display: none !important; }
 }

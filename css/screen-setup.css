@@ -122,3 +122,29 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
   body.laptop-ui #setupBedWrap .jogmount { margin-top: 8px; flex: 0 0 auto; }
   body.laptop-ui #setupView[data-setup-tab="edges"] .jogwrap .j { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.laptop-ui #setupBedWrap { position: relative; overflow: hidden; }
+  body.laptop-ui #setupHomeNote {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    margin: 0;
+    max-height: 3.2em;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--card, #fff) 92%, transparent);
+    padding: 4px 8px;
+    border-radius: 8px;
+  }
+  body.laptop-ui #setupBedWrap .jogmount {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    margin: 0;
+    background: color-mix(in srgb, var(--card, #fff) 92%, transparent);
+    padding: 6px;
+    border-radius: 10px;
+    z-index: 2;
+  }
+}

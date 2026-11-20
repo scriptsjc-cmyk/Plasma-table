@@ -2237,3 +2237,14 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="1"] #dryRun { margin: 4px 0; }
   body[data-screen="cut"][data-step="3"] #btnOriginOpts { max-width: 100%; }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="1"] #speedBox { margin-top: 4px; }
+  body[data-screen="cut"][data-step="1"] .ampsdl { margin: 2px 0; font-size: 12px; }
+  body[data-screen="cut"][data-step="1"] #dryRun { margin: 2px 0 8px; }
+  /* Check-cut chip in the torch card should not sit under Start-here options */
+  body[data-screen="cut"][data-step="3"] #btnOriginOpts { margin-bottom: 6px; }
+  body[data-screen="cut"][data-step="3"] #checkCard .checkrow,
+  body[data-screen="cut"][data-step="3"] #zeroCard a,
+  body[data-screen="cut"][data-step="3"] #zeroCard .chkcut { clear: both; display: block; }
+}
