@@ -76,11 +76,17 @@ function paintPinnedTools(B, wrap, qb) {
   pin.hidden = !show;
   pin.classList.toggle("hidden", !show);
   const bar = $("makeBar");
+  function put(parent, el, before) {
+    if (!parent || !el) return;
+    const ref = (before && before.parentNode === parent) ? before : null;
+    if (el.parentNode === parent && el.nextElementSibling === ref) return;
+    try { parent.insertBefore(el, ref); } catch (e) { parent.appendChild(el); }
+  }
   if (show && S.shapeFs && wrap) {
-    if (pin.parentElement !== wrap) wrap.insertBefore(pin, qb || wrap.firstChild);
+    put(wrap, pin, qb || wrap.firstChild);
   } else if (bar) {
     const slot = $("btnSimpleSnap") || $("btnDragPan") || $("btnMakeCheckCut") || $("btnViewParts") || $("editorSwitch");
-    if (pin.parentElement !== bar) bar.insertBefore(pin, slot || null);
+    put(bar, pin, slot);
   }
   if (!show) { pin.innerHTML = ""; return; }
   pin.innerHTML = B("undo", "↶", "Undo") + B("redo", "↷", "Redo") + B("fit", "⤢", "Fit") + B("del", "🗑", "Delete");

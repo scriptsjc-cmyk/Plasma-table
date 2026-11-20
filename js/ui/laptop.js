@@ -24,17 +24,21 @@ export function isShellLaptop() {
 }
 
 let makeHome = null, tabsHome = null, skToolsHome = null, skOptsHome = null;
+function safeInsert(parent, el, before) {
+  if (!parent || !el) return;
+  const ref = (before && before.parentNode === parent) ? before : null;
+  if (el.parentNode === parent && el.nextElementSibling === ref) return;
+  try { parent.insertBefore(el, ref); } catch (e) { parent.appendChild(el); }
+}
 function placeNode(el, homeKey, parent, before) {
   if (!el) return;
   if (!homeKey.ref) homeKey.ref = { parent: el.parentNode, next: el.nextElementSibling };
-  if (parent && el.parentNode !== parent) parent.insertBefore(el, before || null);
+  if (parent) safeInsert(parent, el, before || null);
 }
 function restoreNode(el, homeKey) {
   const h = homeKey.ref;
   if (!el || !h || !h.parent) return;
-  const next = (h.next && h.next.parentNode === h.parent) ? h.next : null;
-  if (el.parentNode === h.parent && el.nextElementSibling === next) return;
-  try { h.parent.insertBefore(el, next); } catch (e) { h.parent.appendChild(el); }
+  safeInsert(h.parent, el, h.next);
 }
 export function placeMakeBar() {
   const bar = $("makeBar");
@@ -52,15 +56,24 @@ export function placeMakeBar() {
   const opts = document.querySelector("#srcShape .skopts") || document.querySelector(".skopts");
   const pin = $("qbPinned");
   const onAdv = !!(bar && isShellLaptop() && document.body.dataset.screen === "make" && (document.body.classList.contains("pro-mode") || document.body.classList.contains("advanced-mode")));
-  if (opts) {
-    if (!skOptsHome) skOptsHome = { ref: null };
-    if (onAdv) placeNode(opts, skOptsHome, bar, tools ? tools.nextElementSibling : (pin ? pin.nextElementSibling : null));
-    else restoreNode(opts, skOptsHome);
-  }
-  if (tools) {
-    if (!skToolsHome) skToolsHome = { ref: null };
-    if (onAdv) placeNode(tools, skToolsHome, bar, pin ? pin.nextElementSibling : bar.firstChild);
-    else restoreNode(tools, skToolsHome);
+  if (onAdv) {
+    if (tools) {
+      if (!skToolsHome) skToolsHome = { ref: null };
+      placeNode(tools, skToolsHome, bar, pin ? pin.nextElementSibling : bar.firstChild);
+    }
+    if (opts) {
+      if (!skOptsHome) skOptsHome = { ref: null };
+      placeNode(opts, skOptsHome, bar, tools ? tools.nextElementSibling : (pin ? pin.nextElementSibling : null));
+    }
+  } else {
+    if (opts) {
+      if (!skOptsHome) skOptsHome = { ref: null };
+      restoreNode(opts, skOptsHome);
+    }
+    if (tools) {
+      if (!skToolsHome) skToolsHome = { ref: null };
+      restoreNode(tools, skToolsHome);
+    }
   }
   if (tabs && top && main) {
     if (!tabsHome) tabsHome = { ref: null };

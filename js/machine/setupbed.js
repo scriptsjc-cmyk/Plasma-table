@@ -68,7 +68,8 @@ export function placeSetupJog() {
   if (on) {
     if (mount.parentNode !== bed) bed.appendChild(mount);
   } else if (jogHome.parent && mount.parentNode !== jogHome.parent) {
-    jogHome.parent.insertBefore(mount, jogHome.next);
+    const next = (jogHome.next && jogHome.next.parentNode === jogHome.parent) ? jogHome.next : null;
+    try { jogHome.parent.insertBefore(mount, next); } catch (e) { jogHome.parent.appendChild(mount); }
   }
 }
 
