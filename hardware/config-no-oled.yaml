@@ -1,11 +1,14 @@
 # FluidNC config.yaml for Josh's plasma table
 # Board: DUBEUYEW / DOIT-style ESP32-DevKitC V1 (30-pin) + green screw-terminal adapter
 # Drivers: StepperOnline DM542TE, motors: NEMA 23 23HS32 (typically 23HS32-4004S, 2.4 Nm, 4.0 A)
-# App: connects at ws://<fluidnc-ip>:81  (M3/M5 fire the torch relay)
+# App: connects over USB or Bluetooth serial (Web Serial in Chrome or Edge).
+# M3/M5 fire the torch relay. The app does not use Wi-Fi or a WebSocket.
 #
 # This file is written for CURRENT FluidNC (Relay: is a top-level section, not
-# "spindle: type: Relay"). Wi-Fi is NOT stored here — set it in the FluidNC
-# web installer or web UI, or with $Sta / $WiFi commands (see the wiring guide).
+# "spindle: type: Relay"). Wi-Fi is optional and is only for FluidNC's own web
+# installer or web UI. It is NOT stored here. If you use Bluetooth, turn Wi-Fi
+# off ($WiFi/Mode=Off, then $Bye) — Wi-Fi + Bluetooth together can be unstable
+# on an ESP32.
 #
 # Wiring this file expects (recommended, because the ESP32 is 3.3 V and the
 # DM542TE optocouplers want 5–24 V):
@@ -220,15 +223,15 @@ control:
 #   radio_delay_ms: 2000
 #   report_interval_ms: 500
 
-# Wi-Fi is configured outside this file (FluidNC stores it separately).
-# First boot, the board puts out a network called FluidNC, password 12345678,
-# and its page is http://192.168.0.1/
-# Then, in the web UI or over USB:
+# Wi-Fi is optional and is configured outside this file (FluidNC stores it
+# separately). The app talks to the board over USB or Bluetooth serial, not
+# over Wi-Fi. Leave Wi-Fi off while using Bluetooth ($WiFi/Mode=Off, then $Bye).
+# If you do want FluidNC's own web installer: first boot, the board puts out a
+# network called FluidNC, password 12345678, and its page is
+# http://192.168.0.1/  Then, in the web UI or over USB:
 #   $Sta/SSID=YourNetworkName
 #   $Sta/Password=YourNetworkPassword
 #   $WiFi/Mode=STA>AP
 #   $Bye
 # STA>AP tries your home Wi-Fi, and falls back to the FluidNC access point
-# if that fails. The app then connects to ws://<ip>:81
-# If the live HTTPS app blocks that link, serve a local HTTP copy of the app
-# (see the app's docs/FLUIDNC.md).
+# if that fails. That installer is not how this app connects.
