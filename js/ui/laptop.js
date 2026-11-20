@@ -23,7 +23,7 @@ export function isShellLaptop() {
   catch (e) { return false; }
 }
 
-let makeHome = null, tabsHome = null;
+let makeHome = null, tabsHome = null, skToolsHome = null, skOptsHome = null;
 function placeNode(el, homeKey, parent, before) {
   if (!el) return;
   if (!homeKey.ref) homeKey.ref = { parent: el.parentNode, next: el.nextElementSibling };
@@ -45,6 +45,20 @@ export function placeMakeBar() {
     const on = isShellLaptop() && document.body.dataset.screen === "make" && !document.body.classList.contains("header-hidden");
     if (on) placeNode(bar, makeHome, top, stop || null);
     else restoreNode(bar, makeHome);
+  }
+  const tools = document.querySelector("#srcShape .sktools") || document.querySelector(".sktools");
+  const opts = document.querySelector("#srcShape .skopts") || document.querySelector(".skopts");
+  const pin = $("qbPinned");
+  const onAdv = !!(bar && isShellLaptop() && document.body.dataset.screen === "make" && (document.body.classList.contains("pro-mode") || document.body.classList.contains("advanced-mode")));
+  if (tools) {
+    if (!skToolsHome) skToolsHome = { ref: null };
+    if (onAdv) placeNode(tools, skToolsHome, bar, pin ? pin.nextElementSibling : bar.firstChild);
+    else restoreNode(tools, skToolsHome);
+  }
+  if (opts) {
+    if (!skOptsHome) skOptsHome = { ref: null };
+    if (onAdv) placeNode(opts, skOptsHome, bar, tools ? tools.nextElementSibling : (pin ? pin.nextElementSibling : null));
+    else restoreNode(opts, skOptsHome);
   }
   if (tabs && top && main) {
     if (!tabsHome) tabsHome = { ref: null };

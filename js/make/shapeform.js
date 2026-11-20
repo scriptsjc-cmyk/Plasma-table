@@ -18,6 +18,7 @@ import { isFoldPart, mountFoldView } from "./fold3d.js";
 import { flangeShapeKeys } from "./flange-tables.js";
 import { tableToHtml, openSheetTable } from "./sheetopts.js";
 import { setInfoText } from "../ui/hovertip.js";
+import { maybeOpenSizeTab } from "./inspector.js";
 
 let editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
@@ -150,6 +151,7 @@ export function renderShapeForm() {
   try { renderShapeFormCore(); } finally {
     try { paintFoldView(); } catch (e) { /* 3D view optional */ }
     try { onShapeFormPainted(); } catch (e) { /* phone sheet optional */ }
+    try { maybeOpenSizeTab(); } catch (e) { /* laptop inspector tabs optional */ }
   }
 }
 function paintFoldView() {
@@ -241,7 +243,7 @@ function renderShapeFormCore() {
   const curKey = sketch.currentVariantKey();
   const vars = variantsFor(it.type).map((v) => {
     const d = shapeDef(v.id); const label = v.label || (d ? d.name : v.id);
-    return `<button type="button" data-var="${esc(variantKey(v))}" class="${variantKey(v) === curKey ? "sel" : ""}">${esc(label)}</button>`;
+    return `<button type="button" data-var="${esc(variantKey(v))}" title="${esc(label)}" class="${variantKey(v) === curKey ? "sel" : ""}">${esc(label)}</button>`;
   }).join("");
   const varBox = vars ? `<div class="varbox"><h4>Versions of this shape</h4><div class="varrow">${vars}</div><p class="muted small">Keeps this size and place. Then edit holes, radii and so on below. ${clickVerb()} a blue size on the drawing to type an exact measurement.</p></div>` : `<p class="muted small">${clickVerb()} a blue size on the drawing to type an exact measurement.</p>`;
   const proOne = sketch.opts.pro ? `

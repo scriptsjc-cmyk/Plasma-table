@@ -46,9 +46,15 @@
         </div>
 </template>
 <template data-slot="make-editor">
-<div id="srcShape" class="hidden">
-          <p class="muted small skhelp beginner-help has-info"><span class="info-label">Click a shape to pick it.</span><button type="button" class="info-i" data-tip="Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them." aria-label="More about editing shapes"></button><span class="info-body"> drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</span></p>
-          <p id="makeSelStatus" class="makeselstatus" aria-live="polite"></p>
+<div id="srcShape" class="hidden" data-insp="part">
+          <div class="insp-tabs" role="tablist" aria-label="Part inspector">
+            <button type="button" role="tab" data-insp="part" aria-selected="true" class="on">Part</button>
+            <button type="button" role="tab" data-insp="size" aria-selected="false">Size</button>
+            <button type="button" role="tab" data-insp="holes" aria-selected="false">Holes</button>
+            <button type="button" role="tab" data-insp="arrange" aria-selected="false">Arrange</button>
+          </div>
+          <p class="muted small skhelp beginner-help has-info insp-part"><span class="info-label">Click a shape to pick it.</span><button type="button" class="info-i" data-tip="Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them." aria-label="More about editing shapes"></button><span class="info-body"> drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</span></p>
+          <p id="makeSelStatus" class="makeselstatus insp-part" aria-live="polite"></p>
           <div class="sktools">
             <button id="skUndo" title="Undo (Ctrl+Z)">↶ Undo</button><button id="skRedo" title="Redo (Ctrl+Y)">↷ Redo</button>
             <button id="skAll" title="Pick every shape (Ctrl+A)">▣ Pick all</button><button id="skFit" title="Show everything (double-click empty space)">⤢ Fit</button>
@@ -58,7 +64,7 @@
             <label>Snap to <select id="skSnap"><option value="0">off</option><option value="0.1">0.1 mm</option><option value="0.5">0.5 mm</option><option value="1">1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option></select></label>
             <label class="check"><input type="checkbox" id="skGuides"> Line-up guides</label>
           </div>
-          <div id="edgePanel" class="edgepanel hidden" hidden>
+          <div id="edgePanel" class="edgepanel hidden insp-part" hidden>
             <h3>Edit edge</h3>
             <p class="muted small" id="edgeHint">Click an edge of a drawn outline to set its length, square it up, or turn it into a curve. Drag corners, double-click an edge to add a corner, Delete removes one.</p>
             <div class="grid2">
@@ -110,7 +116,7 @@
               <button type="button" id="edgeCancel" class="small">Cancel</button>
             </div>
           </div>
-          <div id="filletPanel" class="edgepanel hidden" hidden>
+          <div id="filletPanel" class="edgepanel hidden insp-part" hidden>
             <h3 id="filletTitle">Fillet corners</h3>
             <p class="muted small" id="filletHint">Click a corner to give it a radius. Inside (re-entrant) corners get a smooth inner radius; outside corners are rounded off. Hover a corner to preview the radius.</p>
             <label id="filletKindLab">Kind
@@ -130,28 +136,28 @@
               <button type="button" id="filletDone" class="small">Done</button>
             </div>
           </div>
-          <div id="proTools" class="protools hidden"></div>
-          <h3 class="addtiles">Add a part</h3>
-          <div id="shapeTiles" class="tiles small addtiles"></div>
-          <h3 class="addtiles">Add holes <span class="muted small has-info"><span class="info-label">(pick a part first)</span><button type="button" class="info-i" data-tip="Pick a part first and the holes land in its middle." aria-label="More about adding holes"></button><span class="info-body"> and they land in its middle</span></span></h3>
-          <div id="holeTiles" class="tiles small addtiles"></div>
-          <div id="shapeForm" class="shapeform"></div>
-          <div id="sheetSizeBox" class="sheetsize">
+          <div id="proTools" class="protools hidden insp-arrange"></div>
+          <h3 class="addtiles insp-part">Add a part</h3>
+          <div id="shapeTiles" class="tiles small addtiles insp-part"></div>
+          <h3 class="addtiles insp-holes">Add holes <span class="muted small has-info"><span class="info-label">(pick a part first)</span><button type="button" class="info-i" data-tip="Pick a part first and the holes land in its middle." aria-label="More about adding holes"></button><span class="info-body"> and they land in its middle</span></span></h3>
+          <div id="holeTiles" class="tiles small addtiles insp-holes"></div>
+          <div id="shapeForm" class="shapeform insp-size"></div>
+          <div id="sheetSizeBox" class="sheetsize insp-size">
             <h3>Drawing sheet</h3>
             <div class="grid2">
               <label>Width <input id="sheetSizeW" type="number" min="50" max="20000" step="any" inputmode="decimal"> mm</label>
               <label>Height <input id="sheetSizeH" type="number" min="50" max="20000" step="any" inputmode="decimal"> mm</label>
             </div>
           </div>
-          <section id="layersPanel" class="layerspanel" aria-label="Parts list">
+          <section id="layersPanel" class="layerspanel insp-part" aria-label="Parts list">
             <div class="layershead">
               <h3>Parts</h3>
               <button type="button" id="layersClose" class="small" aria-label="Close the parts list">✕</button>
             </div>
             <ul id="layersList" class="layerslist"></ul>
           </section>
-          <section id="cutSummary" class="cutsummary" aria-label="Cut settings"></section>
-          <div id="cutCheck" class="cutcheck"></div>
+          <section id="cutSummary" class="cutsummary insp-size" aria-label="Cut settings"></section>
+          <div id="cutCheck" class="cutcheck insp-size"></div>
           <details class="guide"><summary>What this machine can cut</summary><div class="limitsBody"></div></details>
           <details class="guide howto beginner-help">
             <summary>How to use the shape maker</summary>
@@ -172,13 +178,13 @@
               <li><b>View</b> – on a laptop the wheel zooms to the cursor, the middle button pans and right-click opens a menu. On a phone, scroll still pans; pinch to zoom. Space is STOP (it never pans). Double-click empty space, or press F, to fit.</li>
             </ul>
           </details>
-          <h3>How many of the whole drawing?</h3>
-          <div class="grid3">
+          <h3 class="insp-arrange">How many of the whole drawing?</h3>
+          <div class="grid3 insp-arrange">
             <label>Across<input id="cpX" type="number" min="1" value="1" inputmode="numeric"></label>
             <label>Up<input id="cpY" type="number" min="1" value="1" inputmode="numeric"></label>
             <label>Gap (mm)<input id="cpGap" type="number" min="0" value="10" inputmode="decimal"></label>
           </div>
-          <p class="muted small has-info"><span class="info-label">All sizes are in mm, finished size.</span><button type="button" class="info-i" data-tip="All sizes in mm and are the finished part – the cut width is allowed for automatically." aria-label="More about sizes and cut width"></button><span class="info-body"> All sizes in mm and are the finished part – the cut width is allowed for automatically.</span></p>
+          <p class="muted small has-info insp-size"><span class="info-label">All sizes are in mm, finished size.</span><button type="button" class="info-i" data-tip="All sizes in mm and are the finished part – the cut width is allowed for automatically." aria-label="More about sizes and cut width"></button><span class="info-body"> All sizes in mm and are the finished part – the cut width is allowed for automatically.</span></p>
         </div>
 </template>
 <template data-slot="make-dialogs">

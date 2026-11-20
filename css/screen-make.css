@@ -1565,3 +1565,118 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     min-height: 44px;
   }
 }
+
+/* ---- r12 Make Advanced: inspector tabs, compact versions, Cut this part fixed ---- */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.pro-mode[data-screen="make"] .insp-tabs,
+  body.advanced-mode[data-screen="make"] .insp-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+  }
+  body.pro-mode[data-screen="make"] .insp-tabs [data-insp],
+  body.advanced-mode[data-screen="make"] .insp-tabs [data-insp] {
+    min-height: 32px;
+    padding: 0 4px;
+    font-size: 13px;
+    font-weight: 650;
+  }
+  body.pro-mode[data-screen="make"] .insp-tabs [data-insp].on,
+  body.advanced-mode[data-screen="make"] .insp-tabs [data-insp].on {
+    background: var(--accent-weak, var(--well));
+    border-color: var(--accent);
+  }
+  body.pro-mode[data-screen="make"] #srcShape[data-insp="part"] > :not(.insp-tabs):not(.insp-part):not(.sktools):not(.skopts),
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="part"] > :not(.insp-tabs):not(.insp-part):not(.sktools):not(.skopts),
+  body.pro-mode[data-screen="make"] #srcShape[data-insp="size"] > :not(.insp-tabs):not(.insp-size),
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="size"] > :not(.insp-tabs):not(.insp-size),
+  body.pro-mode[data-screen="make"] #srcShape[data-insp="holes"] > :not(.insp-tabs):not(.insp-holes),
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="holes"] > :not(.insp-tabs):not(.insp-holes),
+  body.pro-mode[data-screen="make"] #srcShape[data-insp="arrange"] > :not(.insp-tabs):not(.insp-arrange),
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="arrange"] > :not(.insp-tabs):not(.insp-arrange) {
+    display: none !important;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane > .step[data-step="1"],
+  body.advanced-mode[data-screen="make"]:not(.shape-fs) .stepPane > .step[data-step="1"] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs) .step[data-step="1"] > h2,
+  body.advanced-mode[data-screen="make"]:not(.shape-fs) .step[data-step="1"] > h2,
+  body.pro-mode[data-screen="make"]:not(.shape-fs) .step[data-step="1"] > details.guide,
+  body.advanced-mode[data-screen="make"]:not(.shape-fs) .step[data-step="1"] > details.guide {
+    display: none;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs) .step[data-step="1"] > .nav,
+  body.advanced-mode[data-screen="make"]:not(.shape-fs) .step[data-step="1"] > .nav {
+    flex: 0 0 auto;
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    background: var(--card, var(--well));
+    padding: 8px 0 6px;
+    box-shadow: 0 -8px 12px -8px rgba(16, 24, 40, .18);
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs) .step[data-step="1"] > .nav #next1,
+  body.advanced-mode[data-screen="make"]:not(.shape-fs) .step[data-step="1"] > .nav #next1 {
+    min-height: var(--tap-primary, 44px);
+    width: 100%;
+  }
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape,
+  body.advanced-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape {
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+  body.pro-mode[data-screen="make"] #srcShape .varrow,
+  body.advanced-mode[data-screen="make"] #srcShape .varrow {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  body.pro-mode[data-screen="make"] #srcShape .varrow button,
+  body.advanced-mode[data-screen="make"] #srcShape .varrow button {
+    min-height: 36px;
+    padding: 4px 6px;
+    font-size: 12px;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  body.pro-mode[data-screen="make"] #srcShape .varbox p,
+  body.pro-mode[data-screen="make"] #srcShape details.guide,
+  body.advanced-mode[data-screen="make"] #srcShape details.guide {
+    display: none;
+  }
+  .topbar #makeBar .sktools {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin: 0;
+  }
+  .topbar #makeBar .sktools #skUndo,
+  .topbar #makeBar .sktools #skRedo,
+  .topbar #makeBar .sktools #skFit { display: none; }
+  .topbar #makeBar .skopts {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: 0;
+    align-items: center;
+  }
+  body[data-screen="make"] .topbar #makeBar #btnMakeImport,
+  body[data-screen="make"] .topbar #makeBar .makeexp-wrap { display: none; }
+}
+@media (max-width: 1279px), (hover: none), (pointer: coarse) {
+  .insp-tabs { display: none !important; }
+}

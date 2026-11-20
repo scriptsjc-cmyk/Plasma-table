@@ -9,11 +9,13 @@ import { bindSheetSize, paintSheetSize } from "./sheetsize.js";
 import { sketch } from "../core/state.js";
 import { renderQuickBar, focusToolSearch } from "./quickbar.js";
 import { bindShortcuts, openShortcutSheet, closeShortcutSheet } from "./shortcuts.js";
+import { initInspectorTabs } from "./inspector.js";
 
 export { isLaptopUi, syncLaptopUi, paintSidewaysHint, paintLayers };
 
 export function bindCadUi() {
   bindLaptopUi();
+  initInspectorTabs();
   bindLayers();
   bindCtxMenu();
   bindDrawHud();
