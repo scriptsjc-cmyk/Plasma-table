@@ -60,7 +60,9 @@
       <button type="button" id="btnTorchTest" class="warn" aria-pressed="false">Test torch</button>
     </div>
     <p class="muted small">Touch-off test: the torch finds the sheet and stops at pierce height, no arc.
-      Test torch: hold to fire over scrap, let go to stop. It stays on for as long as you hold the button.</p>
+      Test torch: hold to fire over scrap, let go to stop. It turns off after 2 seconds and needs a fresh press.</p>
+    <p class="muted small" id="torchTestCutterNote">Touch-start: no arc in air — this checks the relay and air only.</p>
+    <p class="muted small hidden" id="torchTestBtNote">If the Bluetooth link drops while the torch is on, use the hardware E-stop. Reconnecting the app may not be enough.</p>
   </div>
 
   <div class="card admin-only" id="controllerCard">

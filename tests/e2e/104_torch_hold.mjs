@@ -110,17 +110,17 @@ await pressTorch(page);
 await sleep(250);
 
 const samples = [];
-for (let i = 0; i < 6; i++) {
+for (let i = 0; i < 4; i++) {
   if (i === 1 || i === 3) await leaveTorch(page);
   samples.push(await ui(page));
-  await sleep(400);
+  await sleep(300);
 }
 const during = await ev(page, (from) => (window.plasmaTest.S.demo.log || []).slice(from), start);
 const held = m3m5(during);
 const allOn = samples.every((s) => s.lit && s.label === "TORCH ON" && s.live && s.lampOn && s.pill && /TORCH ON/.test(s.pill.text) && s.pill.on && s.torch);
 t.check("a steady hold sends M3 S1 once and no M5", held.m3 === 1 && held.m5 === 0, JSON.stringify(held));
 t.check("the button, relay lamp and pill stay ON through laggy status and pointerleave",
-  allOn && samples.length === 6, JSON.stringify(samples));
+  allOn && samples.length === 4, JSON.stringify(samples));
 
 start = await ev(page, () => (window.plasmaTest.S.demo.log || []).length);
 await releaseTorch(page);
@@ -130,6 +130,24 @@ const off = await ui(page);
 t.check("release sends M5 once and the relay goes off",
   after.m3 === 0 && after.m5 === 1 && !off.lit && off.label === "Test torch" && !off.live && !off.torch && !off.lampOn,
   JSON.stringify({ after, off }));
+
+// Hard max hold: even a steady finger-down turns off at 2 s.
+start = await ev(page, () => (window.plasmaTest.S.demo.log || []).length);
+await pressTorch(page);
+await sleep(2300);
+const capped = await ev(page, (from) => {
+  const T = window.plasmaTest;
+  const st = T.torchTestState();
+  const log = (T.S.demo.log || []).slice(from);
+  return { lit: st.lit, cooling: st.cooling, cutoff: st.cutoff, ...(() => {
+    const lines = log.map((l) => String(l).trim());
+    return { m3: lines.filter((l) => l === "M3 S1").length, m5: lines.filter((l) => /^M5\b/i.test(l)).length };
+  })() };
+}, start);
+t.check("a hold longer than 2 s sends M5 and starts the cooldown",
+  !capped.lit && capped.m3 === 1 && capped.m5 === 1 && capped.cooling && capped.cutoff, JSON.stringify(capped));
+await releaseTorch(page);
+await sleep(3100);
 
 // Safety: a long gap in status reports still turns the torch off.
 start = await ev(page, () => (window.plasmaTest.S.demo.log || []).length);

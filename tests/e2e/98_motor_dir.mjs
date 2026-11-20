@@ -262,45 +262,101 @@ t.check("releasing Test torch sends M5 and clears TORCH ON",
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
 await pressTorch();
-await sleep(2200);
+await sleep(2300);
 const heldLong = await ev(page, (start) => {
   const T = window.plasmaTest;
   const b = document.getElementById("btnTorchTest");
   const log = T.S.demo.log.slice(start);
+  const st = T.torchTestState();
   return {
-    lit: T.torchTestState().lit,
+    lit: st.lit,
     label: (b.textContent || "").trim(),
     log,
     hadM3: log.some((l) => l === "M3 S1"),
     hadM5: log.some((l) => /M5/.test(l)),
     torch: !!(T.S.demo.torch),
+    cooling: st.cooling,
+    cutoff: st.cutoff,
+    note: (document.getElementById("torchTestCutterNote") || {}).textContent || "",
   };
 }, n);
-t.check("Test torch stays on past 2 seconds while still held",
-  heldLong.lit && heldLong.label === "TORCH ON" && heldLong.hadM3 && !heldLong.hadM5 && heldLong.torch,
+t.check("Test torch turns off after 2 seconds even while still held",
+  !heldLong.lit && heldLong.label === "Test torch" && heldLong.hadM3 && heldLong.hadM5 && !heldLong.torch && heldLong.cooling && heldLong.cutoff,
   JSON.stringify(heldLong));
+t.check("touch-start Test torch explains it only checks the relay and air",
+  /no arc in air/i.test(heldLong.note) && /relay and air/i.test(heldLong.note), heldLong.note);
+
+// Still holding after the cutoff must not re-fire.
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
-await ev(page, () => {
-  const g = window.plasmaTest.getM().grbl;
-  if (!g) return;
-  if (g.pausePoll) g.pausePoll();
-  g.lastRx = Date.now() - 4000;
-});
-await sleep(700);
-const keep = await ev(page, (start) => {
+await pressTorch();
+await sleep(200);
+const stillHeld = await ev(page, (start) => {
   const T = window.plasmaTest;
-  const b = document.getElementById("btnTorchTest");
-  const log = T.S.demo.log.slice(start);
-  return {
-    lit: T.torchTestState().lit,
-    label: (b.textContent || "").trim(),
-    hadM5: log.some((l) => /M5/.test(l)),
-    torch: !!(T.S.demo.torch),
-  };
+  return { lit: T.torchTestState().lit, log: T.S.demo.log.slice(start) };
 }, n);
-t.check("Test torch turns off if status reports stop arriving",
-  !keep.lit && keep.label === "Test torch" && keep.hadM5 && !keep.torch,
-  JSON.stringify(keep));
+t.check("a hold that outlasts the 2 s cutoff does not fire again until you let go",
+  !stillHeld.lit && !stillHeld.log.some((l) => l === "M3 S1"), JSON.stringify(stillHeld));
+await releaseTorch();
+await sleep(150);
+
+// Cooldown: a fresh press now must wait.
+n = await ev(page, () => window.plasmaTest.S.demo.log.length);
+await pressTorch();
+await sleep(200);
+const duringCool = await ev(page, (start) => {
+  const T = window.plasmaTest;
+  return { lit: T.torchTestState().lit, cooling: T.torchTestState().cooling, log: T.S.demo.log.slice(start) };
+}, n);
+t.check("Test torch needs a 3 s cooldown after the max hold",
+  !duringCool.lit && duringCool.cooling && !duringCool.log.some((l) => l === "M3 S1"), JSON.stringify(duringCool));
+await releaseTorch();
+await sleep(3100);
+
+const cutterNote = await ev(page, () => (document.getElementById("torchTestCutterNote") || {}).textContent || "");
+t.check("touch-start warning stays visible after cooldown", /no arc in air/i.test(cutterNote), cutterNote);
+
+n = await ev(page, () => window.plasmaTest.S.demo.log.length);
+await pressTorch();
+await sleep(200);
+t.check("after the cooldown a fresh press fires again",
+  await ev(page, () => !!(window.plasmaTest.torchTestState().lit && window.plasmaTest.S.demo.torch)));
+
+// The torch is already held from the post-cooldown press. pagehide must send M5.
+t.check("held before pagehide", await ev(page, () => !!window.plasmaTest.torchTestState().lit));
+n = await ev(page, () => window.plasmaTest.S.demo.log.length);
+await ev(page, () => window.dispatchEvent(new Event("pagehide")));
+await sleep(200);
+const hid = await ev(page, (start) => {
+  const T = window.plasmaTest;
+  const log = T.S.demo.log.slice(start);
+  return { lit: T.torchTestState().lit, hadM5: log.some((l) => /M5/.test(l)), torch: !!(T.S.demo.torch) };
+}, n);
+t.check("pagehide turns Test torch off with M5",
+  !hid.lit && hid.hadM5 && !hid.torch, JSON.stringify(hid));
+await releaseTorch();
+await sleep(150);
+
+n = await ev(page, () => window.plasmaTest.S.demo.log.length);
+await pressTorch();
+await sleep(200);
+t.check("held before STOP", await ev(page, () => !!window.plasmaTest.torchTestState().lit));
+n = await ev(page, () => window.plasmaTest.S.demo.log.length);
+// Use the Machine stop command (same as the STOP path) without latching the on-screen E-STOP,
+// so later checks can still arm and disconnect cleanly.
+await ev(page, () => window.plasmaTest.getM().command({ cmd: "stop" }));
+await sleep(300);
+const stopped = await ev(page, (start) => {
+  const T = window.plasmaTest;
+  const log = T.S.demo.log.slice(start);
+  const st = (T.S.status && T.S.status.state) || "";
+  return { lit: T.torchTestState().lit, hadM5: log.some((l) => /M5/.test(l)), torch: !!(T.S.demo.torch), state: st };
+}, n);
+t.check("STOP turns Test torch off with M5",
+  !stopped.lit && stopped.hadM5 && !stopped.torch, JSON.stringify(stopped));
+await ev(page, () => {
+  try { window.plasmaTest.getM().command({ cmd: "unlock" }); } catch (e) { /* ignore */ }
+});
+await sleep(300);
 await releaseTorch();
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);

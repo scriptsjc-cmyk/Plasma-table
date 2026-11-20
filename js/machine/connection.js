@@ -102,8 +102,13 @@ export function bindConnection() {
   if ($("btnLostOk")) $("btnLostOk").onclick = () => $("lostBar").classList.add("hidden");
   $("connPill").onclick = () => (S.connected ? showTab("setup") : connectUSB());
   $("btnDisconnect").onclick = disconnect;
-  window.addEventListener("beforeunload", (e) => { if (M.jobRunning()) { e.preventDefault(); e.returnValue = ""; } });
+  window.addEventListener("beforeunload", (e) => {
+    try { torchTestOff(); } catch (err) { /* best effort */ }
+    if (M.jobRunning()) { e.preventDefault(); e.returnValue = ""; }
+  });
   window.addEventListener("pagehide", () => {
+    // Always drop a Test-torch hold. A board-run cut already on the controller is left alone below.
+    try { torchTestOff(); } catch (err) { /* best effort */ }
     // The page is going away, so a delayed reset (stop() waits 250 ms) would never be sent and the controller would be
     // left in Hold with the torch lit. Send hold + reset back to back.
     try {

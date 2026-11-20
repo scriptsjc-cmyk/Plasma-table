@@ -161,7 +161,7 @@ async function init() {
   mountJogPads();
   initFlow({
     signedIn: () => Acc.isSignedIn(), bypass: testBypass(),
-    stop: () => { if (M && M.grbl) cmd("stop"); },       // the same STOP path as always: soft reset, torch off
+    stop: () => { try { torchTestOff(); } catch (e) { /* ignore */ } if (M && M.grbl) cmd("stop"); },       // soft reset + Test-torch M5
     jobLive: navBusy, dialogOpen: () => !!document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden), .numpad:not(.hidden)"),
     hardwareEstop: () => !!(S.connected && S.status && S.status.inputs && S.status.inputs.estop),
     toast, refresh, onScreen,

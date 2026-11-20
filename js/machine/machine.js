@@ -10,6 +10,7 @@ import { Safety, SafetyError, limitsSizeText } from "./safety.js";
 import { filterConsoleCommand } from "./admin-machine.js";
 import { probeBlocks } from "./probefilter.js";
 import { sheetCornerName } from "../cut/bedview.js";
+import { torchTestOff } from "./torchtest.js";
 
 export const POSITION_LOST_ALARMS = new Set([1, 3, 10, 13]);
 export { JobError, SafetyError };
@@ -190,7 +191,7 @@ export class Machine {
         return { ok: true };
       case "hold": g.hold(); return { ok: true };
       case "resume": g.resume(); return { ok: true };
-      case "stop": this.zeroConfirmed = false; g.stop(); return { ok: true };       // a stop (soft reset) can lose the place: work zero must be confirmed again
+      case "stop": this.zeroConfirmed = false; try { torchTestOff(); } catch (e) { /* ignore */ } g.stop(); return { ok: true };       // a stop (soft reset) can lose the place: work zero must be confirmed again
       case "reset": this.zeroConfirmed = false; g.reset(); return { ok: true };
       case "jog_cancel": g.realtime(RT.JOG_CANCEL); return { ok: true };
       case "feed_override": {
