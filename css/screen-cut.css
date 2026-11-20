@@ -76,6 +76,8 @@ body.short-land .progress { height: 10px; }
   .admtab { min-height: 36px; }
 }
 .checkmat { margin: 0 0 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 650; }
+.checkzero { margin: 0 0 6px; font-size: 14px; font-weight: 650; }
+#checkHint { margin: 0 0 8px; }
 @media (orientation: landscape) and (max-height: 540px) {
   /* landscape: compact stats, don't cover 28% of the canvas */
   body.short-land #fit,

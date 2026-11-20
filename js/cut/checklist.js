@@ -1,12 +1,11 @@
-// Pre-start check (the start-point line and one safety tick box) and the list of reasons Start is blocked (blockers()).
+// Pre-start checks: sheet-corner status on the card, a short safety reminder when Start is pressed, and blockers().
 import { estopOn } from "../ui/flow.js";
 import * as Setup from "./setup.js";
 import { S, sketch } from "../core/state.js";
 import { fit } from "./preview.js";
-import { ampsNow, row } from "./material.js";
-import { $, $$, esc } from "../core/dom.js";
+import { row } from "./material.js";
+import { $ } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
-import { CHECK_LINE } from "../machine/boardrun.js";
 import { isEtchOp, throughCutInEtch, etchHeightProblem, resolveEtch } from "./etch.js";
 import { currentSettings } from "../machine/settings.js";
 import { motorDirLockWhy } from "../machine/motordir.js";
@@ -26,36 +25,36 @@ function zeroLineText() {
   if (!S.zeroSet) return "Sheet corner not set yet — press Start here";
   return "Sheet corner set ✓";
 }
-// r7 J13: ONE tick box before cutting. Its label lists everything it confirms, so nothing is skipped by ticking it.
-// A practice run (torch off) says so as a line of text, not as a box to tick (r7 U24).
-export function checkItems() {
+// Short lines for the Start reminder. A practice run notes that the torch stays off.
+export function checkItems() { return startReminders(); }
+export function startReminders() {
   const dry = S.prepared && S.prepared.dry_run;
-  // Short lines, so each fits on one line in the laptop's narrow left column
-  const board = S.fluidnc ? [CHECK_LINE] : [];
-  return dry ? ["material flat on the slats", "area clear, hands away", "e-stop within reach", ...board]
-    : [...(row().check ? [row().check] : []), `plasma ON, set to ${ampsNow()} A`, `air on, ${row().air_bar ?? S.chart.air_bar} bar`,
-      "material clamped flat", "earth clamp on the sheet", "area clear, hands away", "e-stop within reach", ...board];
+  const lines = dry
+    ? ["Sheet flat on the slats", "Area clear", "E-stop in reach", "Practice run: torch stays off"]
+    : ["Sheet clamped, earth on", "Torch at the start", `Air on${row() && row().air_bar != null ? `, ${row().air_bar} bar` : ""}`, "Eyes protected", "E-stop in reach", "First pierce will touch off"];
+  if (S.fluidnc) lines.push("If the laptop disconnects, the cut keeps going.");
+  return lines;
 }
 export function renderChecklist() {
-  const dry = S.prepared && S.prepared.dry_run;
-  $("checklist").innerHTML = `<li class="autochk"><label><input type="checkbox" data-chk="zero" disabled> <span>${esc(zeroLineText())}</span></label></li>`
-    + `<li class="checknote">The first pierce will touch off (find the sheet) before the arc starts. You can try this with Touch-off test in Machine setup.</li>`
-    + (dry ? `<li class="checknote">Practice run: the torch stays off.</li>` : "")
-    + `<li class="onecheck"><label><input type="checkbox" data-chk="1"> <span><b>I've checked:</b>${checkItems().map((t) => `<span class="checkwhat">${esc(t)}</span>`).join("")}</span></label></li>`;
   const cm = $("checkMat");
   if (cm) cm.textContent = S.material && S.thickness != null ? `${S.material} · ${S.thickness} mm` : "";
+  const hint = $("checkHint");
+  if (hint) {
+    const dry = S.prepared && S.prepared.dry_run;
+    hint.textContent = (dry
+      ? "Press Start for a short reminder. Practice run: the torch stays off. The first pierce will touch off."
+      : "Press Start for a short safety reminder before the cut begins. The first pierce will touch off.")
+      + (S.fluidnc ? " If the laptop disconnects, the cut keeps going." : "");
+  }
   paintZeroWarn();
   refresh();
 }
-// Every refresh: the start-point line and the "start point not set" warning follow S.zeroSet (so a STOP unticks it at once)
+// Every refresh: the start-point line and the "start point not set" warning follow S.zeroSet (so a STOP clears it at once)
 export function paintZeroWarn() {
   const zw = $("zeroWarn");
   if (zw) zw.classList.toggle("hidden", zeroIsConfirmed());
-  const box = document.querySelector('#checklist input[data-chk="zero"]');
-  if (!box) return;
-  box.checked = zeroIsConfirmed();
-  const label = box.nextElementSibling, text = zeroLineText();
-  if (label && label.textContent !== text) label.textContent = text;
+  const el = $("checkZero");
+  if (el && el.textContent !== zeroLineText()) el.textContent = zeroLineText();
 }
 // Score / Mark is a real etch pass (C32). Start and Download stay blocked only when that pass would
 // cut through the sheet (no PORTA-ETCH block, or a pierce delay / torch inside the etch).
@@ -104,8 +103,6 @@ export function blockers() {
   const dirLock = motorDirLockWhy(); if (dirLock) b.push(dirLock);
   if (fit().bad) b.push("The part doesn't fit the machine – move the parts or the sheet's start corner.");
   for (const t of Setup.blockText()) b.push(t);
-  const boxes = $$("#checklist input:not([disabled])");      // the start-point line ticks itself (the blocker above covers it)
-  if (boxes.some((x) => !x.checked)) b.push("Tick the safety check box.");
   return b;
 }
 // ------------------------------------------------------------------ refresh everything that depends on state

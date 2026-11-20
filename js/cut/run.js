@@ -4,7 +4,7 @@ import { $, toast } from "../core/dom.js";
 import { askConfirm } from "../core/safeprompt.js";
 import { cmd, requireMachine } from "../machine/access.js";
 import { M, S } from "../core/state.js";
-import { blockers } from "./checklist.js";
+import { blockers, startReminders } from "./checklist.js";
 import { refresh } from "../ui/refresh.js";
 import { goStep, markFirstJobDone } from "../ui/nav.js";
 import { keepAwake } from "../machine/connection.js";
@@ -28,10 +28,19 @@ export function bindRun() {
   };
   $("btnTrace").onclick = () => cmd("trace_outline");
   // step 4
-  $("checklist").addEventListener("change", refresh);
+  if ($("checklist")) $("checklist").addEventListener("change", refresh);
   $("btnStart").onclick = async () => {
     if (!requireMachine("Link your machine to run jobs")) return;
-    { const b = blockers(); if (b.length) { toast(b[0], true); return; } }   // a script/DOM-poke can't bypass the disabled button: zero, alarm, fit, checklist are re-checked here
+    { const b = blockers(); if (b.length) { toast(b[0], true); return; } }   // a script/DOM-poke can't bypass the disabled button: zero, alarm, fit, and the other start gates are re-checked here
+    if (!(await askConfirm({
+      title: "Before you cut",
+      body: "",
+      lines: startReminders(),
+      ok: "Everything's correct – start",
+      cancel: "Cancel",
+      compact: true,
+    }))) return;
+    { const b = blockers(); if (b.length) { toast(b[0], true); return; } }
     try {
       M.command({ cmd: "feed_override", step: "reset" });  // cut at exactly the speed chosen in step 2
       const fromCut = startCut();
