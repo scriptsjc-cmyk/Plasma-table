@@ -86,8 +86,11 @@ try {
   ck("the live claim hint says DEMO-0000 only works in local demo mode", /practice code DEMO-0000 only works in local demo mode/i.test(home));
 
   const css = fs.readFileSync(SITE + "css/layout.css", "utf8");
-  const zm = css.match(/\.toast\s*\{[^}]*z-index:\s*(\d+)/);
-  const z = zm ? Number(zm[1]) : 0;
+  // the z-index may be a number or (since r13) a --z- token from tokens.css: resolve the token to its number
+  const toks = fs.readFileSync(SITE + "css/tokens.css", "utf8");
+  const zm = css.match(/\.toast\s*\{[^}]*z-index:\s*(\d+|var\(--([\w-]+)\))/);
+  const tv = zm && zm[2] ? toks.match(new RegExp("--" + zm[2] + ":\\s*(\\d+)")) : null;
+  const z = zm ? Number(zm[2] ? (tv ? tv[1] : 0) : zm[1]) : 0;
   ck("toasts sit above claim/account dialogs (z-index 120)", z > 120, "z-index=" + z);
 
   const mach = readJs("machines");
