@@ -109,8 +109,21 @@ function claimWorkspace(migratable) {
   if (owner === u.id) return;
   try { localStorage.setItem(OWNER_KEY, u.id); } catch (e) { /* ignore */ }
   const items = host && host.getDesign ? host.getDesign() : [];
-  if (migratable && items && items.length) askKeepDrawing();
+  if (migratable && hasRealDrawing(items)) askKeepDrawing();
   else if (owner && host && host.startFresh) host.startFresh();
+}
+function hasRealDrawing(items) {
+  if (!Array.isArray(items) || !items.length) return false;
+  return items.some((it) => {
+    if (!it) return false;
+    const p = it.p || {};
+    if (Number(p.w) > 0 || Number(p.h) > 0 || Number(p.d) > 0 || Number(p.hole) > 0) return true;
+    const cs = (it.shape && it.shape.cs) || it.cs;
+    if (Array.isArray(cs) && cs.some((c) => c && c.pts && c.pts.length >= 2)) return true;
+    if (Array.isArray(it.pts) && it.pts.length >= 2) return true;
+    // named templates (rect, disc, presets) are a real drawing even at default size
+    return !!(it.type && it.type !== "custom");
+  });
 }
 export function bindDialogs() {
   $("acctPill").onclick = () => openAccount();
@@ -191,7 +204,13 @@ export function bindHome() {
     } catch (err) { toast(err.message, true); }
   };
   $("migrateNo").onclick = async () => {
-    if (!(await askConfirm({ title: "Start fresh?", body: "This clears the drawing on this device, its undo history, Recent parts and the material choice. This can't be undone.", ok: "Start fresh", cancel: "Cancel", danger: true }))) return;
+    const dlg = $("migrateDlg");
+    if (dlg) dlg.classList.add("hidden");
+    const ok = await askConfirm({ title: "Start fresh?", body: "This clears the drawing on this device, its undo history, Recent parts and the material choice. This can't be undone.", ok: "Start fresh", cancel: "Cancel", danger: true });
+    if (!ok) {
+      if (dlg) dlg.classList.remove("hidden");
+      return;
+    }
     keepAnswered();
     if (host && host.startFresh) host.startFresh();
   };
