@@ -185,3 +185,77 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
   body.laptop-ui #setupView .wizard { font-size: 12px; gap: 2px; }
   body.laptop-ui #setupView .wzbtns button { min-height: 28px; padding: 0 10px; }
 }
+
+/* r13 #29–31: Machine setup on the laptop.
+   - The jog pad is a solid strip docked above the bed picture, never over it.
+   - The homing note is one line; the details are behind its "i".
+   - Position and Edges read as one status row. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.laptop-ui #setupBedWrap > h2 { order: 0; flex: 0 0 auto; }
+  body.laptop-ui #setupBedWrap .jogmount {
+    order: 1;
+    position: static;
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+    padding: 6px 8px;
+    background: var(--card, #fff);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    z-index: auto;
+  }
+  body.laptop-ui #setupBedWrap .jogmount .jogwrap {
+    transform: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    row-gap: 6px;
+    align-items: center;
+  }
+  body.laptop-ui #setupBedWrap .jogmount .jogwrap > .pos:empty,
+  body.laptop-ui #setupBedWrap .jogmount .jogwrap > .pos { grid-column: 1; }
+  body.laptop-ui #setupBedWrap .jogmount .jogwrap > .lamps { grid-column: 1; grid-row: 1; }
+  body.laptop-ui #setupBedWrap .jogmount .jogwrap > .steps { grid-column: 1; grid-row: 2; }
+  body.laptop-ui #setupBedWrap .jogmount .jogwrap > .jog { grid-column: 2; grid-row: 1 / 3; }
+  body.laptop-ui #setupBed { order: 2; flex: 1 1 auto; min-height: 0; }
+  body.laptop-ui #setupHomeNote,
+  body.laptop-ui #setupBedWrap #setupHomeNote {
+    order: 3;
+    position: static;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    padding: 0;
+    max-height: none;
+    background: none;
+    white-space: nowrap;
+  }
+  body.laptop-ui #setupHomeNote .info-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-height: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body.laptop-ui #setupView .status2 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin: 0 0 4px;
+  }
+  body.laptop-ui #setupView .status2 div,
+  body.laptop-ui #setupView .status2 > div {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+  body.laptop-ui #setupView .status2 span { display: inline; font-size: 13px; }
+  body.laptop-ui #setupView .status2 span::after { content: ":"; }
+  body.laptop-ui #setupView .status2 b { font-size: 13px; }
+}

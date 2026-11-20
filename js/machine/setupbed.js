@@ -28,21 +28,21 @@ export function homeNoteText() {
   return `This table has no limit switches, so it cannot find home by itself. Jog the torch to your marked home corner (raised right up) and press “Set this as home (0,0)”. The motors do not move.\n\n$H (Home all) is not used: the FluidNC config has no homing cycles or switch pins, so $H would raise an alarm (“No homing cycles defined”). A single-axis $HX with no switch would search the full travel for a pin that is not there.\n\nCurrent machine position: ${pos}.\n${home}`;
 }
 
-export function homeNoteShort() {
-  const full = homeNoteText();
-  // Visible copy keeps the safety explanation and the live position; $H / homing-cycle
-  // technical detail stays in the “i” tip (and in .info-body for textContent checks).
-  const a = full.indexOf("$H (Home all) is not used:");
-  const b = full.indexOf("Current machine position:");
-  if (a >= 0 && b > a) return (full.slice(0, a).trimEnd() + "\n\n" + full.slice(b)).trim();
-  return full;
+// One plain-words line on the bed picture; the rest (no switches, $H, live position) is behind the "i" (r13 #30).
+export function homeNoteLine() {
+  const ref = S.safety && S.safety.referenced;
+  return ref
+    ? "Home is set. Jog anywhere; the picture shows where the torch is."
+    : "No home switches: jog to your home corner, then press “Set this as home”.";
 }
 
 export function paintSetupHomeNote() {
   const el = $("setupHomeNote");
   if (!el) return;
   const full = homeNoteText();
-  setInfoText(el, homeNoteShort(), full, "More about homing and $H");
+  setInfoText(el, homeNoteLine(), full, "More about homing and $H");
+  const lab = el.querySelector(".info-label");
+  if (lab) lab.title = full;
 }
 
 const SETUP_TABS = ["edges", "motors", "torch", "controller"];
