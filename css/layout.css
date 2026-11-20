@@ -895,10 +895,8 @@ body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
   .topbar.menu-open .topbar-main { overflow: visible; }
   .topmenu .pill, .topmenu .iconbtn { width: 100%; max-width: none; justify-content: flex-start; border-radius: var(--r); }
   .topmenu .iconbtn span { margin-left: 0.35em; }
-  /* Cut header: steps stay; the Cut tab, warning pill and Space hint drop out of the bar */
+  /* Cut header: steps stay; the Cut tab and Space hint drop out of the bar. Check cut stays. */
   body[data-screen="cut"] .tabs .tab,
-  body[data-screen="cut"] #cutStatus,
-  body[data-screen="cut"] #cutStatusPop,
   body[data-screen="cut"] .cutbar-key { display: none !important; }
 }
 

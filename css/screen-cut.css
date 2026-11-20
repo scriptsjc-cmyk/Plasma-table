@@ -990,8 +990,8 @@ body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important;
   min-height: 36px;
   margin: 0 8px 0 4px;
   padding: 4px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  border-radius: var(--r);
+  border: 1px solid var(--line-strong);
   background: var(--well);
   color: var(--text);
   font: 650 13px/1.2 var(--font);
@@ -999,12 +999,12 @@ body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important;
   position: relative;
   z-index: 5;
 }
+.cutstatus:hover:not(:disabled) { background: var(--accent-weak); border-color: var(--accent); }
 .cutstatus.is-ok { background: var(--well); }
 .cutstatus.is-bad {
-  background: #FFF4C2;
-  border-color: #E0B400;
-  color: #5A4500;
-  animation: cutPulse 1.6s ease-in-out infinite;
+  background: var(--well);
+  border-color: var(--warn);
+  color: var(--warn-text);
 }
 .cutstatus-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
 .cutstatus.is-ok .cutstatus-dot { background: var(--go, #1B7A3D); }
@@ -1228,8 +1228,6 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 /* ---- r10 laptop chrome: a flat reserved STOP, a quieter header ---- */
 @media (min-width: 900px) {
   body[data-screen="cut"] .tabs .tab,
-  body[data-screen="cut"] #cutStatus,
-  body[data-screen="cut"] #cutStatusPop,
   body[data-screen="cut"] .cutbar-key { display: none !important; }
 
   body:not(.short-land)[data-screen="cut"] #btnStop.estop,

@@ -89,7 +89,7 @@ for (const prof of ["d1440", "d1366"]) {
     const show = pop && !pop.hidden && pcs.display !== "none";
     return { show, text: (pop && pop.textContent || "").replace(/\s+/g, " ").trim(), bg, tipOn, title: document.getElementById("cutStatus").getAttribute("title") };
   });
-  t.check(n("item 6: the Check the cut header pill is not shown on a laptop"), !hover.show, JSON.stringify(hover));
+  t.check(n("item 6: hovering Check cut shows the white what's-left box"), hover.show && hover.bg && !/^rgb\(0,\s*0,\s*0\)$/.test(hover.bg) && !/^rgba\(0,\s*0,\s*0/.test(hover.bg), JSON.stringify(hover));
   t.check(n("item 6: the black hover tip is not shown"), !hover.tipOn, JSON.stringify(hover));
   t.check(n("item 5: the hover box lists the small-hole warning"), /small|hole|thickness|sheet/i.test(hover.text), hover.text.slice(0, 240));
 

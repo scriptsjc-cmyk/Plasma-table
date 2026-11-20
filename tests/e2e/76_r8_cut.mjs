@@ -42,7 +42,7 @@ for (const prof of ["d1440", "d1366"]) {
   t.check(n("r9 item 4: the header connection pill is visible on Cut"), one.pill.exists && one.pill.show && /connected/i.test(one.pill.text), JSON.stringify(one.pill));
   t.check(n("item 1/4: the cut-bar slot is not a Not-connected pill when disconnected"), !one.bar.show || !/not connected/i.test(one.bar.text), JSON.stringify(one.bar));
   t.check(n("item 1: Connect is the clear place to connect (on Bed, or at least in the document)"), one.usb.exists, JSON.stringify(one.usb));
-  t.check(n("item 4: the cut-status pill stays out of the laptop header until there is something to check"), one.status.exists && !one.status.show, JSON.stringify(one.status));
+  t.check(n("item 4: a Check cut button sits in the Cut header"), one.status.exists && one.status.show, JSON.stringify(one.status));
   t.check(n("STOP is visible and large"), one.stop.show && one.stop.w >= 44 && one.stop.h >= 44, JSON.stringify(one.stop));
 
   const zone = await ev(page, () => {
@@ -143,7 +143,7 @@ for (const prof of ["d1440", "d1366"]) {
   });
   t.check(n("step 3 is labelled Setup, not Bed & start"), /setup/i.test(stepName) && !/bed\s*&\s*start/i.test(stepName), stepName);
 
-  t.check(n("item 4: the header status pill stays out of the way of STOP"), !bed.overlap && (!bed.status || true), JSON.stringify(bed));
+  t.check(n("item 4: status is marked when something is wrong (not connected)"), bed.bad, JSON.stringify(bed));
   t.check(n("item 4: status never covers STOP"), !bed.overlap && bed.stopW >= 44, JSON.stringify(bed));
 
   await ev(page, () => { document.getElementById("cutStatus").focus(); });
@@ -153,7 +153,7 @@ for (const prof of ["d1440", "d1366"]) {
     const t = (p && (p.textContent || "")) || "";
     return { show: p && !p.hidden && getComputedStyle(p).display !== "none", text: t.slice(0, 400) };
   });
-  t.check(n("item 4: focusing a hidden status box does not cover the page"), !pop.show, JSON.stringify(pop));
+  t.check(n("item 4: focusing the Check cut button lists what's wrong"), pop.show && /not connected|connect|home|edge|start/i.test(pop.text), JSON.stringify(pop));
 
   await shot(page, `76-r8-cut-bed-${prof}`);
 
