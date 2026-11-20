@@ -191,3 +191,9 @@ button.info-i:active:not(:disabled) { transform: none; filter: none; }
   body:not(.running-job):not(.job-live) :is(.head-pop, .conn-menu, .exportpop, .qb-more):not(.hidden),
   body:not(.running-job):not(.job-live) .topbar.menu-open .topmenu { animation: txPop .12s var(--ease) backwards; transform-origin: top center; }
 }
+/* the active-step underline slides; li.cur keeps its own underline except while the bar is moving */
+#stepper { position: relative; }
+#stepper.ul-moving::after { content: ""; position: absolute; bottom: 0; left: var(--ul-l, 0); width: var(--ul-w, 0); height: 3px;
+  background: var(--accent); border-radius: 2px; pointer-events: none; }
+#stepper.ul-go::after { transition: left var(--motion) var(--ease), width var(--motion) var(--ease); }
+body #stepper#stepper.ul-moving li.cur { border-bottom-color: transparent; }

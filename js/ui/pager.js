@@ -1,4 +1,5 @@
 // Fit a list to its box by showing one page of tiles or rows, with no inner scroll.
+import { pageTurn } from "./transition.js";
 export function pageSizeFor(el, { minW = 160, minH = 140, gap = 12, fallback = 8 } = {}) {
   if (!el) return fallback;
   const r = el.getBoundingClientRect();
@@ -32,7 +33,9 @@ export function bindPager(el, get, set) {
   el.addEventListener("click", (e) => {
     const b = e.target.closest("[data-page-dir]");
     if (!b || b.disabled) return;
-    set((get() || 1) + Number(b.getAttribute("data-page-dir")));
+    const dir = Number(b.getAttribute("data-page-dir")), was = get() || 1;
+    set(was + dir);
+    if ((get() || 1) !== was) pageTurn(el.previousElementSibling, dir);
   });
 }
 

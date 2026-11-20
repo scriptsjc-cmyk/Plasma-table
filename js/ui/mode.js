@@ -11,6 +11,7 @@ import { $, $$, toast } from "../core/dom.js";
 import { renderMatPreset } from "../cut/material.js";
 import { paintChrome, paintGuide, renderProTools, renderQuickBar, renderShapeForm, setShapeFs } from "../core/hooks.js";
 import { getPrefs, savePrefs } from "../core/prefs.js";
+import { enter } from "./transition.js";
 
 export function normEditorMode(mode) {
   if (mode === "pro" || mode === "advanced") return "advanced";
@@ -44,9 +45,14 @@ export function setAppMode(mode, opts) {
   const autoFs = !opts || opts.autoFs !== false;
   const editor = normEditorMode(mode) || (isProMode() ? "advanced" : "simple");
   const pro = editor === "advanced";
+  const wasPro = document.body.classList.contains("advanced-mode");
   if (sketch) sketch.setPro(pro);
   applyBodyMode();
   syncModeSwitch();
+  if (wasPro !== pro && screen() === "make") {          // Simple <-> Advanced: the side panel comes in from the left, the inspector from the right; the canvas stays put
+    enter(document.querySelector("#cutView .stepPane"), "back");
+    if (pro) enter(document.getElementById("ptInspector"), "fwd");
+  }
   if (sketch) {
     renderProTools(); renderShapeForm(); renderQuickBar();
     if (autoFs && screen() === "make") {

@@ -33,3 +33,23 @@ export function go(fn, kind, target) {
   enter(el, kind);
   return out;
 }
+
+// The active-step underline slides from the old step to the new one (0.15 s). The real underline (li.cur's border) is only
+// hidden while the sliding bar is on its way, so the settled look is exactly as before. Instant when still().
+export function slideUnderline(list, from, to) {
+  if (!list || !from || !to || from === to || still()) return;
+  const lr = list.getBoundingClientRect(), a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
+  if (!lr.width || !a.width || !b.width) return;
+  // a pseudo-element on the list draws the moving bar, so no extra node goes inside the <ol>
+  list.classList.remove("ul-moving", "ul-go");
+  list.style.setProperty("--ul-l", (a.left - lr.left) + "px"); list.style.setProperty("--ul-w", a.width + "px");
+  list.classList.add("ul-moving");
+  void list.offsetWidth;
+  list.classList.add("ul-go");
+  list.style.setProperty("--ul-l", (b.left - lr.left) + "px"); list.style.setProperty("--ul-w", b.width + "px");
+  clearTimeout(list._ulT);
+  list._ulT = setTimeout(() => list.classList.remove("ul-moving", "ul-go"), 180);
+}
+
+// Paged lists: the new page slides in from the side it came from.
+export function pageTurn(grid, dir) { enter(grid, dir > 0 ? "fwd" : "back"); }

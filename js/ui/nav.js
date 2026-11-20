@@ -10,7 +10,7 @@ import { S, sketch } from "../core/state.js";
 import { loadJob, renderCutCheck } from "../cut/prepare.js";
 import { renderMaterials } from "../cut/material.js";
 import { applyBodyMode, syncModeSwitch } from "./mode.js";
-import { enter } from "./transition.js";
+import { enter, slideUnderline } from "./transition.js";
 import { syncPhoneUi } from "../make/phonesheet.js";
 import { renderProTools, setShapeFs } from "../make/protools.js";
 import { renderShapeForm } from "../make/shapeform.js";
@@ -136,6 +136,7 @@ export function goStep(n) {
   const was = S.cur;
   S.cur = n; document.body.dataset.step = String(n);
   $$(".step").forEach((el) => el.classList.toggle("hidden", Number(el.dataset.step) !== n));
+  const ulFrom = document.querySelector("#stepper li.cur");
   $$("#stepper li").forEach((li) => {
     const k = Number(li.dataset.step);
     li.classList.toggle("cur", k === n);
@@ -144,6 +145,7 @@ export function goStep(n) {
   if (n !== 3) Setup.leave();
   if (n === 3 && screen() === "cut") { Setup.enter(); renderChecklist(); }
   refresh();
+  if (was !== n && screen() === "cut") slideUnderline($("stepper"), ulFrom, document.querySelector("#stepper li.cur"));
   if (was !== n && screen() === "cut") enter(document.querySelector(`.step[data-step="${n}"]`), n > was ? "fwd" : "back");
   window.scrollTo({ top: 0, behavior: "smooth" });
   const sp = document.querySelector(".stepPane"); if (sp) sp.scrollTop = 0;

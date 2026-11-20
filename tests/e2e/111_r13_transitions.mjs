@@ -127,5 +127,34 @@ for (const [scr, conn] of [["make", true], ["cut", true], ["cut", false]]) {
   await page.context().close();
 }
 
+// r13 section 2 extras: the step underline slides and settles back to li.cur's own underline; paged lists slide;
+// Simple <-> Advanced slides the side panel in while the canvas stays put.
+{
+  const page = await newPage(br, "d1366x640", { base: srv.base });
+  await ev(page, () => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(1); });
+  await page.waitForTimeout(400);
+  const ul = await ev(page, () => new Promise((res) => {
+    const st = document.getElementById("stepper"); window.plasmaTest.goStep(3);
+    const moving = st.classList.contains("ul-moving"), bar = getComputedStyle(st, "::after").width;
+    setTimeout(() => { const cur = st.querySelector("li.cur"); res({ moving, bar, settled: !st.classList.contains("ul-moving"), curBorder: getComputedStyle(cur).borderBottomColor }); }, 350);
+  }));
+  ck("the step underline slides to the new step and then the real underline is back", ul.moving && ul.bar !== "0px" && ul.settled && ul.curBorder !== "rgba(0, 0, 0, 0)", ul);
+
+  await ev(page, () => { const T = window.plasmaTest; T.showScreen("make"); T.openPresetBrowser(); }); await page.waitForTimeout(500);
+  const pg = await ev(page, () => { const nx = document.querySelector("#pbPage .pagebar-next"); if (!nx || nx.disabled) return { skip: true }; nx.click(); return { cls: [...document.getElementById("pbGrid").classList].filter((c) => c.startsWith("tx-")) }; });
+  ck("preset pages slide in (next page comes from the right)", pg.skip || pg.cls.includes("tx-fwd"), pg);
+  await page.keyboard.press("Escape"); await ev(page, () => { const c = document.getElementById("pbClose"); if (c && c.offsetParent) c.click(); }); await page.waitForTimeout(300);
+
+  const md = await ev(page, () => {
+    const T = window.plasmaTest; T.setAppMode("simple", { persist: false, autoFs: false });
+    const cv = document.getElementById("sketch") || document.querySelector("#cutView canvas"); const r0 = cv && cv.getBoundingClientRect().left;
+    T.setAppMode("advanced", { persist: false, autoFs: false });
+    const pane = document.querySelector("#cutView .stepPane");
+    return { cls: pane ? [...pane.classList].filter((c) => c.startsWith("tx-")) : null, canvasAnim: cv ? getComputedStyle(cv).animationName : "none" };
+  });
+  ck("Simple -> Advanced: the side panel slides in, the canvas itself does not animate", md.cls && md.cls.includes("tx-back") && md.canvasAnim === "none", md);
+  await page.context().close();
+}
+
 await br.close(); srv.close();
 process.exit(t.done() ? 1 : 0);
