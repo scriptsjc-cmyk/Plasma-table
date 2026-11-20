@@ -138,6 +138,20 @@ export function refresh() {
   }
   $("fit").style.cursor = f.cls === "unknown" ? "pointer" : "";
   $("fit").title = f.cls === "unknown" ? "Open Machine setup" : "";
+  const fitChip = $("fitChip");
+  const demoHint = !!(f && f.text && /^Demo:/.test(f.text));
+  const onSetup = document.body.dataset.screen === "cut" && String(S.cur) === "3";
+  if (fitChip) {
+    if (onSetup && demoHint) {
+      fitChip.textContent = f.text;
+      fitChip.classList.remove("hidden");
+      $("fit").textContent = "";
+      $("fit").innerHTML = "";
+    } else {
+      fitChip.textContent = "";
+      fitChip.classList.add("hidden");
+    }
+  }
   const kn = $("kerfNote");
   if (kn) kn.classList.toggle("hidden", !S.prepared || screen() !== "cut" || Number(S.cur) < 2);
   if (S.prepared) {
