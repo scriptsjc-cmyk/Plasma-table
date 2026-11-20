@@ -70,16 +70,18 @@ export function applyHudPoint() {
     return true;
   }
   if (tool === "rect" || tool === "disc") {
-    return commitRectDisc();
+    return commitRectDisc({ fromHud: true });
   }
   return false;
 }
 
-export function commitRectDisc() {
+export function commitRectDisc(opts = {}) {
   if (!sketch || !sketch.drawDraft) return false;
   const d = sketch.drawDraft;
+  const fromHud = !!opts.fromHud;
   if (d.kind === "rect") {
-    const w = Math.abs(num($("drawHudW"), d.w)), h = Math.abs(num($("drawHudH"), d.h));
+    const w = Math.abs(fromHud ? num($("drawHudW"), d.w) : d.w);
+    const h = Math.abs(fromHud ? num($("drawHudH"), d.h) : d.h);
     if (w < 2 || h < 2) return false;
     const x = Math.min(d.x, d.x + (d.w >= 0 ? w : -w));
     const y = Math.min(d.y, d.y + (d.h >= 0 ? h : -h));
@@ -92,7 +94,7 @@ export function commitRectDisc() {
     return true;
   }
   if (d.kind === "disc") {
-    const dia = Math.abs(num($("drawHudD"), d.d));
+    const dia = Math.abs(fromHud ? num($("drawHudD"), d.d) : d.d);
     if (dia < 2) return false;
     sketch.add("disc", true, { d: dia });
     const it = sketch.selected() || sketch.items[sketch.items.length - 1];
@@ -102,6 +104,18 @@ export function commitRectDisc() {
     return true;
   }
   return false;
+}
+
+
+export function syncDrawHudValues() {
+  if (!sketch || !sketch.drawDraft) return;
+  const d = sketch.drawDraft;
+  if (d.kind === "rect") {
+    if ($("drawHudW")) $("drawHudW").value = String(Math.round(Math.abs(d.w || 0) * 10) / 10);
+    if ($("drawHudH")) $("drawHudH").value = String(Math.round(Math.abs(d.h || 0) * 10) / 10);
+  } else if (d.kind === "disc") {
+    if ($("drawHudD")) $("drawHudD").value = String(Math.round(Math.abs(d.d || 0) * 10) / 10);
+  }
 }
 
 export function cancelDrawHud() {
@@ -229,6 +243,7 @@ export function startRectAt(wx, wy) {
   sketch.drawDraft = { kind: "rect", x: wx, y: wy, w: 40, h: 30 };
   paintDrawHud();
   focusHud("drawHudW");
+  if (sketch.onMessage) sketch.onMessage("Move to set the size, then click again or press Enter. Or type the width and height.");
 }
 
 export function startDiscAt(wx, wy) {
@@ -236,6 +251,7 @@ export function startDiscAt(wx, wy) {
   sketch.drawDraft = { kind: "disc", cx: wx, cy: wy, d: 40 };
   paintDrawHud();
   focusHud("drawHudD");
+  if (sketch.onMessage) sketch.onMessage("Move to set the size, then click again or press Enter. Or type the diameter.");
 }
 
 export function afterDrawPoint() {

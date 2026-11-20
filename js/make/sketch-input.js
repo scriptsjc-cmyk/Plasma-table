@@ -4,7 +4,7 @@ import { boxOverlap, clone, r1, unionBox, wholeSet } from "./sketch-util.js";
 import { screenBoxToWorld, shiftView } from "../cut/bedview.js";
 import { detectCircle, pointInPoly, bulgeRadius } from "../core/geom.js";
 import { snapWorld, constraintOf, applyConstraints } from "./snaps.js";
-import { afterDrawPoint, startRectAt, startDiscAt, paintDrawHud, commitRectDisc, closeDrawHud, cancelDrawHud } from "./drawhud.js";
+import { afterDrawPoint, startRectAt, startDiscAt, paintDrawHud, commitRectDisc, closeDrawHud, cancelDrawHud, syncDrawHudValues } from "./drawhud.js";
 import { openCtxMenu } from "./ctxmenu.js";
 
 
@@ -406,10 +406,12 @@ export class InputMethods {
           const d = this.drawDraft;
           const x = sn ? sn.x : mwx, y = sn ? sn.y : mwy;
           d.w = x - d.x; d.h = y - d.y;
+          syncDrawHudValues();
         } else if (this.tool === "disc" && this.drawDraft && this.drawDraft.kind === "disc") {
           const d = this.drawDraft;
           const x = sn ? sn.x : mwx, y = sn ? sn.y : mwy;
           d.d = 2 * Math.hypot(x - d.cx, y - d.cy);
+          syncDrawHudValues();
         }
         this.draw();
         return;
