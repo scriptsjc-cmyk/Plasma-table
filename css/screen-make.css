@@ -1796,9 +1796,9 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body[data-screen="make"] .topbar #makeBar #qbPinned button span,
   body[data-screen="make"] .topbar #makeBar #qbPinned button kbd { display: none; }
   body[data-screen="make"] .topbar #makeBar #qbPinned button {
-    width: 36px;
-    min-width: 36px;
-    min-height: 36px;
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
     padding: 0;
   }
   body[data-screen="make"] .topbar #makeBar .sktools button {
@@ -1808,6 +1808,13 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   }
   body.pro-mode[data-screen="make"] #srcShape .varbox h4 { margin: 0 0 4px; }
   body.pro-mode[data-screen="make"] #srcShape .tip { display: none; }
+}
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) and (max-height: 680px) {
+  body[data-screen="make"] .topbar #makeBar #qbPinned button {
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
