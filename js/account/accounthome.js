@@ -148,7 +148,7 @@ export function bindHome() {
   $("btnAcctSave").onclick = async () => {
     try {
       await A.setDisplayName($("acctName").value);
-      toast("Saved");
+      toast("Saved ✓");
       fillSignedIn();
     } catch (err) { toast(err.message, true); }
   };
@@ -198,7 +198,7 @@ export function bindHome() {
       const name = (host && host.fileName && host.fileName()) || "Imported from this device";
       const p = await A.migrateLocalParts(items, name);
       if (p && host && host.rememberPart) host.rememberPart(p);
-      toast("Saved to your account");
+      toast("Saved ✓");
       keepAnswered();
       openAccount();
     } catch (err) { toast(err.message, true); }

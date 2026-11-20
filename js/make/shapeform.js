@@ -63,7 +63,9 @@ export function paintGuide() {
   const has = !!(sketch && sketch.items.length);
   document.body.classList.toggle("bg-picked", !!(mk && beg && S.src === "shape" && has && !S.bgChoosing && S.cur === 1));
   const nx = $("next1");
-  if (nx) nx.textContent = mk ? (S.prepared ? "✂ Cut this part →" : (has ? "Getting it ready…" : "Pick a template to continue")) : "Next: bed and start →";
+  if (nx) nx.textContent = mk
+    ? (S.prepared ? "✂ Cut this part →" : (has ? "Getting it ready…" : "Pick a template to continue"))
+    : (S.prepared ? "Next: bed and start →" : "Pick a part first");
   const mt = $("matLine"); if (mt) mt.textContent = S.material ? `Cutting ${S.material.toLowerCase()}, ${S.thickness} mm thick. Not right? ${clickVerb()} a different one.` : "";
   const t = $("step1Title"); if (t) t.textContent = mk ? "Make a part" : "What do you want to cut?";
   const gh = $("guideHead"); if (!gh || !mk || !beg) return;

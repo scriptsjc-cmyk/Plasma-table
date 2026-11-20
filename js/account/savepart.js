@@ -32,10 +32,11 @@ export async function saveCurrent(mode) {
     const base = String(name).replace(/ \(copy( \d+)?\)$/, "");
     const nm = name === (cur && cur.name) ? base + " (copy)" : name;
     const fold = cur && cur.data && cur.data.folder;     // a copy stays in the same folder as the original
+    toast("Saving…");
     const p = await A.savePart({ name: nm, data: { items, ...(fold ? { folder: fold } : {}), ...(host.designMeta && host.designMeta() ? { meta: host.designMeta() } : {}) } });
     if (host.rememberPart) host.rememberPart(p);
     if ($("partName")) $("partName").value = p.name;
-    toast("Saved a copy: “" + p.name + "”");
+    toast("Saved ✓");
     await refreshPartsList();
     return p;
   }
@@ -43,10 +44,11 @@ export async function saveCurrent(mode) {
   if (mode === "over" && cur && cur.id) { try { prev = await A.loadPart(cur.id); } catch { prev = null; } }
   try {
     const dm = host.designMeta && host.designMeta();
+    toast("Saving…");
     const p = await A.savePart({ id: cur && cur.id, name, data: { items, ...(dm ? { meta: dm } : {}) }, updated_at: cur && cur.updated_at });
     if (host.rememberPart) host.rememberPart(p);
     if ($("partName")) $("partName").value = p.name;
-    toast("Saved “" + p.name + "”");
+    toast("Saved ✓");
     await refreshPartsList();
     if (prev) offerUndo(p, prev);
     return p;

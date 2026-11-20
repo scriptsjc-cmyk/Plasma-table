@@ -38,6 +38,10 @@ export function paintCutStatus() {
   if (!btn) return;
   const issues = cutStatusIssues();
   const bad = issues.length > 0;
+  // Don't show the pill until a part is on the bed and there is something to check.
+  const show = !!(S.prepared && bad);
+  btn.hidden = !show;
+  btn.classList.toggle("hidden", !show);
   btn.classList.toggle("is-bad", bad);
   btn.classList.toggle("is-ok", !bad);
   btn.setAttribute("aria-expanded", pop && !pop.hidden ? "true" : "false");
@@ -45,6 +49,7 @@ export function paintCutStatus() {
     ? `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label">Check the cut: ${issues.length} warning${issues.length === 1 ? "" : "s"}</span>`
     : `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label">Cut looks ready</span>`;
   btn.removeAttribute("title");
+  if (!show) { if (pop) { pop.hidden = true; pop.classList.add("hidden"); } return; }
   if (pop) {
     const rows = issues.map((i) => {
       const link = i.kind === "setup"

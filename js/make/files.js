@@ -141,6 +141,7 @@ export async function importIntoMake(list, opts = {}) {
   const fl = [...(list || [])].filter((f) => f && /\.(dxf|svg)$/i.test(f.name));
   if (!fl.length) { toast("Open a DXF or SVG file.", true); return 0; }
   if (S.job && S.job.running) { toast("Stop the cut first.", true); return 0; }
+  toast("Opening…");
   let replace = !!opts.replace;
   if (!replace && sketch && sketch.items.length && !opts.add) {
     const a = await askAddOrReplace(fl[0], "make");
@@ -168,7 +169,7 @@ export async function importIntoMake(list, opts = {}) {
     const cv = (r.warnings || []).find((w) => /can't be edited as true curves/.test(w));
     const openW = (r.warnings || []).find((w) => /open path/.test(w));
     const extra = [openW, cv].filter(Boolean).map((w) => " " + w).join("");
-    toast(`Opened ${e.parts.length} part${e.parts.length > 1 ? "s" : ""} on the drawing (${e.arcs} arc${e.arcs === 1 ? "" : "s"}, ${e.lines} straight edge${e.lines === 1 ? "" : "s"}).` + extra, !!(openW || cv));
+    toast((openW || cv) ? (`Opened ${e.parts.length} part${e.parts.length > 1 ? "s" : ""} on the drawing.` + extra) : "Opened ✓", !!(openW || cv));
     return n;
   };
   let added = 0;

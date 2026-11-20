@@ -88,6 +88,12 @@ export function drawPreview() {
   const cv = $("preview");
   const grid = cv && cv.closest(".cutgrid");
   if (grid) grid.classList.toggle("nofile", screen() === "cut" && S.cur === 1 && !S.prepared);
+  const hint = $("previewHint");
+  if (hint) {
+    const show = screen() === "cut" && !S.prepared;
+    hint.hidden = !show;
+    hint.classList.toggle("hidden", !show);
+  }
   if (!cv || !cv.offsetParent) return;
   const editing = !!sketch && S.src === "shape" && (screen() === "make" ? S.cur === 1 : (S.cur === 3 && Setup.layoutActive()));
   if (sketch) renderQuickBar();
@@ -105,17 +111,6 @@ function drawCanvas(cv, main) {
   // steps 1-2: zoom in on the part. Step 3 onwards (and the Move tab): the whole table, with the part where it will be cut.
   const zoom = main && S.prepared && isPartPreview();
   let A, ox = 0, oy = 0;
-  if (isPartPreview() && !S.prepared) {
-    const ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 600;
-    const box = cv.closest(".previewPane") || cv.parentElement;
-    const dock = box && box.querySelector(".previewDock");
-    const h = Math.max(120, (box ? (box.clientHeight - (dock ? dock.offsetHeight : 0)) : 0) || cv.clientHeight || 200);
-    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = themeColor("--cad-canvas", "#FFFFFF"); ctx.fillRect(0, 0, w, h);
-    cv._zmap = null; cv._map = null;
-    return;
-  }
   if (zoom) {
     const b = S.prepared.stats.bounds, pad = Math.max(5, 0.06 * Math.max(b[2] - b[0], b[3] - b[1]));
     A = { x: [b[0] - pad, b[2] + pad], y: [b[1] - pad, b[3] + pad], label: "" };
@@ -177,6 +172,14 @@ function drawCanvas(cv, main) {
   cv._zmap = main && zoom ? { toMm, toPx } : null;
   cv._map = zoom ? null : { toMm, toPx, sc, T: A.table };
   if (!zoom && !isPartPreview()) drawMachineBed(ctx, A.table, X, Y, sc);
+  if (!S.prepared && A.table) {
+    const T = A.table, [x0, x1] = T.x, [y0, y1] = T.y;
+    ctx.beginPath();
+    ctx.moveTo(X(x0), Y(y0)); ctx.lineTo(X(x1), Y(y0)); ctx.lineTo(X(x1), Y(y1)); ctx.lineTo(X(x0), Y(y1));
+    ctx.closePath();
+    ctx.fillStyle = C.bed; ctx.fill();
+    ctx.strokeStyle = C.slat; ctx.lineWidth = 2; ctx.stroke();
+  }
   if (S.prepared) {
     const pv = S.prepared.preview;
     const path = (p) => { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(X(x + ox), Y(y + oy)) : ctx.moveTo(X(x + ox), Y(y + oy)))); ctx.stroke(); };

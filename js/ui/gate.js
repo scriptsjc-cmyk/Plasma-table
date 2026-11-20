@@ -17,7 +17,7 @@ function whyOff(el) {
   if (el.matches && el.matches(".j[data-axis], .steps button")) return needConn || (S.job && S.job.running ? "Not while a job is running." : /alarm/i.test((S.status && S.status.state) || "") ? "Clear the alarm first." : "Not available right now.");
   if (el.hasAttribute && el.hasAttribute("data-mv")) return Number(el.dataset.mv) < 0 ? "Already first in the order." : "Already last in the order.";
   switch (id) {
-    case "next1": return screen() === "make" ? "Pick a shape first." : "Upload a file or pick saved parts first.";
+    case "next1": return screen() === "make" ? "Pick a shape first." : "Pick a part first.";
     case "btnStart": {
       if (!machineAllowed()) return Acc.isSignedIn() ? "Link a machine to run jobs." : "Sign in and link a machine to run jobs.";
       try { const b = blockers(); if (b && b.length) return String(b[0]).replace(/\s+/g, " ").slice(0, 90); } catch (e) { /* fall through */ }
