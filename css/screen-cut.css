@@ -954,6 +954,8 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   #running > #liveSpeedBox .row button { flex: 1 1 0; min-width: 0; min-height: 44px; }
   #running > #liveSpeedBox #delayRow .row { flex-wrap: wrap; }
   #running > #liveSpeedBox #delayRow .row #delSave { flex: 1 0 100%; white-space: nowrap; }    /* its own row under − / +, never squeezed */
+  /* r13: the 300 px button cap let Save share the row on wide screens and squeezed − / + to 30 px; it always gets its own row */
+  body[data-screen="cut"] #running > #liveSpeedBox #delayRow .row #delSave { max-width: none; }
   #running > #liveSpeedBox p { margin: 4px 0 0; }
   #running > #livePanel { grid-area: live; margin: 0; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }   /* each reading on one line */
   #running > #livePanel .lp b { white-space: nowrap; }
@@ -2823,6 +2825,41 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   }
   body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnGoStart { top: 72px; }
   body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnTrace { top: 104px; }
+  /* r13 done-when: the three start-point chips are one row along the top of the picture, under the Drag / fit
+     notes, and the bed is fitted below the row (js/cut/setuplayout.js setupPadTop) — nothing stacks over the bed. */
+  body[data-screen="cut"][data-step="3"] .previewPane > #startChips {
+    position: absolute;
+    right: 8px;
+    top: 36px;
+    z-index: 5;
+    display: flex;
+    gap: 6px;
+    max-width: calc(100% - 16px);
+  }
+  body[data-screen="cut"][data-step="3"] .previewPane:has(> #fitChip:not(.hidden)) > #startChips { top: 64px; }
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] .previewPane > #startChips,
+  body[data-screen="cut"][data-step="3"] .previewPane > #startChips:empty { display: none; }
+  body[data-screen="cut"][data-step="3"] #cutView #startChips > button {
+    position: static;
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    height: 28px;
+    min-height: 28px;
+    margin: 0;
+    padding: 2px 10px;
+    white-space: nowrap;
+    background: var(--card, var(--c-white));
+    color: var(--text);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--c-black) 12%, transparent);
+    font-size: var(--fs-xs);
+  }
   body:not(.machine-connected)[data-screen="cut"][data-step="3"] #connectCard .xl {
     min-height: 40px;
     font-size: var(--fs-s);
@@ -2952,3 +2989,8 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label > .unitin input { min-width: 0; width: 100%; }
   body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label > .info-i { width: 16px; height: 16px; min-height: 0; }
 }
+
+/* r13 done-when: jog pad labels (arrow + Y− / Up / Home …) fit inside their buttons instead of running 2–6 px out of the bottom */
+body.laptop-ui .jogwrap .j, body.laptop-ui .jogwrap .do-home { line-height: 1; }
+body.laptop-ui .jogwrap .j small, body.laptop-ui .jogwrap .do-home small { line-height: 1; }
+body.laptop-ui .jogwrap .j .ico, body.laptop-ui .jogwrap .do-home .ico { width: 15px; height: 15px; }
