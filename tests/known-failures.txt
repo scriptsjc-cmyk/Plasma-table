@@ -1,0 +1,5 @@
+# Checks that already fail on main and are tracked in the backlog. ci-gate.mjs lets ONLY these exact checks fail.
+# One check per line: "<group>/<suite>: <check name>" (the text after "FAIL " up to the " — " details). Remove a line when it is fixed.
+# Never add a safety check here (20_demo_job_safety, 22_stop_overlay, 70, 74, 96_fits_screen, 110, 111 are gated in full).
+unit/22_cad_c1_c9: [C9-S2R] C9: offset preset packs four side panels
+unit/22_cad_c1_c9: [C9-S2R] C9: the four packed panels are not two identical pairs

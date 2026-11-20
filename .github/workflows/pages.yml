@@ -18,7 +18,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # r13 section 5: deploy only after the gate passes. tests/ci-gate.mjs runs every unit suite plus the safety and fit
+  # end-to-end suites (20_demo_job_safety, 22_stop_overlay, 70, 74, 96_fits_screen, 110, 111); only the checks listed in
+  # tests/known-failures.txt may fail. Everything runs against a local static server and the in-browser practice table.
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - name: Install test tools
+        working-directory: tests
+        run: npm ci
+      - name: Check Chrome is there (Playwright uses the installed Google Chrome)
+        run: google-chrome --version
+      - name: Deploy gate
+        working-directory: tests
+        env:
+          JOBS: "2"
+        run: node ci-gate.mjs
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: github-pages
