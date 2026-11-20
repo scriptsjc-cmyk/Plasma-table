@@ -17,7 +17,8 @@ const run = (s) => new Promise((resolve) => {
     clearTimeout(kill);
     const summary = [...out.matchAll(/^\s*\S+: (\d+)\/(\d+) passed, (\d+) failed/gm)].pop();
     const fails = out.split("\n").filter((l) => /^\s*FAIL /.test(l)).map((l) => s + ": " + l.replace(/^\s*FAIL\s+/, "").split(" — ")[0].split("  -> ")[0].trim());
-    resolve({ s, code, summary, fails, out });
+    const detail = Object.fromEntries(out.split("\n").filter((l) => /^\s*FAIL /.test(l)).map((l) => { const t = l.replace(/^\s*FAIL\s+/, ""); return [s + ": " + t.split(" — ")[0].split("  -> ")[0].trim(), t.slice(0, 400)]; }));
+    resolve({ s, code, summary, fails, detail, out });
   });
 });
 const unexpected = (x) => !x.summary || x.fails.some((f) => !known.has(f));
@@ -29,7 +30,7 @@ await Promise.all(Array.from({ length: JOBS }, async () => { while (queue.length
   results.push(r);
   const bad = unexpected(r);
   console.log(`${bad ? "BLOCK" : "ok   "} ${s.padEnd(34)} ${r.summary ? r.summary[1] + "/" + r.summary[2] : "crashed / no summary"}${r.retried ? " (2nd run)" : ""}${r.fails.length ? "  known-fail: " + r.fails.filter((f) => known.has(f)).length : ""}`);
-  if (bad) console.log((r.summary ? r.fails.filter((f) => !known.has(f)) : [r.out.split("\n").slice(-15).join("\n")]).map((f) => "    " + f).join("\n"));
+  if (bad) console.log((r.summary ? r.fails.filter((f) => !known.has(f)).map((f) => r.detail[f] || f) : [r.out.split("\n").slice(-15).join("\n")]).map((f) => "    " + f).join("\n"));
 } }));
 const blocked = results.filter(unexpected);
 const stale = [...known].filter((k) => !results.some((r) => r.fails.includes(k)));
