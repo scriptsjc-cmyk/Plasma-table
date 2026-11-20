@@ -5,6 +5,7 @@ import { $, $$, toast } from "../core/dom.js";
 import { M, S } from "../core/state.js";
 import { cmd, machineAllowed, requireMachine } from "./access.js";
 import { jogToMachine, syncJogPadLabels } from "../cut/bedview.js";
+import { motorDirLockWhy, guidedJogAllowed } from "./motordir.js";
 
 // ------------------------------------------------------------------ jog pad (one template, used on 3 screens)
 export function mountJogPads() {
@@ -22,8 +23,10 @@ export function mountJogPads() {
 }
 function jogMachine(axis, dir) {
   if (!machineAllowed()) { requireMachine("Link your machine to run jobs"); return; }
+  const lock = motorDirLockWhy();
+  if (lock && !guidedJogAllowed()) { toast(lock, true); return; }
   const step = axis === "Z" ? Math.min(S.jogStep, 10) : S.jogStep;
-  cmd("jog", { axis, dist: step * dir });
+  cmd("jog", { axis, dist: step * dir, allowDirTest: guidedJogAllowed() });
 }
 function jog(axis, dir) { jogMachine(...jogToMachine(axis, dir)); }
 // ---- press-and-hold jogging

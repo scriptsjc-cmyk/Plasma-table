@@ -1,13 +1,26 @@
-// Machine setup: Reverse X / Y / Z. Changes the board's motor direction
-// (FluidNC direction_pin :low, or GRBL $3) so probing and on-board jobs follow it too.
+// Machine setup: Stock / Reversed X / Y / Z, relative to the shipped config.
+// Changes the board's motor direction (FluidNC direction_pin :low, or GRBL $3)
+// so probing and on-board jobs follow it too. After a change: lock jog and cut
+// until the board restarts, then a guided test. Dual motors on one axis are flipped as a pair.
 import { isLaptopUi } from "../ui/laptop.js";
 import { estopOn } from "../ui/flow.js";
 import { M, S } from "../core/state.js";
 import { $, toast } from "../core/dom.js";
 import { askConfirm } from "../core/safeprompt.js";
+import { cmd } from "./access.js";
 
 const AXES = ["x", "y", "z"];
 const PIN_PATH = (a, n) => `$/axes/${a}/motor${n}/standard_stepper/direction_pin`;
+// Shipped hardware/config.yaml: X and Y already have :low, Z does not.
+export const STOCK_PIN_LOW = { x: true, y: true, z: false };
+const PENDING_KEY = "plasma.motorDir.pendingRestart";
+const TEST_KEY = "plasma.motorDir.guidedTest";
+const TEST_DIST_MM = 3;
+const TEST_STEPS = [
+  { axis: "X", dir: 1, question: "Did the head move right?" },
+  { axis: "Y", dir: 1, question: "Did the head move towards you?" },
+  { axis: "Z", dir: 1, question: "Did the head move up?" },
+];
 
 function pinParts(s) {
   const raw = String(s || "").trim();
@@ -31,8 +44,27 @@ export function pinCanonical(s) {
   return raw ? raw.toLowerCase() : raw;
 }
 
+function readFlag(key) {
+  try { return localStorage.getItem(key) === "1"; } catch (e) { return false; }
+}
+function writeFlag(key, on) {
+  try { if (on) localStorage.setItem(key, "1"); else localStorage.removeItem(key); } catch (e) { /* ignore */ }
+}
+function readTestStep() {
+  try {
+    const n = Number(localStorage.getItem(TEST_KEY));
+    return Number.isInteger(n) && n >= 0 && n < TEST_STEPS.length ? n : -1;
+  } catch (e) { return -1; }
+}
+function writeTestStep(n) {
+  try {
+    if (n >= 0) localStorage.setItem(TEST_KEY, String(n));
+    else localStorage.removeItem(TEST_KEY);
+  } catch (e) { /* ignore */ }
+}
+
 function gLink() { return M && M.grbl; }
-const state = { pins: { x: {}, y: {}, z: {} }, mask: 0, ready: false, loading: false, painting: false, sawFluidPath: false };
+const state = { pins: { x: {}, y: {}, z: {} }, mask: 0, ready: false, loading: false, painting: false, sawFluidPath: false, pendingRestart: readFlag(PENDING_KEY), testStep: readTestStep() };
 function markFluid() {
   state.sawFluidPath = true;
   try { if (S) S.fluidnc = true; } catch (e) { /* ignore */ }
@@ -166,14 +198,106 @@ async function readGrblMask() {
 }
 
 
+// True when this axis does not match the shipped stock polarity.
 function reversed(axis) {
   if (isFluid()) {
     const pin = state.pins[axis] && state.pins[axis][0];
-    return !!(pin && pinHasLow(pin));
+    if (!pin) return false;
+    return pinHasLow(pin) !== !!STOCK_PIN_LOW[axis];
   }
   const bit = { x: 1, y: 2, z: 4 }[axis];
-  return !!(state.mask & bit);
+  return !!(state.mask & bit); // GRBL stock is $3=0
 }
+
+function pairAxes() {
+  return AXES.filter((a) => state.pins[a] && state.pins[a][1]);
+}
+
+export function motorDirLockWhy() {
+  if (state.pendingRestart) return "Restart the board to apply the motor direction change. Jog and cut are locked until then.";
+  if (state.testStep >= 0) return "Finish the motor direction test before cutting.";
+  return "";
+}
+export function guidedJogAllowed() { return state.testStep >= 0 && !state.pendingRestart; }
+
+function setPendingRestart(on) {
+  state.pendingRestart = !!on;
+  writeFlag(PENDING_KEY, state.pendingRestart);
+  if (on) { state.testStep = -1; writeTestStep(-1); }
+}
+
+function clearHomedState() {
+  try {
+    if (M && typeof M.loseReference === "function" && M.safety && M.safety.referenced) {
+      M.loseReference("Motor direction changed");
+    } else if (M && M.safety && typeof M.safety.clearReference === "function") {
+      M.safety.clearReference();
+    }
+    if (M) M.zeroConfirmed = false;
+    if (S) S.zeroSet = false;
+  } catch (e) { /* ignore */ }
+}
+
+// Called on reconnect or a controller banner: the board has come back after a direction change.
+export function noteMotorDirRestarted() {
+  if (!state.pendingRestart) return false;
+  setPendingRestart(false);
+  state.testStep = 0;
+  writeTestStep(0);
+  setNote("The board is back. Check each axis with the short test below.", true);
+  toast("The board is back. Check each axis with the short test.");
+  paint();
+  return true;
+}
+
+function paintTest() {
+  const box = $("motorDirTest");
+  if (!box) return;
+  const on = state.testStep >= 0 && !state.pendingRestart && S.connected;
+  box.classList.toggle("hidden", !on);
+  if (!on) return;
+  const step = TEST_STEPS[state.testStep];
+  const q = $("motorDirTestStep");
+  if (q && step) {
+    q.textContent = "Jog " + step.axis + "+ a short way, slowly. " + step.question;
+  }
+  const jog = $("btnDirTestJog");
+  if (jog && step) jog.textContent = "Jog " + step.axis + " a short way (slow)";
+}
+
+function runGuidedJog() {
+  if (!guidedJogAllowed()) return;
+  const step = TEST_STEPS[state.testStep];
+  if (!step) return;
+  const why = motorDirWhy();
+  if (why) { toast(why, true); return; }
+  const r = cmd("jog", { axis: step.axis, dist: TEST_DIST_MM * step.dir, allowDirTest: true, slow: true });
+  if (!r) return;
+  if (r.note) toast(r.note);
+}
+
+function answerTest(yes) {
+  if (state.testStep < 0) return;
+  const step = TEST_STEPS[state.testStep];
+  if (!yes) {
+    toast("Switch " + step.axis + " to the other setting (Stock or Reversed), save, and restart the board again.", true);
+    setNote("That axis is still the wrong way. Change " + step.axis + " below, restart the board, then test again.", true);
+    return;
+  }
+  const next = state.testStep + 1;
+  if (next >= TEST_STEPS.length) {
+    state.testStep = -1;
+    writeTestStep(-1);
+    setNote("Motor direction looks right on X, Y and Z.", true);
+    toast("Motor direction looks right.");
+    paint();
+    return;
+  }
+  state.testStep = next;
+  writeTestStep(next);
+  paint();
+}
+
 
 function paint() {
   const card = $("motorDirCard");
@@ -191,6 +315,8 @@ function paint() {
     if (!el) continue;
     el.checked = reversed(a);
     el.disabled = !can;
+    const stock = $("rev" + a.toUpperCase() + "Lab");
+    if (stock) stock.textContent = reversed(a) ? "(Reversed)" : "(Stock)";
     if (lab) {
       if (!can) {
         lab.setAttribute("aria-disabled", "true");
@@ -201,11 +327,24 @@ function paint() {
       }
     }
   }
+  const pair = $("motorDirPairNote");
+  if (pair) {
+    const axes = pairAxes();
+    if (axes.length) {
+      pair.textContent = axes.map((a) => a.toUpperCase()).join(" and ") +
+        (axes.length === 1 ? " has two motors; they are reversed only as a pair." : " have two motors each; each axis is reversed only as a pair.");
+      pair.classList.remove("hidden");
+    } else {
+      pair.textContent = "";
+      pair.classList.add("hidden");
+    }
+  }
   if (note && !note.dataset.hold) {
     note.classList.toggle("hidden", !(!S.connected || (S.connected && !state.ready && !state.loading && why === "")));
     if (!S.connected) { note.textContent = ""; note.classList.add("hidden"); }
     else if (!state.ready && !state.loading && !why) { note.textContent = "Couldn't read the motor direction from the board."; note.classList.remove("hidden"); }
   }
+  paintTest();
   state.painting = false;
 }
 
@@ -297,15 +436,17 @@ async function onToggle(axis, want) {
   if (jobBusy()) { toast("Not while a job is running.", true); return; }
   if (boardEstop()) { toast("E-STOP is on. Nothing was sent.", true); return; }
   const fluid = isFluid();
-  const title = (want ? "Reverse " : "Turn off Reverse ") + axis.toUpperCase() + "?";
+  const title = "Set " + axis.toUpperCase() + (want ? " to Reversed?" : " back to Stock?");
   const body = fluid
-    ? "This changes the motor direction on the controller and saves it to config.yaml. Restart the board afterwards for it to take effect."
-    : "This changes the motor direction invert mask ($3) on the controller.";
+    ? "This changes the motor direction on the controller and saves it to config.yaml. Restart the board afterwards for it to take effect. Jog and cut stay locked until then, then we'll test each axis. Any homed position is cleared."
+    : "This changes the motor direction invert mask ($3) on the controller. Restart the board afterwards. Jog and cut stay locked until then, then we'll test each axis. Any homed position is cleared.";
   if (!(await askConfirm({ title, body, ok: "Save", cancel: "Cancel" }))) return;
   try {
     if (fluid) await writeFluid(axis);
     else await writeGrbl(axis);
-    const msg = fluid ? "Saved. Restart the board to apply." : "Saved. Try the + arrow again.";
+    clearHomedState();
+    setPendingRestart(true);
+    const msg = "Saved. Restart the board to apply. Jog and cut are locked until then.";
     setNote(msg, true);
     toast(msg);
   } catch (e) {
@@ -321,8 +462,21 @@ export function bindMotorDir() {
     if (!el) continue;
     el.addEventListener("change", () => onToggle(a, !!el.checked));
   }
+  const jog = $("btnDirTestJog"), yes = $("btnDirTestYes"), no = $("btnDirTestNo");
+  if (jog) jog.addEventListener("click", () => runGuidedJog());
+  if (yes) yes.addEventListener("click", () => answerTest(true));
+  if (no) no.addEventListener("click", () => answerTest(false));
 }
 
 export function motorDirState() {
-  return { ready: state.ready, fluidnc: isFluid(), mask: state.mask, pins: JSON.parse(JSON.stringify(state.pins)), enabled: motorDirEnabled(), why: motorDirWhy(), reversed: { x: reversed("x"), y: reversed("y"), z: reversed("z") } };
+  return {
+    ready: state.ready, fluidnc: isFluid(), mask: state.mask,
+    pins: JSON.parse(JSON.stringify(state.pins)),
+    enabled: motorDirEnabled(), why: motorDirWhy(),
+    reversed: { x: reversed("x"), y: reversed("y"), z: reversed("z") },
+    pendingRestart: !!state.pendingRestart,
+    testStep: state.testStep,
+    lockWhy: motorDirLockWhy(),
+    pairAxes: pairAxes(),
+  };
 }

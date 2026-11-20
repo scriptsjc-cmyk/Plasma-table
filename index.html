@@ -997,16 +997,11 @@
 
     <div class="setpane" data-setpane="machine">
       <h3>Machine and axes</h3>
-      <p class="muted small">Bed size is the travel the torch may use. Invert an axis if it moves the wrong way.<span class="pro-copy"> Firmware can push invert and travel to the controller.</span></p>
+      <p class="muted small">Bed size is the travel the torch may use. To reverse a motor, use Machine setup → Motor direction (Stock or Reversed).</p>
       <div class="grid3">
         <label>Bed X (mm)<input id="setBedX" type="number" min="50" step="1" inputmode="decimal"></label>
         <label>Bed Y (mm)<input id="setBedY" type="number" min="50" step="1" inputmode="decimal"></label>
         <label>Bed Z (mm)<input id="setBedZ" type="number" min="10" step="1" inputmode="decimal"></label>
-      </div>
-      <div class="row wrap invrow">
-        <label class="check"><input id="setInvX" type="checkbox"> Invert X</label>
-        <label class="check"><input id="setInvY" type="checkbox"> Invert Y</label>
-        <label class="check"><input id="setInvZ" type="checkbox"> Invert Z</label>
       </div>
       <p id="setFirmwareHint" class="muted small"></p>
     </div>

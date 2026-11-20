@@ -50,6 +50,15 @@ t.check("Machine setup shows Motor direction on a laptop", off.shown && off.lapt
 t.check("toggles are disabled when not connected, with a why-off hint", off.disabled && /connect/i.test(off.why) && !off.connected, JSON.stringify(off));
 t.check("Test torch is on the page, disabled when not connected", off.torchLabel === "Test torch" && off.torchOff && /connect/i.test(off.torchWhy), JSON.stringify(off));
 
+await ev(page, () => {
+  try {
+    localStorage.removeItem("plasma.motorDir.pendingRestart");
+    localStorage.removeItem("plasma.motorDir.guidedTest");
+  } catch (e) { /* ignore */ }
+});
+t.check("Settings no longer has the dead Invert X/Y/Z boxes",
+  await ev(page, () => !document.getElementById("setInvX") && !document.getElementById("setInvY") && !document.getElementById("setInvZ") && !/Invert X/.test((document.getElementById("settingsDlg") || {}).innerHTML || "")));
+
 // ------------------------------------------------------------------ GRBL / practice table ($3)
 await ev(page, () => document.getElementById("btnDemo").click());
 await page.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 10000 });
@@ -78,7 +87,7 @@ let n = await ev(page, () => window.plasmaTest.S.demo.log.length);
 await ev(page, () => { const el = document.getElementById("revX"); el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
 await sleep(700);
 let log = await logAfter(n);
-t.check("Reverse X sends $3=1 and asks to confirm", log.some((l) => l === "$3=1") && page.dialogs.some((d) => /Reverse X/i.test(d)), JSON.stringify({ log, dialogs: page.dialogs }));
+t.check("Reverse X sends $3=1 and asks to confirm", log.some((l) => l === "$3=1") && page.dialogs.some((d) => /Set X to Reversed/i.test(d)), JSON.stringify({ log, dialogs: page.dialogs }));
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
 await ev(page, () => { const el = document.getElementById("revY"); el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
@@ -148,7 +157,8 @@ t.check("parseDumpPins reads quoted axis pins and ignores Relay.direction_pin",
 // ------------------------------------------------------------------ FluidNC path
 await ev(page, async () => {
   const T = window.plasmaTest;
-  T.S.demo.useFluidNC({ y: { 0: "gpio.23", 1: "gpio.17" } });
+  // Start at the shipped stock pins (X/Y :low, Z not). Y motor1 is present to check pair-reverse.
+  T.S.demo.useFluidNC({ x: { 0: "gpio.19:low" }, y: { 0: "gpio.23:low", 1: "gpio.17" }, z: { 0: "gpio.26" } });
   // Banner missed: isFluid() is false until a $/axes answer arrives.
   T.S.fluidnc = false;
   if (T.getM().grbl) T.getM().grbl.fluidnc = false;
@@ -160,22 +170,27 @@ await page.waitForFunction(() => {
 }, null, { timeout: 8000 });
 
 const fl0 = await ev(page, () => window.plasmaTest.motorDirState());
-t.check("FluidNC is detected from a $/axes reply and reads the stock pins, Reverse off", fl0.fluidnc && fl0.pins.x[0] === "gpio.19" && !fl0.reversed.x && !fl0.reversed.y && !fl0.reversed.z, JSON.stringify(fl0));
+t.check("FluidNC is detected from a $/axes reply and reads the shipped stock pins as Stock, not Reversed",
+  fl0.fluidnc && fl0.pins.x[0] === "gpio.19:low" && fl0.pins.y[0] === "gpio.23:low" && fl0.pins.z[0] === "gpio.26" && !fl0.reversed.x && !fl0.reversed.y && !fl0.reversed.z,
+  JSON.stringify(fl0));
+const pairNote = await ev(page, () => (document.getElementById("motorDirPairNote") || {}).textContent || "");
+t.check("a dual-motor Y shows that both motors are reversed as a pair",
+  /Y/i.test(pairNote) && /pair/i.test(pairNote), pairNote);
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
 await ev(page, () => { const el = document.getElementById("revX"); el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
 await sleep(900);
 log = await logAfter(n);
-t.check("FluidNC Reverse X writes the direction pin with :low, then saves config.yaml",
-  log.some((l) => l === "$/axes/x/motor0/standard_stepper/direction_pin=gpio.19:low") && log.some((l) => l.startsWith("$CD=")),
+t.check("FluidNC Reversed X flips the shipped :low pin off, then saves config.yaml",
+  log.some((l) => l === "$/axes/x/motor0/standard_stepper/direction_pin=gpio.19") && log.some((l) => l.startsWith("$CD=")),
   JSON.stringify(log));
 
 n = await ev(page, () => window.plasmaTest.S.demo.log.length);
 await ev(page, () => { const el = document.getElementById("revY"); el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
 await sleep(900);
 log = await logAfter(n);
-t.check("FluidNC Reverse Y also flips motor1 when it is present",
-  log.some((l) => l === "$/axes/y/motor0/standard_stepper/direction_pin=gpio.23:low") &&
+t.check("FluidNC Reversed Y flips both motors as a pair",
+  log.some((l) => l === "$/axes/y/motor0/standard_stepper/direction_pin=gpio.23") &&
   log.some((l) => l === "$/axes/y/motor1/standard_stepper/direction_pin=gpio.17:low") &&
   log.some((l) => l.startsWith("$CD=")),
   JSON.stringify(log));
@@ -190,6 +205,46 @@ t.check("FluidNC Reverse Z writes gpio.26:low and saves",
 
 const note = await ev(page, () => (document.getElementById("motorDirNote") || {}).textContent || "");
 t.check("FluidNC save tells the user to restart the board", /restart the board/i.test(note), note);
+const locked = await ev(page, () => {
+  const st = window.plasmaTest.motorDirState();
+  return { pending: st.pendingRestart, lock: st.lockWhy, referenced: !!(window.plasmaTest.S.safety && window.plasmaTest.S.safety.referenced), zero: !!window.plasmaTest.S.zeroSet };
+});
+t.check("after a direction change, jog and cut are locked and homed state is cleared",
+  locked.pending && /restart the board/i.test(locked.lock) && !locked.referenced && !locked.zero, JSON.stringify(locked));
+const jogBlocked = await ev(page, () => {
+  try { window.plasmaTest.getM().command({ cmd: "jog", axis: "X", dist: 2 }); return { ok: true }; }
+  catch (e) { return { ok: false, msg: e.message || String(e) }; }
+});
+t.check("a normal jog is refused while the restart is pending",
+  !jogBlocked.ok && /restart the board/i.test(jogBlocked.msg || ""), JSON.stringify(jogBlocked));
+
+await ev(page, () => window.plasmaTest.noteMotorDirRestarted());
+await sleep(200);
+const testing = await ev(page, () => {
+  const box = document.getElementById("motorDirTest");
+  const st = window.plasmaTest.motorDirState();
+  return {
+    shown: !!(box && !box.classList.contains("hidden")),
+    step: st.testStep,
+    pending: st.pendingRestart,
+    text: (document.getElementById("motorDirTestStep") || {}).textContent || "",
+    lock: st.lockWhy,
+  };
+});
+t.check("after the board restarts, the guided test starts at X (move right)",
+  testing.shown && testing.step === 0 && !testing.pending && /right/i.test(testing.text) && /test/i.test(testing.lock),
+  JSON.stringify(testing));
+await ev(page, () => document.getElementById("btnDirTestYes").click());
+await ev(page, () => document.getElementById("btnDirTestYes").click());
+await ev(page, () => document.getElementById("btnDirTestYes").click());
+await sleep(150);
+const done = await ev(page, () => {
+  const box = document.getElementById("motorDirTest");
+  const st = window.plasmaTest.motorDirState();
+  return { hidden: !!(box && box.classList.contains("hidden")), step: st.testStep, lock: st.lockWhy, pending: st.pendingRestart };
+});
+t.check("finishing the guided test unlocks jog and cut",
+  done.hidden && done.step < 0 && !done.lock && !done.pending, JSON.stringify(done));
 
 // ------------------------------------------------------------------ Test torch (hold-to-fire)
 async function pressTorch() {

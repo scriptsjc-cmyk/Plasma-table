@@ -11,6 +11,7 @@ import { filterConsoleCommand } from "./admin-machine.js";
 import { probeBlocks } from "./probefilter.js";
 import { sheetCornerName } from "../cut/bedview.js";
 import { torchTestOff } from "./torchtest.js";
+import { motorDirLockWhy, noteMotorDirRestarted } from "./motordir.js";
 
 export const POSITION_LOST_ALARMS = new Set([1, 3, 10, 13]);
 export { JobError, SafetyError };
@@ -106,6 +107,7 @@ export class Machine {
     } else if (kind === "log" && (data.text || "").toLowerCase().startsWith("grbl")) {
       this.zeroConfirmed = false;           // the controller restarted: work zero has to be confirmed again
       if (this.safety.referenced) this.loseReference("Controller restarted");
+      try { noteMotorDirRestarted(); } catch (e) { /* ignore */ }
     }
     this.emit(kind, data);
   }
@@ -206,16 +208,21 @@ export class Machine {
 
     switch (cmd) {
       case "jog": {
+        const lock = motorDirLockWhy();
+        if (lock && !body.allowDirTest) throw new JobError(lock);
         const axis = String(body.axis).toUpperCase();
         if (!"XYZ".includes(axis)) throw new JobError("Bad axis.");
         const dist = Number(body.dist);
         const safe = this.safety.clampJog(g.status.MPos, axis, dist);
-        const feed = axis === "Z" ? m.jog.feed_z : m.jog.feed_xy;
+        const baseFeed = axis === "Z" ? m.jog.feed_z : m.jog.feed_xy;
+        const feed = body.slow ? Math.min(baseFeed, axis === "Z" ? 200 : 300) : baseFeed;
         g.send(`$J=G91 G21 ${axis}${safe.toFixed(3)} F${feed}`);
         if (Math.abs(safe - dist) > 0.01) return { ok: true, note: `Stopped at the ${axis} boundary.` };
         break;
       }
       case "jog_dir": {
+        const lock = motorDirLockWhy();
+        if (lock && !body.allowDirTest) throw new JobError(lock);
         // keep moving this way (dir = [x, y, z] each -1, 0 or 1) until jog_cancel.
         // Absolute machine target, so it can follow on from a step jog without overshooting the edge.
         const d = (body.dir || []).map((v) => Math.sign(Number(v) || 0));
@@ -363,6 +370,8 @@ export class Machine {
     if (this.estopLatched()) throw new JobError(LATCH_MSG);
     if (this.state() === "Alarm") throw new JobError(ALARM_MSG);
     if (this.state() !== "Idle") throw new JobError(`Machine must be Idle to start (it is ${this.state()}).`);
+    const dirLock = motorDirLockWhy();
+    if (dirLock) throw new JobError(dirLock);
     if (!this.zeroConfirmed) throw new JobError(noZeroMsg());
     if (this.startGuard) { const why = this.startGuard(); if (why) throw new JobError(why); }
     const inp = this.grbl.status.inputs || {};

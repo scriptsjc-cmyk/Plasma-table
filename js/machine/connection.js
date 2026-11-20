@@ -8,7 +8,7 @@ import { askConfirm } from "../core/safeprompt.js";
 import { refreshGate } from "../ui/gate.js";
 import { refresh } from "../ui/refresh.js";
 import { requireMachine } from "./access.js";
-import { loadMotorDir } from "./motordir.js";
+import { loadMotorDir, noteMotorDirRestarted } from "./motordir.js";
 import { torchTestOff } from "./torchtest.js";
 import { showTab } from "../ui/nav.js";
 
@@ -31,6 +31,7 @@ export function setConnected(on, label = "") {
   refreshGate();
   refresh();
   if (on) {
+    try { noteMotorDirRestarted(); } catch (e) { /* ignore */ }
     // Pin-path queries (and a $CD fallback) are a burst. On Bluetooth wait until
     // the link has settled; loadMotorDir itself also skips the YAML dump over BT.
     const bt = !!(M.grbl && M.grbl.t && M.grbl.t.kind === "bluetooth");

@@ -23,13 +23,22 @@
 
   <div class="card" id="motorDirCard">
     <h2>Motor direction</h2>
-    <p class="muted small">Press the + arrow; if the motor goes the wrong way, switch on Reverse for that axis.</p>
+    <p class="muted small">Each axis is Stock (as shipped) or Reversed. If a + jog moves the head the wrong way, tick Reversed for that axis. Restart the board afterwards — jog and cut stay locked until then, then we’ll do a short test (X right, Y towards you, Z up).</p>
     <div class="motor-dir-row">
-      <label class="check"><input type="checkbox" id="revX"> Reverse X</label>
-      <label class="check"><input type="checkbox" id="revY"> Reverse Y</label>
-      <label class="check"><input type="checkbox" id="revZ"> Reverse Z</label>
+      <label class="check"><input type="checkbox" id="revX"> X — Reversed <span class="motor-dir-stock" id="revXLab">(Stock)</span></label>
+      <label class="check"><input type="checkbox" id="revY"> Y — Reversed <span class="motor-dir-stock" id="revYLab">(Stock)</span></label>
+      <label class="check"><input type="checkbox" id="revZ"> Z — Reversed <span class="motor-dir-stock" id="revZLab">(Stock)</span></label>
     </div>
+    <p class="muted small hidden" id="motorDirPairNote"></p>
     <p class="muted small hidden" id="motorDirNote"></p>
+    <div id="motorDirTest" class="hidden">
+      <p class="muted small" id="motorDirTestStep"></p>
+      <div class="row">
+        <button type="button" id="btnDirTestJog" class="small">Jog a short way (slow)</button>
+        <button type="button" id="btnDirTestYes" class="small accent">Yes</button>
+        <button type="button" id="btnDirTestNo" class="small">No</button>
+      </div>
+    </div>
   </div>
 
   <div class="card">

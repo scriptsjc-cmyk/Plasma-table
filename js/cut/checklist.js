@@ -9,6 +9,7 @@ import { refresh } from "../core/hooks.js";
 import { CHECK_LINE } from "../machine/boardrun.js";
 import { isEtchOp, throughCutInEtch, etchHeightProblem, resolveEtch } from "./etch.js";
 import { currentSettings } from "../machine/settings.js";
+import { motorDirLockWhy } from "../machine/motordir.js";
 import { sheetCornerName } from "./bedview.js";
 import { probeDisplayOn } from "../machine/probefilter.js";
 
@@ -93,6 +94,7 @@ export function blockers() {
   // still uses the conservative raw-or-shown check, so a genuine trigger cannot start a cut.
   if (probeDisplayOn()) b.push("Floating head is pushed up – check the torch isn't touching anything or stuck.");
   if (S.safety.limits && !S.safety.referenced) b.push("Set home again (Machine setup) to use your saved edges.");
+  const dirLock = motorDirLockWhy(); if (dirLock) b.push(dirLock);
   if (fit().bad) b.push("The part doesn't fit the machine – move the parts or the sheet's start corner.");
   for (const t of Setup.blockText()) b.push(t);
   const boxes = $$("#checklist input:not([disabled])");      // the start-point line ticks itself (the blocker above covers it)
