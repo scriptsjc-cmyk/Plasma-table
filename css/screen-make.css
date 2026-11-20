@@ -1680,3 +1680,75 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 @media (max-width: 1279px), (hover: none), (pointer: coarse) {
   .insp-tabs { display: none !important; }
 }
+
+/* r12: paged lists — categories on the left, a fixed page of cards, no inner scroll. */
+.pagebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line);
+}
+.pagebar[hidden] { display: none; }
+.pagebar-status { font-size: 14px; font-weight: 650; min-width: 8.5em; text-align: center; }
+.pagebar-prev, .pagebar-next { min-width: 44px; min-height: 36px; font-size: 20px; line-height: 1; }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  .presetbrowser .pb-frame {
+    width: min(1100px, calc(100vw - 64px));
+    height: calc(100dvh - 64px);
+    max-height: calc(100dvh - 64px);
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .presetbrowser .pb-head { grid-column: 1 / -1; }
+  .presetbrowser .pbcats {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    overflow: hidden;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    padding: 10px 8px;
+  }
+  .presetbrowser .pbcats button { width: 100%; justify-content: flex-start; min-height: 36px; }
+  .presetbrowser .pbgrid {
+    grid-column: 2;
+    grid-row: 2;
+    overflow: hidden;
+    align-content: start;
+  }
+  .presetbrowser #pbPage { grid-column: 2; grid-row: 3; }
+
+  #shapeLib.shapelib { align-items: center; padding: 32px; }
+  #shapeLib .shapelib-card {
+    width: min(1100px, calc(100vw - 64px));
+    height: calc(100dvh - 64px);
+    max-height: calc(100dvh - 64px);
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    overflow: hidden;
+  }
+  #shapeLib .shapelib-head { grid-column: 1 / -1; margin: 0; }
+  #shapeLib #libSearch { grid-column: 1 / -1; }
+  #shapeLib #libCats {
+    grid-column: 1;
+    grid-row: 3 / 5;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    border-right: 1px solid var(--line);
+    padding-right: 8px;
+  }
+  #shapeLib #libCats button { width: 100%; justify-content: flex-start; min-height: 36px; }
+  #shapeLib #libGrid { grid-column: 2; grid-row: 3; overflow: hidden; }
+  #shapeLib #libPage { grid-column: 2; grid-row: 4; }
+}

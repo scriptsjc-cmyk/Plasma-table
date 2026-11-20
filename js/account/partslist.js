@@ -3,12 +3,15 @@ import { $, closeAll, esc, host, toast } from "./uibase.js";
 import { askConfirm } from "../core/safeprompt.js";
 import { MY, addKnownFolder, cleanFolderName, deleteFolder, folderOf, groupParts, moveParts, openImport, renameFolder, sizeText, thumbSvg } from "./partsfolders.js";
 import * as A from "./account.js";
+import { pageSizeFor, slicePage, paintPager, bindPager, bindPagerKeys } from "../ui/pager.js";
 
 // ---- parts list, grouped in folders (a folder is just a name stored inside each part's data; no new SQL)
 const closedFolders = () => { try { return new Set(JSON.parse(localStorage.getItem("plasma.folders.closed") || "[]")); } catch { return new Set(); } };
 const setClosed = (set) => { try { localStorage.setItem("plasma.folders.closed", JSON.stringify([...set])); } catch { /* ignore */ } };
 export let partsRows = [];
 export const metaCache = new Map();
+let partsFolder = "";
+let partsPage = 1;
 function partRowHtml(p, folders) {
   const when = p.updated_at ? new Date(p.updated_at).toLocaleString() : "";
   const meta = p.meta || metaCache.get(p.id + "|" + p.updated_at) || null, cur = folderOf(p);
@@ -32,18 +35,36 @@ export async function refreshPartsList() {
   try {
     partsRows = await A.listParts();
     const groups = groupParts(partsRows), names = groups.map((g) => g.name), closed = closedFolders();
-    if (!partsRows.length && groups.length === 1) { box.innerHTML = "<p class='muted'>No parts saved yet. Save a drawing, or use “Import DXF / SVG”.</p>"; return; }
-    box.innerHTML = groups.map((g) => {
-      const isClosed = closed.has(g.name);
-      return `<section class="pfolder ${isClosed ? "closed" : ""}" data-folder="${esc(g.name)}">
-        <div class="pfhead">
-          <button type="button" class="pftoggle" data-fact="toggle" aria-expanded="${!isClosed}" title="${isClosed ? "Show" : "Hide"} this folder"><span class="caret">${isClosed ? "▸" : "▾"}</span> <b>📁 ${esc(g.name)}</b> <span class="muted small">${g.rows.length} part${g.rows.length === 1 ? "" : "s"}</span></button>
-          ${g.name === MY ? "" : `<button type="button" class="small" data-fact="frename">Rename</button><button type="button" class="small warn" data-fact="fdelete">Delete</button>`}
-        </div>
-        <div class="pfbody">${g.rows.length ? g.rows.map((p) => partRowHtml(p, names)).join("") : "<p class='muted small pfempty'>Empty. Use “Move to…” on a part, or import DXF / SVG files into this folder.</p>"}</div>
-      </section>`;
-    }).join("");
+    if (!partsRows.length && groups.length === 1) {
+      box.innerHTML = "<p class='muted'>No parts saved yet. Save a drawing, or use “Import DXF / SVG”.</p>";
+      const fold = $("partsFold"), bar = $("partsPage");
+      if (fold) fold.innerHTML = "";
+      if (bar) bar.hidden = true;
+      return;
+    }
+    if (!partsFolder || !groups.some((g) => g.name === partsFolder)) partsFolder = groups[0].name;
+    const fold = $("partsFold");
+    if (fold) {
+      fold.innerHTML = groups.map((g) => {
+        const on = g.name === partsFolder;
+        return `<button type="button" class="pffold${on ? " on" : ""}" role="tab" aria-selected="${on ? "true" : "false"}" data-folder="${esc(g.name)}" data-fact="pick">${esc(g.name)} <span class="muted small">${g.rows.length}</span></button>`
+          + (g.name === MY ? "" : `<span class="pffold-acts" data-folder="${esc(g.name)}"><button type="button" class="small" data-fact="frename">Rename</button><button type="button" class="small warn" data-fact="fdelete">Delete</button></span>`);
+      }).join("");
+    }
+    const cur = groups.find((g) => g.name === partsFolder) || groups[0];
+    const per = pageSizeFor(box, { minW: 280, minH: 72, gap: 8, fallback: 6 });
+    const sliced = slicePage(cur.rows, partsPage, per);
+    partsPage = sliced.page;
+    box.innerHTML = sliced.items.length
+      ? sliced.items.map((p) => partRowHtml(p, names)).join("")
+      : "<p class='muted small pfempty'>Empty. Use “Move to…” on a part, or import DXF / SVG files into this folder.</p>";
+    paintPager($("partsPage"), sliced);
+    if (!cur.rows.length) { const bar = $("partsPage"); if (bar) bar.hidden = true; }
     fillMissingMeta();
+    requestAnimationFrame(() => {
+      const again = pageSizeFor(box, { minW: 280, minH: 72, gap: 8, fallback: 6 });
+      if (again !== per) refreshPartsList();
+    });
   } catch (e) { box.innerHTML = "<p class='muted'>" + esc(e.message) + "</p>"; }
 }
 // older parts have no preview stored yet: build one in the background (not saved, just shown)
@@ -68,6 +89,23 @@ export function bindPartsList() {
     addKnownFolder(n); await refreshPartsList(); toast("Folder “" + n + "” made. Use “Move to…” on a part to put it in.");
   });
   document.addEventListener("parts-changed", () => { refreshPartsList(); });
+  if ($("partsFold")) $("partsFold").addEventListener("click", async (e) => {
+    const fb = e.target.closest("button[data-fact]"); if (!fb) return;
+    const folder = (fb.closest("[data-folder]") || fb).dataset.folder;
+    try {
+      if (fb.dataset.fact === "pick") { partsFolder = folder; partsPage = 1; await refreshPartsList(); }
+      else if (fb.dataset.fact === "frename") {
+        const n = cleanFolderName(prompt("New folder name", folder)); if (!n || n === folder) return;
+        await renameFolder(folder, n, partsRows); partsFolder = n; await refreshPartsList(); toast("Folder renamed to “" + n + "”");
+      } else if (fb.dataset.fact === "fdelete") {
+        const n = partsRows.filter((r) => folderOf(r) === folder).length;
+        if (!(await askConfirm({ title: "Delete this folder?", body: `Delete the folder “${folder}”${n ? ` and the ${n} part${n === 1 ? "" : "s"} in it` : ""}? This can't be undone.`, ok: "Delete", cancel: "Cancel", danger: true }))) return;
+        await deleteFolder(folder, partsRows); partsFolder = ""; partsPage = 1; await refreshPartsList(); toast("Folder deleted");
+      }
+    } catch (err) { toast(err.message, true); }
+  });
+  bindPager($("partsPage"), () => partsPage, (n) => { partsPage = n; refreshPartsList(); });
+  bindPagerKeys($("partsDlg"), () => { const d = $("partsDlg"); return d && !d.classList.contains("hidden"); }, () => partsPage, (n) => { partsPage = n; refreshPartsList(); });
   $("partsList").addEventListener("change", async (e) => {
     const sel = e.target.closest("select[data-act='move']"); if (!sel || !sel.value) return;
     const row = sel.closest(".partrow"), id = row && row.dataset.id; let to = sel.value;
@@ -79,9 +117,10 @@ export function bindPartsList() {
   $("partsList").addEventListener("click", async (e) => {
     const fb = e.target.closest("button[data-fact]");
     if (fb) {
-      const folder = fb.closest(".pfolder").dataset.folder;
+      const folder = (fb.closest("[data-folder]") || fb).dataset.folder;
       try {
-        if (fb.dataset.fact === "toggle") { const c = closedFolders(); c.has(folder) ? c.delete(folder) : c.add(folder); setClosed(c); await refreshPartsList(); }
+        if (fb.dataset.fact === "pick") { partsFolder = folder; partsPage = 1; await refreshPartsList(); }
+        else if (fb.dataset.fact === "toggle") { const c = closedFolders(); c.has(folder) ? c.delete(folder) : c.add(folder); setClosed(c); await refreshPartsList(); }
         else if (fb.dataset.fact === "frename") {
           const n = cleanFolderName(prompt("New folder name", folder)); if (!n || n === folder) return;
           await renameFolder(folder, n, partsRows); await refreshPartsList(); toast("Folder renamed to “" + n + "”");

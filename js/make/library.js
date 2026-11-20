@@ -9,11 +9,13 @@ import { $, esc, toast } from "../core/dom.js";
 import { isProMode } from "../ui/mode.js";
 import { clickVerb } from "../ui/laptop.js";
 import { addShapeId, beginnerPick, paintGuide } from "./shapeform.js";
+import { pageSizeFor, slicePage, paintPager, bindPager, bindPagerKeys } from "../ui/pager.js";
 
 // keep the boxes in step while dragging, without rebuilding them
 
 
 let libCat = "all";
+let libPage = 1;
 export function openMakeTool(which) {
   if (!makeTools || (S.job && S.job.running)) return;
   if (S.src !== "shape") showSource("shape");
@@ -22,10 +24,12 @@ export function openMakeTool(which) {
 export function openLibrary() {
   $("shapeLib").classList.remove("hidden");
   $("libSearch").value = "";
+  libPage = 1;
+  const d = $("shapeLib"); if (d) { d.hidden = false; d.setAttribute("aria-hidden", "false"); }
   renderLibrary();
   setTimeout(() => { if (matchMedia("(pointer: fine)").matches) $("libSearch").focus(); }, 30);
 }
-export function closeLibrary() { $("shapeLib").classList.add("hidden"); S.uiBlockUntil = Date.now() + 450; }
+export function closeLibrary() { const d = $("shapeLib"); d.classList.add("hidden"); d.hidden = true; d.setAttribute("aria-hidden", "true"); S.uiBlockUntil = Date.now() + 450; }
 // "l bracket", "L-bracket" and "lbracket" all match: ignore case, spaces, hyphens and underscores
 function normQ(s) { return String(s || "").toLowerCase().replace(/[\s\-_()/.,]+/g, " ").trim(); }
 export function matchesQuery(hay, q) {
@@ -48,8 +52,18 @@ function renderLibrary() {
   else ids = (LIBRARY_SHAPE_GROUPS.find((g) => g.id === libCat) || { ids: [] }).ids;
   const list = ids.map((id) => presetOrShape(id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
-  $("libGrid").innerHTML = list.length ? list.map((s) => `<button type="button" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 64, 44)}<span class="libname">${esc(s.name)}</span></button>`).join("")
+  const grid = $("libGrid");
+  const per = pageSizeFor(grid, { minW: 140, minH: 110, gap: 10, fallback: 10 });
+  const sliced = slicePage(list, libPage, per);
+  libPage = sliced.page;
+  grid.innerHTML = sliced.items.length ? sliced.items.map((s) => `<button type="button" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 64, 44)}<span class="libname">${esc(s.name)}</span></button>`).join("")
     : `<p class="muted">No shapes match “${esc(q)}”.</p>`;
+  paintPager($("libPage"), sliced);
+  if (!list.length) { const bar = $("libPage"); if (bar) bar.hidden = true; }
+  requestAnimationFrame(() => {
+    const again = pageSizeFor(grid, { minW: 140, minH: 110, gap: 10, fallback: 10 });
+    if (again !== per) renderLibrary();
+  });
 }
 export function openVersions() {
   const it = sketch.selected();
@@ -85,10 +99,12 @@ export function bindLibrary() {
   $("libClose").onclick = closeLibrary;
   $("shapeLib").addEventListener("click", (e) => {
     if (e.target === $("shapeLib")) { closeLibrary(); return; }
-    const c = e.target.closest("[data-cat]"); if (c) { libCat = c.dataset.cat; renderLibrary(); return; }
+    const c = e.target.closest("[data-cat]"); if (c) { libCat = c.dataset.cat; libPage = 1; renderLibrary(); return; }
     const b = e.target.closest("[data-shape]"); if (b) { closeLibrary(); if (!isProMode()) beginnerPick(b.dataset.shape); else addShapeId(b.dataset.shape); }
   });
-  $("libSearch").addEventListener("input", renderLibrary);
+  $("libSearch").addEventListener("input", () => { libPage = 1; renderLibrary(); });
+  bindPager($("libPage"), () => libPage, (n) => { libPage = n; renderLibrary(); });
+  bindPagerKeys($("shapeLib"), () => { const d = $("shapeLib"); return d && !d.classList.contains("hidden"); }, () => libPage, (n) => { libPage = n; renderLibrary(); });
   $("verClose").onclick = closeVersions;
   $("verPop").addEventListener("click", (e) => {
     if (e.target === $("verPop")) { closeVersions(); return; }

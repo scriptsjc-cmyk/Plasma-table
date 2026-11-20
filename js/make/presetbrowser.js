@@ -6,8 +6,10 @@ import { $ , esc } from "../core/dom.js";
 import { S } from "../core/state.js";
 import { showSource } from "./useshape.js";
 import { getPrefs, savePrefs } from "../core/prefs.js";
+import { pageSizeFor, slicePage, paintPager, bindPager, bindPagerKeys } from "../ui/pager.js";
 
 let cat = "all";
+let page = 1;
 
 export function openPresetBrowser() {
   const el = $("presetBrowser");
@@ -15,6 +17,7 @@ export function openPresetBrowser() {
   const q = $("pbSearch");
   if (q) q.value = "";
   cat = "all";
+  page = 1;
   renderPresetBrowser();
   el.classList.remove("hidden");
   el.hidden = false;
@@ -56,12 +59,22 @@ function renderPresetBrowser() {
   const list = ids.map((id) => presetOrShape(id) || PRESET_SHAPES.find((s) => s.id === id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
   const empty = cat === "favs" ? "Star parts to keep them here." : cat === "recent" ? "Parts you pick will show up here." : `No parts match “${esc(q)}”.`;
-  grid.innerHTML = list.length
-    ? list.map((s) => {
+  const per = pageSizeFor(grid, { minW: 160, minH: 132, gap: 12, fallback: 8 });
+  const sliced = slicePage(list, page, per);
+  page = sliced.page;
+  grid.innerHTML = sliced.items.length
+    ? sliced.items.map((s) => {
         const on = favs.includes(s.id);
         return `<div class="pb-tilewrap"><button type="button" class="pb-tile" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 96, 72)}<span class="pb-name">${esc(s.name)}</span></button><button type="button" class="pb-fav${on ? " on" : ""}" data-pbfav="${esc(s.id)}" aria-pressed="${on ? "true" : "false"}" title="${on ? "Remove from favourites" : "Add to favourites"}" aria-label="${on ? "Remove from favourites" : "Add to favourites"}">${on ? "★" : "☆"}</button></div>`;
       }).join("")
-    : `<p class="muted">${q && cat !== "favs" && cat !== "recent" ? empty : empty}</p>`;
+    : `<p class="muted">${empty}</p>`;
+  paintPager($("pbPage"), sliced, `Page ${sliced.page} of ${sliced.pages}`);
+  if (!list.length) { const bar = $("pbPage"); if (bar) bar.hidden = true; }
+  // Measure after layout so the first open uses a real page size, not the fallback.
+  requestAnimationFrame(() => {
+    const again = pageSizeFor(grid, { minW: 160, minH: 132, gap: 12, fallback: 8 });
+    if (again !== per) renderPresetBrowser();
+  });
 }
 
 export function listFavs() {
@@ -89,10 +102,10 @@ export function bindPresetBrowser() {
   if (!el) return;
   if ($("pbClose")) $("pbClose").onclick = () => closePresetBrowser();
   if ($("btnPresetParts")) $("btnPresetParts").onclick = () => openPresetBrowser();
-  if ($("pbSearch")) $("pbSearch").addEventListener("input", () => renderPresetBrowser());
+  if ($("pbSearch")) $("pbSearch").addEventListener("input", () => { page = 1; renderPresetBrowser(); });
   if ($("pbCats")) $("pbCats").addEventListener("click", (e) => {
     const b = e.target.closest("[data-pbcat]"); if (!b) return;
-    cat = b.dataset.pbcat; renderPresetBrowser();
+    cat = b.dataset.pbcat; page = 1; renderPresetBrowser();
   });
   if ($("pbGrid")) $("pbGrid").addEventListener("click", (e) => {
     const fav = e.target.closest("[data-pbfav]");
@@ -106,9 +119,12 @@ export function bindPresetBrowser() {
     if (form) form.scrollIntoView({ block: "nearest" });
   });
   el.addEventListener("click", (e) => { if (e.target === el) closePresetBrowser(); });
+  bindPager($("pbPage"), () => page, (n) => { page = n; renderPresetBrowser(); });
+  bindPagerKeys(el, () => el && !el.classList.contains("hidden") && !el.hidden, () => page, (n) => { page = n; renderPresetBrowser(); });
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && el && !el.classList.contains("hidden")) { e.preventDefault(); closePresetBrowser(); }
   });
 }
+
 
 export { renderPresetBrowser };

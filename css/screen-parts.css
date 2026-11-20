@@ -17,3 +17,48 @@
 .partstools { margin: 6px 0; }
 .addfolder { border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; margin-bottom: 6px; }
 .savedrow.folderrow { font-weight: 600; }
+
+.partscard { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+.partfolds { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.pffold { min-height: 36px; }
+.pffold.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.pffold-acts { display: flex; gap: 4px; align-items: center; }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  #partsDlg.shapelib { align-items: center; padding: 32px; }
+  #partsDlg .acctcard.wide {
+    width: min(1100px, calc(100vw - 64px));
+    height: calc(100dvh - 64px);
+    max-height: calc(100dvh - 64px);
+    overflow: hidden;
+  }
+  #partsDlg .partscard {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+  #partsDlg .partfolds {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    overflow: hidden;
+    margin: 0;
+    padding: 8px 8px 0 0;
+    border-right: 1px solid var(--line);
+  }
+  #partsDlg .pffold { width: 100%; justify-content: flex-start; }
+  #partsDlg .partlist {
+    grid-column: 2;
+    grid-row: 1;
+    overflow: hidden;
+    max-height: none;
+    margin: 0;
+    align-content: start;
+    padding: 8px;
+  }
+  #partsDlg #partsPage { grid-column: 2; grid-row: 2; }
+}
