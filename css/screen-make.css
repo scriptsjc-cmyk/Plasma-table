@@ -2176,7 +2176,8 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.advanced-mode[data-screen="make"] #srcShape .varrow button {
     min-height: 26px;
     height: 26px;
-    padding: 0 6px;
+    padding: 0 3px;
+    font-size: 11.5px;
   }
   body.pro-mode[data-screen="make"] #srcShape .varrow,
   body.advanced-mode[data-screen="make"] #srcShape .varrow { gap: 3px; padding: 0 0 2px; }
