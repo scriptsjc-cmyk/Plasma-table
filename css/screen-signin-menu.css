@@ -203,3 +203,9 @@ body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-wi
   #accountDlg.loginpage { top: 0; }
   #accountDlg.loginpage .acctcard { max-height: 100dvh; overflow: hidden; }
 }
+
+/* r13 #32: on the laptop every menu card puts its icon and title on the same line as the
+   others (top-aligned), whatever the length of the description; the cards stay centred. */
+@media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+  .menubtns .menubig { justify-content: flex-start; padding-top: 28px; }
+}
