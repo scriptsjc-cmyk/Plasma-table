@@ -2260,3 +2260,9 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     margin: 0 0 8px;
   }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="1"] #speedBox #spDown,
+  body[data-screen="cut"][data-step="1"] #speedBox #spUp { display: none; }
+  body[data-screen="cut"][data-step="3"] #btnOriginOpts { display: none !important; }
+}

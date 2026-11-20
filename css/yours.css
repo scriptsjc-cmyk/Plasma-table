@@ -451,3 +451,25 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
   }
   body.app-shell[data-screen="make"] { overflow: hidden; }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .stepPane #srcShape,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape,
+  body.app-shell.laptop-ui.advanced-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .stepPane #srcShape {
+    overflow: hidden !important;
+  }
+  body.pro-mode[data-screen="make"] #sheetSizeBox,
+  body.advanced-mode[data-screen="make"] #sheetSizeBox,
+  body.pro-mode[data-screen="make"] #srcShape > .insp-size.has-info,
+  body.advanced-mode[data-screen="make"] #srcShape > .insp-size.has-info {
+    display: none !important;
+  }
+  body.pro-mode[data-screen="make"] #srcShape .shapeform input,
+  body.pro-mode[data-screen="make"] #srcShape .shapeform select {
+    min-height: 32px;
+    font-size: 13px;
+  }
+  body.pro-mode[data-screen="make"] #srcShape .shapeform label { font-size: 12px; gap: 2px; }
+  body.pro-mode[data-screen="make"] #srcShape .shapeform { padding: 8px; margin-top: 0; }
+  body.pro-mode[data-screen="make"] #srcShape .shapeform input[disabled] { display: none; }
+}

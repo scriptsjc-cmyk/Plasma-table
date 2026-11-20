@@ -59,7 +59,7 @@ function renderPresetBrowser() {
   const list = ids.map((id) => presetOrShape(id) || PRESET_SHAPES.find((s) => s.id === id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
   const empty = cat === "favs" ? "Star parts to keep them here." : cat === "recent" ? "Parts you pick will show up here." : `No parts match “${esc(q)}”.`;
-  const per = pageSizeFor(grid, { minW: 160, minH: 132, gap: 12, fallback: 8 });
+  const per = pageSizeFor(grid, { minW: 168, minH: 148, gap: 12, fallback: 8 });
   const sliced = slicePage(list, page, per);
   page = sliced.page;
   grid.innerHTML = sliced.items.length
@@ -72,7 +72,7 @@ function renderPresetBrowser() {
   if (!list.length) { const bar = $("pbPage"); if (bar) bar.hidden = true; }
   // Measure after layout so the first open uses a real page size, not the fallback.
   requestAnimationFrame(() => {
-    const again = pageSizeFor(grid, { minW: 160, minH: 132, gap: 12, fallback: 8 });
+    const again = pageSizeFor(grid, { minW: 168, minH: 148, gap: 12, fallback: 8 });
     if (again !== per) renderPresetBrowser();
   });
 }

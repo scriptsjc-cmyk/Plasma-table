@@ -155,3 +155,7 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
   body.laptop-ui #setupView .wizard p { margin: 0 0 2px; }
   body.laptop-ui #setupBedWrap .jogmount .jogwrap { transform: scale(0.86); transform-origin: top right; }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.laptop-ui #setupHomeNote { bottom: 16px; right: 16px; left: 16px; }
+}
