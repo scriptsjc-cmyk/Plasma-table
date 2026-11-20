@@ -30,7 +30,7 @@
 .protools { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin: 8px 0 4px; }
 .toolbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); display: flex; gap: 8px;
   padding: 10px 12px max(10px, env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); }
-.toolbar.hidden { display: none !important; }
+.toolbar.hidden { display: none; }
 .quickbar button i { font-style: normal; font-size: var(--fs-m); line-height: 1; display: grid; place-items: center; }
 .quickbar button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .quickbar button:disabled { opacity: .4; }
@@ -51,8 +51,8 @@ body:not(.short-land) .toolbar { bottom: 0; }
 .libgrid button svg { color: var(--text); display: block; }
 .libgrid button .libname { text-align: center; line-height: 1.2; }
 body.beginner .pro-only {
-    display: none !important; }
-body.beginner #proTools { display: none !important; }
+    display: none; }
+body.beginner #proTools { display: none; }
 @media (max-width: 520px) {
   .sktools { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .quickbar button { flex-basis: calc(25% - 4px); }
@@ -91,11 +91,11 @@ body.shape-fs #fsBar { display: flex !important; }
 .fsbar { position: fixed; top: calc(var(--topbar-h, 56px) + 8px); right: 12px; z-index: var(--z-hud);
   display: flex; gap: 8px; align-items: center; background: var(--well); border: 1px solid var(--line);
   border-radius: var(--r); padding: 6px 8px; }
-.fsbar.hidden { display: none !important; }
+.fsbar.hidden { display: none; }
 /* dimension typing */
 .dimedit { position: fixed; z-index: var(--z-popover); background: var(--well); border: 1px solid var(--accent);
   border-radius: var(--r); padding: 8px 10px; box-shadow: var(--shadow); min-width: 200px; }
-.dimedit.hidden { display: none !important; }
+.dimedit.hidden { display: none; }
 .dimedit label { display: block; font-weight: 650; margin-bottom: 4px; }
 .dimedit input { width: 100%; min-height: 44px; font-size: var(--fs-m); }
 .settab { min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); background: var(--well); border-radius: 6px; font-weight: 650; }
@@ -129,11 +129,11 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
 }
 body.pro-mode .beginner-help, body.pro-mode .guide.howto, body.pro-mode .mattip,
 body.pro-mode p.skhelp, body.pro-mode .step[data-step="2"] > p.muted,
-body.pro-mode .step[data-step="3"] > p.muted { display: none !important; }
+body.pro-mode .step[data-step="3"] > p.muted { display: none; }
 body.pro-mode #btnShapeFs { display: none; }
 .beginner-only { display: none; }
 body.beginner .beginner-only { display: block; }
-body.pro-mode .beginner-only { display: none !important; }
+body.pro-mode .beginner-only { display: none; }
 .qbwhy { margin: 4px 0 0; padding: 6px 10px; background: var(--warn-bg); border: 1px solid var(--warn); border-radius: var(--r); color: var(--warn-text); font-size: var(--fs-s); }
 .qbwhy.hidden { display: none; }
 .quickbar button[aria-disabled="true"],
@@ -241,7 +241,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 body.pro-mode.pt-insp-collapsed { --pt-insp-w: 40px; }
 #ptInspector { display: none; }
-body.beginner #ptInspector { display: none !important; }
+body.beginner #ptInspector { display: none; }
 body.pro-mode:not(.beginner) #cutView:has(#ptInspector) > #ptInspector {
   grid-column: 2; grid-row: 1 / span 3; min-width: 0; min-height: 0;
 }
@@ -342,7 +342,7 @@ body[data-screen="make"] #makeBar { display: flex; }
   #btnHome span { display: none; }
 }
 body[data-screen="cut"] #srcShape, body[data-screen="cut"] #bgPick, body[data-screen="cut"] #guideHead, body[data-screen="cut"] #quickBar,
-body[data-screen="cut"] #fsBar, body[data-screen="cut"] #toolBar { display: none !important; }
+body[data-screen="cut"] #fsBar, body[data-screen="cut"] #toolBar { display: none; }
 /* make bar: title, the four edit buttons, then Simple / Advanced */
 .makebar { align-items: center; justify-content: flex-start; gap: 8px 10px; padding: 6px 12px; background: var(--card); border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
 .makebar h1, .makebar h2 { margin: 0; font-size: var(--fs-lg); font-weight: 700; flex: 0 0 auto; }
@@ -350,7 +350,7 @@ body[data-screen="cut"] #fsBar, body[data-screen="cut"] #toolBar { display: none
   display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center;
   gap: 4px; min-width: 0; padding: 0; border: 0;
 }
-#makeBar #qbPinned.hidden { display: none !important; }
+#makeBar #qbPinned.hidden { display: none; }
 #makeBar #qbPinned button {
   min-height: 44px; min-width: 44px; padding: 4px 8px;
   flex: 0 0 auto; gap: 2px;
@@ -385,7 +385,7 @@ body.phone-ui.advanced-mode[data-screen="make"] #btnViewParts { display: inline-
 body.shape-fs .makebar { display: none; }
 body[data-screen="cut"] .step[data-step="4"] .nav { display: none; }
 /* Round 5 (CAD): the cut check and job warnings belong to cutting, not to designing */
-body[data-screen="make"] #warnings, body[data-screen="make"] #cutCheck { display: none !important; }
+body[data-screen="make"] #warnings, body[data-screen="make"] #cutCheck { display: none; }
 /* Machine / cutting status belongs on the cutting and Machine setup screens, not on the drawing screen. */
 body[data-screen="make"] #fit,
 body[data-screen="make"] #jobStats,
@@ -396,7 +396,7 @@ body[data-screen="make"] #cutSummary,
 body[data-screen="make"] #ptInspCutSum,
 body[data-screen="make"] #homeBar,
 body[data-screen="make"] details.guide:has(.limitsBody) {
-  display: none !important;
+  display: none;
 }
 /* Round 5 (bugs 20): the inspector's job-wide cut settings sit in their own labelled box */
 #ptInspector .pt-jobset { margin: 8px 0 0; padding: 6px 8px 8px; border: 1px dashed var(--line); border-radius: 8px; min-width: 0; }
@@ -437,7 +437,7 @@ body.short-land .dimedit .dimops { margin-top: 4px; }
 /* picture tools (Zoom to fit / Expand picture) sit over the picture on Make a part; pinch or scroll also zooms */
 .pictools { display: none; }
 body[data-screen="make"] .pictools,
-body[data-screen="make"].beginner .pictools { display: none !important; }
+body[data-screen="make"].beginner .pictools { display: none; }
 body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
 .pictools button { min-height: 44px; min-width: 44px; padding: 4px 10px; font-size: var(--fs-s); font-weight: 650; background: color-mix(in srgb, var(--card) 92%, transparent); }
 @media (max-width: 899px), (max-height: 540px) {
@@ -468,7 +468,7 @@ body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
   body.app-shell.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid,
   body.app-shell.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.with-qb,
   body.app-shell.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.editing {
-    grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr) !important; grid-template-areas: "preview" "step" !important; }
+    grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-areas: "preview" "step"; }
   body.beginner[data-screen="make"]:not(.short-land) .nav .next { min-height: 56px; font-size: var(--fs-l); }
   body.beginner[data-screen="make"]:not(.short-land) #bgChange { min-height: 44px; margin-bottom: 6px; }
   /* and the heading above it is two short lines: the Make a part bar already names the screen */
@@ -514,7 +514,7 @@ body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
   body.pro-mode[data-screen="make"] .cutgrid { padding-bottom: 56px; }        /* room for the collapsed sheet */
   body.app-shell.pro-mode[data-screen="make"]:not(.short-land) .cutgrid.with-qb,
   body.app-shell.pro-mode[data-screen="make"]:not(.short-land) .cutgrid.editing {
-    grid-template-rows: minmax(0, 1fr) auto minmax(0, 0.8fr) !important; }
+    grid-template-rows: minmax(0, 1fr) auto minmax(0, 0.8fr); }
   /* the tool list: one row that scrolls sideways */
   body.app-shell.pro-mode[data-screen="make"] .cutgrid.with-qb #quickBar.quickbar {
     display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; height: auto; max-height: none; gap: 6px; padding: 4px; align-items: stretch; }
@@ -564,10 +564,10 @@ body.pro-mode #srcShape > .addtiles { display: none; }
 body[data-screen="cut"] #editorSwitch,
 body[data-screen="cut"] #phoneBar,
 body[data-screen="cut"] #phoneSheet,
-body[data-screen="cut"] #drawSizeDlg { display: none !important; }
+body[data-screen="cut"] #drawSizeDlg { display: none; }
 body:not(.phone-ui) #phoneBar,
-body:not(.phone-ui) #phoneSheet { display: none !important; }
-.editorsw .modesw-btn.hidden { display: none !important; }
+body:not(.phone-ui) #phoneSheet { display: none; }
+.editorsw .modesw-btn.hidden { display: none; }
 
 /* ---- Phone Make-a-part: canvas first, sheets on demand, compact tool bar ---- */
 body.phone-ui[data-screen="make"] {
@@ -582,8 +582,8 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape
 body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.editing,
 body.app-shell.phone-ui.pro-mode[data-screen="make"]:not(.short-land) .cutgrid.with-qb,
 body.app-shell.phone-ui.pro-mode[data-screen="make"]:not(.short-land) .cutgrid.editing {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) !important;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) !important;
   grid-template-areas: "preview" !important;
   min-height: 0; height: 100%;
@@ -595,27 +595,27 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape
 body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.with-qb,
 body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land):not(.shape-fs) .cutgrid.editing,
 body.app-shell.phone-ui[data-screen="make"].simple-mode:not(.short-land):not(.shape-fs) .cutgrid {
-  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1.4fr) minmax(160px, 0.9fr) !important;
   grid-template-areas: "preview" "step" !important;
-  padding-bottom: 0 !important;
+  padding-bottom: 0;
 }
 body.app-shell.phone-ui.short-land.beginner[data-screen="make"]:not(.shape-fs) .cutgrid,
 body.app-shell.phone-ui.short-land[data-screen="make"].simple-mode:not(.shape-fs) .cutgrid {
   grid-template-columns: minmax(0, 1.25fr) minmax(220px, 40vw) !important;
-  grid-template-rows: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "preview step" !important;
-  padding-bottom: 0 !important;
+  padding-bottom: 0;
 }
 body.phone-ui[data-screen="make"] .previewPane { grid-area: preview !important; min-height: 0; overflow: hidden; }
 body.phone-ui[data-screen="make"] #makeSplit,
 body.phone-ui[data-screen="make"] #quickBarWrap,
-body.phone-ui[data-screen="make"] #ptInspector { display: none !important; }
+body.phone-ui[data-screen="make"] #ptInspector { display: none; }
 /* Advanced phone: keep the step pane out of the grid, but leave #edgePanel
    available as a sheet so edge edit still works. */
 body.phone-ui[data-screen="make"].advanced-mode .stepPane,
 body.phone-ui[data-screen="make"].pro-mode .stepPane {
-  display: block !important;
+  display: block;
   position: fixed;
   left: 0; right: 0; bottom: 0;
   width: auto; height: 0;
@@ -643,7 +643,7 @@ body.phone-ui[data-screen="make"].pro-mode #srcShape {
 body.phone-ui[data-screen="make"].advanced-mode .stepPane > .step > :not(#srcShape):not(#edgePanel),
 body.phone-ui[data-screen="make"].pro-mode .stepPane > .step > :not(#srcShape):not(#edgePanel),
 body.phone-ui[data-screen="make"].advanced-mode #srcShape > :not(#edgePanel),
-body.phone-ui[data-screen="make"].pro-mode #srcShape > :not(#edgePanel) { display: none !important; }
+body.phone-ui[data-screen="make"].pro-mode #srcShape > :not(#edgePanel) { display: none; }
 body.phone-ui[data-screen="make"]:has(#edgePanel:not(.hidden)) #phoneSheet { display: none !important; }
 body.phone-ui[data-screen="make"].advanced-mode #edgePanel:not(.hidden),
 body.phone-ui[data-screen="make"].pro-mode #edgePanel:not(.hidden) {
@@ -684,7 +684,7 @@ body.phone-ui.short-land[data-screen="make"].beginner .stepPane {
 body.phone-ui[data-screen="make"].simple-mode #phoneBar,
 body.phone-ui[data-screen="make"].simple-mode #phoneSheet,
 body.phone-ui[data-screen="make"].beginner #phoneBar,
-body.phone-ui[data-screen="make"].beginner #phoneSheet { display: none !important; }
+body.phone-ui[data-screen="make"].beginner #phoneSheet { display: none; }
 
 .phonebar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet-bar);
@@ -706,7 +706,7 @@ body.phone-ui[data-screen="make"].beginner #phoneSheet { display: none !importan
 body.app-shell.phone-ui[data-screen="make"]:not(.short-land) .previewDock,
 body.app-shell.phone-ui.short-land[data-screen="make"] .previewDock {
   position: relative !important;
-  z-index: var(--z-sheet-dock) !important;
+  z-index: var(--z-sheet-dock);
   left: auto; right: auto; bottom: auto;
   max-height: none;
   overflow: visible;
@@ -734,34 +734,34 @@ body.app-shell.phone-ui.short-land[data-screen="make"] .previewDock {
 /* ---- Laptop CAD chrome (wide + fine pointer): slim left tools, roomy right properties ---- */
 body.laptop-ui.pro-mode[data-screen="make"] { --pt-insp-w: 0px; }
 body.laptop-ui.pro-mode[data-screen="make"] #cutView:has(#ptInspector) {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) !important;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 body.laptop-ui.pro-mode[data-screen="make"] #ptInspector {
-  display: none !important; /* properties live in the right-hand step pane */
+  display: none; /* properties live in the right-hand step pane */
 }
 @media (min-width: 900px) {
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid,
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.editing {
-    display: grid !important;
-    grid-template-columns: 76px minmax(0, 1fr) minmax(320px, 380px) !important;
-    grid-template-rows: minmax(0, 1fr) !important;
-    grid-template-areas: "tools preview props" !important;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) minmax(320px, 380px);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "tools preview props";
     column-gap: 10px;
     min-height: 0;
   }
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBarWrap,
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #quickBarWrap {
-    grid-area: tools; display: block !important; min-width: 0; min-height: 0;
+    grid-area: tools; display: block; min-width: 0; min-height: 0;
   }
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar.quickbar,
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #quickBar.quickbar {
-    display: flex !important;
-    flex-direction: column !important;
-    flex-wrap: nowrap !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-x: hidden;
+    overflow-y: auto;
     width: 76px;
     height: 100%;
     max-height: none;
@@ -792,15 +792,15 @@ body.laptop-ui.pro-mode[data-screen="make"] #ptInspector {
   }
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid #quickBarWrap,
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap {
-    grid-column: 1 !important; grid-row: 1 !important; grid-area: auto !important;
-    width: 76px !important; min-width: 76px !important; max-width: 76px !important;
-    display: block !important; min-height: 0; height: 100%;
+    grid-column: 1; grid-row: 1; grid-area: auto;
+    width: 76px; min-width: 76px; max-width: 76px;
+    display: block; min-height: 0; height: 100%;
   }
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .previewPane,
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .previewPane,
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .previewPane {
-    grid-column: 2 !important; grid-row: 1 !important; grid-area: auto !important;
-    min-width: 0 !important; min-height: 0 !important; width: auto !important;
+    grid-column: 2; grid-row: 1; grid-area: auto;
+    min-width: 0; min-height: 0; width: auto;
   }
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .stepPane,
@@ -813,13 +813,13 @@ body.laptop-ui.pro-mode[data-screen="make"] #ptInspector {
     min-height: 0;
     padding: 12px 14px 24px;
   }
-  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #makeSplit { display: none !important; }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #makeSplit { display: none; }
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) canvas#preview {
-    width: 100% !important; height: 100% !important; min-width: 0 !important; min-height: 200px !important;
+    width: 100%; height: 100%; min-width: 0; min-height: 200px;
   }
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane .shapeform,
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #shapeForm {
-    display: block !important;
+    display: block;
   }
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane label,
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .shapeform label {
@@ -876,7 +876,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
   background: color-mix(in srgb, var(--card) 94%, transparent); box-shadow: var(--shadow);
   max-width: min(640px, calc(100vw - 24px));
 }
-.drawhud.hidden { display: none !important; }
+.drawhud.hidden { display: none; }
 .drawhud-lab { font-size: var(--fs-s); color: var(--muted); font-weight: 600; }
 .drawhud input { width: 88px; min-height: 40px; font-size: var(--fs-m); }
 
@@ -887,7 +887,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
   background: var(--card); box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 2px;
 }
-.cadctx.hidden { display: none !important; }
+.cadctx.hidden { display: none; }
 .cadctx-item { text-align: left; min-height: 40px; padding: 6px 10px; border: 0; background: transparent; border-radius: 8px; }
 .cadctx-item:hover, .cadctx-item:focus { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .cadctx-item:disabled { opacity: 0.45; }
@@ -901,7 +901,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
   transition: opacity 180ms ease;
 }
 .presetbrowser.is-open { opacity: 1; pointer-events: auto; }
-.presetbrowser.hidden { display: none !important; }
+.presetbrowser.hidden { display: none; }
 .pb-frame {
   width: min(1100px, calc(100vw - 32px));
   height: min(760px, calc(100dvh - var(--topbar-h, 56px) - 24px));
@@ -952,7 +952,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
   font-size: var(--fs-s);
   pointer-events: none;
 }
-.sideways-hint.hidden { display: none !important; }
+.sideways-hint.hidden { display: none; }
 .sideways-hint button { min-width: 44px; min-height: 44px; border-radius: 999px; pointer-events: auto; }
 
 /* Customise toolbar: a roomy dialog, not a control that sits on the canvas. */
@@ -964,7 +964,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
   transition: opacity 180ms ease;
 }
 .toolbarcustom.is-open { opacity: 1; pointer-events: auto; }
-.toolbarcustom.hidden { display: none !important; }
+.toolbarcustom.hidden { display: none; }
 .tc-card {
   width: min(920px, calc(100vw - 24px));
   max-height: min(640px, calc(100dvh - 24px));
@@ -1004,7 +1004,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 /* Advanced already has Undo / Redo / Fit on the toolbar — keep Pick all and Clear here. */
 body.pro-mode #skUndo, body.advanced-mode #skUndo,
 body.pro-mode #skRedo, body.advanced-mode #skRedo,
-body.pro-mode #skFit, body.advanced-mode #skFit { display: none !important; }
+body.pro-mode #skFit, body.advanced-mode #skFit { display: none; }
 #skFit, #btnPicFit, #btnPicFit .picword { white-space: nowrap; }
 .pictools { flex-wrap: nowrap; gap: 6px; }
 .pictools button { white-space: nowrap; }
@@ -1096,7 +1096,7 @@ body[data-screen="make"] .exportpop {
   background: var(--well); border: 1px solid var(--line); border-radius: var(--r);
   box-shadow: var(--shadow);
 }
-body[data-screen="make"] .exportpop.hidden { display: none !important; }
+body[data-screen="make"] .exportpop.hidden { display: none; }
 body[data-screen="make"] .exportpop-actions { gap: 8px; margin-top: 8px; justify-content: flex-end; }
 
 #makeBar .modesw-btn, .editorsw .modesw-btn, #editorSwitch .modesw-btn {
@@ -1104,7 +1104,7 @@ body[data-screen="make"] .exportpop-actions { gap: 8px; margin-top: 8px; justify
 }
 
 /* r8 item 8: 'Make a part' is already in the header next to Undo — don't repeat it above Set the size / Pick a template. */
-body.beginner[data-screen="make"] .guidehead #ghStep { display: none !important; }
+body.beginner[data-screen="make"] .guidehead #ghStep { display: none; }
 
 /* r8: Simple-only Snap, box-select/pan toggle, hover tips, check-cut dialog */
 body:not(.beginner) #btnSimpleSnap { display: none; }
@@ -1287,8 +1287,8 @@ body.laptop-ui .fold3d-wrap canvas.fold3d { height: 300px; }
 
 /* ---- C46–C50 layout: compact tools, one home, visible Save, shortcuts, library favs ---- */
 body.pro-mode #btnSimpleSnap,
-body.advanced-mode #btnSimpleSnap { display: none !important; }
-body.beginner .skopts { display: none !important; }
+body.advanced-mode #btnSimpleSnap { display: none; }
+body.beginner .skopts { display: none; }
 
 /* Laptop properties pane: footer stays put; the form scrolls above it. */
 @media (min-width: 900px) {
@@ -1314,7 +1314,7 @@ body.beginner .skopts { display: none !important; }
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape {
     flex: 1 1 auto;
     min-height: 0;
-    overflow: auto !important;
+    overflow: auto;
     overscroll-behavior: contain;
   }
 }
@@ -1325,7 +1325,7 @@ body.beginner .skopts { display: none !important; }
   body.app-shell[data-screen="make"] #quickBar.quickbar,
   body[data-screen="make"] #quickBar {
     display: flex !important;
-    flex-direction: row !important;
+    flex-direction: row;
     flex-wrap: nowrap !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
@@ -1436,10 +1436,10 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid,
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.editing {
-    display: grid !important;
-    grid-template-columns: 76px minmax(0, 1fr) minmax(320px, 380px) !important;
-    grid-template-rows: minmax(0, 1fr) !important;
-    grid-template-areas: "tools preview props" !important;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) minmax(320px, 380px);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "tools preview props";
     column-gap: 10px;
     min-height: 0;
   }
@@ -1448,18 +1448,18 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid #quickBarWrap,
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap {
     grid-area: tools;
-    grid-column: 1 !important; grid-row: 1 !important;
-    display: block !important;
-    width: 76px !important; min-width: 76px !important; max-width: 76px !important;
+    grid-column: 1; grid-row: 1;
+    display: block;
+    width: 76px; min-width: 76px; max-width: 76px;
     min-height: 0; height: 100%;
   }
   body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar,
   body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #quickBar.quickbar {
-    display: flex !important;
-    flex-direction: column !important;
-    flex-wrap: nowrap !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-x: hidden;
+    overflow-y: auto;
     width: 76px;
     height: 100%;
     max-height: none;
@@ -1483,8 +1483,8 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .previewPane,
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .previewPane,
   body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .previewPane {
-    grid-column: 2 !important; grid-row: 1 !important; grid-area: auto !important;
-    min-width: 0 !important; min-height: 0 !important; width: auto !important;
+    grid-column: 2; grid-row: 1; grid-area: auto;
+    min-width: 0; min-height: 0; width: auto;
   }
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .stepPane,
@@ -1498,9 +1498,9 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     min-height: 0;
     padding: 12px 14px 0;
   }
-  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #makeSplit { display: none !important; }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #makeSplit { display: none; }
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) canvas#preview {
-    width: 100% !important; height: 100% !important; min-width: 0 !important; min-height: 200px !important;
+    width: 100%; height: 100%; min-width: 0; min-height: 200px;
   }
   body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #qbMorePop.qb-more {
     left: calc(100% + 6px);
@@ -1600,7 +1600,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.advanced-mode[data-screen="make"] #srcShape[data-insp="holes"] > :not(.insp-tabs):not(.insp-holes),
   body.pro-mode[data-screen="make"] #srcShape[data-insp="arrange"] > :not(.insp-tabs):not(.insp-arrange),
   body.advanced-mode[data-screen="make"] #srcShape[data-insp="arrange"] > :not(.insp-tabs):not(.insp-arrange) {
-    display: none !important;
+    display: none;
   }
   body.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane > .step[data-step="1"],
   body.advanced-mode[data-screen="make"]:not(.shape-fs) .stepPane > .step[data-step="1"] {
@@ -1635,7 +1635,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape,
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape,
   body.advanced-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape {
-    overflow: hidden !important;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -1683,7 +1683,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body[data-screen="make"] .topbar #makeBar .makeexp-wrap { display: none; }
 }
 @media (max-width: 1279px), (hover: none), (pointer: coarse) {
-  .insp-tabs { display: none !important; }
+  .insp-tabs { display: none; }
 }
 
 /* r12: paged lists — categories on the left, a fixed page of cards, no inner scroll. */
@@ -1856,17 +1856,17 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   body.pro-mode[data-screen="make"] #srcShape[data-insp="size"] #shapeForm .insp-arrange,
-  body.advanced-mode[data-screen="make"] #srcShape[data-insp="size"] #shapeForm .insp-arrange { display: none !important; }
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="size"] #shapeForm .insp-arrange { display: none; }
   body.pro-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm,
   body.advanced-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm { display: block !important; }
   body.pro-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm > :not(.insp-arrange),
   body.advanced-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm > :not(.insp-arrange) { display: none !important; }
   body.pro-mode[data-screen="make"] .stepPane #srcShape,
-  body.advanced-mode[data-screen="make"] .stepPane #srcShape { overflow: hidden !important; }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search { display: none !important; }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #qbMorePop .qb-search { display: flex !important; }
+  body.advanced-mode[data-screen="make"] .stepPane #srcShape { overflow: hidden; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search { display: none; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #qbMorePop .qb-search { display: flex; }
   .presetbrowser .pbcats {
-    display: flex !important;
+    display: flex;
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
@@ -1887,7 +1887,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   body.beginner[data-screen="make"] #srcShape { overflow: hidden !important; }
   body.beginner[data-screen="make"] #srcShape .skbtns.holeadd,
-  body.beginner[data-screen="make"] #srcShape p.tip { display: none !important; }
+  body.beginner[data-screen="make"] #srcShape p.tip { display: none; }
 }
 
 @media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
