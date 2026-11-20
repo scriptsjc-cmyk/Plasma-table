@@ -355,59 +355,86 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
 
 /* r12: Advanced laptop tool rail is a vertical icon column at the left of the canvas. */
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.editing,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.editing,
+  body.yours-toolbar-top.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
+  body.yours-toolbar-bottom.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb {
+    display: grid !important;
     grid-template-columns: 52px minmax(0, 1fr) minmax(280px, 340px) !important;
     grid-template-rows: minmax(0, 1fr) !important;
-    grid-template-areas: "tools preview step" !important;
+    grid-template-areas: "tools preview props" !important;
+    column-gap: 8px;
+    row-gap: 0;
   }
-  body.yours-toolbar-top.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb {
-    grid-template-areas: "tools preview step" !important;
-  }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap,
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid #quickBarWrap,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb #quickBarWrap,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) #quickBarWrap {
     grid-area: tools !important;
+    width: 52px !important;
+    min-width: 52px !important;
+    max-width: 52px !important;
+    height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
+    overflow: visible !important;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar.quickbar,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) #quickBar.quickbar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    flex-direction: column !important;
     flex-wrap: nowrap !important;
+    align-content: start !important;
+    gap: 2px !important;
+    padding: 4px 2px !important;
+    width: 52px !important;
     height: 100% !important;
     max-height: none !important;
-    width: 52px;
-    min-width: 52px;
     overflow: visible !important;
   }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    align-content: start;
-    gap: 2px;
-    padding: 4px 2px;
-    overflow: visible !important;
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-group,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .scrollrow-fade,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .scrollrow-more { display: none !important; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar.quickbar button,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left):not(.phone-ui) .cutgrid.with-qb #quickBar button {
+    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 26px !important;
+    height: 26px !important;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
   }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-group,
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .scrollrow-fade,
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .scrollrow-more { display: none !important; }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button {
-    width: 100%;
-    min-width: 0;
-    min-height: 26px;
-    height: 26px;
-    padding: 0;
-    flex: 0 0 auto;
-  }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button span { display: none; }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button span { display: none !important; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search {
     grid-column: 1 / -1;
-    flex: 0 0 auto;
-    display: flex;
-    width: 100%;
-    min-width: 0;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
   }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search input { display: none; }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-more-btn { grid-column: 1 / -1; }
-  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #qbMorePop.qb-more {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search input { display: none !important; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-more-btn { grid-column: 1 / -1; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #qbMorePop.qb-more {
     left: calc(100% + 6px);
     bottom: 8px;
     top: auto;
     width: min(320px, 40vw);
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .previewPane,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .previewPane {
+    grid-area: preview !important;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .stepPane {
+    grid-area: props !important;
   }
 }
