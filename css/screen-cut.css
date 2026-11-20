@@ -2233,7 +2233,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="4"] #doneActions .xl,
   body[data-screen="cut"][data-step="4"] #doneActions .wide { height: auto; line-height: 1.2; padding-top: 6px; padding-bottom: 6px; }
   body[data-screen="cut"][data-step="4"] #cutView #doneActions .xl,
-  body[data-screen="cut"][data-step="4"] #cutView #doneActions .wide { max-width: 280px; }   /* STOP stays the largest control */
+  body[data-screen="cut"][data-step="4"] #cutView #doneActions .wide { max-width: 240px; font-size: var(--fs-m); }   /* STOP stays the largest control */
   body[data-screen="cut"][data-step="4"] #restartBox { margin: 0 0 8px; }
   body[data-screen="cut"][data-step="4"] #restartBox.hidden ~ #doneActions .done-continue { display: none; }
   body[data-screen="cut"][data-step="4"] #doneInfo { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
