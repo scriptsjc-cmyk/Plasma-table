@@ -237,9 +237,13 @@ function drawBg(sk, ctx, S, C, w, h) {
   }
   ctx.fillStyle = "#3d5a85"; ctx.font = "bold 12px Barlow, system-ui";
   const mat = H.S.material ? ` · ${H.S.material.toLowerCase()} ${H.S.thickness} mm` : "";
-  const sl = Math.min(x0, x1), st = Math.min(y0, y1);
+  const sr = Math.max(x0, x1), st = Math.min(y0, y1);
+  ctx.textAlign = "right";
+  ctx.textBaseline = "top";
+  // Top-right of the sheet, so it does not cover the corner mark at the top-left.
+  ctx.fillText(`${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(8, sr - 6), Math.max(4, st + 6));
   ctx.textAlign = "left";
-  ctx.fillText(`${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(4, sl + 6), Math.max(14, st + 16));
+  ctx.textBaseline = "alphabetic";
   const parked = sk.items.filter((it) => sk.boxOf(it)[0] >= sheet.w + 20);
   if (parked.length) {
     const [lx, ly] = S(sheet.w + 40, 0);

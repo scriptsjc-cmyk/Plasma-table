@@ -70,8 +70,10 @@ export function placeSetupColumns() {
   const back = (layout && layout.querySelector(".back")) || (nav && nav.querySelector(".back"));
   const fit = $("layFit"), zoom = $("layZoom");
   const sel = $("layoutSel");
+  const goStart = $("btnGoStart"), trace = $("btnTrace");
   remember(mat, "mat"); remember(start, "start"); remember(back, "back");
   remember(fit, "fit"); remember(zoom, "zoom"); remember(sel, "sel");
+  remember(goStart, "goStart"); remember(trace, "trace");
   const hint = $("zeroCard") && $("zeroCard").querySelector(".keyhint");
   remember(hint, "hint");
   const disc = $("btnDisconnect"), link = $("btnLinkMachine"), menu = $("connMenu");
@@ -81,15 +83,21 @@ export function placeSetupColumns() {
     if (menu && link && link.parentNode !== menu) menu.appendChild(link);
     if (layout && mat && mat.parentNode !== layout) layout.appendChild(mat);
     if (layout && start && start.parentNode !== layout) layout.appendChild(start);
-    if (layout && back && back.parentNode !== layout) layout.appendChild(back);
+    if (back && nav && back.parentNode !== nav) {
+      try { nav.insertBefore(back, nav.firstChild); } catch (e) { nav.appendChild(back); }
+    }
     if (pane && fit && fit.parentNode !== pane) pane.appendChild(fit);
     if (pane && zoom && zoom.parentNode !== pane) pane.appendChild(zoom);
     if (pane && sel && sel.parentNode !== pane) pane.appendChild(sel);
+    if (pane && goStart && goStart.parentNode !== pane) pane.appendChild(goStart);
+    if (pane && trace && trace.parentNode !== pane) pane.appendChild(trace);
     const wrap = $("zeroCard") && $("zeroCard").querySelector(".jogwrap");
-    if (wrap && hint && hint.parentNode !== wrap) wrap.appendChild(hint);
+    const zsum = $("zeroCard") && $("zeroCard").querySelector("summary");
+    if (zsum && hint && hint.parentNode !== zsum) zsum.appendChild(hint);
     if (back) back.textContent = "← Back to part";
   } else {
     restore(hint, "hint"); restore(link, "link"); restore(disc, "disc");
+    restore(trace, "trace"); restore(goStart, "goStart");
     restore(sel, "sel"); restore(zoom, "zoom"); restore(fit, "fit");
     restore(start, "start"); restore(mat, "mat"); restore(back, "back");
     if (back) back.textContent = "← Back";

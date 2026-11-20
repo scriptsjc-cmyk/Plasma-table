@@ -2673,3 +2673,259 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   left: 50%;
   transform: translateX(-50%);
 }
+
+
+/* r13: Setup — keep the torch card in its row, put Back in the action row,
+   give Download G-code a clear outlined icon, and keep the jog pad inside the card. */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid {
+    grid-template-rows: minmax(0, 1fr) auto auto !important;
+    grid-auto-rows: auto;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane {
+    grid-row: 1 / -1;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #layoutCard {
+    grid-column: var(--s3-side, 1);
+    grid-row: 1 / 3;
+    align-self: stretch;
+    min-height: 0;
+    overflow: hidden;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard {
+    grid-column: var(--s3-main, 3);
+    grid-row: 2;
+    align-self: stretch;
+    overflow: hidden;
+    max-height: none;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #zeroCard {
+    grid-column: var(--s3-main, 3);
+    grid-row: 1;
+    overflow: hidden;
+    align-self: stretch;
+    min-height: 0;
+  }
+  body[data-screen="cut"][data-step="3"] .jogmount {
+    min-height: 0;
+    height: auto;
+  }
+  body[data-screen="cut"][data-step="3"] .zerobody {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 8px 6px;
+    min-height: 0;
+    overflow: hidden;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap {
+    flex: 0 0 auto;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .j,
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home {
+    min-height: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap .small-pos {
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+  }
+  /* Readout: "X 0.0" on one line so the number is never cut off. */
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos > div {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .steps button { min-height: 28px; }
+  /* Keep the keyboard i in the Torch summary; don't let it add a row under the jog. */
+  body.machine-connected[data-screen="cut"][data-step="3"] #zeroCard .jogwrap .keyhint { display: none; }
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary .keyhint {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 0 0 4px;
+    padding: 0;
+    font-size: 11px;
+  }
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary .keyhint .info-label,
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary .keyhint .info-body { display: none; }
+  body[data-screen="cut"][data-step="3"] #checkHint {
+    margin: 0;
+    padding: 0 10px 2px;
+  }
+  body[data-screen="cut"][data-step="3"] #checkCard #checkHint .info-label,
+  body[data-screen="cut"][data-step="3"] #checkCard #checkHint .info-body { display: none; }
+  body[data-screen="cut"][data-step="3"] #btnZero,
+  body.machine-connected[data-screen="cut"][data-step="3"] #btnZero {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: 36px;
+    height: 36px;
+    font-size: 15px;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="3"] #beforeCut {
+    gap: 4px;
+    margin: 0;
+    padding: 0 10px 2px;
+  }
+  body[data-screen="cut"][data-step="3"] #beforeCut li { min-height: 20px; padding: 0; }
+  body[data-screen="cut"][data-step="3"] #checkHint { margin: 2px 0 4px; }
+  body[data-screen="cut"][data-step="3"] #checkCard > summary { padding: 4px 10px 2px; }
+  /* Go to start and Trace sit on the bed picture, next to Start point options. */
+  body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnGoStart,
+  body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnTrace {
+    position: absolute;
+    right: 8px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    width: auto;
+    min-width: 0;
+    min-height: 28px;
+    padding: 2px 10px;
+    background: var(--card, #fff);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: 0 4px 16px color-mix(in srgb, #000 12%, transparent);
+    font-size: 12px;
+  }
+  body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnGoStart { top: 72px; }
+  body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnTrace { top: 104px; }
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] #connectCard .xl {
+    min-height: 40px;
+    font-size: 14px;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  body[data-screen="cut"][data-step="3"] .zerobody {
+    min-width: 0;
+    overflow: hidden;
+  }
+  /* The action row: Back under the left card, Download + Start cutting under the
+     torch card. The bed picture keeps the full height between them. */
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav { display: contents; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav .back {
+    display: inline-flex !important;
+    grid-column: var(--s3-side, 1);
+    grid-row: 3;
+    justify-self: start;
+    align-self: stretch;
+    min-height: 44px;
+    min-width: 0;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    background: var(--card, #fff);
+    border-radius: var(--r);
+    align-items: center;
+    justify-content: center;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnExport3,
+  body[data-screen="cut"][data-step="3"] .nav #btnExport3 {
+    grid-column: var(--s3-main, 3);
+    grid-row: 3;
+    justify-self: start;
+    align-self: stretch;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--line);
+    background: var(--card, #fff);
+    border-radius: var(--r);
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-icon {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    display: block;
+    font-size: inherit;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnStart,
+  body[data-screen="cut"][data-step="3"] .nav #btnStart {
+    grid-column: var(--s3-main, 3);
+    grid-row: 3;
+    justify-self: end;
+    width: calc(100% - 52px);
+    max-width: 260px; /* STOP stays the largest control by area */
+    min-width: 0;
+    margin: 0;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy {
+    grid-column: var(--s3-main, 3);
+    grid-row: 4;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="3"] #btnZero {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  /* Download G-code is the download icon; its name is the tooltip and the accessible label. */
+  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-label {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  /* r13 #24: Start here sits inside the Torch card, as wide as the card
+     (capped at 400 px so STOP stays the largest control by area). */
+  body[data-screen="cut"][data-step="3"] #cutView .stepPane #btnZero {
+    max-width: min(100%, 400px);
+    width: 100%;
+    align-self: center;
+    min-height: 36px;
+    height: 36px;
+    max-height: 36px;
+    flex: 0 0 auto;
+  }
+  /* One line for the Torch title, its "i" tips and the lamps. */
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary {
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-width: 0;
+    min-height: 32px;
+  }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips { flex: 0 1 auto; min-width: 0; margin-left: auto; }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp { white-space: nowrap; }
+  /* The Before you cut "i" sits on the title row. */
+  body[data-screen="cut"][data-step="3"] #checkCard { position: relative; }
+  body[data-screen="cut"][data-step="3"] #checkCard > summary { margin-right: 34px; }
+  body[data-screen="cut"][data-step="3"] #checkCard > #checkHint {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    margin: 0;
+    padding: 0;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .steps button { white-space: nowrap; }
+  /* Sheet width / Height / Gap: the label and its "i" share one line, the box sits under it. */
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr); }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    min-width: 0;
+    align-items: center;
+    column-gap: 4px;
+    row-gap: 2px;
+  }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label > .unitin { grid-column: 1 / -1; min-width: 0; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label > .unitin input { min-width: 0; width: 100%; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label > .info-i { width: 16px; height: 16px; min-height: 0; }
+}
