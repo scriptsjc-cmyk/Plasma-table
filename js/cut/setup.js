@@ -15,6 +15,7 @@ import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
 import { MACH, drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
 import { drawAxisHints, bedViewRotated } from "./bedview.js";
 import { drawingSheet } from "../core/prefs.js";
+import { placeLayoutToolbar, paintGapTip } from "./setuplayout.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
@@ -534,6 +535,8 @@ export function paint(light) {
     $("laySelName").textContent = (u ? `Part ${u.n}` : "Hole") + (sh ? " · " + sh.name : "");
     if (document.activeElement !== $("layAngle")) $("layAngle").value = r1(one.rot || 0);
   }
+  paintGapTip();
+  placeLayoutToolbar();
   if (!light) H.refresh();
 }
 function bind() {

@@ -93,17 +93,18 @@
       <div class="step hidden" data-step="3">
         <h2>Place the parts, then get set up</h2>
         <details class="setupcard" id="layoutCard" open>
-          <summary><b>Parts on the bed</b> <span id="layoutState" class="layoutstate"></span></summary>
+          <summary><b>Sheet &amp; parts</b> <span id="layoutState" class="layoutstate"></span></summary>
           <div class="sheetrow">
             <label>Sheet width <span class="unitin"><input id="sheetW" type="number" min="50" step="any" inputmode="decimal"> <span class="unit">mm</span></span></label>
             <label>Height <span class="unitin"><input id="sheetH" type="number" min="50" step="any" inputmode="decimal"> <span class="unit">mm</span></span></label>
-            <label>Gap <span class="unitin"><input id="sheetClr" type="number" min="0" step="0.5" inputmode="decimal" value="2"> <span class="unit">mm</span></span></label>
+            <label class="has-info">Gap <button type="button" class="info-i" id="gapInfo" aria-label="More about the gap"></button> <span class="unitin"><input id="sheetClr" type="number" min="0" step="0.5" inputmode="decimal" value="2"> <span class="unit">mm</span></span></label>
           </div>
           <p class="muted small" id="sheetNote"></p>
           <div class="skbtns bigbtns laybtns">
-            <button type="button" id="layAdd" class="accent">＋ Add parts…</button>
-            <button type="button" id="layAuto" title="Pack every part onto the sheet with the right gaps">⊞ Arrange for me</button>
-            <button type="button" id="btnEditParts" title="Shapes and sizes are changed in Make a part (the picked part is opened there), then you come back here">✏ Edit in Make a part</button>
+            <button type="button" id="layAdd" class="accent">＋ Add parts</button>
+            <button type="button" id="layAuto" title="Pack every part onto the sheet with the right gaps">Arrange for me</button>
+            <span class="nest-cell"><button type="button" id="btnNestPop" aria-haspopup="dialog" aria-controls="nestBox">Nest to fit</button><button type="button" class="info-i" data-tip="Pack the parts by their real outline, keeping the cut-check gap between them. Locked parts stay where they are. You can also put small parts inside the holes of bigger ones and save the leftover as a remnant." aria-label="More about nest to fit"></button></span>
+            <button type="button" id="btnEditParts" title="Shapes and sizes are changed in Make a part (the picked part is opened there), then you come back here">Edit part</button>
           </div>
           <details class="nestbox" id="nestBox">
             <summary><b>Nest to fit</b> <span class="muted small">pack by outline, use the holes, save the leftover</span></summary>
@@ -141,7 +142,14 @@
             </div>
           </div>
           <div class="row laygrid">
-            <label>Grid snap <select id="layGrid"><option value="0">off</option><option value="1">1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option><option value="25">25 mm</option></select></label>
+            <div class="gridsnap" id="gridSnap" role="group" aria-label="Grid snap">
+              <button type="button" data-snap="0">Off</button>
+              <button type="button" data-snap="1">1</button>
+              <button type="button" data-snap="5">5</button>
+              <button type="button" data-snap="10">10</button>
+              <button type="button" data-snap="25">25 mm</button>
+            </div>
+            <label class="laygrid-select">Grid snap <select id="layGrid"><option value="0">off</option><option value="1">1 mm</option><option value="5">5 mm</option><option value="10">10 mm</option><option value="25">25 mm</option></select></label>
             <button type="button" id="layFit" class="small">⤢ Whole sheet</button> <button type="button" id="layZoom" class="small">🔍 Zoom to parts</button>
           </div>
           <ul id="layProblems" class="layproblems"></ul>
@@ -184,6 +192,7 @@
           </div>
           <button id="btnZero" class="xl accent wide">📍 Start here</button>
           <button id="btnTrace" class="wide" title="Walk the outline with the torch off, to check the part is on the sheet">Trace the outline (torch off)</button>
+          <button type="button" id="btnOriginOpts" class="minor" aria-haspopup="dialog" aria-controls="originCard">Start point options</button>
           </div>
         </details>
 

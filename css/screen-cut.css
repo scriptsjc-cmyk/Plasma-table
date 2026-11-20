@@ -1640,5 +1640,122 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     text-align: left;
   }
   body[data-screen="cut"][data-step="3"] #checkHint { margin: 2px 0 6px; padding: 0 10px; font-size: 13px; }
+
+  /* Left: Sheet & parts compact column */
+  body[data-screen="cut"][data-step="3"] #layoutCard > summary { padding: 6px 10px 4px; display: flex; align-items: center; gap: 8px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard { padding-bottom: 8px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard > .sheetrow,
+  body[data-screen="cut"][data-step="3"] #layoutCard > .laybtns,
+  body[data-screen="cut"][data-step="3"] #layoutCard > .laygrid,
+  body[data-screen="cut"][data-step="3"] #layoutCard > .checkmat,
+  body[data-screen="cut"][data-step="3"] #layoutCard > #startCutRow { padding: 0 10px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin: 8px 0;
+  }
+  body[data-screen="cut"][data-step="3"] #layoutCard .laybtns button { margin: 0; min-height: 38px; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .nest-cell { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .nest-cell #btnNestPop { flex: 1 1 auto; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .nest-cell .info-i { pointer-events: auto; }
+  body[data-screen="cut"][data-step="3"] #layoutCard #sheetNote,
+  body[data-screen="cut"][data-step="3"] #layoutCard .beginner-help,
+  body[data-screen="cut"][data-step="3"] #layoutCard #layProblems,
+  body[data-screen="cut"][data-step="3"] #layoutCard #nestBox:not(.is-setup-pop),
+  body[data-screen="cut"][data-step="3"] #layoutCard .laygrid-select { display: none; }
+  body[data-screen="cut"][data-step="3"] #gapInfo { pointer-events: auto; }
+  body[data-screen="cut"][data-step="3"] .gridsnap { display: flex; gap: 4px; padding: 0 0 6px; }
+  body[data-screen="cut"][data-step="3"] .gridsnap button {
+    flex: 1 1 0; min-height: 32px; padding: 2px 4px; font-size: 12px;
+    border: 1px solid var(--line); background: var(--card); border-radius: var(--r);
+  }
+  body[data-screen="cut"][data-step="3"] .gridsnap button.is-on { background: var(--accent-weak); border-color: var(--accent); font-weight: 600; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .checkmat { margin-top: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  body[data-screen="cut"][data-step="3"] #layoutCard .checkmat::before { content: "Material · "; font-weight: 600; }
+  body[data-screen="cut"][data-step="3"] #layoutCard #startCutRow { margin: 6px 0; }
+  body[data-screen="cut"][data-step="3"] #layoutCard #startCutNote .info-label { /* short line stays */ }
+  body[data-screen="cut"][data-step="3"] #layoutCard > .back {
+    display: inline-flex !important;
+    margin: auto 10px 0;
+    align-self: start;
+    min-height: 38px;
+  }
+  /* Hide material / start-from-cut in the right-hand checklist once they have moved left */
+  body[data-screen="cut"][data-step="3"] #checkCard > .checkmat,
+  body[data-screen="cut"][data-step="3"] #checkCard > #startCutRow { display: none; }
+
+  /* Fit / zoom sit on the canvas, bottom-right */
+  body[data-screen="cut"][data-step="3"] .previewPane { position: relative; }
+  body[data-screen="cut"][data-step="3"] .previewPane > #layFit,
+  body[data-screen="cut"][data-step="3"] .previewPane > #layZoom {
+    position: absolute;
+    right: 8px;
+    bottom: 60px;
+    z-index: 3;
+    min-height: 32px;
+    padding: 2px 8px;
+    font-size: 12px;
+  }
+  body[data-screen="cut"][data-step="3"] .previewPane > #layZoom { right: 8px; bottom: 96px; }
+
+  /* Picked-part tools float on the canvas next to the part */
+  body[data-screen="cut"][data-step="3"] .previewPane > #layoutSel {
+    position: absolute;
+    z-index: 4;
+    left: 8px;
+    top: 8px;
+    width: min(280px, calc(100% - 16px));
+    padding: 6px 8px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: 0 8px 24px color-mix(in srgb, #000 16%, transparent);
+  }
+  body[data-screen="cut"][data-step="3"] .previewPane > #layoutSel.hidden { display: none; }
+
+  /* Start point options under Go to start / Trace */
+  body[data-screen="cut"][data-step="3"] #btnOriginOpts {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-self: start;
+    min-height: 28px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: var(--text);
+    text-decoration: underline;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] #btnOriginOpts { display: none; }
 }
 
+/* Shared popover card (Nest, start-point options). Never covers STOP. */
+.is-setup-pop {
+  display: block !important;
+  position: fixed;
+  z-index: 80;
+  max-width: min(420px, calc(100vw - 24px));
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 12px;
+  background: var(--card, #fff);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent);
+}
+.is-setup-pop > summary { display: none; }
+
+
+
+/* r11 laptop-only Setup controls: hidden on the phone stacked layout */
+#btnNestPop, #gridSnap, #btnOriginOpts, .nest-cell .info-i { display: none; }
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="3"] #btnNestPop,
+  body[data-screen="cut"][data-step="3"] #gridSnap,
+  body[data-screen="cut"][data-step="3"] #btnOriginOpts,
+  body[data-screen="cut"][data-step="3"] .nest-cell .info-i { display: flex; }
+  body[data-screen="cut"][data-step="3"] #gridSnap { display: flex; }
+  body[data-screen="cut"][data-step="3"] #btnOriginOpts { display: inline-flex; }
+}
