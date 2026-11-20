@@ -2666,12 +2666,15 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="1"] #fit.hidden { display: none; }
 }
 
-/* r13: toasts sit bottom-centre and never over the header, tabs or STOP. */
-.toast {
-  top: auto;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+/* r13 #21: on the laptop, toasts sit bottom-centre and never over the header, tabs or STOP.
+   Phones keep theirs under the header, clear of the bottom actions. */
+@media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+  .toast {
+    top: auto;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
 

@@ -25,7 +25,18 @@ export function bannerBottom() {
 // covers the dialog's title or buttons (r7 U6).
 export function placeToast() {
   const t = $("toast"); if (!t) return;
-  // r13: toasts sit bottom-centre, above the bottom edge, and never over the header, step tabs or STOP.
+  const laptop = window.matchMedia && matchMedia("(min-width: 1200px) and (hover: hover) and (pointer: fine)").matches;
+  if (!laptop) {
+    // Phones and tablets: just under the header / banners, clear of the bottom actions,
+    // and below an open safety dialog so it never covers its title or buttons (r7 U6).
+    t.style.bottom = ""; t.style.left = ""; t.style.transform = "";
+    let top = bannerBottom();
+    const dlg = $("safeDlg"), card = dlg && !dlg.classList.contains("hidden") && dlg.querySelector(".safedlg-card");
+    if (card) top = Math.max(top, card.getBoundingClientRect().bottom);
+    t.style.top = (top + 8) + "px";
+    return;
+  }
+  // Laptop (r13 #21): bottom-centre, above the bottom edge, never over the header, step tabs or STOP.
   t.style.top = "auto";
   t.style.bottom = "24px";
   t.style.left = "50%";

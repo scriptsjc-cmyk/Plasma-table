@@ -110,8 +110,15 @@ for (const [w, h] of [[390, 664], [844, 390], [1366, 768]]) {
   ck(`C ${w}x${h}: a recent part opens in Make a part`, (await T(page, `document.body.dataset.screen`)) === "make");
   // toast position: under the header, above the middle of the screen
   await T(page, `window.plasmaTest.toast ? window.plasmaTest.toast("Look test") : (document.getElementById("toast").textContent = "Look test", document.getElementById("toast").className = "toast")`); await sleep(100);
-  const tp = await T(page, `(() => { const t = document.getElementById("toast").getBoundingClientRect(), b = document.querySelector(".topbar").getBoundingClientRect(); return { t: t.top, hb: b.bottom, h: innerHeight }; })()`);
-  ck(`C ${w}x${h}: toasts sit just under the header, never over the bottom actions`, tp.t >= tp.hb - 1 && tp.t < tp.h / 2, tp);
+  const tp = await T(page, `(() => { const el = document.getElementById("toast"), t = el.getBoundingClientRect(), b = document.querySelector(".topbar").getBoundingClientRect();
+    const hit = (r) => Math.min(t.right, r.right) - Math.max(t.left, r.left) > 4 && Math.min(t.bottom, r.bottom) - Math.max(t.top, r.top) > 4;
+    const acts = [...document.querySelectorAll(".nav button, #btnCutThis, .cutthis, #btnStart, #btnStop")].filter((x) => x.offsetParent).map((x) => x.id || x.textContent.trim().slice(0, 20));
+    const covered = [...document.querySelectorAll(".nav button, #btnCutThis, .cutthis, #btnStart, #btnStop")].filter((x) => x.offsetParent && hit(x.getBoundingClientRect())).map((x) => x.id || x.textContent.trim().slice(0, 20));
+    return { t: t.top, b: t.bottom, hb: b.bottom, h: innerHeight, laptop: matchMedia("(min-width: 1200px) and (hover: hover) and (pointer: fine)").matches, covered, acts }; })()`);
+  // Phones: just under the header. Laptop (r13 #21): bottom-centre, still on screen.
+  // Everywhere: never over the header or any bottom action.
+  ck(`C ${w}x${h}: toasts sit clear of the header and never over the bottom actions`,
+    tp.t >= tp.hb - 1 && tp.b <= tp.h && !tp.covered.length && (tp.laptop || tp.t < tp.h / 2), tp);
   // account: name first, email behind a reveal; one filled action
   await T(page, `document.getElementById("acctPill").click()`); await sleep(400);
   const ac = await T(page, `({ who: document.getElementById("acctWho").innerText, email: !!document.getElementById("acctEmail").offsetParent, save: getComputedStyle(document.getElementById("btnAcctSave")).backgroundColor, card: getComputedStyle(document.getElementById("btnAcctSave").closest(".acctcard") || document.body).backgroundColor })`);
