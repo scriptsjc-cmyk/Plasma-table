@@ -23,18 +23,34 @@ export function isShellLaptop() {
   catch (e) { return false; }
 }
 
-let makeHome = null;
+let makeHome = null, tabsHome = null;
+function placeNode(el, homeKey, parent, before) {
+  if (!el) return;
+  if (!homeKey.ref) homeKey.ref = { parent: el.parentNode, next: el.nextElementSibling };
+  if (parent && el.parentNode !== parent) parent.insertBefore(el, before || null);
+}
+function restoreNode(el, homeKey) {
+  const h = homeKey.ref;
+  if (!el || !h || !h.parent || el.parentNode === h.parent) return;
+  h.parent.insertBefore(el, h.next);
+}
 export function placeMakeBar() {
   const bar = $("makeBar");
+  const tabs = document.querySelector(".topbar .tabs") || document.querySelector("header .tabs") || document.querySelector(".tabs");
   const top = document.querySelector(".topbar");
   const stop = $("btnStop");
-  if (!bar || !top) return;
-  if (!makeHome) makeHome = { parent: bar.parentNode, next: bar.nextElementSibling };
-  const on = isShellLaptop() && document.body.dataset.screen === "make" && !document.body.classList.contains("header-hidden");
-  if (on) {
-    if (bar.parentNode !== top) top.insertBefore(bar, stop || null);
-  } else if (makeHome.parent && bar.parentNode !== makeHome.parent) {
-    makeHome.parent.insertBefore(bar, makeHome.next);
+  const main = document.querySelector(".topbar-main");
+  if (bar && top) {
+    if (!makeHome) makeHome = { ref: null };
+    const on = isShellLaptop() && document.body.dataset.screen === "make" && !document.body.classList.contains("header-hidden");
+    if (on) placeNode(bar, makeHome, top, stop || null);
+    else restoreNode(bar, makeHome);
+  }
+  if (tabs && top && main) {
+    if (!tabsHome) tabsHome = { ref: null };
+    const onCut = isShellLaptop() && document.body.dataset.screen === "cut" && !document.body.classList.contains("header-hidden");
+    if (onCut) placeNode(tabs, tabsHome, main, $("connWrap") || $("btnTopMenu") || null);
+    else restoreNode(tabs, tabsHome);
   }
 }
 

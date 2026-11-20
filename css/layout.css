@@ -914,46 +914,49 @@ body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   html, body, body.app-shell { height: 100%; height: 100dvh; overflow: hidden; }
   body.app-shell > .appfoot { display: none; }
-  .topbar { flex-wrap: nowrap; align-items: center; min-height: 56px; padding-top: 4px; padding-bottom: 4px; overflow: visible; }
-  body[data-screen="cut"] .topbar-main,
-  body[data-screen="make"] .topbar-main,
-  body[data-screen="setup"] .topbar-main { display: contents; }
-  body[data-screen="cut"] .brand,
-  body[data-screen="make"] .brand,
-  body[data-screen="setup"] .brand,
-  body[data-screen="cut"] #btnShowHeader,
-  body[data-screen="make"] #btnShowHeader,
-  body[data-screen="setup"] #btnShowHeader,
-  body[data-screen="cut"] #btnHideHeader,
-  body[data-screen="make"] #btnHideHeader,
-  body[data-screen="setup"] #btnHideHeader,
-  body[data-screen="cut"] #btnHome,
-  body[data-screen="make"] #btnHome,
-  body[data-screen="setup"] #btnHome { order: 1; flex: 0 0 auto; }
+  .topbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    min-height: 56px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    overflow: visible;
+    gap: 8px;
+  }
+  .topbar-main {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: visible;
+    gap: 6px;
+  }
+  body[data-screen="cut"] .topbar-main .brand { flex: 0 0 auto; }
   body[data-screen="cut"] .tabs {
-    order: 2; flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; max-width: none;
-    align-self: stretch; align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+    align-items: center;
   }
   body[data-screen="cut"] .cutbar { margin: 0 8px; padding-left: 12px; }
-  body[data-screen="cut"] #connWrap,
-  body[data-screen="make"] #connWrap,
-  body[data-screen="setup"] #connWrap,
-  body[data-screen="cut"] #practiceChip,
-  body[data-screen="cut"] #stateBadge,
-  body[data-screen="cut"] #torchPill { order: 3; flex: 0 0 auto; position: relative; }
-  body[data-screen="cut"] #btnTopMenu,
-  body[data-screen="make"] #btnTopMenu,
-  body[data-screen="setup"] #btnTopMenu { order: 4; }
-  body[data-screen="cut"] #topMenu,
-  body[data-screen="make"] #topMenu,
-  body[data-screen="setup"] #topMenu { order: 4; }
-  body[data-screen="cut"] #btnStop,
-  body[data-screen="make"] #btnStop,
-  body[data-screen="setup"] #btnStop { order: 5; align-self: center; }
-  /* Make a part: the drawing bar joins the account bar as one row (js/ui/laptop.js). */
+  body[data-screen="cut"] #btnStop { flex: none; margin-left: 0; align-self: center; }
   body[data-screen="make"] .topbar > #makeBar {
-    order: 2; flex: 1 1 auto; min-width: 0;
-    border-bottom: 0; background: transparent; padding: 0 8px; gap: 8px; flex-wrap: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    border-bottom: 0;
+    background: transparent;
+    padding: 0 6px;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow: hidden;
   }
   body[data-screen="make"] .topbar > #makeBar h1 { font-size: var(--fs-md); }
+  body[data-screen="make"] .topbar > #makeBar .modesw-btn,
+  body[data-screen="make"] .topbar > #makeBar .small { min-height: 36px; padding: 4px 8px; }
 }
+
