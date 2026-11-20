@@ -15,8 +15,10 @@ index.html ── js/sw-register.js          registers sw.js (offline cache)
 Screens (`body[data-screen]`): `boot → login → menu → make | cut`.
 
 * **Make a part** (`make`): draw / add shapes, text, a traced picture or a DXF/SVG; edit sizes. Everything lives in one `Sketch`.
-* **Cutting** (`cut`), steps: 1 *Part* (file or "Add parts"), 3 *Bed & start / Get set up* (lay the parts on the sheet, start point,
-  checks; **placing only**, the layout lock refuses any shape/size edit there), 4 *Cut* (live status, pause, STOP).
+* **Cutting** (`cut`), steps: 1 *Part* (material and thickness, or "Add parts"), 3 *Bed & start / Get set up* (lay the parts on the sheet, start point,
+  checks; **placing only**, the layout lock refuses any shape/size edit there), 4 *Cut* (live status, pause, STOP). Machine setup is a tab on this screen.
+* The laptop machine view is always drawn as seen from the **front of the table**: the X gantry rail is at the top of the screen, home is back-left (top-left on screen), +Y is towards the operator (down the screen). G-code itself is not flipped, and Make a part is not flipped.
+* Connection is **USB or Bluetooth serial** (Web Serial in Chrome or Edge). There is no Wi-Fi / WebSocket path. On FluidNC a cut is uploaded as `/job.nc` by XModem and started with `$LocalFS/Run`, so a dropped laptop link does not stop the board mid-cut.
 * `window.plasmaTest` (localhost + `?test=1` only) is the test handle: state `S`, the sketch, `showScreen`, `goStep`, `sendToCutting`, …
 
 ## 2. Folder map (`js/`)
@@ -30,7 +32,7 @@ name; `tests/unit/90_module_graph.mjs` enforces it).
 | `machine/` | talking to the controller and keeping the torch safe: GRBL/FluidNC links, the simulator, the `Machine` model, safety limits, console filter, settings, connection, jog, panels | `core/`, `machine/`, `account/` (gating) |
 | `make/` | Make a part: shape catalogue, the `Sketch` editor (split over several files), DXF/SVG/text/trace import, the Make-screen forms and tools | `core/`, `make/`, and `cut/`, `ui/` for the few places that start a cut |
 | `cut/` | CAM and the cutting screen: G-code generation, job building, cut check, nesting, set-up, preview, checklist, start/pause buttons | `core/`, `machine/`, `make/`, `ui/` |
-| `ui/` | screen plumbing: navigation and steps, mode (Beginner/Pro), the big `refresh()`, why-is-it-off tips, version banner, icons, the Pro inspector | everything below |
+| `ui/` | screen plumbing: navigation and steps, Simple / Advanced on Make, the big `refresh()`, why-is-it-off tips, version banner, icons, the laptop chrome and Pro inspector | everything below |
 | `account/` | sign-in, saved parts, machine claims, admin dialogs; backend is Supabase (publishable key only) or a browser-only demo store | `core/`, `account/` |
 | (root) | `app.js` entry, `sw-register.js`, `version.js` (stamped at deploy) | everything |
 
@@ -51,12 +53,26 @@ name; `tests/unit/90_module_graph.mjs` enforces it).
 
 ## 2b. Stylesheets (`css/`)
 
-Eight plain files, linked from `index.html` **in this order** (later files win ties, so the order is part of the design; each file's
+Eleven plain files, linked from `index.html` **in this order** (later files win ties, so the order is part of the design; each file's
 header says what it holds and which rules must stay in cascade order): `tokens.css` (colours, type, spacing variables), `base.css`
 (resets, utilities, buttons, forms), `layout.css` (app shell, step grid, stepper, nav bar), `components.css` (dialogs, keypad, jog pad,
-chips, lists), then one file per screen: `screen-signin-menu.css`, `screen-make.css`, `screen-cut.css`, `screen-admin.css`.
+chips, lists), then one file per screen: `screen-signin-menu.css`, `screen-make.css`, `screen-cut.css`, `screen-parts.css`,
+`screen-setup.css`, `screen-admin.css`, and finally `yours.css` (the "Make it yours" appearance overrides).
 Put a new rule in the file of the screen it styles; a new colour or size becomes a token. A new `css/*.css` file must be linked in
-`index.html`; the offline list picks it up by itself.
+`index.html`; the offline list picks it up by itself (`scripts/stamp-version.sh` rewrites the `sw.js` precache from the files on disk).
+
+## 2c. Other folders
+
+| path | what |
+|---|---|
+| `index.html`, `html/` | The page shell, plus the Make / Cut / Your parts / Machine setup HTML partials `boot.js` fetches at start-up. |
+| `config/` | Served to the app: `machine.json` (bed and defaults), `cut_chart.json` (pierce/cut speeds), controller setting lists and the FluidNC **template** `fluidnc-plasma.yaml`. |
+| `hardware/` | Josh's board `config.yaml` (and a no-OLED variant). Pin polarity here can differ from the template and from the file actually on the ESP32 — check the board before changing pins. |
+| `docs/` | This map, `DEPLOY-STAMP.md`, `FLUIDNC.md`, `ACCOUNTS-SETUP.md`. |
+| `tests/` | Unit + end-to-end tests (`tests/README.md`). |
+| `scripts/` | `stamp-version.sh` (deploy stamp + offline file list), `harden-csp.sh`, `serve-local.sh`. |
+| `samples/` | Example drawings. |
+| `supabase/` | Schema and policies Josh runs himself. The app never uses the service_role key. |
 
 ## 3. Data flow
 
@@ -71,8 +87,9 @@ file / shape form / text / trace ──► Sketch (items: shapes with params, ho
                                        │  Start (blocked unless cut/checklist.js blockers() is empty)
                                        ▼
                        machine/machine.js  Machine.startJob(): safety rules, zero rule, latch
-                                       │
-                       machine/grbl.js protocol over usbserial.js (USB or Bluetooth serial) | sim.js (practice table)
+                                       │  FluidNC: xmodem.js uploads /job.nc, boardrun.js runs $LocalFS/Run
+                                       │  (or stream line-by-line over the serial link; practice table uses sim.js)
+                       machine/grbl.js protocol over usbserial.js (USB or Bluetooth serial)
                                        │  status, events
                                        ▼
                     machine/events.js onStatus/onEvent ─► ui/refresh.js refresh() ─► DOM
@@ -136,159 +153,229 @@ Tests find modules by file name (`tests/lib/site.mjs`), so moving a module betwe
 * Sheet items count as one part (`Setup.unitsOf` works per item); a hole not in `sk._seen` with a host is skipped.
 * `git pull --rebase` with a merge commit in local history replays the merged branch: use plain `git pull` / `git push`.
 * Hard-coded folder names in tests break on a move: use `tests/lib/site.mjs` (`mod`, `readJs`, `allJsText`, page-side `window.__J`).
+* After adding or moving a JS module, the committed `sw.js` precache list must include it (suite 59 compares it to `scripts/stamp-version.sh`). Deploy stamps the list anyway, but a missing entry fails the test in the repo.
+* Never press Connect or send commands to a real machine from tests or from this app while developing.
 
 ## 9. Module reference
 
-Line counts are approximate. Regenerate the table's descriptions from each file's first comment line when you add a module.
+Line counts are approximate. The one-line description is taken from each file's opening comment.
+Regenerate this table when you add or move a module, and keep the opening comment accurate.
 
 ### `js/`
 
 | file | lines | what it is |
 |---|---:|---|
-| `app.js` | 346 | Plasma table operator screen (browser version): the entry point. |
-| `sw-register.js` | 16 | Registers the offline cache (sw.js). Lives in its own file because the page's CSP does not allow inline scripts. |
+| `app.js` | 392 | The entry point: init() wires the modules and bind() binds the controls. |
+| `boot.js` | 40 | Fetches the main-menu HTML partials (Make, Cut, Your parts, Machine setup) before the app starts. No build step. |
+| `sw-register.js` | 16 | Registers the offline cache (sw.js). Its own file because the page CSP does not allow inline scripts. |
 | `version.js` | 4 | The release this copy belongs to (rewritten by the deploy stamp; version.json is the live truth). |
 
 ### `js/core/`
 
 | file | lines | what it is |
 |---|---:|---|
-| `dom.js` | 29 | Tiny DOM and text helpers used everywhere: $ / $$, esc, clock, toast. |
-| `expr.js` | 58 | Safe numeric expressions for the size keypad: 100/2, 50+12.5, 80-5, 25*4, (30+10)/2 |
-| `geom.js` | 428 | 2D geometry helpers for the CAD import and shape maker. |
-| `hooks.js` | 18 | Late-bound calls. A few low-level modules need to call something that lives in a higher layer (for example refresh()). |
-| `state.js` | 18 | The one shared state object, plus the few live references init() fills in (machine, sketch, ...). |
+| `arcs.js` | 640 | Arc fitting, intersections, 3-point and tangent arcs, splines, and DXF/SVG export helpers. |
+| `dom.js` | 51 | Tiny DOM and text helpers used everywhere: $, $$, esc, clock, toast. |
+| `expr.js` | 58 | Safe numeric expressions for the size keypad: 100/2, 50+12.5, 80-5, 25*4, (30+10)/2. |
+| `geom.js` | 627 | 2D geometry helpers for CAD import and the shape maker (contours in mm). |
+| `hooks.js` | 18 | Late-bound calls so a low-level module can ask for refresh() and similar without a circular import. |
+| `prefs.js` | 281 | Per-user "Make it yours" preferences: theme, accent, toolbar, grid, snap, canvas, Cut layout. |
+| `safeprompt.js` | 107 | In-app confirm and prompt dialogs (replaces window.confirm for operator questions). |
+| `state.js` | 18 | The one shared state object S, plus the live references init() fills in (machine, sketch, …). |
 
 ### `js/machine/`
 
 | file | lines | what it is |
 |---|---:|---|
 | `access.js` | 32 | Machine access rules: send a command only when allowed (signed in, machine linked, not e-stopped). |
-| `admin-machine.js` | 414 | Admin-only Advanced Machine panel: GRBL `$` settings, firmware text, the filtered console (`filterConsoleCommand`). |
-| `connection.js` |  | Connect / disconnect (USB or Bluetooth serial, and the practice table), keep-awake, and the unload safety stop. |
-| `console.js` | 42 | The controller console pane: the log lines and the typed-command box. |
-| `dialect.js` | 94 | Turn the app's prepared GRBL/grblHAL job into another controller dialect. |
-| `events.js` | 104 | Reacts to everything the machine reports: status, safety flags, events, job log entry. |
-| `fluidnc.js` |  | Serial FluidNC detection from the controller's banner or status text. |
-| `grbl.js` |  | The GRBL text protocol for every link (FluidNC / grblHAL): streaming, status poll + watchdog, connect handshake. |
-| `jog.js` | 107 | Jogging: on-screen pad, arrow keys, hold-to-glide; and the position read-out. |
-| `machine.js` | 338 | `Machine`: ties the controller link, job builder and safety checks together; E-stop latch, work-zero rule, start guard. |
-| `panels.js` | 143 | Machine panels on the Get set up screen: edge/limits panel, controller settings backup, test patterns, command buttons. |
-| `safety.js` | 118 | Keeping the torch inside the machine (same rules as plasma/safety.py). |
-| `settings.js` | 412 | Settings menu: machine, speeds, torch, pierce/cut, materials, homing, I/O, backup/restore. |
-| `sim.js` | 238 | Demo mode: a pretend grblHAL controller in the browser (same as plasma/sim.py). |
-| `usbserial.js` | 115 | USB or Bluetooth serial to the controller (Web Serial, Chrome/Edge desktop): opens the port at 115200 8N1, reads lines, notices an unplug. |
+| `admin-machine.js` | 414 | Admin-only Advanced Machine panel: $ settings, filtered console, calibration, invert, limits, firmware. |
+| `boardrun.js` | 261 | Run a cut from FluidNC on-board flash ($LocalFS/Run) so a USB/Bluetooth drop does not stop it. |
+| `connection.js` | 120 | Connect / disconnect (USB or Bluetooth serial, and the practice table), keep-awake, unload safety stop. |
+| `console.js` | 43 | The controller console pane: log lines and the typed-command box. |
+| `dialect.js` | 94 | Turn the prepared GRBL/grblHAL job into another controller dialect for download. |
+| `events.js` | 150 | Reacts to everything the machine reports: status, safety flags, events, job log entry. |
+| `fluidnc.js` | 10 | Detect FluidNC from the controller banner or status text. |
+| `grbl.js` | 434 | The GRBL text protocol for every link: streaming, status poll and watchdog, handshake, real-time bytes. |
+| `jog.js` | 123 | Jogging: on-screen pad, arrow keys, hold-to-glide, and the position read-out. |
+| `machine.js` | 415 | Machine model: ties the controller link, job builder and safety checks together; E-stop latch, start guard. |
+| `motordir.js` | 328 | Machine setup: Reverse X / Y / Z, reading and writing FluidNC direction pins (skips $CD over Bluetooth). |
+| `panels.js` | 223 | Machine panels on Get set up: edges/limits, settings backup, test patterns, command buttons. |
+| `probefilter.js` | 62 | Debounce and safety helpers for the floating-head / probe input. |
+| `safety.js` | 139 | Keep the torch inside the machine (soft limits, travel, raise height). |
+| `settings.js` | 464 | Settings menu: appearance, machine, speeds, torch, pierce/cut, materials, homing, I/O, backup/restore. |
+| `setupbed.js` | 115 | Machine setup bed picture: the table, gantry, home corner and current torch position (front-of-table view). |
+| `sim.js` | 303 | Practice table: a pretend controller in the browser, same protocol as a real board. |
+| `torchtest.js` | 182 | Machine setup: hold-to-fire Test torch (pointer capture, keepalive, writeNow for M5). |
+| `usbserial.js` | 226 | USB or Bluetooth serial via Web Serial: open the port, read lines, notice a drop; Bluetooth uses a gentler poll. |
+| `xmodem.js` | 135 | XModem-CRC sender for FluidNC $Xmodem/Receive (used to upload /job.nc). |
 
 ### `js/make/`
 
 | file | lines | what it is |
 |---|---:|---|
-| `cad.js` | 66 | CAD dialog (trim, offset, ...) and the Pro command runner. |
-| `dimedit.js` | 123 | Click a dimension on the drawing to type a new size (with Tab / arrows), plus the old number pad. |
-| `duct.js` | 95 | Flat patterns for sheet-metal transitions (pure maths, no DOM, so it can be unit-tested in node). |
-| `dxf.js` | 203 | Read 2D shapes from a DXF file (ASCII DXF from Fusion 360, FreeCAD, Onshape, ...). |
-| `editable.js` | 151 | Turn imported DXF/SVG outlines (many short segments) into editable shapes: lines and arcs. |
-| `files.js` | 201 | Opening, adding and replacing files; drag and drop; start over; edit-drawing and resize. |
-| `fontdata.js` | 4 | Single-line (Hershey) letter shapes for the text tool. Characters ! to ~ (code 33 to 126); each is [stroke path, advance]. |
-| `library.js` | 95 | The shape library, the shape-versions pop-up and the Add text / Trace tool launchers. |
-| `maketools.js` | 211 | Make a part: "Add text" and "Trace a picture". Two small dialogs on top of the engines in textshape.js and trace.js. |
-| `protools.js` | 46 | Pro tools: full-screen drawing, the tool buttons and their state. |
-| `quickbar.js` | 125 | The Pro quick bar: search palette and its actions. |
-| `shape-helpers.js` | 72 | Small geometry helpers shared by the shape definitions (moved out of shapes.js unchanged). |
-| `shapeform.js` | 243 | Make a part: beginner shape tiles, the guide, and the size/position form for the selected shape. |
-| `shapes-fab.js` | 248 | More ready-made fabrication parts (round 5): complete parts with every size adjustable. |
-| `shapes.js` | 625 | Shape maker: common plasma parts from a few sizes. Each shape returns contours (mm). |
+| `blockfont.js` | 101 | Procedural block / stencil-cut stroke font used by the text tool. |
+| `cad.js` | 252 | CAD dialog (trim, offset, …) and the Advanced command runner. |
+| `cadpreview.js` | 39 | Thumbnail and 3D/preview helpers for preset parts in the browser. |
+| `cadui.js` | 40 | Make-screen CAD chrome: tools, status and wiring for the Advanced editor. |
+| `camprofile.js` | 70 | CAM profile helpers for gears, sprockets and similar generated parts. |
+| `checkcut.js` | 157 | The "check this cut" summary on Make, before sending the drawing to Cut. |
+| `ctxmenu.js` | 70 | Right-click / long-press context menu on the drawing. |
+| `cutsummary.js` | 48 | Short cut-time / size summary shown on Make. |
+| `dimedit.js` | 126 | Click a dimension on the drawing to type a new size, plus the number pad. |
+| `drawexport.js` | 61 | Export the drawing as DXF or SVG. |
+| `drawhud.js` | 256 | Heads-up overlay on the drawing: snaps, lengths, angles, cursor hints. |
+| `duct.js` | 501 | Flat patterns for sheet-metal transitions (pure maths, no DOM). |
+| `dxf.js` | 234 | Read 2D shapes from an ASCII DXF (Fusion 360, FreeCAD, Onshape, …). |
+| `editable.js` | 153 | Turn imported DXF/SVG outlines (many short segments) into editable lines and arcs. |
+| `files.js` | 290 | Open, add and replace files; drag and drop; start over; edit-drawing and resize. |
+| `flange-tables.js` | 182 | Standard flange size tables used by the pipe-flange presets. |
+| `fold3d.js` | 1465 | 3D / folding preview and unfold helpers for folding presets (thickness, flanges, etch folds). |
+| `fontdata.js` | 4 | Single-line (Hershey) letter shapes for the text tool. |
+| `headertools.js` | 54 | Make-screen header tools (selection status and common actions). |
+| `layers.js` | 142 | Layers / parts list: pick, hide and lock shapes. |
+| `library.js` | 100 | The shape library, the version pop-up, and the Add text / Trace tool launchers. |
+| `maketools.js` | 236 | Make a part: "Add text" and "Trace a picture" dialogs on top of textshape.js and trace.js. |
+| `phonesheet.js` | 272 | Phone-sized bottom sheets for Make tools (phone must still not break). |
+| `picture.js` | 44 | Place and trace a picture / logo on the drawing. |
+| `pipeflanges.js` | 207 | Pipe flange geometry used by the flange presets. |
+| `presetbrowser.js` | 114 | The Preset parts browser (tabs such as 3D / folding and Pipework). |
+| `protools.js` | 43 | Advanced tools: full-screen drawing, the tool buttons and their state. |
+| `quickbar.js` | 407 | The Advanced quick bar: search palette and its actions. |
+| `shape-helpers.js` | 72 | Small geometry helpers shared by the shape definitions. |
+| `shapeform.js` | 367 | Simple-view shape tiles, the guide, and the size/position form for the selected shape. |
+| `shapes-fab.js` | 238 | Ready-made fabrication parts, each with adjustable sizes. |
+| `shapes.js` | 717 | Shape maker: common plasma parts from a few sizes. Each shape returns contours in mm. |
+| `sheetopts.js` | 134 | Sheet options on Make (material area used as the drawing sheet). |
+| `sheetsize.js` | 40 | Drawing-sheet size helpers. |
+| `shortcuts.js` | 97 | Keyboard shortcuts on the Make screen. |
 | `sizecheck.js` | 70 | Size check after a DXF/SVG import: shows the size and asks before scaling (inches vs mm). |
-| `sketch-edge.js` | 383 | Sketch: editing the corners and edges of a custom outline (length, angle, curve, add / delete / move a corner) and drawing its handles. |
-| `sketch-edit.js` | 430 | Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...). |
-| `sketch-geom.js` | 188 | Sketch: where a shape really is (base and world outlines, bounding boxes) and which holes belong to which part. |
-| `sketch-input.js` | 327 | Sketch: mouse, touch and keyboard (picking, dragging, snapping guides, resize handles, pan and zoom). |
-| `sketch-lock.js` | 22 | Sketch: the layout lock. On the sheet layout (Get set up / Bed & start) parts can only be placed, never reshaped or resized. |
-| `sketch-util.js` | 59 | Small helpers shared by the Sketch class files (shape lookup, geometry bits) and the mixin() that joins them. |
-| `sketch-view.js` | 222 | Sketch: the view (fit, zoom, pan) and drawing the canvas. |
-| `sketch.js` | 249 | Shape editor: build parts on a canvas with the mouse or a finger. |
+| `sketch-edge.js` | 838 | Sketch: edit corners and edges of a custom outline (length, angle, curve, add / delete / move). |
+| `sketch-edit.js` | 823 | Sketch: commands that change picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize). |
+| `sketch-geom.js` | 277 | Sketch: where a shape really is (world outlines, boxes) and which holes belong to which part. |
+| `sketch-input.js` | 694 | Sketch: mouse, touch and keyboard (pick, drag, snaps, resize handles, pan and zoom). |
+| `sketch-lock.js` | 22 | Sketch: the layout lock. On Bed & start, parts can only be placed, never reshaped or resized. |
+| `sketch-stage6.js` | 280 | Sketch: later-stage edit tools (trim / extend family and related commands). |
+| `sketch-trim.js` | 608 | Sketch: trim, extend and break tools. |
+| `sketch-util.js` | 94 | Small helpers shared by the Sketch class files, and the mixin() that joins them. |
+| `sketch-view.js` | 590 | Sketch: the view (fit, zoom, pan) and drawing the canvas. |
+| `sketch.js` | 334 | Shape editor core: the Sketch class that the mixin files hang their methods on. |
+| `snaps.js` | 92 | Snap points and snap guides for drawing and dragging. |
 | `straight.js` | 21 | Straight cut: one line across the sheet. |
 | `svg.js` | 209 | Read 2D shapes from an SVG (Inkscape, Illustrator, online designers). |
-| `textshape.js` | 214 | Text tool engine: turns typed text into closed cutting outlines (mm). Pure maths, no DOM. |
-| `trace.js` | 188 | Raster to outline engine, shared by the text tool and the photo / logo trace. |
-| `useshape.js` | 89 | Sends the drawing to the cut side (useShape) and the sketch toolbar. |
-| `variants.js` | 76 | Families of shape "versions" (tap a version to swap the part for a variant, keeping its size). |
+| `textshape.js` | 275 | Text tool engine: typed text to closed cutting outlines in mm. Pure maths, no DOM. |
+| `toolbarcustom.js` | 186 | Customise which tools appear on the Advanced toolbar. |
+| `trace.js` | 188 | Raster-to-outline engine, shared by the text tool and the photo / logo trace. |
+| `useshape.js` | 94 | Send the drawing to the cut side (useShape) and the sketch toolbar. |
+| `variants.js` | 76 | Families of shape versions (tap a version to swap the part, keeping its size). |
+
+### `js/make/presets/`
+
+| file | lines | what it is |
+|---|---:|---|
+| `enclosures.js` | 139 | Preset parts: boxes and enclosures. |
+| `fab-transitions.js` | 443 | Preset parts: square-to-round and other sheet-metal transitions. |
+| `flanges.js` | 128 | Preset parts: flanges. |
+| `fold-parts.js` | 555 | Preset parts: folding / 3D parts that unfold to a flat blank with etch fold lines. |
+| `gears-sprockets.js` | 189 | Preset parts: gears and sprockets. |
+| `gussets.js` | 132 | Preset parts: gussets. |
+| `helpers.js` | 469 | Shared builders used by the preset-part modules. |
+| `hooks-hangers.js` | 217 | Preset parts: hooks and hangers. |
+| `index.js` | 85 | Preset catalogue: groups the preset modules into the browser tabs. |
+| `plates-brackets.js` | 200 | Preset parts: plates and brackets. |
+| `r8-parts.js` | 255 | Later preset parts added in the r8 batch (still imported by the catalogue). |
+| `signs-frames.js` | 114 | Preset parts: signs and frames. |
+| `tabs-slots.js` | 182 | Preset parts: tabs and slots. |
 
 ### `js/cut/`
 
 | file | lines | what it is |
 |---|---:|---|
-| `cam.js` | 398 | CAM: turn a 2D design (closed outlines) into plasma G-code. |
-| `camedit.js` | 104 | Pro cut options (tabs, lead-out, overcut) and the start-point / tab handles you drag on the preview. |
+| `bedview.js` | 117 | Front-of-table bed view helpers: how the laptop picture is rotated and how jog arrows map to machine axes. |
+| `cam.js` | 577 | CAM: turn closed outlines into plasma G-code (kerf, lead-in, pierce, etch pass, cut order). |
+| `camedit.js` | 105 | Cut options (tabs, lead-out, overcut) and the start-point / tab handles on the preview. |
 | `check.js` | 223 | Cut check: can this design be cut well on this machine at this thickness? |
-| `checklist.js` | 85 | Pre-start checklist and the list of reasons Start is blocked (blockers()). |
-| `coupon.js` | 64 | Cut-test coupon + pierce counter (round 5, item 37). Pure logic (storage injected), no DOM. |
-| `cutfeatures-ui.js` | 224 | Cutting-screen extras: live torch/arc panel with lost-arc resume, saved work origins and 9-point job origin, cut-test coupon. |
-| `cutlist.js` | 61 | Pro cut list: reorder cuts, skip a cut, change where each one starts. |
-| `cutlive.js` | 88 | Live torch / arc panel (round 5, item 35). Pure logic: no DOM, so tests can drive it with fake status reports. |
-| `export.js` | 70 | Download G-code (dialect, line numbers) and its menu. |
-| `job.js` | 271 | Turn a CAM G-code file into a plasma job (same rules as plasma/job.py). |
-| `material.js` | 173 | Material, thickness, cut settings, speed and the saved-speed memory (step: material). |
-| `nest.js` | 452 | True-shape nesting and saved remnants. Pure maths (no DOM), so the browser and the node tests run the same code. |
-| `nestui.js` | 151 | "Get set up" > Put the parts on the bed: Nest to fit (true-shape packing) and saved remnants. |
-| `origins.js` | 87 | Work origins (round 5, item 36): saved start points, and the 9-point job origin. Pure logic + localStorage, no DOM. |
-| `pierce.js` | 33 | Live pierce delay: change it while cutting. |
-| `playback.js` | 103 | Playable preview: play / pause the cut on the preview, speed multipliers, numbered cut order. |
-| `prepare.js` | 89 | Turns the drawing into a job: kerf / lead-in, the safety check and loadJob(). |
-| `preview.js` | 223 | The preview canvas: sheet, parts, cut order, torch path, machine bed and gantry drawing. |
-| `progress.js` | 33 | Live cut progress: a time-based estimate re-synced every time the torch fires or stops. |
+| `checklist.js` | 110 | Pre-start checklist and the list of reasons Start is blocked (blockers()). |
+| `coupon.js` | 64 | Cut-test coupon and pierce counter. Pure logic (storage injected), no DOM. |
+| `cutbar.js` | 30 | The cutting-screen action bar (Start, Pause, trace, and related buttons). |
+| `cutfeatures-ui.js` | 224 | Cutting-screen extras: live torch/arc panel, saved work origins, 9-point origin, cut-test coupon. |
+| `cutlist.js` | 61 | Cut list: reorder cuts, skip a cut, change where each one starts. |
+| `cutlive.js` | 88 | Live torch / arc panel logic (no DOM; tests drive it with fake status reports). |
+| `cutpanels.js` | 178 | Cutting-screen side panels and their show/hide layout. |
+| `cutstatus.js` | 104 | Live job and machine status on the cutting screen. |
+| `etch.js` | 226 | Plasma etch / scribe pass (fold lines and text) before the through cuts, including optional amp-change pauses. |
+| `export.js` | 87 | Download G-code (dialect, line numbers) and its menu. |
+| `job.js` | 321 | Turn CAM G-code into a plasma job (pierce, torch on/off, feeds, plan, summary). |
+| `machinedraw.js` | 119 | Draw the machine bed, gantry and torch on the cutting preview (front-of-table view). |
+| `material.js` | 186 | Material, thickness, cut settings, speed and the saved-speed memory (step 1). |
+| `nest.js` | 470 | True-shape nesting and saved remnants. Pure maths, no DOM. |
+| `nestui.js` | 151 | Bed & start: Nest to fit and saved remnants. |
+| `origins.js` | 87 | Saved work origins and the 9-point job origin (localStorage, no DOM). |
+| `pierce.js` | 39 | Live pierce delay: change it while cutting. |
+| `playback.js` | 103 | Playable preview: play / pause the cut path, speed multipliers, numbered cut order. |
+| `prepare.js` | 101 | Turn the drawing into a job: kerf / lead-in, the safety check and loadJob(). |
+| `preview.js` | 198 | The preview canvas: sheet, parts, cut order, torch path, machine bed and gantry. |
+| `previewnav.js` | 137 | Pan and zoom the cutting preview. |
+| `progress.js` | 54 | Live cut progress: a time-based estimate re-synced when the torch fires or stops. |
 | `restart.js` | 79 | Restart from cut N after a stop, and the checks that the position is still known. |
-| `run.js` | 37 | Cut-step buttons: set start point, trace, Start, Pause, cut again, new file. |
-| `setup.js` | 480 | Step 3 "Get set up": lay the parts on the sheet (drag, turn, copy, delete, snap guides, live gaps), start point, checks. |
-| `timeline.js` | 72 | Turns the prepared job into a timeline (where the torch is at second t) for the playable preview. |
+| `run.js` | 77 | Cut-step buttons: set start point, trace, Start, Pause, cut again, new file. |
+| `setup.js` | 572 | Bed & start: lay parts on the sheet (drag, turn, copy, delete, snaps, gaps), start point, checks. |
+| `startmark.js` | 33 | The start-point marker on the bed picture. |
+| `timeline.js` | 72 | Turns the prepared job into a timeline (torch position at second t) for the playable preview. |
+| `turncover.js` | 7 | The "turn the phone sideways" cover on the cutting screen. |
 
 ### `js/ui/`
 
 | file | lines | what it is |
 |---|---:|---|
-| `about.js` | 63 | New-version banner and the About lines: reads version.json and offers a reload when a new release is out. |
-| `demo.js` | 84 | Practice-table helpers: set up the edges, fit dressing, jump to pierce. |
-| `dialogs.js` | 46 | Escape / Enter / Tab handling for the open dialogs (capture phase, so a dialog wins over the page). |
-| `features.js` | 23 | Starts the optional screen features (version banner, playable preview, cut list, restart, size check, demo helpers, icons). |
-| `flow.js` | 170 | Round 4: the app's four screens, the "can't leave while cutting" lock, and the E-stop (big red button and the space bar). |
-| `gate.js` | 57 | Why a control is switched off (hover text), and the sign-in / link-your-machine gate on Start. |
-| `host.js` | 6 | What the screen modules in this group need from the app (state, toast, cmd, refresh, ...): app.js hands it over once with setHost(). |
-| `howto.js` | 102 | Built-in "How to use" guide. |
-| `icons.js` | 102 | Replaces emoji with the app's own line icons. |
-| `inspector-api.js` | 106 | window.ptInspector: the small, validated API the Pro inspector panel talks to. mm and degrees CLOCKWISE. |
-| `inspector-ui.js` | 532 | Pro docked inspector (shell and layout only). |
-| `labels.js` | 43 | Keeps the preview's labels off the sheet and machine drawing. |
-| `menu.js` |  | The top menu and the phone cutting screen's More sheet. |
-| `mode.js` | 72 | Beginner / Pro mode switch and the account mode that decides it. |
-| `nav.js` | 135 | Screens and steps: menu, Make a part -> Get set up -> Cut, tabs and the stepper. |
-| `refresh.js` | 167 | The big repaint: refresh() brings every button, banner and lamp in line with the current state. |
-| `viewport.js` | 27 | Window size / orientation relayout and the machine-outline toggle. |
+| `about.js` | 68 | New-version banner and the About lines: reads version.json and offers a reload when a new release is out. |
+| `demo.js` | 61 | Practice-table helpers: set up the edges, fit dressing, jump to pierce. |
+| `dialogs.js` | 59 | Escape / Enter / Tab handling for open dialogs (capture phase, so a dialog wins over the page). |
+| `features.js` | 22 | Starts optional screen features (version banner, playable preview, cut list, restart, size check, demo helpers, icons). |
+| `flow.js` | 182 | The app screens, the "can't leave while cutting" lock, and the E-stop (big red button and the space bar). |
+| `gate.js` | 64 | Why a control is switched off (hover text), and the sign-in / link-your-machine gate on Start. |
+| `header.js` | 55 | The top header bar, including hide/show (STOP must stay visible on Cut). |
+| `host.js` | 6 | What the screen modules need from the app (state, toast, cmd, refresh, …): app.js hands it over once with setHost(). |
+| `hovertip.js` | 93 | Hover / focus tips on controls. |
+| `howto.js` | 100 | Built-in "How to use" guide. |
+| `icons.js` | 108 | Replaces emoji with the app's own line icons. |
+| `inspector-api.js` | 118 | The small, validated API the Advanced inspector talks to. mm and degrees clockwise. |
+| `inspector-ui.js` | 535 | Docked Advanced inspector (shell and layout only). |
+| `labels.js` | 43 | Keeps the preview labels off the sheet and machine drawing. |
+| `laptop.js` | 54 | Laptop chrome (wide, fine pointer) and the phone "turn sideways" hint. |
+| `menu.js` | 99 | The top menu and the phone cutting screen's More sheet. |
+| `mode.js` | 88 | Simple / Advanced editor on Make a part. Older Beginner / Pro names are still accepted as aliases. |
+| `nav.js` | 169 | Screens and steps: menu, Make a part, Bed & start, Cut, tabs and the stepper. |
+| `refresh.js` | 318 | The big repaint: refresh() brings every button, banner and lamp in line with the current state. |
+| `scrollrow.js` | 92 | Horizontal sliding toolbars (wheel / trackpad map to sideways scroll, fade hints when more tools sit off-screen). |
+| `viewport.js` | 31 | Window size / orientation relayout and the machine-outline toggle. |
 | `whyoff.js` | 29 | Greyed controls say why: aria-disabled + data-why on every watched control. |
 | `whytip.js` | 62 | The "why is this off" tip that appears when you press a switched-off control. |
+| `yours.js` | 110 | Settings → Make it yours: per-user appearance and canvas preferences, applied live. |
 
 ### `js/account/`
 
 | file | lines | what it is |
 |---|---:|---|
 | `account-ui.js` | 42 | Start-up wiring for the account dialogs (the pieces live next to it). |
-| `account.js` | 12 | The account API: one place that re-exports every account module (import * as Acc from this file). |
-| `accounthome.js` | 167 | The account dialog itself (signed-in view), claim and gate dialogs, and the account chrome (pill, gating). |
-| `acctbase.js` | 50 | Account basics shared by every account module: storage keys, listeners, demo-mode switch, small string helpers. |
+| `account.js` | 12 | The account API: one place that re-exports every account module. |
+| `accounthome.js` | 200 | The account dialog (signed-in view), claim and gate dialogs, and the account chrome (pill, gating). |
+| `acctbase.js` | 56 | Account basics shared by every account module: storage keys, listeners, demo-mode switch, string helpers. |
 | `acctcrypto.js` | 46 | SHA-256 (works without a secure context) and claim-code generation. |
 | `acctstate.js` | 108 | Who is signed in and what they may do: user, profile, mode, admin, Pro / firmware gating, linked machines. |
 | `adminapi.js` | 114 | Admin-only calls: users, usage stats, job events, cut presets. |
-| `adminview.js` | 230 | The admin dialog: machines, users, usage stats, announcements, cut presets. |
+| `adminview.js` | 261 | The admin dialog: machines, users, usage stats, announcements, cut presets. |
 | `announce.js` | 60 | Announcements from the admin: list, mark read, create, delete. |
 | `announceui.js` | 63 | Announcement bar and inbox. |
-| `auth.js` | 226 | Sign up / in / out, sign-in link, reset, new PIN, mode and display name. |
-| `authforms.js` | 88 | Sign in, sign up, sign-in link, reset and new-PIN forms. |
-| `cloud.js` | 118 | Talking to the cloud account service: auth headers, token refresh, profile and entitlements, sign-in link parsing. |
-| `config.js` | 41 | Site config for the accounts backend. |
-| `demostore.js` | 57 | The practice (demo) account: everything is kept in localStorage in this browser, nothing leaves it. |
-| `jobevents.js` | 54 | Records that the user is active and logs job events (start, finish, alarm) for the admin. |
-| `machines.js` | 160 | Linking a machine (claim code) and the admin machine list: add, unlink, transfer, claim log. |
+| `auth.js` | 230 | Sign up / in / out, sign-in link, reset, new PIN, mode and display name. |
+| `authforms.js` | 102 | Sign in, sign up, sign-in link, reset and new-PIN forms. |
+| `cloud.js` | 146 | Talking to the cloud account service: auth headers, token refresh, profile and entitlements. |
+| `config.js` | 41 | Site config for the accounts backend (publishable key only; ?demo=1 stays local). |
+| `demostore.js` | 57 | The practice (demo) account: everything stays in localStorage in this browser. |
+| `jobevents.js` | 55 | Records that the user is active and logs job events (start, finish, alarm) for the admin. |
+| `machines.js` | 183 | Linking a machine (claim code) and the admin machine list: add, unlink, transfer, claim log. |
 | `parts.js` | 132 | Saved parts: list, load, save (with conflict check), rename, delete, move local parts to the account. |
-| `partsfolders.js` | 222 | Round 3: folders for the parts list + batch "Import DXF / SVG" (up to 20 files, each saved as a part). |
-| `partslist.js` | 131 | The saved-parts list in the account dialog: folders, rows, rename, delete, open. |
-| `savepart.js` | 119 | Save the current drawing as a part (over / copy), the conflict dialog and the 8-second undo. |
-| `uibase.js` | 35 | Shared by the account dialogs: the host callbacks from app.js, dialog open/close, and the toast / esc helpers. |
+| `partsfolders.js` | 222 | Folders for the parts list and batch "Import DXF / SVG". |
+| `partslist.js` | 132 | The saved-parts list in the account dialog: folders, rows, rename, delete, open. |
+| `savepart.js` | 123 | Save the current drawing as a part (over / copy), the conflict dialog and the 8-second undo. |
+| `uibase.js` | 37 | Shared by the account dialogs: host callbacks from app.js, dialog open/close, toast / esc helpers. |
+| `userprefs.js` | 102 | Cloud sync for per-user "Make it yours" and Cut panel layout (localStorage is the offline cache). |
