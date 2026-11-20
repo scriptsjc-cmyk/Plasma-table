@@ -24,21 +24,25 @@ export function isShellLaptop() {
 }
 
 let makeHome = null, tabsHome = null, skToolsHome = null, skOptsHome = null;
-function safeInsert(parent, el, before) {
+function safeInsert(parent, el, before, restore) {
   if (!parent || !el) return;
   const ref = (before && before.parentNode === parent) ? before : null;
   if (el.parentNode === parent && el.nextElementSibling === ref) return;
-  try { parent.insertBefore(el, ref); } catch (e) { parent.appendChild(el); }
+  // A stale neighbour used to throw; skip the move unless we must return the node home.
+  if (before && !ref && !restore) return;
+  try { parent.insertBefore(el, ref); } catch (e) {
+    if (restore && el.parentNode !== parent) parent.appendChild(el);
+  }
 }
 function placeNode(el, homeKey, parent, before) {
   if (!el) return;
   if (!homeKey.ref) homeKey.ref = { parent: el.parentNode, next: el.nextElementSibling };
-  if (parent) safeInsert(parent, el, before || null);
+  if (parent && el.parentNode !== parent) safeInsert(parent, el, before || null, false);
 }
 function restoreNode(el, homeKey) {
   const h = homeKey.ref;
   if (!el || !h || !h.parent) return;
-  safeInsert(h.parent, el, h.next);
+  safeInsert(h.parent, el, h.next, true);
 }
 export function placeMakeBar() {
   const bar = $("makeBar");
