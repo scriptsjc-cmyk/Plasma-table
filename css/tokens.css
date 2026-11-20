@@ -72,15 +72,6 @@
   --gap: 12px;
   --tap-primary: 44px;
 }
-/* Compact density on short laptop screens. Primary actions keep --tap-primary (44px). */
-@media (min-width: 1280px) and (max-height: 720px) and (hover: hover) and (pointer: fine) {
-  :root, [data-theme="light"], [data-theme="dark"] {
-    --tap: 36px;
-    --pad: 8px;
-    --gap: 8px;
-    --fs-lg: 15px;
-  }
-}
 /* Dark theme tokens — unused by default; set data-theme="dark" on <html> to switch. */
 [data-theme="dark"] {
   --bg: #18202a; --card: #202a35; --well: #161e27; --canvas: #121920; --line: #324050;
@@ -95,3 +86,15 @@
   --cad-edge: #e07a3c; --cad-score: #e0a040; --cad-mark: #b49cff;
   --accent-text: #9CC7FF;
 }
+
+/* Compact density on short laptop screens. Primary actions keep --tap-primary (44px).
+   Selector is :root only so the dark-theme contrast tokens stay in their own block. */
+@media (min-width: 1280px) and (max-height: 720px) and (hover: hover) and (pointer: fine) {
+  :root {
+    --tap: 36px;
+    --pad: 8px;
+    --gap: 8px;
+    --fs-lg: 15px;
+  }
+}
+
