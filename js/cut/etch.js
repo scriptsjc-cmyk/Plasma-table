@@ -4,6 +4,9 @@ export const ETCH_OPS = ["score", "mark"];
 export const ETCH_START_PLASMA = "; PORTA-ETCH PLASMA";
 export const ETCH_START_SCRIBE = "; PORTA-ETCH SCRIBE";
 export const ETCH_END = "; PORTA-ETCH END";
+// Default mark height sits above the cut so a plasma etch cannot pierce. Starting point only — test on scrap.
+export const ETCH_HEIGHT_ABOVE_CUT_MM = 1.5;
+export const ETCH_LEAD_MM = 2;
 
 export function isEtchOp(op) { return ETCH_OPS.includes(op); }
 
@@ -62,7 +65,7 @@ export function plasmaEtchFromRow(row, chart) {
   const cutH = Number(r.cut_height_mm ?? c.cut_height_mm) || 1.5;
   const amps = Number(r.etch_amps) > 0 ? Number(r.etch_amps) : Math.max(10, Math.min(25, Math.round(cutAmps * 0.35)));
   const feed = Number(r.etch_feed_mm_min) > 0 ? Number(r.etch_feed_mm_min) : Math.max(cutFeed * 2, Math.min(12000, cutFeed * 3));
-  const height = Number(r.etch_height_mm) > 0 ? Number(r.etch_height_mm) : cutH;
+  const height = Number(r.etch_height_mm) > 0 ? Number(r.etch_height_mm) : Math.round((cutH + ETCH_HEIGHT_ABOVE_CUT_MM) * 100) / 100;
   return { amps, feed_mm_min: Math.round(feed), height_mm: height, pierce_delay_s: 0, cut_amps: cutAmps };
 }
 
@@ -98,8 +101,8 @@ export function etchPauseMessage(kind, amps) {
   const has = Number.isFinite(n) && n > 0;
   if (String(kind).toLowerCase() === "etch") {
     return has
-      ? `Set the plasma to about ${n} A for etching, then press Resume`
-      : "Set the plasma to the etching current, then press Resume";
+      ? `Turn the cutter to its lowest amps (about ${n} A) for etching, then press Resume`
+      : "Turn the cutter to its lowest amps for etching, then press Resume";
   }
   return has
     ? `Set the plasma back to ${n} A for cutting, then press Resume`
@@ -154,7 +157,7 @@ export function emitEtchGcode(contours, { T = (p) => p, resolved, name = "etch" 
   if (scribe) {
     lines.push(`; scribe/marker on ${r.scribe.on}, off ${r.scribe.off}` + ((dx || dy) ? `, offset ${fmt(dx)}, ${fmt(dy)} mm` : ""));
   } else {
-    lines.push(`; plasma etch: set the unit to ${r.plasma.amps} A, ${r.plasma.feed_mm_min} mm/min, no pierce delay (will not cut through)`);
+    lines.push(`; plasma etch: turn the cutter to its lowest amps (about ${r.plasma.amps} A), ${r.plasma.feed_mm_min} mm/min, height ${r.plasma.height_mm} mm (starting point, test on scrap), no pierce delay`);
   }
   for (const c of list) {
     const pts = offsetPts(c.pts, dx, dy).map(T);
@@ -194,6 +197,18 @@ export function etchSections(lines) {
   }
   if (cur) blocks.push(cur);
   return { blocks, rest };
+}
+
+// Block Start / Download when a plasma etch would sit at or below cut height (it would cut through).
+export function etchHeightProblem(resolved, cutHeight) {
+  if (!resolved || resolved.tool === "scribe") return "";
+  const eh = Number(resolved.plasma && resolved.plasma.height_mm);
+  const ch = Number(cutHeight);
+  if (!(ch > 0) || !(eh > 0)) return "";
+  if (eh <= ch + 1e-6) {
+    return "Etch height must be above cut height (it starts at cut height + 1.5 mm — a starting point, test on scrap). Raise the etch height or it will cut through.";
+  }
+  return "";
 }
 
 // True when an etch pass would actually be a through-cut (pierce delay, or etch geometry cut as a normal pierce).

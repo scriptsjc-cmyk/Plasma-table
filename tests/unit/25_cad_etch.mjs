@@ -5,7 +5,7 @@ import { load } from "../lib/env.mjs";
 import {
   emitEtchGcode, throughCutInEtch, sanitizeMcode, resolveEtch, isEtchOp,
   ETCH_START_PLASMA, ETCH_START_SCRIBE, ETCH_END, defaultEtchSettings, sanitizeEtchSettings,
-  etchPauseMessage, etchPausePrompts,
+  etchPauseMessage, etchPausePrompts, plasmaEtchFromRow, etchHeightProblem, ETCH_HEIGHT_ABOVE_CUT_MM,
 } from "../../js/cut/etch.js";
 
 const A = await load();
@@ -143,7 +143,7 @@ function etchBody(text) {
   const end = on.findIndex((l) => /PORTA-ETCH END/.test(l));
   const m0s = on.map((l, i) => /(?:^|\s)M0$/.test(l.trim()) ? i : -1).filter((i) => i >= 0);
   t.check("plasma etch (default) pauses once before and once after the pass", m0s.length === 2 && m0s[0] < start && m0s[1] > end, { m0s, start, end, g }, "C32-PAUSE");
-  t.check("pause messages name the etch and cut currents", /Set the plasma to about \d+ A for etching, then press Resume/.test(g) && /Set the plasma back to \d+ A for cutting, then press Resume/.test(g), g, "C32-PAUSE");
+  t.check("pause messages tell the operator to use the lowest amps", /Turn the cutter to its lowest amps \(about \d+ A\) for etching, then press Resume/.test(g) && /Set the plasma back to \d+ A for cutting, then press Resume/.test(g), g, "C32-PAUSE");
   const lastCmd = (arr, i) => { for (let k = i - 1; k >= 0; k--) { const u = String(arr[k]).replace(/;.*$/, "").trim(); if (u) return u; } return ""; };
   t.check("the torch is not on when an amp pause runs", !m0s.some((i) => /^M3\b/.test(lastCmd(on, i))), on, "C32-PAUSE");
   t.check("no M0 inside the plasma etch block", !on.slice(start, end + 1).some((l) => /(?:^|\s)M0$/.test(l.trim())), on.slice(start, end + 1), "C32-PAUSE");
@@ -171,5 +171,40 @@ function etchBody(text) {
   t.check("prepared plasma job keeps both amp pauses in place", js.length === 2 && js[0] < jStart && js[1] > jEnd && /PORTA-PAUSE ETCH/.test(text) && /PORTA-PAUSE CUT/.test(text), { js, jStart, jEnd, head: job.lines.slice(0, 20) }, "C32-PAUSE");
 }
 
+
+
+// ---- F1: etch height, lead-in, height guard ----
+{
+  const row = { amps: 40, feed_mm_min: 1000, cut_height_mm: 1.5 };
+  const est = plasmaEtchFromRow(row, {});
+  t.check("F1: default etch height is cut height + 1.5 mm",
+    Math.abs(est.height_mm - (1.5 + ETCH_HEIGHT_ABOVE_CUT_MM)) < 1e-6 && est.pierce_delay_s === 0,
+    est, "F1-HEIGHT");
+  t.check("F1: a height at or below cut height is blocked",
+    /above cut height/.test(etchHeightProblem({ tool: "plasma", plasma: { height_mm: 1.5 } }, 1.5))
+    && etchHeightProblem({ tool: "plasma", plasma: { height_mm: 3 } }, 1.5) === "",
+    etchHeightProblem({ tool: "plasma", plasma: { height_mm: 1.5 } }, 1.5), "F1-HEIGHT");
+  t.check("F1: scribe is not blocked on height",
+    etchHeightProblem({ tool: "scribe", plasma: { height_mm: 1.5 } }, 1.5) === "", "", "F1-HEIGHT");
+
+  const rect = { pts: [[0, 0], [80, 0], [80, 50], [0, 50]], closed: true };
+  const score = { pts: [[5, 5], [75, 5]], closed: false, op: "score" };
+  const resolved = resolveEtch(row, {}, { tool: "plasma" });
+  const cam = A.designToGcode([rect, score], { kerf: 1.5, leadIn: 3, name: "etched", etch: resolved });
+  const job = A.prepareJob(cam.gcode, { ...cut(), etch: resolved, cut_height_mm: 1.5 }, A.machine, false);
+  const body = etchBody(job.lines);
+  t.check("F1: prepared plasma etch has a moving lead-in before M3",
+    /etch lead-in \(already moving\)/.test(body) && body.search(/etch lead-in/) < body.search(/\bM3\b/),
+    body, "F1-LEAD");
+  t.check("F1: prepared etch height is above cut height",
+    etchHeightProblem(resolved, 1.5) === "" && resolved.plasma.height_mm > 1.5,
+    resolved.plasma, "F1-HEIGHT");
+  let blocked = "";
+  try {
+    A.prepareJob(cam.gcode, { ...cut(), etch: { tool: "plasma", plasma: { height_mm: 1.5, feed_mm_min: 3000 } }, cut_height_mm: 1.5 }, A.machine, false);
+  } catch (e) { blocked = e.message; }
+  t.check("F1: prepareJob refuses etch height at cut height",
+    /above cut height/.test(blocked), blocked, "F1-HEIGHT");
+}
 
 process.exit(t.done() ? 1 : 0);

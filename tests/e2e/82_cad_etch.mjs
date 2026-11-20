@@ -120,7 +120,7 @@ t.check("C32: stripping the etch flag is treated as a through-cut", /cut through
   t.check("amp pause: the job starts", started, "", "C32-PAUSE");
   const prompt = await page.waitForFunction(() => {
     const el = document.getElementById("ampPauseMsg");
-    return el && !el.classList.contains("hidden") && /Set the plasma to about \d+ A for etching, then press Resume/.test(el.textContent || "");
+    return el && !el.classList.contains("hidden") && /Turn the cutter to its lowest amps \(about \d+ A\) for etching, then press Resume/.test(el.textContent || "");
   }, null, { timeout: 15000 }).then(() => true).catch(() => false);
   const ui = await page.evaluate(() => {
     const msg = document.getElementById("ampPauseMsg");

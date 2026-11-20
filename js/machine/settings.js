@@ -25,6 +25,7 @@ const defaultSettings = () => ({
   fluidnc: { host: "", port: 81 },
   firmwareWarned: false,
   etch: defaultEtchSettings(),
+  cutter: { kind: "touch-start" }, // Josh's current Reboot 60A. Andeli CUT-65DS = pilot-arc.
 });
 
 // ---- validation: every number has a sane range; a bad value is refused (form) or dropped (stored/restored file), never half-applied
@@ -73,7 +74,18 @@ function sanitizeSettings(raw, { strict = false } = {}) {
   const etch = sanitizeEtchSettings(src.etch);
   out.etch = etch.settings;
   if (etch.errors && etch.errors.length) errors.push(...etch.errors);
+  const cutterSrc = isObj(src.cutter) ? src.cutter : {};
+  const kindRaw = cutterSrc.kind != null ? cutterSrc.kind : src.cutterType;
+  out.cutter = { kind: sanitizeCutterKind(kindRaw) };
   return { settings: out, errors: strict ? errors : [] };
+}
+
+export const CUTTER_KINDS = ["touch-start", "pilot-arc", "hf"];
+export function sanitizeCutterKind(v) {
+  const k = String(v == null ? "" : v).toLowerCase().trim();
+  if (/pilot/.test(k)) return "pilot-arc";
+  if (/^hf\b|high[\s-]*freq/.test(k)) return "hf";
+  return "touch-start";
 }
 
 function sanitizePresets(list) {
@@ -194,6 +206,22 @@ export function closeSettings() {
 }
 
 
+function paintCutterEtchNote(kind) {
+  const el = $("setCutterEtchNote");
+  if (!el) return;
+  const k = sanitizeCutterKind(kind != null ? kind : ($("setCutterKind") && $("setCutterKind").value));
+  if (k === "touch-start") {
+    el.textContent = "Touch-start cannot strike an arc in the air, so plasma marking is unreliable. Scribe / marker mode is recommended. Plasma etch stays available.";
+    el.classList.remove("hidden");
+  } else if (k === "pilot-arc") {
+    el.textContent = "Pilot arc: plasma etch runs at the etch height as normal.";
+    el.classList.remove("hidden");
+  } else {
+    el.textContent = "High-frequency start: plasma etch runs at the etch height as normal.";
+    el.classList.remove("hidden");
+  }
+}
+
 function paintEtchToolFields() {
   const tool = (($$("input[name=setEtchTool]") || []).find((r) => r.checked) || { value: "plasma" }).value;
   const plasma = $("setEtchPlasmaFields"), scribe = $("setEtchScribeFields");
@@ -272,6 +300,9 @@ function fillBasics() {
   const tool = e.tool === "scribe" ? "scribe" : "plasma";
   $$("input[name=setEtchTool]").forEach((r) => { r.checked = r.value === tool; });
   const blank = (id, v) => { const el = $(id); if (!el) return; el.value = v == null ? "" : String(v); };
+  const kind = sanitizeCutterKind(s.cutter && s.cutter.kind);
+  if ($("setCutterKind")) $("setCutterKind").value = kind;
+  paintCutterEtchNote(kind);
   blank("setEtchAmps", e.plasma && e.plasma.amps);
   blank("setEtchFeed", e.plasma && e.plasma.feed_mm_min);
   blank("setEtchHeight", e.plasma && e.plasma.height_mm);
@@ -301,6 +332,7 @@ function readFormIntoState() {
   put(cand.accel, "x", "setAccX"); put(cand.accel, "y", "setAccY"); put(cand.accel, "z", "setAccZ");
   put(cand.torch, "pierceHeight", "setPierceH"); put(cand.torch, "cutHeight", "setCutH"); put(cand.torch, "pierceDelay", "setPierceD"); put(cand.torch, "thcVoltage", "setThcV");
   if ($("setThcOn")) cand.torch.thcOn = $("setThcOn").checked;
+  cand.cutter = { kind: sanitizeCutterKind($("setCutterKind") && $("setCutterKind").value) };
   if ($("setUnits")) cand.units = $("setUnits").value;
   if ($("setDialect")) cand.dialect = $("setDialect").value;
   if ($("setLineNo")) cand.lineNumbers = $("setLineNo").checked;
@@ -418,6 +450,7 @@ export function bindSettings() {
   $("settingsClose") && ($("settingsClose").onclick = closeSettings);
   $("btnSaveSettings") && ($("btnSaveSettings").onclick = () => { if (readFormIntoState()) toast("Settings saved."); });
   $$("input[name=setEtchTool]").forEach((r) => r.addEventListener("change", paintEtchToolFields));
+  $("setCutterKind") && $("setCutterKind").addEventListener("change", () => paintCutterEtchNote());
   $("formSetPreset") && $("formSetPreset").addEventListener("submit", (e) => {
     e.preventDefault();
     try {

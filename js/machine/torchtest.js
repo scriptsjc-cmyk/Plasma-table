@@ -9,6 +9,7 @@ import { M, S } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { askConfirm } from "../core/safeprompt.js";
 import { cmd } from "./access.js";
+import { currentSettings, sanitizeCutterKind } from "./settings.js";
 
 // Treat a dead link as a release, but never sooner than the transport's own
 // no-reply watchdog (3 s on USB/Bluetooth). A tighter 1.5 s cutoff was firing
@@ -39,12 +40,8 @@ function boardEstop() {
 // can override this; until then, assume touch-start so the air-only warning shows.
 export function cutterKind() {
   try {
-    const s = (S && S.settings) || {};
-    const raw = (s.cutter && (s.cutter.kind || s.cutter.type)) || s.cutterType || s.cutter_kind || "";
-    const k = String(raw).toLowerCase().trim();
-    if (/pilot/.test(k)) return "pilot-arc";
-    if (/^hf\b|high[\s-]*freq/.test(k)) return "hf";
-    if (/touch/.test(k)) return "touch-start";
+    const s = (typeof currentSettings === "function" && currentSettings()) || (S && S.settings) || {};
+    return sanitizeCutterKind((s.cutter && s.cutter.kind) || s.cutterType);
   } catch (e) { /* ignore */ }
   return "touch-start";
 }

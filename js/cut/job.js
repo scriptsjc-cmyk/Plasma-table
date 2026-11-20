@@ -6,7 +6,7 @@
 //    torch on -> pierce delay -> drop to cut height -> set cut feed.
 //  * After every M5: lift clear for the next rapid.
 
-import { ETCH_START_PLASMA, ETCH_START_SCRIBE, ETCH_END } from "./etch.js";
+import { ETCH_START_PLASMA, ETCH_START_SCRIBE, ETCH_END, ETCH_HEIGHT_ABOVE_CUT_MM, ETCH_LEAD_MM } from "./etch.js";
 
 export class JobError extends Error {}
 const MAX_COORD_MM = 100000;   // 100 m: far beyond any table, still safe to print with toFixed()
@@ -21,6 +21,28 @@ export function fmt(v) {
   let s = Number(v).toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
   if (s === "-0" || s === "") s = "0";
   return s;
+}
+
+function peekNextXY(lines, from, x, y) {
+  let nx = x, ny = y, found = false;
+  for (let i = from + 1; i < lines.length; i++) {
+    const raw = lines[i];
+    if (/PORTA-ETCH END/i.test(raw)) break;
+    const body = stripComments(raw);
+    if (!body) continue;
+    WORD_RE.lastIndex = 0;
+    let m, g = null;
+    const words = [];
+    while ((m = WORD_RE.exec(body))) words.push([m[1], Number(m[2])]);
+    for (const [k, v] of words) {
+      if (k === "G" && (v === 0 || v === 1 || v === 2 || v === 3)) g = v;
+      if (k === "X") { nx = v; found = true; }
+      if (k === "Y") { ny = v; found = true; }
+    }
+    if (found && (g == null || g === 0 || g === 1 || g === 2 || g === 3)) return { x: nx, y: ny };
+    if (g != null) break;
+  }
+  return null;
 }
 
 export function arcPoints(x0, y0, x1, y1, i, j, clockwise, stepDeg = 6) {
@@ -64,7 +86,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
   let etchMode = null, etchToolOn = false, sawEtch = false, etchLen = 0;
   const etchCfg = (cut && cut.etch) || {};
   const etchPlasma = etchCfg.plasma || {};
-  const etchHeight = Number(etchPlasma.height_mm) > 0 ? Number(etchPlasma.height_mm) : cutH;
+  const etchHeight = Number(etchPlasma.height_mm) > 0 ? Number(etchPlasma.height_mm) : cutH + ETCH_HEIGHT_ABOVE_CUT_MM;
   const etchFeed = Number(etchPlasma.feed_mm_min) > 0 ? Number(etchPlasma.feed_mm_min) : Math.max(feed * 2, 2000);
   const scribeOn = Number(String((etchCfg.scribe && etchCfg.scribe.on) || "M8").replace(/^[Mm]/, ""));
   const scribeOff = Number(String((etchCfg.scribe && etchCfg.scribe.off) || "M9").replace(/^[Mm]/, ""));
@@ -171,14 +193,30 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
         torchOn = true;
         etchToolOn = true;
         current = null;
+        if (etchHeight <= cutH + 1e-6) {
+          throw new JobError("Etch height must be above cut height (it starts at cut height + 1.5 mm — a starting point, test on scrap).");
+        }
         out.push("; --- plasma etch (no pierce delay) ---");
         if (dryRun) out.push("G4 P0");
         else {
           out.push("G91",
             `G38.2 Z-${fmt(probe.probe_distance_mm)} F${fmt(probe.probe_feed)}`,
             `G0 Z${fmt(probe.switch_offset_mm + etchHeight)}`,
-            `M3 S${fmt(torch.spindle_s)}`,
             "G90");
+          // Start already moving: a short lead at etch height, then M3, then the rest of the path.
+          const lead = peekNextXY(lines, idx, x, y);
+          if (lead && posKnown) {
+            const len = Math.hypot(lead.x - x, lead.y - y);
+            if (len > 0.05) {
+              const d = Math.min(ETCH_LEAD_MM, len);
+              const t = d / len;
+              const lx = x + (lead.x - x) * t, ly = y + (lead.y - y) * t;
+              out.push("; etch lead-in (already moving)");
+              out.push(`G1 X${fmt(lx)} Y${fmt(ly)} F${fmt(etchFeed)}`);
+              x = lx; y = ly;
+            }
+          }
+          out.push(`M3 S${fmt(torch.spindle_s)}`);
         }
         out.push(`G1 F${fmt(etchFeed)}`);
       } else {

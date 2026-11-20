@@ -1035,6 +1035,14 @@
       </div>
       <label class="check"><input id="setThcOn" type="checkbox"> THC on (if supported)</label>
       <p id="setThcNote" class="muted small"></p>
+      <label>Cutter type
+        <select id="setCutterKind">
+          <option value="touch-start">Touch-start (Reboot 60A — current cutter)</option>
+          <option value="pilot-arc">Pilot arc (Andeli CUT-65DS)</option>
+          <option value="hf">High frequency (HF)</option>
+        </select>
+      </label>
+      <p class="muted small">Josh’s current Reboot 60A is touch-start. The Andeli CUT-65DS is a pilot-arc cutter. This does not change pierce or cut numbers.</p>
     </div>
 
     <div class="setpane hidden" data-setpane="pierce">
@@ -1049,18 +1057,20 @@
 
     <div class="setpane hidden" data-setpane="etch">
       <h3>Etch / mark</h3>
-      <p class="muted small">Score and Mark lines, fold marks, and etched text run as a first pass, before any cuts. They must never cut through the sheet. Choose whether that pass is a light plasma etch (low current, high speed, no pierce delay) or a scribe / marker tool.</p>
+      <p class="muted small">Score and Mark lines, fold marks, and etched text run as a first pass, before any cuts. They must never cut through the sheet. Choose whether that pass is a light plasma etch (low current, high speed, no pierce delay) or a scribe / marker tool. Turn the cutter to its lowest amps for a plasma etch; the job can pause so you can set the dial.</p>
+      <p class="muted small" id="setCutterEtchNote"></p>
       <div class="row wrap">
         <label class="check"><input type="radio" name="setEtchTool" value="plasma" checked> Plasma etch</label>
         <label class="check"><input type="radio" name="setEtchTool" value="scribe"> Scribe / marker tool</label>
       </div>
       <div id="setEtchPlasmaFields">
-        <p class="muted small">Leave a field blank to use the cut chart for this material (a lower current, faster feed and no pierce delay). Set the plasma unit to the etch current before you start; after etch, set it back to the cutting current.</p>
+        <p class="muted small">Leave current or speed blank to use a safe estimate (lower current, faster feed, no pierce delay). Etch height defaults to cut height + 1.5 mm — a starting point, test on scrap. The run is blocked if etch height is at or below cut height. Turn the cutter to its lowest amps before the etch pass.</p>
         <div class="grid3">
-          <label>Etch current (A)<input id="setEtchAmps" type="number" min="5" max="200" step="1" inputmode="decimal" placeholder="from chart"></label>
-          <label>Etch speed (mm/min)<input id="setEtchFeed" type="number" min="50" max="30000" step="10" inputmode="decimal" placeholder="from chart"></label>
-          <label>Etch height (mm)<input id="setEtchHeight" type="number" min="0" max="25" step="0.1" inputmode="decimal" placeholder="from chart"></label>
+          <label>Etch current (A)<input id="setEtchAmps" type="number" min="5" max="200" step="1" inputmode="decimal" placeholder="lowest amps"></label>
+          <label>Etch speed (mm/min)<input id="setEtchFeed" type="number" min="50" max="30000" step="10" inputmode="decimal" placeholder="high (from estimate)"></label>
+          <label>Etch height (mm)<input id="setEtchHeight" type="number" min="0" max="25" step="0.1" inputmode="decimal" placeholder="cut height + 1.5"></label>
         </div>
+        <p class="muted small">Etch height is a starting point, test on scrap.</p>
       </div>
       <div id="setEtchScribeFields" class="hidden">
         <p class="muted small">The tool-on and tool-off M-codes are sent as written. They cannot be the torch codes M3 / M5. An optional XY offset is added to every etch move (for a marker that sits beside the torch).</p>

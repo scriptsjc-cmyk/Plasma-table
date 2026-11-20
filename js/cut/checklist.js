@@ -7,7 +7,8 @@ import { ampsNow, row } from "./material.js";
 import { $, $$, esc } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
 import { CHECK_LINE } from "../machine/boardrun.js";
-import { isEtchOp, throughCutInEtch } from "./etch.js";
+import { isEtchOp, throughCutInEtch, etchHeightProblem, resolveEtch } from "./etch.js";
+import { currentSettings } from "../machine/settings.js";
 import { sheetCornerName } from "./bedview.js";
 import { probeDisplayOn } from "../machine/probefilter.js";
 
@@ -68,6 +69,11 @@ function scoreMarkCount() {
 export function scoreMarkProblem() {
   const n = scoreMarkCount();
   if (!n) return "";
+  const r = row() || {};
+  const cutH = Number(r.cut_height_mm ?? (S.chart && S.chart.cut_height_mm));
+  const resolved = resolveEtch(r, S.chart, currentSettings());
+  const heightWhy = etchHeightProblem(resolved, cutH);
+  if (heightWhy) return heightWhy;
   const lines = (S.prepared && S.prepared.lines) || [];
   return throughCutInEtch(lines, { hasEtchItems: true }) || "";
 }
