@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Porta Plazma – component gallery</title>
+<!-- r13: every shared piece of the UI on one page, styled by the app's own CSS. See docs/UI-RULES.md. -->
+<link rel="stylesheet" href="../css/tokens.css">
+<link rel="stylesheet" href="../css/base.css">
+<link rel="stylesheet" href="../css/layout.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/screen-signin-menu.css">
+<link rel="stylesheet" href="../css/screen-make.css">
+<link rel="stylesheet" href="../css/screen-cut.css">
+<link rel="stylesheet" href="../css/screen-setup.css">
+<link rel="stylesheet" href="../css/yours.css">
+<style>
+  body.gallery { overflow: auto; height: auto; padding: 16px 24px 48px; background: var(--bg); }
+  .gallery section { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; margin: 0 0 16px; }
+  .gallery h2 { margin: 0 0 12px; font-size: var(--fs-l); }
+  .gallery .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; }
+  .gallery .sw { width: 120px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; font-size: var(--fs-xs); }
+  .gallery .sw i { display: block; height: 40px; }
+  .gallery .sw span { display: block; padding: 4px 6px; }
+  .gallery .demo-pos { position: relative; height: 56px; }
+  .gallery .demo-pos .toast { position: absolute; top: 8px; }
+</style>
+</head>
+<body class="gallery">
+<h1>Component gallery</h1>
+<p class="muted">Every shared piece of Porta Plazma's look, drawn with the app's own stylesheets. Rules: <a href="UI-RULES.md">UI-RULES.md</a>.</p>
+
+<section><h2>Buttons</h2>
+  <div class="row">
+    <button class="primary">Primary (go)</button><button class="accent">Primary (accent)</button><button>Secondary</button>
+    <button class="quiet">Quiet</button><button class="danger">Delete</button><button class="warn">Warning</button><button disabled>Disabled</button>
+  </div>
+  <div class="row">
+    <button class="xl go">Start cutting</button><button class="small">Small</button>
+    <button class="pill iconbtn" title="Settings" aria-label="Settings"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="switch" aria-pressed="true">Snap <span class="muted small">on</span></button>
+    <span>Info <button type="button" class="info-i" aria-label="More about this" title="More about this"></button></span>
+  </div>
+</section>
+
+<section><h2>Pills and chips</h2>
+  <div class="row"><span class="pill">Pill</span><span class="pill off">● Not connected</span><span class="pill chip practice">Practice run · torch off</span><span class="pill torch off">TORCH OFF</span></div>
+</section>
+
+<section><h2>Tabs and steps</h2>
+  <nav class="tabs" aria-label="Example tabs"><button class="tab sel">✂ Cut</button><button class="tab">Machine setup</button></nav>
+  <ol class="stepper" style="margin-top:12px"><li class="done"><span>1</span>Part</li><li class="cur"><span>2</span>Setup</li><li><span>3</span>Cut</li></ol>
+</section>
+
+<section><h2>Banners, toast and states</h2>
+  <div class="banner red">E-STOP is on. Hold the button to release.</div>
+  <div class="banner amber" style="margin-top:8px">Check the cut: 1 warning</div>
+  <div class="demo-pos"><div class="toast">Saved ✓</div></div>
+  <div class="empty-state"><span class="empty-title">No parts saved yet</span><span>Save a drawing, or use "Import DXF / SVG".</span></div>
+  <p class="muted small">Loading placeholders:</p>
+  <div class="ph-row"></div><div class="ph-row"></div>
+</section>
+
+<section><h2>Pager</h2>
+  <div class="pagebar"><button type="button" class="pagebar-prev" aria-label="Previous page" title="Previous page" disabled>‹</button><span class="pagebar-status">Page 1 of 3</span><button type="button" class="pagebar-next" aria-label="Next page" title="Next page">›</button></div>
+</section>
+
+<section><h2>Card and checklist</h2>
+  <div class="card" style="padding:12px"><h3>Before you cut</h3><ol class="checklist"><li><label class="check"><input type="checkbox" checked> Air on and dry</label></li><li><label class="check"><input type="checkbox"> Earth clamp on the sheet</label></li></ol></div>
+</section>
+
+<section><h2>Type scale</h2>
+  <p style="font-size:var(--fs-xs)">--fs-xs 12 px – small print</p><p style="font-size:var(--fs-s)">--fs-s 13 px – labels and buttons</p>
+  <p style="font-size:var(--fs-m)">--fs-m 15 px – body</p><p style="font-size:var(--fs-l)">--fs-l 18 px – section titles</p><p style="font-size:var(--fs-xl)">--fs-xl 24 px – screen titles</p>
+</section>
+
+<section><h2>Colours</h2>
+  <div class="row">
+    <div class="sw"><i style="background:var(--accent)"></i><span>--accent</span></div><div class="sw"><i style="background:var(--go)"></i><span>--go</span></div>
+    <div class="sw"><i style="background:var(--warn)"></i><span>--warn</span></div><div class="sw"><i style="background:var(--stop)"></i><span>--stop</span></div>
+    <div class="sw"><i style="background:var(--alarm-bg)"></i><span>--alarm-bg</span></div><div class="sw"><i style="background:var(--warn-bg)"></i><span>--warn-bg</span></div>
+    <div class="sw"><i style="background:var(--ok-bg)"></i><span>--ok-bg</span></div><div class="sw"><i style="background:var(--card)"></i><span>--card</span></div>
+    <div class="sw"><i style="background:var(--well)"></i><span>--well</span></div><div class="sw"><i style="background:var(--line-strong)"></i><span>--line-strong</span></div>
+  </div>
+</section>
+</body>
+</html>

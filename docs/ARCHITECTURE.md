@@ -1,5 +1,7 @@
 # Architecture
 
+> **Changing the look?** Read [`UI-RULES.md`](UI-RULES.md) first (tokens, button types, breakpoints, layers, "STOP never moves", transitions). The component gallery is [`gallery.html`](gallery.html).
+
 A static web app: `index.html` + ES modules in `js/` + CSS in `css/`, no build step. It runs the operator screen for a plasma
 table (FluidNC / grblHAL), entirely in the browser. This file is the map: where things live, how data flows, which safety rules are
 enforced where, how it is deployed and how to test it. Keep it up to date when you add or move a module.
