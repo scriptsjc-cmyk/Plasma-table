@@ -172,6 +172,16 @@ export class ViewMethods {
         ctx.lineWidth = on ? 2 : 1.5;
         ctx.stroke(); ctx.setLineDash([]);
       }
+      // Open paths (3-point arc, spline, trim remainder) must still be visible — a thin line, not a fill.
+      const openCs = cs.filter((c) => !isEtch(c.op) && c.closed === false && !(hiddenOps && hiddenOps.has(c.op)));
+      if (!itemEtch && openCs.length) {
+        ctx.beginPath();
+        for (const c of openCs) trace(c, false);
+        ctx.setLineDash([]);
+        ctx.strokeStyle = bad ? C.danger : it.lock ? C.lock : on ? C.sel : C.partLine;
+        ctx.lineWidth = on ? 2.2 : 1.6;
+        ctx.stroke();
+      }
       const etchStroke = (list, op) => {
         if (!list.length) return;
         ctx.beginPath();
