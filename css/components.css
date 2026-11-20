@@ -26,11 +26,11 @@
 .tiles.small { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 .selhead { margin-bottom: 10px; font-size: var(--fs-md); }
 /* keypad / cad dialogs */
-.numpad { position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-numpad); background: rgba(20, 28, 36, .45); display: flex;
+.numpad { position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-numpad); background: var(--scrim-45); display: flex;
   align-items: flex-end; justify-content: center; padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 .numpad.hidden { display: none !important; }
 .numpad-card { width: min(420px, 100%); background: var(--well); border: 1px solid var(--line);
-  border-radius: var(--r); padding: 14px; box-shadow: 0 16px 40px rgba(16, 24, 40, .18);
+  border-radius: var(--r); padding: 14px; box-shadow: 0 16px 40px var(--shade-18);
   overflow: auto; max-height: min(92dvh, 100%); }
 .numpad-label { font-size: var(--fs-sm); color: var(--muted); margin-bottom: 6px; }
 .numpad-value { font-size: var(--fs-readout); font-weight: 700; min-height: 48px; padding: 6px 10px; background: var(--card);
@@ -42,7 +42,7 @@
   .numpad { align-items: center; }
 }
 /* shape library */
-.shapelib { position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-dialog); background: rgba(20, 28, 36, .45); display: flex;
+.shapelib { position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-dialog); background: var(--scrim-45); display: flex;
   align-items: flex-end; justify-content: center; padding: 8px;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
   padding-left: max(8px, env(safe-area-inset-left));
@@ -50,7 +50,7 @@
 .shapelib.hidden { display: none !important; }
 .shapelib-card { width: min(720px, 100%); max-height: min(92dvh, 860px); background: var(--well);
   border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column;
-  min-height: 0; box-shadow: 0 16px 40px rgba(16, 24, 40, .18); }
+  min-height: 0; box-shadow: 0 16px 40px var(--shade-18); }
 .shapelib-card.slim { max-height: 60dvh; }
 .shapelib-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
 @media (min-width: 800px) {
@@ -96,10 +96,10 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
 }
 
 /* In-app confirm: sits under the header so STOP stays visible and clickable. */
-.safedlg { position: fixed; left: 0; right: 0; top: var(--topbar-h, 56px); bottom: 0; z-index: var(--z-dialog-top); background: rgba(20, 28, 36, .45); display: flex; align-items: center; justify-content: center; padding: 24px 12px; }
+.safedlg { position: fixed; left: 0; right: 0; top: var(--topbar-h, 56px); bottom: 0; z-index: var(--z-dialog-top); background: var(--scrim-45); display: flex; align-items: center; justify-content: center; padding: 24px 12px; }
 .safedlg.hidden { display: none; }
 .safedlg:not(.hidden) { animation: safedlg-in .2s ease; }
-.safedlg-card { background: var(--well); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 16px; width: min(480px, 100%); box-shadow: 0 8px 24px rgba(16, 24, 40, .2); animation: safedlg-card-in .2s ease; }
+.safedlg-card { background: var(--well); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 16px; width: min(480px, 100%); box-shadow: 0 8px 24px var(--shade-20); animation: safedlg-card-in .2s ease; }
 .safedlg-card.is-compact { width: min(360px, 100%); padding: 12px 14px; }
 .safedlg-card.is-compact h2 { font-size: var(--fs-l); margin-bottom: 6px; }
 .safedlg-card.is-compact p { margin-bottom: 8px; font-size: var(--fs-s); }

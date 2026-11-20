@@ -46,7 +46,7 @@ button.switch:hover:not(:disabled) { background: var(--accent-weak); border-colo
 button.switch .switch-track { width: 40px; height: 24px; border-radius: 999px; background: var(--line-strong);
   position: relative; flex: none; transition: background var(--motion) var(--ease); }
 button.switch .switch-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
-  border-radius: 50%; background: var(--c-white); box-shadow: 0 1px 2px rgba(16,24,40,.25);
+  border-radius: 50%; background: var(--c-white); box-shadow: 0 1px 2px var(--shade-25);
   transition: transform var(--motion) var(--ease); }
 button.switch[aria-pressed="true"] .switch-track,
 button.switch[aria-checked="true"] .switch-track { background: var(--go); }
@@ -94,7 +94,7 @@ button .ico, .tab .ico, .pill .ico, .locknote .ico, .ampsnote .ico { margin-righ
 .jog .j > .ico { display: block; margin: 0 auto 2px; width: 1.35em; height: 1.35em; }
 ::placeholder { color: var(--muted); opacity: 1; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-@keyframes esPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(224, 52, 43, .55); } 50% { box-shadow: 0 0 0 9px rgba(224, 52, 43, 0); } }
+@keyframes esPulse { 0%, 100% { box-shadow: 0 0 0 0 var(--stop-glow-55); } 50% { box-shadow: 0 0 0 9px var(--stop-glow-00); } }
 a { color: var(--accent-text); }
 
 @media (prefers-reduced-motion: reduce) {

@@ -68,6 +68,12 @@
   --c-c42b1c: #c42b1c; --c-c8c8c8: #c8c8c8; --c-c9d4df: #c9d4df; --c-cbd5df: #cbd5df; --c-e0b400: #e0b400;
   --c-e8eaed: #e8eaed; --c-e8edf2: #e8edf2; --c-eee: #eee; --c-f4f7fa: #f4f7fa; --c-f5c542: #f5c542;
   --c-fff4d6: #fff4d6; --c-white: #fff;
+  /* r13: shadows, scrims and glows. Every rgba() outside this file reads one of these (same values as before). */
+  --amber-glow-00: rgba(224, 180, 0, 0); --amber-glow-55: rgba(224, 180, 0, 0.55); --black-12: rgba(0, 0, 0, .12); --black-18: rgba(0, 0, 0, .18);
+  --black-25: rgba(0, 0, 0, .25); --black-35: rgba(0, 0, 0, .35); --scrim-45: rgba(20, 28, 36, .45); --shade-06: rgba(16, 24, 40, .06);
+  --shade-08: rgba(16, 24, 40, .08); --shade-12: rgba(16, 24, 40, .12); --shade-14: rgba(16, 24, 40, .14); --shade-16: rgba(16, 24, 40, .16);
+  --shade-18: rgba(16, 24, 40, .18); --shade-20: rgba(16, 24, 40, .2); --shade-25: rgba(16, 24, 40, .25); --shade-28: rgba(16, 24, 40, .28);
+  --stop-glow-00: rgba(224, 52, 43, 0); --stop-glow-55: rgba(224, 52, 43, .55); --stop-tint-12: rgba(196, 43, 28, .12); --warn-glow-25: rgba(192, 86, 0, .25);
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --cond: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* r13 type scale: five text sizes, plus named sizes for the big readouts. Every font-size in the CSS uses one of these.

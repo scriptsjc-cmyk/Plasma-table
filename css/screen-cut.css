@@ -556,7 +556,7 @@ body[data-screen="cut"] .delayrow { display: block; }
   min-width: 72px; min-height: 72px; width: auto; padding: 2px 6px 3px; background: transparent; border: 2px solid transparent; border-radius: 18px; color: var(--text);
   line-height: 1; letter-spacing: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #btnStop.estop:hover { background: transparent; filter: none; }
-#btnStop.estop .estop-svg { width: 72px; height: 72px; display: block; overflow: visible; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); }
+#btnStop.estop .estop-svg { width: 72px; height: 72px; display: block; overflow: visible; filter: drop-shadow(0 2px 3px var(--black-35)); }
 #btnStop.estop .estop-label { font-size: var(--fs-stop-badge); font-weight: 900; letter-spacing: .08em; margin-top: -6px; padding: 1px 7px; border-radius: 6px; background: var(--stop); color: var(--c-white); white-space: nowrap; }
 #btnStop .es-top { transform: translateY(-7px); transition: transform .16s cubic-bezier(.3, 1.7, .5, 1); transform-origin: 60px 56px; }
 #btnStop .es-shadow { transition: opacity .12s, transform .16s; transform-origin: 60px 70px; }
@@ -566,7 +566,7 @@ body[data-screen="cut"] .delayrow { display: block; }
 #btnStop.pressed .es-on { opacity: 1; }
 #btnStop.pressed .es-hi { opacity: .18; }
 #btnStop.pressed .es-shadow { opacity: .15; transform: scale(.7); }
-#btnStop.pressed { border-color: var(--stop); background: rgba(196, 43, 28, .12); animation: esPulse 1.1s ease-in-out infinite; }
+#btnStop.pressed { border-color: var(--stop); background: var(--stop-tint-12); animation: esPulse 1.1s ease-in-out infinite; }
 #btnStop.pressed .estop-label { background: var(--c-7a0b08); font-size: var(--fs-stop-badge-s); }
 @media (prefers-reduced-motion: reduce) {
   #btnStop.pressed { animation: none; }
@@ -1011,8 +1011,8 @@ body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important;
 .cutstatus.is-bad .cutstatus-dot { background: var(--c-e0b400); }
 .cutstatus-n { font-weight: 800; }
 @keyframes cutPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(224, 180, 0, 0.55); }
-  50% { box-shadow: 0 0 0 8px rgba(224, 180, 0, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 var(--amber-glow-55); }
+  50% { box-shadow: 0 0 0 8px var(--amber-glow-00); }
 }
 @media (prefers-reduced-motion: reduce) {
   .cutstatus.is-bad { animation: none; }
@@ -1030,7 +1030,7 @@ body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important;
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  box-shadow: 0 8px 24px var(--black-18);
 }
 .cutstatus-pop[hidden], .cutstatus-pop.hidden { display: none; }
 .cutstatus-pop ul { margin: 0; padding: 0 0 0 18px; }
@@ -1193,7 +1193,7 @@ body[data-screen="cut"][data-step="4"] #showMachWrap.showmach {
   min-height: 0;
   z-index: 3;
   background: color-mix(in srgb, var(--well) 92%, transparent);
-  box-shadow: 0 1px 2px rgba(0,0,0,.12);
+  box-shadow: 0 1px 2px var(--black-12);
 }
 body[data-screen="cut"][data-step="3"] #showMachWrap.showmach input,
 body[data-screen="cut"][data-step="4"] #showMachWrap.showmach input {
@@ -1841,7 +1841,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     font-size: var(--fs-xs);
     background: color-mix(in srgb, var(--well) 92%, transparent);
     border-radius: var(--r);
-    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+    box-shadow: 0 1px 2px var(--black-12);
     white-space: nowrap;
   }
   body[data-screen="cut"][data-step="3"] #dragChip.hidden { display: none !important; }
@@ -1860,7 +1860,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     font-size: var(--fs-xs);
     background: color-mix(in srgb, var(--well) 92%, transparent);
     border-radius: var(--r);
-    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+    box-shadow: 0 1px 2px var(--black-12);
     white-space: nowrap;
   }
   body[data-screen="cut"][data-step="3"] #fitChip.hidden { display: none; }
@@ -2170,7 +2170,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     font-size: var(--fs-xs);
     background: color-mix(in srgb, var(--well) 92%, transparent);
     border-radius: var(--r);
-    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+    box-shadow: 0 1px 2px var(--black-12);
   }
   body[data-screen="cut"][data-step="1"] #pathLegend.hidden { display: none; }
 }

@@ -39,6 +39,9 @@ for (const f of others) fs.readFileSync(cssDir + f, "utf8").split("\n").forEach(
   const z = ln.match(/z-index:\s*(\d+)/); if (z && +z[1] >= 10) rawZ.push(f + ":" + (i + 1));
 });
 ck("no hex colours outside tokens.css", rawHex.length === 0, rawHex.slice(0, 10).join(", "));
+const rawRgba = [];
+for (const f of others) fs.readFileSync(cssDir + f, "utf8").split("\n").forEach((ln, i) => { if (/\b(rgba?|hsla?)\(/.test(ln.replace(/\/\*.*?\*\//g, ""))) rawRgba.push(f + ":" + (i + 1)); });
+ck("no rgb()/rgba()/hsl() colours outside tokens.css (shadows, scrims and glows are tokens too)", rawRgba.length === 0, rawRgba.slice(0, 10).join(", "));
 ck("no page-level z-index numbers outside tokens.css (10 and up use a --z- token)", rawZ.length === 0, rawZ.slice(0, 10).join(", "));
 ck("STOP sits above the header in the layer scale", parseInt(varOf(light, "z-stop")) > parseInt(varOf(light, "z-header")));
 { // STOP and the header sit above every dialog, numpad, popover, toast and sheet (only the pass-through tooltip and the pinned header-hidden layers are higher)

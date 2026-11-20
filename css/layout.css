@@ -133,7 +133,7 @@ label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm)
 .torchbig { margin: 14px 0; padding: 10px; text-align: center; border-radius: var(--r);
   background: var(--well); border: 2px solid var(--line); font-weight: 800; font-size: var(--fs-lg); }
 .torchbig.on { background: var(--warn-bg); color: var(--warn-text); border-color: var(--torch);
-  box-shadow: 0 0 0 3px rgba(192, 86, 0, .25); }
+  box-shadow: 0 0 0 3px var(--warn-glow-25); }
 .log .error { color: var(--alarm); }
 .log .warn { color: var(--warn); }
 .lamps.mini { flex-wrap: wrap; gap: 4px 14px; }
@@ -177,7 +177,7 @@ canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px s
 /* toast */
 .toast { position: fixed; left: 50%; top: calc(var(--topbar-h, 56px) + 10px); transform: translateX(-50%); background: var(--text);
   color: var(--c-white); font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: var(--z-toast);
-  box-shadow: 0 8px 24px rgba(16, 24, 40, .2); max-width: min(92vw, 480px);
+  box-shadow: 0 8px 24px var(--shade-20); max-width: min(92vw, 480px);
   pointer-events: none; /* a toast must never swallow a tap meant for STOP or the quick bar */ }
 .toast.err { background: var(--toast-err, var(--stop)); color: var(--c-white); }
 /* sits just under the header (STOP stays clear above it) and above claim/account dialogs (z-index 120) so an error is visible; never over Start, Save or the readouts at the bottom */
@@ -482,7 +482,7 @@ body.demo-on #connPill { background: var(--warn-bg); border-color: var(--warn); 
 }
 .whytip { position: fixed; z-index: var(--z-tip); max-width: min(280px, calc(100vw - 16px)); padding: 8px 10px;
   background: var(--c-1f2a37); color: var(--c-white); border-radius: 6px; font-size: var(--fs-s); font-weight: 650; line-height: 1.35;
-  box-shadow: 0 8px 24px rgba(16, 24, 40, .28); pointer-events: none; }
+  box-shadow: 0 8px 24px var(--shade-28); pointer-events: none; }
 .whytip.hidden { display: none; }
 button.secondary, .fit-demo-btn { background: var(--well); border: 1px solid var(--line-strong); color: var(--text); font-weight: 650; }
 button.secondary:hover:not(:disabled), .fit-demo-btn:hover { background: var(--accent-weak); border-color: var(--accent); }
@@ -576,7 +576,7 @@ body.short-land .appfoot { display: none; }
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--r);
-    box-shadow: 0 8px 24px rgba(16, 24, 40, .16);
+    box-shadow: 0 8px 24px var(--shade-16);
     max-height: min(70dvh, 420px);
     overflow: auto;
   }
@@ -603,7 +603,7 @@ body.short-land .appfoot { display: none; }
     display: none; position: absolute; top: calc(100% + 4px); right: 8px; left: auto; z-index: var(--z-popover);
     flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px; padding: 8px; margin: 0; min-width: 200px;
     max-height: min(70dvh, 420px); overflow: auto;
-    background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 8px 24px rgba(16, 24, 40, .16);
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 8px 24px var(--shade-16);
   }
   .topbar.menu-open .topmenu { display: flex; }
   .topbar.menu-open .topbar-main { overflow: visible; }
@@ -905,7 +905,7 @@ body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: var(--r);
-    box-shadow: 0 8px 24px rgba(16, 24, 40, .16);
+    box-shadow: 0 8px 24px var(--shade-16);
   }
   .topbar.menu-open .topmenu { display: flex; }
   .topbar.menu-open .topbar-main { overflow: visible; }
