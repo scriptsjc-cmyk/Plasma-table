@@ -197,3 +197,7 @@ button.info-i:active:not(:disabled) { transform: none; filter: none; }
   background: var(--accent); border-radius: 2px; pointer-events: none; }
 #stepper.ul-go::after { transition: left var(--motion) var(--ease), width var(--motion) var(--ease); }
 body #stepper#stepper.ul-moving li.cur { border-bottom-color: transparent; }
+/* r13 section 3: one empty-state look for lists and panels ("nothing here yet") */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px 16px;
+  text-align: center; color: var(--muted); font-size: var(--fs-m); border: 1px dashed var(--line-strong); border-radius: var(--r); background: var(--well); }
+.empty-state .empty-title { color: var(--text); font-weight: 650; }

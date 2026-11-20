@@ -39,7 +39,7 @@ export async function refreshPartsList() {
     partsRows = await A.listParts();
     const groups = groupParts(partsRows), names = groups.map((g) => g.name), closed = closedFolders();
     if (!partsRows.length && groups.length === 1) {
-      box.innerHTML = "<p class='muted'>No parts saved yet. Save a drawing, or use “Import DXF / SVG”.</p>";
+      box.innerHTML = "<div class='empty-state'><span class='empty-title'>No parts saved yet</span><span>Save a drawing, or use “Import DXF / SVG”.</span></div>";
       const fold = $("partsFold"), bar = $("partsPage");
       if (fold) fold.innerHTML = "";
       if (bar) bar.hidden = true;
