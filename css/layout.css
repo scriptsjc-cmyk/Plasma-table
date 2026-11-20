@@ -186,6 +186,10 @@ canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px s
   .cutgrid.nofile .previewPane { display: none; }
 }
 @media (min-width: 900px) {
+  /* laptop: keep the bed in view with a "pick a part" hint */
+  .cutgrid.nofile .previewPane { display: flex; flex-direction: column; min-height: 0; }
+}
+@media (min-width: 900px) {
   .tabs { justify-content: flex-start; gap: 2px; }
   .tab { flex: 0 0 auto; min-width: 132px; padding: 8px 20px; }
 }
@@ -451,7 +455,7 @@ body.pro-mode details.adjust > .grid2 { display: grid; }
 body.pro-mode .stepper li span { display: none; }
 /* optional tabs, not a numbered wizard */
 body.pro-mode .stepper { padding: 0 4px; }
-body.pro-mode .stepper li { font-size: 12px; letter-spacing: 0; padding: 6px 8px; text-transform: uppercase; }
+body.pro-mode .stepper li { font-size: 12px; letter-spacing: 0; padding: 6px 8px; }
 body.pro-mode .stepPane h2 { font-size: 16px; margin-bottom: 6px; }
 body.pro-mode .stepPane { font-size: 14px; padding: 8px 10px; }
 body.pro-mode .nav .back, body.beginner .pro-only { }
@@ -847,11 +851,59 @@ body[data-screen="make"] .step[data-step="1"] > .nav {
 .loginbrand { display: flex; flex-direction: column; align-items: center; }
 .loginbrand .loginmark { object-fit: contain; }
 
-/* Small Machine setup control in the account bar (laptop; in the overflow menu on a phone). */
+/* Machine setup control in the Account and settings menu. */
 #btnBarSetup { gap: 4px; }
 #btnBarSetup .ico { width: 18px; height: 18px; }
 #btnBarSetup span { font-size: 13px; }
-@media (max-width: 899px) {
-  #btnBarSetup span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-}
 body[data-tab="setup"] #btnBarSetup { background: var(--accent-weak); }
+
+
+/* ---- r10: empty cut preview shows the bed and a short hint ---- */
+.previewPane { position: relative; }
+.preview-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  margin: 0; padding: 16px; pointer-events: none; text-align: center; font-size: var(--fs-lg); font-weight: 650;
+  color: var(--muted); z-index: 2; }
+.preview-hint[hidden], .preview-hint.hidden { display: none !important; }
+
+/* Step 1: keep "Set the plasma to" above the sticky Next bar */
+body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
+
+/* Laptop: Account, Help, Settings and Machine setup live in one overflow menu.
+   Menu, connection, steps and STOP stay on the bar. */
+@media (min-width: 900px) {
+  #btnTopMenu { display: inline-flex; align-items: center; justify-content: center; }
+  .topmenu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 8px;
+    left: auto;
+    z-index: 140;
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 8px;
+    margin: 0;
+    min-width: 200px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .16);
+  }
+  .topbar.menu-open .topmenu { display: flex; }
+  .topbar.menu-open .topbar-main { overflow: visible; }
+  .topmenu .pill, .topmenu .iconbtn { width: 100%; max-width: none; justify-content: flex-start; border-radius: var(--r); }
+  .topmenu .iconbtn span { margin-left: 0.35em; }
+  /* Cut header: steps stay; the Cut tab, warning pill and Space hint drop out of the bar */
+  body[data-screen="cut"] .tabs .tab,
+  body[data-screen="cut"] #cutStatus,
+  body[data-screen="cut"] #cutStatusPop,
+  body[data-screen="cut"] .cutbar-key { display: none !important; }
+}
+
+/* panels and screens ease in; respect reduced motion via the base.css rule */
+.view:not(.hidden), .shapelib-card, .acctcard, .safedlg-card {
+  animation: paneIn var(--motion) var(--ease);
+}
+@keyframes paneIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }

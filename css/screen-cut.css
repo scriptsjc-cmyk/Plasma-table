@@ -186,7 +186,7 @@ body.beginner .step[data-step="3"] #startCutRow:not(.hidden) { display: block; }
 body.beginner .step[data-step="4"] .runnums .bigpct { font-size: 56px; }
 body.pro-mode .amps { padding: 6px 10px; }
 body.pro-mode .amps .big { font-size: 24px; }
-body.pro-mode .stepPane h3 { font-size: 13px; margin: 8px 0 4px; text-transform: uppercase; letter-spacing: .04em; }
+body.pro-mode .stepPane h3 { font-size: 13px; margin: 8px 0 4px; letter-spacing: 0; }
 body.pro-mode .campanel input, body.pro-mode .adjust input, body.pro-mode .cutlistcard input[type="number"] { min-height: 36px; font-size: 14px; }
 body.pro-mode .s2cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 14px; }
 @media (min-width: 1100px) {
@@ -436,8 +436,7 @@ body.shape-fs[data-screen="make"] .fsbar button { min-height: 44px; }
   color: var(--text);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: .04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   text-align: left;
 }
 #ptInspector.is-collapsed .pt-insp-toggle {
@@ -1130,8 +1129,8 @@ body:not(.header-hidden)[data-screen="cut"][data-tab="cut"] .tabs { border-top: 
     height: auto;
     flex-direction: column;
     width: auto;
-    min-width: 136px;
-    min-height: 104px;
+    min-width: 168px;
+    min-height: 120px;
     padding: 2px 8px;
   }
   body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop .estop-svg { width: 84px; height: 84px; }
@@ -1223,3 +1222,53 @@ body.short-land[data-screen="cut"] #connPill { display: none !important; }
 #ampPauseMsg.amppause.hidden { display: none; }
 body[data-screen="cut"] #running > #ampPauseMsg { grid-area: help; margin: 0; }
 body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
+
+
+/* ---- r10 laptop chrome: a flat reserved STOP, a quieter header ---- */
+@media (min-width: 900px) {
+  body[data-screen="cut"] .tabs .tab,
+  body[data-screen="cut"] #cutStatus,
+  body[data-screen="cut"] #cutStatusPop,
+  body[data-screen="cut"] .cutbar-key { display: none !important; }
+
+  body:not(.short-land)[data-screen="cut"] #btnStop.estop,
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop {
+    background: var(--stop);
+    border: 0;
+    border-radius: var(--r);
+    color: var(--on-stop);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    box-shadow: none;
+    filter: none;
+  }
+  body:not(.short-land)[data-screen="cut"] #btnStop.estop .estop-svg { display: none; }
+  body:not(.short-land)[data-screen="cut"] #btnStop.estop .estop-label {
+    background: transparent;
+    color: var(--on-stop);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+  }
+  body:not(.short-land)[data-screen="cut"] #btnStop.estop:hover {
+    background: var(--stop);
+    filter: brightness(1.08);
+  }
+  body:not(.short-land)[data-screen="cut"] #btnStop.estop:active:not(.pressed),
+  body:not(.short-land)[data-screen="cut"] #btnStop.pressed {
+    background: #8a0d0a;
+    filter: none;
+    animation: none;
+    border-color: transparent;
+  }
+  body:not(.short-land)[data-screen="cut"] #btnStop.pressed .estop-label {
+    background: transparent;
+    font-size: 28px;
+    padding: 0;
+  }
+}
