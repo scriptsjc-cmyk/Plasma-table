@@ -57,6 +57,8 @@ export function placeSetupColumns() {
   const sel = $("layoutSel");
   remember(mat, "mat"); remember(start, "start"); remember(back, "back");
   remember(fit, "fit"); remember(zoom, "zoom"); remember(sel, "sel");
+  const hint = $("zeroCard") && $("zeroCard").querySelector(".keyhint");
+  remember(hint, "hint");
   const disc = $("btnDisconnect"), link = $("btnLinkMachine"), menu = $("connMenu");
   remember(disc, "disc"); remember(link, "link");
   if (isSetupLaptop()) {
@@ -68,9 +70,11 @@ export function placeSetupColumns() {
     if (pane && fit && fit.parentNode !== pane) pane.appendChild(fit);
     if (pane && zoom && zoom.parentNode !== pane) pane.appendChild(zoom);
     if (pane && sel && sel.parentNode !== pane) pane.appendChild(sel);
+    const wrap = $("zeroCard") && $("zeroCard").querySelector(".jogwrap");
+    if (wrap && hint && hint.parentNode !== wrap) wrap.appendChild(hint);
     if (back) back.textContent = "← Back to part";
   } else {
-    restore(link, "link"); restore(disc, "disc");
+    restore(hint, "hint"); restore(link, "link"); restore(disc, "disc");
     restore(sel, "sel"); restore(zoom, "zoom"); restore(fit, "fit");
     restore(start, "start"); restore(mat, "mat"); restore(back, "back");
     if (back) back.textContent = "← Back";
@@ -130,6 +134,8 @@ let openPop = null, popPrevFocus = null;
 export function closeSetupPop() {
   if (!openPop) return;
   const { panel, anchor, home } = openPop;
+  const nestStop = $("nestStop");
+  if (panel && panel.id === "nestBox" && nestStop && !nestStop.classList.contains("hidden")) return;
   panel.classList.remove("is-setup-pop");
   panel.style.left = ""; panel.style.top = ""; panel.style.position = "";
   if (home && home.parent && panel.parentNode !== home.parent) home.parent.insertBefore(panel, home.next);
