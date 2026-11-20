@@ -32,6 +32,10 @@ const TOOL_SYNONYMS = {
   arctan: "tangent arc",
   spline: "curve spline path",
 };
+const RAIL_GROUP = {
+  presets: "Draw", rect: "Draw", disc: "Draw", draw: "Draw", arc3: "Draw", arctan: "Draw", spline: "Draw", etch: "Draw", measure: "Draw", snap: "Draw",
+  join: "Edit", subtract: "Edit", offset: "Edit", fillet: "Edit", trim: "Edit",
+};
 export const PRIMARY_TOOL_IDS = ["undo", "redo", "snap", "presets", "rect", "disc", "draw", "arc3", "arctan", "spline", "etch", "measure", "join", "subtract", "offset", "fillet", "trim", "fit", "dup", "del"];
 
 export function moreToolsOpen() { return moreOpen; }
@@ -171,7 +175,14 @@ export function renderQuickBar() {
   } else {
     const primary = chosen.filter((id) => PRIMARY_TOOL_IDS.includes(id));
     const overflow = chosen.filter((id) => !PRIMARY_TOOL_IDS.includes(id));
-    for (const id of primary) addId(id);
+    // Draw · Edit · Arrange, split by thin dividers (r13 #11)
+    let lastRail = null;
+    for (const id of primary) {
+      const g = RAIL_GROUP[id] || "Arrange";
+      if (lastRail && g !== lastRail) parts.push(`<span class="qb-div" role="separator" aria-hidden="true"></span>`);
+      lastRail = g;
+      addId(id);
+    }
     parts.push(`<button type="button" data-qb="more" class="qb-more-btn${moreOpen ? " on" : ""}" aria-expanded="${moreOpen ? "true" : "false"}" aria-controls="qbMorePop" title="More tools" aria-label="More tools"><i>⋯</i><span>More</span></button>`);
     const extra = [];
     let lastG = null;

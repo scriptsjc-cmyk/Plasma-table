@@ -10,16 +10,16 @@ const ICON_GLYPHS = [
   ["⏸", "pause"], ["✏", "pencil"], ["✎", "pencil"], ["↺", "undo"], ["↻", "rotate-cw"], ["➖", "minus"],
   ["⊞", "arrange"], ["⇋", "flip"], ["⧉", "copy"], ["✕", "close"], ["●", "dot"], ["▣", "square"],
   ["▭", "rect"], ["◯", "circle"], ["△", "triangle"], ["◔", "sector"], ["⊖", "minus-circle"],
-  ["⊕", "plus"], ["⁘", "dots"], ["⟋", "slash"], ["⧈", "offset"], ["↔", "arrows-h"], ["⌒", "arc"],
+  ["⊕", "plus"], ["⁘", "dots"], ["⟋", "slash"], ["⧈", "offset"], ["↔", "arrows-h"], ["⌒", "fillet"],
   ["⌜", "corner"], ["◈", "diamond"], ["⌗", "grid"], ["✲", "asterisk"], ["⋯", "more"],
   ["↶", "undo"], ["↷", "redo"], ["▲", "arrow-up"], ["▼", "arrow-down"], ["◀", "arrow-left"],
   ["←", "arrow-left"], ["→", "arrow-right"], ["↑", "arrow-up"], ["↓", "arrow-down"],
   ["📁", "folder"], ["🧪", "flask"], ["⇪", "upload"], ["⬇", "download"], ["🔓", "unlock"], ["▧", "image"], ["▦", "arrange"],
   ["⇅", "flip"], ["↩", "undo"], ["◎", "circle"], ["◦", "circle"],
   ["↔️", "arrows-h"], ["↕", "flip"], ["↕️", "flip"], ["↦", "arrow-right"],
-  ["∽", "arc"], ["∿", "arc"], ["≋", "arc"], ["⊙", "circle"], ["⊛", "asterisk"],
-  ["⋮", "more"], ["⌓", "corner"], ["━", "minus"], ["▢", "square"], ["✚", "plus"],
-  ["◜", "arc"], ["⤳", "arrow-right"], ["Aa", "pencil"], ["%", "resize"],
+  ["∽", "etch"], ["∿", "spline"], ["≋", "arc"], ["⊙", "circle"], ["⊛", "asterisk"],
+  ["⋮", "more"], ["⌓", "arc3"], ["━", "minus"], ["▢", "square"], ["✚", "plus"],
+  ["◜", "arctan"], ["⤳", "arrow-right"], ["Aa", "pencil"], ["%", "resize"],
 ].sort((a, b) => b[0].length - a[0].length);
 function iconForGlyph(ch, el) {
   if (ch === "▶" && el.closest(".jog")) return "arrow-right";

@@ -119,6 +119,9 @@ function beginnerPartsHtml() {
   return `<div class="bgparts"><h4>Parts in this drawing</h4><ul>${li}</ul>${unlock}</div>`;
 }
 
+// Version chips use a short name so it fits the chip; the full name is the tooltip (r13 #10).
+const SHORT_VARIANT = { "Square corners": "Square", "Rounded rectangle": "Rounded rect.", "Corner + centre hole": "Corner + centre", "Corner + centre holes": "Corner + centre" };
+function shortVariantLabel(label) { return SHORT_VARIANT[label] || label; }
 function paramField(it, param) {
   const [k, label, , meta] = param;
   const val = it.p[k];
@@ -243,7 +246,7 @@ function renderShapeFormCore() {
   const curKey = sketch.currentVariantKey();
   const vars = variantsFor(it.type).map((v) => {
     const d = shapeDef(v.id); const label = v.label || (d ? d.name : v.id);
-    return `<button type="button" data-var="${esc(variantKey(v))}" title="${esc(label)}" class="${variantKey(v) === curKey ? "sel" : ""}">${esc(label)}</button>`;
+    return `<button type="button" data-var="${esc(variantKey(v))}" title="${esc(label)}" aria-label="${esc(label)}" class="${variantKey(v) === curKey ? "sel" : ""}">${esc(shortVariantLabel(label))}</button>`;
   }).join("");
   const varBox = vars ? `<div class="varbox"><h4>Versions of this shape</h4><div class="varrow">${vars}</div><p class="muted small">Keeps this size and place. Then edit holes, radii and so on below. ${clickVerb()} a blue size on the drawing to type an exact measurement.</p></div>` : `<p class="muted small">${clickVerb()} a blue size on the drawing to type an exact measurement.</p>`;
   const proOne = sketch.opts.pro ? `

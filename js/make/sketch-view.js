@@ -519,7 +519,8 @@ export class ViewMethods {
   tag(ctx, text, x, y, bg) {
     ctx.font = "600 14px Barlow, system-ui";
     const tw = Math.max(44, ctx.measureText(text).width + 16), th = 28, [w, h] = this.size();
-    let bottom = this.items && this.items.length ? 22 : 2;
+    // Keep size tags clear of the "1 part · overall …" footer line (r13 #13)
+    let bottom = this.items && this.items.length ? 32 : 2;
     const dock = document.querySelector(".previewDock");
     if (dock) {
       const cs = getComputedStyle(dock);

@@ -2168,3 +2168,59 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     text-decoration: none;
   }
 }
+
+/* r13 #10 + #12: Make Advanced inspector — compact version chips and size fields so the
+   whole Size tab fits above Cut this part at 1280 × 600 and up. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.pro-mode[data-screen="make"] #srcShape .varrow button,
+  body.advanced-mode[data-screen="make"] #srcShape .varrow button {
+    min-height: 26px;
+    height: 26px;
+    padding: 0 6px;
+  }
+  body.pro-mode[data-screen="make"] #srcShape .varrow,
+  body.advanced-mode[data-screen="make"] #srcShape .varrow { gap: 3px; padding: 0 0 2px; }
+  body.pro-mode[data-screen="make"] #srcShape .varbox,
+  body.advanced-mode[data-screen="make"] #srcShape .varbox { margin: 0 0 6px; }
+  body.pro-mode[data-screen="make"] #shapeForm .grid2,
+  body.advanced-mode[data-screen="make"] #shapeForm .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 8px;
+  }
+  /* Long parameter lists (8+ fields) use three columns so they still fit. */
+  body.pro-mode[data-screen="make"] #shapeForm .grid2:has(> label:nth-child(9)),
+  body.advanced-mode[data-screen="make"] #shapeForm .grid2:has(> label:nth-child(9)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  body.pro-mode[data-screen="make"] #srcShape .varbox h4,
+  body.advanced-mode[data-screen="make"] #srcShape .varbox h4 { margin: 0 0 2px; }
+  body.pro-mode[data-screen="make"] #shapeForm .grid2 > label,
+  body.advanced-mode[data-screen="make"] #shapeForm .grid2 > label {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  body.pro-mode[data-screen="make"] #shapeForm .plabel,
+  body.advanced-mode[data-screen="make"] #shapeForm .plabel {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body.pro-mode[data-screen="make"] #shapeForm .grid2 input,
+  body.pro-mode[data-screen="make"] #shapeForm .grid2 select,
+  body.advanced-mode[data-screen="make"] #shapeForm .grid2 input,
+  body.advanced-mode[data-screen="make"] #shapeForm .grid2 select {
+    min-height: 28px;
+    height: 28px;
+    width: 100%;
+    min-width: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}

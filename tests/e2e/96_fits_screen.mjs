@@ -270,6 +270,18 @@ for (const [size, prof] of SIZES) {
   });
   await check(page, size, "make-advanced", stopSamples);
 
+  // r13 #12: a shape with many size fields (Plate with holes) still fits the Size tab.
+  await ev(page, () => {
+    const T = window.plasmaTest;
+    T.sketch.clear();
+    T.sketch.add("plate", true, {});
+    T.sketch.commit && T.sketch.commit();
+    T.sketch.fitView && T.sketch.fitView();
+    const tab = document.querySelector('#srcShape .insp-tabs [data-insp="size"]');
+    if (tab) tab.click();
+  });
+  await check(page, size, "make-advanced-plate", stopSamples);
+
   const dialogs = [
     ["preset-parts", ["presetBrowser"], () => { window.plasmaTest.openPresetBrowser(); }],
     ["more-shapes", ["shapeLib"], () => { const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode && T.setAppMode("beginner", { persist: false, autoFs: false }); const b = document.getElementById("bgMore"); if (b) b.click(); else if (document.getElementById("shapeLib")) { const d = document.getElementById("shapeLib"); d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
