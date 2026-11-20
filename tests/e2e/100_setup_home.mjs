@@ -61,6 +61,30 @@ t.check("home is not set yet, and the note explains no switches / no $H",
   first.homeSet === "0" && /no limit switches/i.test(first.note) && first.hasDollarH && /Set this as home/i.test(first.btn) && /no limit switches/i.test(first.wizard),
   JSON.stringify({ btn: first.btn, note: first.note.slice(0, 400), wizard: first.wizard.slice(0, 240) }));
 
+const tips = await ev(page, () => {
+  const vis = (b) => {
+    const r = b.getBoundingClientRect(), cs = getComputedStyle(b);
+    return cs.display !== "none" && r.width > 8 && r.height > 8;
+  };
+  const icons = [...document.querySelectorAll("#setupView button.info-i")];
+  const usable = icons.find((b) => /usable edges/i.test(b.getAttribute("data-tip") || ""));
+  const wz1 = icons.find((b) => /no limit switches/i.test(b.getAttribute("data-tip") || ""));
+  const safety = (document.getElementById("safetyHint") || {}).textContent || "";
+  const lock = document.getElementById("motorDirNote");
+  return {
+    n: icons.length,
+    vis: icons.filter(vis).length,
+    usable: !!(usable && vis(usable)),
+    wz1: !!(wz1 && vis(wz1)),
+    tip: usable && usable.getAttribute("data-tip"),
+    safetyVisible: !/has-info/.test((document.getElementById("safetyHint") || {}).className || ""),
+    lockIsStatus: !!(lock && !lock.classList.contains("has-info")),
+  };
+});
+t.check("laptop Machine setup puts long help behind information icons",
+  first.laptop && tips.vis >= 5 && tips.usable && tips.wz1 && /torch can actually reach/i.test(tips.tip || "") && tips.safetyVisible && tips.lockIsStatus,
+  JSON.stringify(tips));
+
 await ev(page, () => document.getElementById("btnDemo").click());
 await page.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 8000 });
 await sleep(400);

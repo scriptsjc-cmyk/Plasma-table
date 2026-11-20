@@ -7,16 +7,16 @@
       <div><span>Position</span><b id="refState" class="todo">Unknown</b></div>
       <div><span>Edges</span><b id="limState" class="todo">Not set</b></div>
     </div>
-    <p class="muted small">These are the usable edges — the area the torch can actually reach. That can be a little smaller than the bed size (the rails' travel, for example 1300 × 800 mm).</p>
+    <p class="muted small has-info"><span class="info-label">These are the usable edges.</span><button type="button" class="info-i" data-tip="These are the usable edges — the area the torch can actually reach. That can be a little smaller than the bed size (the rails&#x27; travel, for example 1300 × 800 mm)." aria-label="More about usable edges"></button><span class="info-body"> — the area the torch can actually reach. That can be a little smaller than the bed size (the rails' travel, for example 1300 × 800 mm).</span></p>
     <p class="muted small" id="safetyHint"></p>
     <ol class="wizard" id="wizard">
-      <li id="wz1"><p><b>Set home (0,0).</b> This table has no limit switches, so it cannot find home by itself. Jog the torch to your marked home corner, raised right up, then press “Set this as home (0,0)”. The motors do not move. The bed picture marks that corner.</p>
+      <li id="wz1"><p class="has-info"><span class="info-label"><b>Set home (0,0).</b></span><button type="button" class="info-i" data-tip="Set home (0,0). This table has no limit switches, so it cannot find home by itself. Jog the torch to your marked home corner, raised right up, then press “Set this as home (0,0)”. The motors do not move. The bed picture marks that corner." aria-label="More about setting home"></button><span class="info-body"> This table has no limit switches, so it cannot find home by itself. Jog the torch to your marked home corner, raised right up, then press “Set this as home (0,0)”. The motors do not move. The bed picture marks that corner.</span></p>
         <div class="wzbtns"><button type="button" id="btnRef" class="small accent">Set this as home (0,0)</button></div></li>
       <li id="wz2"><p><b>Far corner.</b> Move to the furthest corner the torch can safely reach. <span id="wzFar" class="muted"></span></p>
         <div class="wzbtns"><button class="small" data-cmd="limits_far">Set far corner</button></div></li>
       <li id="wz3"><p><b>Lowest point.</b> No sheet on. Lower the torch onto a slat (1 mm steps at the end) until the <b>Floating head</b> light comes on. <span id="wzZ" class="muted"></span></p>
         <div class="wzbtns"><button class="small" data-cmd="limits_zbottom">Set lowest point</button></div></li>
-      <li id="wz4"><p><b>Save.</b> The machine then checks every move against these edges. After you save, the torch is raised and moved back to the home corner, so you can put it on the sheet's back-left and press Start here.</p>
+      <li id="wz4"><p class="has-info"><span class="info-label"><b>Save.</b></span><button type="button" class="info-i" data-tip="Save. The machine then checks every move against these edges. After you save, the torch is raised and moved back to the home corner, so you can put it on the sheet&#x27;s back-left and press Start here." aria-label="More about saving edges"></button><span class="info-body"> The machine then checks every move against these edges. After you save, the torch is raised and moved back to the home corner, so you can put it on the sheet's back-left and press Start here.</span></p>
         <div class="wzbtns"><button class="small accent" data-cmd="limits_save">Save edges</button><button class="small" id="btnClearLimits">Clear edges</button></div></li>
     </ol>
     <div class="jogmount"></div>
@@ -24,7 +24,7 @@
 
   <div class="card" id="motorDirCard">
     <h2>Motor direction</h2>
-    <p class="muted small">Each axis is Stock (as shipped) or Reversed. If a + jog moves the head the wrong way, tick Reversed for that axis. Restart the board afterwards — jog and cut stay locked until then, then we’ll do a short test (X right, Y towards you, Z up).</p>
+    <p class="muted small has-info"><span class="info-label">Each axis is Stock or Reversed.</span><button type="button" class="info-i" data-tip="Each axis is Stock (as shipped) or Reversed. If a + jog moves the head the wrong way, tick Reversed for that axis. Restart the board afterwards — jog and cut stay locked until then, then we’ll do a short test (X right, Y towards you, Z up)." aria-label="More about motor direction"></button><span class="info-body"> If a + jog moves the head the wrong way, tick Reversed for that axis. Restart the board afterwards — jog and cut stay locked until then, then we’ll do a short test (X right, Y towards you, Z up).</span></p>
     <div class="motor-dir-row">
       <label class="check"><input type="checkbox" id="revX"> X — Reversed <span class="motor-dir-stock" id="revXLab">(Stock)</span></label>
       <label class="check"><input type="checkbox" id="revY"> Y — Reversed <span class="motor-dir-stock" id="revYLab">(Stock)</span></label>
@@ -44,7 +44,7 @@
 
   <div class="card">
     <h2>Inputs (live)</h2>
-    <p class="muted small">A light comes on when that input is active. Press each switch by hand to check it's wired right.</p>
+    <p class="muted small has-info"><span class="info-label">A light comes on when that input is active.</span><button type="button" class="info-i" data-tip="A light comes on when that input is active. Press each switch by hand to check it&#x27;s wired right." aria-label="More about the input lamps"></button><span class="info-body"> Press each switch by hand to check it's wired right.</span></p>
     <div class="lamps grid">
       <div class="lamp" data-in="probe"><b>Floating head</b><span>on when the torch is pushed up (touching)</span></div>
       <div class="lamp" data-in="estop"><b>E-stop</b><span>on when pressed</span></div>
@@ -55,8 +55,7 @@
       <div class="lamp" data-in="start"><b>Start / resume button</b><span>on when pressed</span></div>
       <div class="lamp" data-in="torch"><b>Torch relay (output)</b><span>on when the torch is firing</span></div>
     </div>
-    <p class="muted small">Nothing lights when you press a switch? Check its wiring and the controller pin list (Show pins below).
-      Light stays on with nothing pressed? The input is inverted – fix it with the $5 / $6 / $14 settings.</p>
+    <p class="muted small has-info"><span class="info-label">Nothing lights when you press a switch?</span><button type="button" class="info-i" data-tip="Nothing lights when you press a switch? Check its wiring and the controller pin list (Show pins below). Light stays on with nothing pressed? The input is inverted – fix it with the $5 / $6 / $14 settings." aria-label="More about input troubleshooting"></button><span class="info-body"> Check its wiring and the controller pin list (Show pins below). Light stays on with nothing pressed? The input is inverted – fix it with the $5 / $6 / $14 settings.</span></p>
     <div class="row hidden" id="demoInputs">
       <button id="btnDemoEstop" class="warn">Demo: press / release e-stop</button>
       <button id="btnDemoEdges" class="accent" title="Demo only: nothing real moves">Demo: set up the edges for me</button>
@@ -69,8 +68,7 @@
       <button id="btnTouchTest">Touch-off test</button>
       <button type="button" id="btnTorchTest" class="warn" aria-pressed="false">Test torch</button>
     </div>
-    <p class="muted small">Touch-off test: the torch finds the sheet and stops at pierce height, no arc.
-      Test torch: hold to fire over scrap, let go to stop. It turns off after 2 seconds and needs a fresh press.</p>
+    <p class="muted small has-info"><span class="info-label">Touch-off and torch tests.</span><button type="button" class="info-i" data-tip="Touch-off test: the torch finds the sheet and stops at pierce height, no arc. Test torch: hold to fire over scrap, let go to stop. It turns off after 2 seconds and needs a fresh press." aria-label="More about the tests"></button><span class="info-body"> Touch-off test: the torch finds the sheet and stops at pierce height, no arc. Test torch: hold to fire over scrap, let go to stop. It turns off after 2 seconds and needs a fresh press.</span></p>
     <p class="muted small" id="torchTestCutterNote">Touch-start: no arc in air — this checks the relay and air only.</p>
     <p class="muted small hidden" id="torchTestBtNote">If the Bluetooth link drops while the torch is on, use the hardware E-stop. Reconnecting the app may not be enough.</p>
   </div>
