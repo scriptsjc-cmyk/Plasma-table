@@ -1841,3 +1841,17 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.beginner.bg-picked[data-screen="make"] #bgPick { overflow: hidden; max-height: 40px; }
   body.beginner[data-screen="make"] #srcShape { overflow: hidden; }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.pro-mode[data-screen="make"] #srcShape[data-insp="size"] .insp-arrange,
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="size"] .insp-arrange { display: none !important; }
+  body.pro-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm > :not(.insp-arrange),
+  body.advanced-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm > :not(.insp-arrange) { display: none !important; }
+  .presetbrowser .pbcats {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    align-content: start;
+    gap: 4px;
+  }
+  .presetbrowser .pbcats button { min-height: 24px; font-size: 11px; padding: 0 6px; }
+}

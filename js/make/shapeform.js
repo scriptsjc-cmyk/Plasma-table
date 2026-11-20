@@ -247,7 +247,7 @@ function renderShapeFormCore() {
   }).join("");
   const varBox = vars ? `<div class="varbox"><h4>Versions of this shape</h4><div class="varrow">${vars}</div><p class="muted small">Keeps this size and place. Then edit holes, radii and so on below. ${clickVerb()} a blue size on the drawing to type an exact measurement.</p></div>` : `<p class="muted small">${clickVerb()} a blue size on the drawing to type an exact measurement.</p>`;
   const proOne = sketch.opts.pro ? `
-      <div class="skbtns">
+      <div class="skbtns insp-arrange">
         <button data-pro="linarray">Linear array</button>
         <button data-pro="polar">Circular array</button>
         <button data-pro="offset">Offset</button>
@@ -267,7 +267,7 @@ function renderShapeFormCore() {
       ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
     </div>
     ${extraFormHtml(it, sh)}
-    <div class="skbtns">
+    <div class="skbtns insp-arrange">
       ${isRoundType(it.type) ? "" : `<button data-sk="rotateBy" data-arg="90" title="Turns 90° about the bottom-left corner">⟳ Turn 90°</button>`}
       <button data-sk="mirror" title="Mirror left-right (H)">⇋ Mirror</button>
       <button data-sk="duplicate" title="Ctrl+D">⧉ Copy</button>

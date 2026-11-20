@@ -2,7 +2,7 @@
 export function pageSizeFor(el, { minW = 160, minH = 140, gap = 12, fallback = 8 } = {}) {
   if (!el) return fallback;
   const r = el.getBoundingClientRect();
-  const w = Math.max(0, r.width), h = Math.max(0, r.height);
+  const w = Math.max(0, r.width - 8), h = Math.max(0, r.height - 8);
   if (w < 8 || h < 8) return fallback;
   const cols = Math.max(1, Math.floor((w + gap) / (minW + gap)));
   const rows = Math.max(1, Math.floor((h + gap) / (minH + gap)));

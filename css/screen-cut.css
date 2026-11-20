@@ -2222,3 +2222,18 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="1"] #speedBox .speedends,
   body[data-screen="cut"][data-step="1"] #speedBox #spNote { display: none; }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="1"] #pickPane > .mat-col {
+    padding-top: 8px;
+    padding-right: 12px;
+    padding-bottom: 56px;
+  }
+  body[data-screen="cut"][data-step="1"] .mat-col > h3 { padding-right: 88px; }
+  body[data-screen="cut"][data-step="1"] #speedBox { margin-top: auto; }
+  body[data-screen="cut"][data-step="1"] #speedBox .speedhead { display: none; }
+  body[data-screen="cut"][data-step="1"] #speedBox .speedrow { gap: 4px; }
+  body[data-screen="cut"][data-step="1"] #speedBox #spSlider { margin: 2px 0; }
+  body[data-screen="cut"][data-step="1"] #dryRun { margin: 4px 0; }
+  body[data-screen="cut"][data-step="3"] #btnOriginOpts { max-width: 100%; }
+}

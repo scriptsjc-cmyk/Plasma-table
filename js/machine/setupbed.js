@@ -6,6 +6,7 @@ import { drawAxisHints, bedViewRotated } from "../cut/bedview.js";
 import { drawGantry, drawMachineBed, markMachine } from "../cut/machinedraw.js";
 import { toView, viewArea } from "../cut/preview.js";
 import { setInfoText } from "../ui/hovertip.js";
+import { isShellLaptop } from "../ui/laptop.js";
 
 function fmt(n) {
   const v = Number(n);
@@ -56,6 +57,21 @@ export function setSetupTab(name) {
   });
 }
 
+let jogHome = null;
+export function placeSetupJog() {
+  const mount = document.querySelector("#setupCards .jogmount, #setupBedWrap .jogmount");
+  const bed = $("setupBedWrap");
+  const card = document.querySelector("#setupCards .setup-pane[data-setup-pane=\"edges\"] .card");
+  if (!mount || !bed) return;
+  if (!jogHome) jogHome = { parent: card || mount.parentNode, next: mount.nextElementSibling };
+  const on = isShellLaptop() && !$("setupView").classList.contains("hidden");
+  if (on) {
+    if (mount.parentNode !== bed) bed.appendChild(mount);
+  } else if (jogHome.parent && mount.parentNode !== jogHome.parent) {
+    jogHome.parent.insertBefore(mount, jogHome.next);
+  }
+}
+
 export function bindSetupTabs() {
   const view = $("setupView");
   if (!view || view.dataset.tabsBound) return;
@@ -71,6 +87,7 @@ export function bindSetupTabs() {
 
 export function drawSetupBed() {
   bindSetupTabs();
+  placeSetupJog();
   paintSetupHomeNote();
   const cv = $("setupBed");
   if (!cv || !cv.offsetParent) return;

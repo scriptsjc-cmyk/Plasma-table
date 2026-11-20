@@ -116,27 +116,9 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] .card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px 12px;
-    align-items: start;
-    overflow: hidden;
-  }
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] .card > h1,
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] .card > .status2,
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] .card > .has-info,
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] .card > #safetyHint,
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] .card > .wizard {
-    grid-column: 1;
-  }
-  body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] .card > .jogmount {
-    grid-column: 2;
-    grid-row: 1 / -1;
-    align-self: start;
-  }
   body.laptop-ui #setupView .setup-pane[data-setup-pane="edges"] h1 { font-size: 16px; margin: 0 0 4px; }
   body.laptop-ui #setupView .wizard { font-size: 13px; gap: 4px; }
   body.laptop-ui #setupView .wzbtns button { min-height: 32px; }
+  body.laptop-ui #setupBedWrap .jogmount { margin-top: 8px; flex: 0 0 auto; }
   body.laptop-ui #setupView[data-setup-tab="edges"] .jogwrap .j { width: 36px; height: 36px; min-width: 36px; min-height: 36px; }
 }
