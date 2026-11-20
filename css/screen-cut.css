@@ -2446,3 +2446,118 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     line-height: 1;
   }
 }
+
+
+/* r13: Cut header second row — one clean strip; Check cut and Layout as quiet
+   buttons at each end; a full-height underline under the active step. At
+   1440 px and up the strip joins the first row. Phone layout is unchanged. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.app-shell[data-screen="cut"][data-tab="cut"] .tabs {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 0 8px;
+    border: 0;
+    border-top: 1px solid var(--line);
+    background: transparent;
+    box-shadow: none;
+    padding: 0 8px;
+    min-height: 40px;
+  }
+  body.app-shell[data-screen="cut"][data-tab="cut"] .tabs > .tab { display: none; }
+  body.app-shell[data-screen="cut"][data-tab="cut"] #cutStatus,
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutstatus {
+    grid-column: 1;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    min-height: 36px;
+    padding: 4px 8px;
+    font-weight: 600;
+  }
+  body.app-shell[data-screen="cut"][data-tab="cut"] #cutStatus.is-bad,
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutstatus.is-bad {
+    background: transparent;
+    color: var(--warn-text);
+  }
+  body.app-shell[data-screen="cut"][data-tab="cut"] #cutBar,
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutbar {
+    display: contents;
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutbar-steps {
+    grid-column: 2;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    margin: 0;
+    align-self: stretch;
+  }
+  body.app-shell[data-screen="cut"][data-tab="cut"] #cutBarStart,
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutbar-start,
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutbar-key { display: none; }
+  body.app-shell[data-screen="cut"][data-tab="cut"] #btnLayoutReset,
+  body.app-shell[data-screen="cut"][data-tab="cut"] #btnLayout {
+    grid-column: 3;
+    justify-self: end;
+    align-self: center;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    min-height: 36px;
+    padding: 4px 8px;
+    font-weight: 600;
+  }
+  body.app-shell[data-screen="cut"][data-tab="cut"] #stepper,
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutbar-steps #stepper {
+    flex: 1 1 auto;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+  body.app-shell[data-screen="cut"][data-tab="cut"] #stepper li,
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutbar-steps #stepper li {
+    flex: 1 1 0;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    padding: 6px 10px;
+    align-items: center;
+    justify-content: center;
+  }
+  body.app-shell[data-screen="cut"][data-tab="cut"] #stepper li.cur,
+  body.app-shell[data-screen="cut"][data-tab="cut"] .cutbar-steps #stepper li.cur {
+    border-bottom-color: var(--accent);
+    color: var(--text);
+  }
+}
+
+@media (min-width: 1440px) and (hover: hover) and (pointer: fine) {
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] .topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 168px;
+    grid-template-rows: auto;
+    align-items: center;
+    gap: 0 8px;
+  }
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] .topbar-main {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] .tabs {
+    grid-column: 2;
+    grid-row: 1;
+    border-top: 0;
+    min-height: 44px;
+  }
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
