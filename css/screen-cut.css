@@ -1460,7 +1460,6 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     align-items: center;
     gap: 6px;
     margin-left: auto;
-    pointer-events: none;
   }
   body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp {
     display: inline-flex;
@@ -2145,7 +2144,6 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     margin: 0;
     padding: 8px;
     background: transparent;
-    pointer-events: none;
   }
   body[data-screen="cut"][data-step="1"] .step[data-step="1"] > .nav #next1 {
     pointer-events: auto;
@@ -2560,4 +2558,118 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
     grid-column: 3;
     grid-row: 1;
   }
+}
+
+
+/* r13: Cut Part columns — Start over on its own line, a full-width 2×2 grid,
+   material heading on one line, and the right column in normal flow
+   (Material → Thickness → Amps → Practice run → Speed → More options → Next). */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="1"] #pickPane > .part-col {
+    overflow: hidden;
+  }
+  body[data-screen="cut"][data-step="1"] #bedStatus {
+    display: block;
+    white-space: normal;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="1"] #btnClearBed.bedstatus-clear {
+    display: inline-flex;
+    align-self: flex-start;
+    margin: 0;
+    min-height: 32px;
+    padding: 4px 10px;
+  }
+  body[data-screen="cut"][data-step="1"] #bedStatus.hidden,
+  body[data-screen="cut"][data-step="1"] #btnClearBed.hidden,
+  body[data-screen="cut"][data-step="1"] #btnClearBed.bedstatus-clear.hidden { display: none; }
+  body[data-screen="cut"][data-step="1"] #drop.drop {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  body[data-screen="cut"][data-step="1"] #drop input[type="file"] {
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+  body[data-screen="cut"][data-step="1"] .pickrow {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  body[data-screen="cut"][data-step="1"] .pickrow .xl {
+    min-width: 0;
+    width: 100%;
+    white-space: normal;
+    line-height: 1.2;
+    overflow: hidden;
+  }
+  body[data-screen="cut"][data-step="1"] .mat-col > h3 {
+    padding-right: 0;
+    white-space: nowrap;
+  }
+  body[data-screen="cut"][data-step="1"] .mat-col #matTipInfo { margin-right: 0; }
+  body[data-screen="cut"][data-step="1"] #pickPane > .mat-col {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 8px 52px;
+    position: relative;
+  }
+  body[data-screen="cut"][data-step="1"] #speedBox,
+  body[data-screen="cut"][data-step="1"] #speedBox[open] {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: 0;
+    max-height: none;
+    z-index: auto;
+  }
+  body[data-screen="cut"][data-step="1"] .mat-col label.check.prominent {
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: 0;
+    white-space: normal;
+    z-index: auto;
+  }
+  body[data-screen="cut"][data-step="1"] #advCut { margin: 0; }
+  body[data-screen="cut"][data-step="1"] .step[data-step="1"] > .nav { z-index: 6; }
+
+  /* Demo hint on Part: same small canvas chip as Setup */
+  body[data-screen="cut"][data-step="1"] #fitChip {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card, #fff);
+    font-size: 12px;
+    font-weight: 650;
+    box-shadow: 0 1px 2px color-mix(in srgb, #000 12%, transparent);
+  }
+  body[data-screen="cut"][data-step="1"] #fitChip.hidden { display: none; }
+  body[data-screen="cut"][data-step="1"] #fit.hidden { display: none; }
+}
+
+/* r13: toasts sit bottom-centre and never over the header, tabs or STOP. */
+.toast {
+  top: auto;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
 }

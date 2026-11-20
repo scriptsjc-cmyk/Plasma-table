@@ -147,7 +147,9 @@ export function refresh() {
       fitChip.classList.remove("hidden");
       $("fit").textContent = "";
       $("fit").innerHTML = "";
+      $("fit").classList.add("hidden");
     } else {
+      $("fit").classList.remove("hidden");
       fitChip.textContent = "";
       fitChip.classList.add("hidden");
     }
@@ -316,7 +318,10 @@ function paintBedStatus() {
   const box = $("bedStatus"); if (!box) return;
   const n = (sketch && S.src === "shape") ? Setup.partCount(sketch) : 0;
   const what = S.prepared ? (S.src === "file" ? (S.design && S.design.coupon ? "a cut-test coupon" : S.design && S.design.straight ? "a straight cut" : "1 file loaded") : (n ? `${n} part${n === 1 ? "" : "s"} on the bed` : "a file loaded")) : "";
-  box.classList.toggle("hidden", !what || screen() !== "cut");
+  const hide = !what || screen() !== "cut";
+  box.classList.toggle("hidden", hide);
+  const clr = $("btnClearBed");
+  if (clr) clr.classList.toggle("hidden", hide);
   if (what) $("bedStatusText").textContent = "On the bed now: " + what + ".";
 }
 

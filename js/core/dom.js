@@ -25,10 +25,18 @@ export function bannerBottom() {
 // covers the dialog's title or buttons (r7 U6).
 export function placeToast() {
   const t = $("toast"); if (!t) return;
-  let top = bannerBottom();
-  const dlg = $("safeDlg"), card = dlg && !dlg.classList.contains("hidden") && dlg.querySelector(".safedlg-card");
-  if (card) top = Math.max(top, card.getBoundingClientRect().bottom);
-  t.style.top = (top + 8) + "px";
+  // r13: toasts sit bottom-centre, above the bottom edge, and never over the header, step tabs or STOP.
+  t.style.top = "auto";
+  t.style.bottom = "24px";
+  t.style.left = "50%";
+  t.style.transform = "translateX(-50%)";
+  const stop = $("btnStop");
+  if (stop) {
+    const sr = stop.getBoundingClientRect(), tr = t.getBoundingClientRect();
+    const ox = Math.min(sr.right, tr.right) - Math.max(sr.left, tr.left);
+    const oy = Math.min(sr.bottom, tr.bottom) - Math.max(sr.top, tr.top);
+    if (ox > 4 && oy > 4) t.style.bottom = Math.max(24, window.innerHeight - sr.top + 12) + "px";
+  }
 }
 export function toast(text, err = false) {
   const t = $("toast");

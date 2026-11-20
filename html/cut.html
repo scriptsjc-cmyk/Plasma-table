@@ -11,7 +11,8 @@
         <div id="pickPane" class="pickpane">
           <div class="part-col">
           <h3>Choose the part</h3>
-          <p id="bedStatus" class="bedstatus hidden"><span id="bedStatusText"></span> <button type="button" id="btnClearBed" class="small">Start over</button></p>
+          <p id="bedStatus" class="bedstatus hidden"><span id="bedStatusText"></span></p>
+          <button type="button" id="btnClearBed" class="small bedstatus-clear hidden">Start over</button>
           <label id="drop" class="drop drop-slim">
             <input type="file" id="file" multiple accept=".dxf,.svg,.nc,.gcode,.ngc,.tap,.txt,.cnc,.g">
             <b id="dropTitle">Upload a file</b>
@@ -32,7 +33,7 @@
           </div>
           </div>
           <div class="mat-col">
-          <h3>Material and thickness <button type="button" class="info-i" id="matTipInfo" aria-label="More about this material"></button></h3>
+          <h3>Material <button type="button" class="info-i" id="matTipInfo" aria-label="More about this material"></button></h3>
           <p id="matLine" class="matline"></p>
           <div class="s2cols">
             <div class="s2a">
