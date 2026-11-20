@@ -235,7 +235,7 @@ body.beginner #zeroState { font-size: 14px; }
 }
 @media (max-width: 899px) and (orientation: portrait) {
   body.beginner .previewDock .stats { display: none; }
-  body.beginner:not([data-step="2"]) #playRow { display: none; }
+  body.beginner:not([data-step="2"]):not([data-step="3"]) #playRow { display: none; }
   body.beginner .previewDock { padding: 2px 6px; min-height: 0; }
   body.beginner .previewDock .fit:empty { display: none; }
   body.beginner #materials { grid-template-columns: 1fr; }
@@ -285,7 +285,12 @@ body.pro-mode .setupcard > summary { font-size: 13px; padding: 3px 0; }
   body.pro-mode .zerobody .jogmount { grid-row: 1 / span 3; }
   body.pro-mode .zerobody > :not(.zeroscroll), body.pro-mode .zeroscroll > :not(.jogmount) { grid-column: 2; }
 }
-body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
+@media (max-width: 899px) {
+  body[data-step="3"] .previewDock .playrow, body[data-step="3"] #playRow { display: none; }
+}
+@media (min-width: 900px) {
+  body[data-step="3"] #playRow.playrow:not(.hidden) { display: flex; }
+}
 body[data-step="3"] #exportRow { display: none; }
 /* ---- Portrait "turn your phone sideways" cover. Only on the cutting bed (cut screen, "Setup" step, Cut tab): sign-in, the menu,
    Make a part and the Part step all work upright. It starts below the header, which is lifted above it, so Menu / Back and STOP are
