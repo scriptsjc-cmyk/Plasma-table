@@ -34,7 +34,7 @@ const fitProblems = () => {
   const isBox = (el, s, r) => s.display !== "contents" && r.width > 0 && r.height > 0;
   const modal = [...document.querySelectorAll("[role=dialog], dialog, .shapelib, .presetbrowser, .acctdlg, .numpad, .impdlg")].find((el) => {
     if (el.id === "howtoDlg" || el.id === "settingsDlg") return false;
-    if (el.classList.contains("hidden") || el.hidden || el.getAttribute("aria-hidden") === "true") return false;
+    if (el.classList.contains("hidden")) return false;
     if (el.tagName === "DIALOG" && !el.open && !el.hasAttribute("open")) return false;
     return shown(el);
   });
@@ -117,6 +117,22 @@ async function openDlg(page, how) {
   await sleep(200);
 }
 
+async function ensureSignedIn(page) {
+  await ev(page, async () => {
+    const A = window.plasmaTest.account;
+    if (A.isSignedIn()) {
+      if (A.canGrantDemoAdmin && A.canGrantDemoAdmin() && !A.isAdmin()) await A.grantDemoAdmin();
+      return;
+    }
+    try { await A.signUp({ email: "r12fit@example.com", pin: "letmein1", display_name: "Fit", mode: "beginner" }); }
+    catch (e) {
+      try { await A.signIn({ email: "r12fit@example.com", pin: "letmein1" }); } catch (e2) {}
+    }
+    try { if (A.canGrantDemoAdmin && A.canGrantDemoAdmin()) await A.grantDemoAdmin(); } catch (e) {}
+  });
+  await sleep(200);
+}
+
 for (const [size, prof] of SIZES) {
   const page = await newPage(br, prof, { base: srv.base, consoleErrors: false });
 
@@ -169,13 +185,14 @@ for (const [size, prof] of SIZES) {
   for (const [name, ids, fn] of dialogs) {
     await closeDialogs(page);
     await ev(page, () => window.plasmaTest.showScreen("menu", { force: true }));
+    if (["claim-machine", "import-dxf", "admin"].includes(name)) await ensureSignedIn(page);
     await openDlg(page, fn);
     const opened = await ev(page, (ids) => ids.some((id) => {
       const el = document.getElementById(id);
       if (!el) return false;
       const s = getComputedStyle(el);
       const r = el.getBoundingClientRect();
-      return !el.classList.contains("hidden") && !el.hidden && s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0;
+      return !el.classList.contains("hidden") && s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0;
     }), ids);
     t.check(`${size} dlg-${name}: dialog opened`, opened, ids.join(","));
     await check(page, size, `dlg-${name}`);
@@ -236,9 +253,13 @@ for (const [size, prof] of SIZES) {
     await check(page, size, "cut-step3-idle");
   }
 
-  // Machine setup tab
+  // Machine setup tab — leave any running job / E-stop from the cut so the edges page is the thing under test.
   await ev(page, () => {
-    window.plasmaTest.showScreen("cut", { force: true });
+    const T = window.plasmaTest;
+    try { T.estopReset && T.estopReset(); } catch (e) {}
+    const unlock = document.getElementById("btnUnlock");
+    if (unlock) unlock.click();
+    T.showScreen("cut", { force: true });
     const tab = document.querySelector('.tab[data-tab="setup"], #btnBarSetup');
     if (tab) tab.click();
   });
