@@ -148,7 +148,7 @@ export function paintBeforeCut() {
     const cls = kind === "stop" ? "is-stop" : (ok ? "is-ok" : "is-todo");
     const mark = kind === "stop" ? "!" : (ok ? "✓" : (kind === "warn" ? "①" : "!"));
     const act = action ? `<button type="button" class="beforecut-link" data-before="${esc(action)}">${esc(label)}</button>` : esc(label);
-    rows.push(`<li class="${cls}"><span class="beforecut-mark" aria-hidden="true">${mark}</span><span class="beforecut-text">${act}</span></li>`);
+    rows.push(`<li class="${cls}"><span class="beforecut-mark" aria-hidden="true">${mark}</span><span class="beforecut-text" title="${esc(label)}">${act}</span></li>`);
   };
   add(machineHomed(), machineHomed() ? "Machine homed" : "Home the machine", machineHomed() ? "ok" : "todo");
   const cornerOk = zeroIsConfirmed();
