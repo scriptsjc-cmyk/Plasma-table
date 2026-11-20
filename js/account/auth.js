@@ -1,7 +1,7 @@
 // Sign up / in / out, sign-in link, reset, new PIN, mode and display name.
 import { CONFIG } from "./config.js";
-import { F_PASS, META_KEY, SESS_KEY, cloudOn, normEmail, nowIso, okEmail, uid } from "./acctbase.js";
-import { accountMode, canGrantDemoAdmin, currentUser, notify, snapshot } from "./acctstate.js";
+import { F_PASS, META_KEY, CLAIM_CACHE_KEY, SESS_KEY, cloudOn, normEmail, nowIso, okEmail, uid } from "./acctbase.js";
+import { accountMode, canGrantDemoAdmin, clearClaimCache, currentUser, notify, rememberClaimCache, snapshot } from "./acctstate.js";
 import { api, authFetch, cloudSess, fromAuthPayload, loadCloudProfile, parseHashSession, readySession, refreshIfNeeded, saveCloudSess, setSessionListener } from "./cloud.js";
 import { bindUserPrefs } from "./userprefs.js";
 import { demoSession, demoState, hashPin, readJson, saveDemo, seedDemo, writeJson } from "./demostore.js";
@@ -39,6 +39,11 @@ export async function refreshLinked() {
     meta.serials = serials;
     meta.uid = (cloudSess() && cloudSess().user && cloudSess().user.id) || null;
     writeJson(META_KEY, meta);
+    if (meta.linked && meta.uid) rememberClaimCache(meta.uid, meta.serials);
+    else if (meta.uid) {
+      const c = readJson(CLAIM_CACHE_KEY, {}) || {};
+      if (c.uid === meta.uid) clearClaimCache();
+    }
   } catch (e) { /* keep last known */ }
 }
 function needPin(pin, min) {
@@ -161,7 +166,8 @@ export async function signOut() {
   if (cloudOn()) {
     try { await authFetch("/auth/v1/logout", { method: "POST", body: "{}" }); } catch (e) { /* ignore */ }
     saveCloudSess(null);
-    writeJson(META_KEY, {});            // linked flag, serials, recovery marker: nothing survives sign-out
+    writeJson(META_KEY, {});            // live linked flag and recovery marker leave with the session
+    // Keep the one-time workshop unlock (CLAIM_CACHE_KEY) so this PC can still cut offline.
   } else {
     try { localStorage.removeItem(SESS_KEY); } catch (e) { /* ignore */ }
   }

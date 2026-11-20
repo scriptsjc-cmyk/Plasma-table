@@ -4,6 +4,7 @@ import { CONFIG } from "./config.js";
 export const DEMO_KEY = "plasma.account.demo";
 export const SESS_KEY = "plasma.account.session";
 export const META_KEY = "plasma.account.meta";
+export const CLAIM_CACHE_KEY = "plasma.account.claimCache";
 export const LISTENERS = new Set();
 export function forcedDemo() {
   // ?demo=1 or ?test=1 keeps accounts in this browser so tests stay offline

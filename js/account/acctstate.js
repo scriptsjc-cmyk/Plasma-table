@@ -1,8 +1,8 @@
 // Who is signed in and what they may do: user, profile, mode, admin, Pro / firmware gating, linked machines.
 import { CONFIG } from "./config.js";
-import { LISTENERS, META_KEY, cloudOn, configHasBackend, forcedDemo, isLocalHost } from "./acctbase.js";
+import { LISTENERS, META_KEY, CLAIM_CACHE_KEY, cloudOn, configHasBackend, forcedDemo, isLocalHost } from "./acctbase.js";
 import { cloudSess, loadCloudProfile, refreshIfNeeded } from "./cloud.js";
-import { demoSession, demoState, readJson } from "./demostore.js";
+import { demoSession, demoState, readJson, writeJson } from "./demostore.js";
 
 export function notify() { for (const fn of LISTENERS) try { fn(snapshot()); } catch (e) { /* ignore */ } }
 export function onAccountChange(fn) { LISTENERS.add(fn); return () => LISTENERS.delete(fn); }
@@ -64,12 +64,24 @@ export function snapshot() {
     recovery: !!(readJson(META_KEY, {}) || {}).recovery,
   };
 }
+export function rememberClaimCache(uid, serials) {
+  if (!uid || !Array.isArray(serials) || !serials.length) return;
+  writeJson(CLAIM_CACHE_KEY, { uid: String(uid), serials: serials.map(String), linked: true, at: Date.now() });
+}
+export function clearClaimCache() {
+  try { localStorage.removeItem(CLAIM_CACHE_KEY); } catch (e) { /* ignore */ }
+}
 export function hasLinkedMachine() {
   if (cloudOn()) {
     // The cached flag only counts for the account it was fetched for (shared devices).
     const m = readJson(META_KEY, {}) || {};
     const s = cloudSess();
-    return !!(m.linked && s && s.user && s.user.id && m.uid === s.user.id);
+    if (s && s.user && s.user.id) return !!(m.linked && m.uid === s.user.id);
+    // Signed out or offline with no live session: a workshop PC that has already
+    // claimed a machine once can still connect and cut (ME8). The live session is
+    // still forgotten on sign-out; this is only the one-time unlock for this browser.
+    const c = readJson(CLAIM_CACHE_KEY, {}) || {};
+    return !!(c.linked && Array.isArray(c.serials) && c.serials.length);
   }
   const u = demoSession();
   if (!u) return false;
@@ -88,7 +100,12 @@ export function linkedSerials() {
   if (cloudOn()) {
     const m = readJson(META_KEY, {}) || {};
     const s = cloudSess();
-    return s && s.user && m.uid === s.user.id ? (m.serials || []) : [];
+    if (s && s.user && m.uid === s.user.id) return m.serials || [];
+    if (!(s && s.user && s.user.id)) {
+      const c = readJson(CLAIM_CACHE_KEY, {}) || {};
+      return Array.isArray(c.serials) ? c.serials : [];
+    }
+    return [];
   }
   const u = demoSession();
   if (!u) return [];
