@@ -1019,6 +1019,11 @@ body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex; visibility
   border-color: var(--warn);
   color: var(--warn-text);
 }
+/* r13 done-when: in a crowded header (wider system font, Practice chip shown) the Check-cut chip shortens with …
+   instead of the step tabs being squeezed into the Layout button */
+body.app-shell .tabs .cutstatus { flex: 0 1 auto; min-width: 44px; }
+body.app-shell .tabs .cutstatus-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.app-shell #cutBarSteps { min-width: min-content; }
 .cutstatus-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
 .cutstatus.is-ok .cutstatus-dot { background: var(--go, var(--c-1b7a3d)); }
 .cutstatus.is-bad .cutstatus-dot { background: var(--c-e0b400); }
