@@ -147,3 +147,59 @@ body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-wi
 #formSignUp { gap: 10px; }
 #goSignIn { margin-top: 8px; display: inline-flex; }
 .loginbrand .loginmark { max-width: min(100%, 360px); height: auto; margin: 0 auto; object-fit: contain; }
+
+/* r12: dialogs fit a short laptop screen, sit below STOP, and keep primary actions in view. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  .shapelib, .acctdlg, .numpad {
+    align-items: center;
+    justify-content: center;
+    top: var(--topbar-h, 56px);
+    padding: 16px 32px;
+    padding-bottom: 16px;
+  }
+  .shapelib-card, .acctcard, .numpad-card {
+    width: min(720px, calc(100vw - 64px));
+    max-height: calc(100dvh - var(--topbar-h, 56px) - 32px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .acctcard.wide, #adminDlg .acctcard, #importDlg .shapelib-card {
+    width: min(1100px, calc(100vw - 64px));
+  }
+  #acctBody { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  #adminDlg .admpane, #announceInbox, #impList, #adminUsers, #adminTable, #adminLog, #adminAnnList, #adminJobEvents, #adminPresets, #adminStats, #advMachine {
+    overflow: hidden;
+    min-height: 0;
+  }
+  #formSignIn, #formSignUp, #formClaim, #formLink, #formReset, #formNewPin {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
+    align-items: end;
+  }
+  #formSignIn button[type="submit"],
+  #formSignUp .signup-submit,
+  #formClaim button[type="submit"],
+  #formLink button[type="submit"],
+  #formReset button[type="submit"],
+  #formNewPin button[type="submit"] {
+    grid-column: 1 / -1;
+    margin-top: 4px;
+  }
+  #formSignUp .signup-submit { position: static; }
+  .shapelib-card > .row:last-child,
+  .acctcard > .row:last-child,
+  .numpad-card > .row:last-child,
+  #importDlg .row:last-child {
+    flex: 0 0 auto;
+    margin-top: auto;
+    padding-top: 8px;
+    position: sticky;
+    bottom: 0;
+    background: var(--well, var(--card));
+  }
+  #accountDlg.loginpage { top: 0; }
+  #accountDlg.loginpage .acctcard { max-height: 100dvh; overflow: hidden; }
+}
