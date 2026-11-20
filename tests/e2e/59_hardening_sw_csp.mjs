@@ -257,6 +257,17 @@ const copySite = (dest) => { fs.rmSync(dest, { recursive: true, force: true }); 
   await sleep(1500); const n2 = await names();
   ck("30 a new deploy: the old cache is deleted and only the new release's cache remains", JSON.stringify(n2) === JSON.stringify(["plasma-cad-2026.01.02-bbbbbbb"]), n2);
   ck("30 open pages are told 'new version' so they can offer Reload", await T(page, "window.__newv === true"));
+  await page.waitForFunction(() => {
+    const bar = document.getElementById("updateBar");
+    return bar && !bar.classList.contains("hidden") && getComputedStyle(bar).display !== "none";
+  }, null, { timeout: 8000 }).catch(() => {});
+  const bar = await T(page, `(() => {
+    const el = document.getElementById("updateBar");
+    if (!el) return { ok: false };
+    const cs = getComputedStyle(el);
+    return { ok: !el.classList.contains("hidden") && cs.display !== "none", text: (document.getElementById("updateText") || {}).textContent || "", id: (window.plasmaTest && (window.plasmaTest.VERSION || {}).id) || "" };
+  })()`);
+  ck("30 a laptop tab still on the old release shows the Reload banner after a new deploy", bar.ok && /2026\.01\.02-bbbbbbb|Reload/i.test(bar.text), bar);
   const css = await T(page, "fetch('css/base.css').then((r) => r.text())");
   ck("30 no stale-after-deploy: the new css/base.css is served even though the HTTP cache said keep it 10 minutes", /DEPLOY-TWO/.test(css));
   const cached2 = await T(page, "caches.open('plasma-cad-2026.01.02-bbbbbbb').then((c) => c.match(new URL('css/base.css', location.href).href)).then((r) => r ? r.text() : '')");

@@ -64,5 +64,14 @@ export function bindVersion() {
 }
 // Starts watching version.json: the first answer sets the version this page shows, later answers raise the banner.
 export function startVersionWatch() {
-  fetchLatest().then((j) => { if (j) { RUN = { id: j.id, commit: j.commit || VERSION.commit, built: j.built || VERSION.built }; paintVersionLines(); paintAbout(); } });
+  fetchLatest().then((j) => {
+    if (!j) return;
+    // The JS this page booted with is the source of truth. A newer version.json means this tab
+    // is still running an older release (for example a slow fetch fell back to the old cache).
+    // Do not adopt the new id as "what we're on" — that would hide the Reload banner.
+    if (VERSION && VERSION.id && j.id !== VERSION.id) { showUpdate(j); return; }
+    RUN = { id: j.id, commit: j.commit || VERSION.commit, built: j.built || VERSION.built };
+    paintVersionLines();
+    paintAbout();
+  });
 }
