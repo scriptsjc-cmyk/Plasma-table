@@ -259,8 +259,16 @@ export function refresh() {
       const ok = j.result === "done";
       if ($("btnStreamFallback")) $("btnStreamFallback").classList.toggle("hidden", !(!ok && S.needStreamFallback));
       $("doneTitle").textContent = ok ? "Finished ✓" : "Stopped";
-      $("doneInfo").textContent = ok ? `Took ${fmtTime(j.elapsed)}. Lift the part out when it's cool.`
+      const infoText = $("doneInfoText") || $("doneInfo");
+      const infoTip = $("doneInfoTip");
+      const raw = ok ? `Took ${fmtTime(j.elapsed)}. Lift the part out when it's cool.`
         : (j.message || S.lastAlarm || "The job was stopped before the end.");
+      const probeStop = !ok && /10k|GPIO32|pull-up|not trusted|already triggered|touch-off/i.test(raw || "");
+      if (infoText) infoText.textContent = probeStop ? "The torch height reading wasn't trusted, so the cut stopped." : raw;
+      if (infoTip) {
+        infoTip.classList.toggle("hidden", !probeStop);
+        if (probeStop) infoTip.dataset.tip = raw;
+      }
       const changed = S.lastFeedOv !== 100 && S.prepared && !S.prepared.dry_run;
       const v = Math.round((S.speed * S.lastFeedOv) / 100 / 10) * 10;
       $("btnSaveSpeed").textContent = `Save ${v} mm/min as my speed for ${S.material.toLowerCase()} ${S.thickness} mm`;

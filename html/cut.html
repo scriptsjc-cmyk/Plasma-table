@@ -269,10 +269,9 @@
         </div>
         <div id="done" class="hidden">
           <h2 id="doneTitle">Finished ✓</h2>
-          <p id="doneInfo" class="muted"></p>
+          <p id="doneInfo" class="muted has-info"><span id="doneInfoText"></span><button type="button" class="info-i hidden" id="doneInfoTip" aria-label="More about why the cut stopped"></button></p>
           <button type="button" id="btnStreamFallback" class="wide hidden">Run from the laptop instead (stops if the connection drops)</button>
           <button id="btnSaveSpeed" class="wide accent hidden"></button>
-          <button type="button" id="btnExport4" class="wide">⬇ Download G-code</button>
           <div id="couponResult" class="couponresult hidden" role="group" aria-labelledby="cpHead">
             <p><b id="cpHead">How did the test coupon cut?</b></p>
             <div class="resbtns"></div>
@@ -283,16 +282,17 @@
             <div class="row"><button type="button" id="cpSave" class="xl accent grow" disabled>Save to the cut chart</button><button type="button" id="cpSkip" class="grow">Not now</button></div>
           </div>
           <div id="restartBox" class="restartbox hidden">
-            <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">After a stop the machine may have lost its position, so you will Home it and set the start point again on Setup before the torch can fire. The torch stays off until it is over the start of the cut.</span></p>
-            <div class="row">
+            <p><b id="restartHead">Stopped during cut 1.</b> <span class="muted">You must Home and set the start point again before the torch can fire.</span><button type="button" class="info-i" id="restartTip" data-tip="After a stop the machine may have lost its position. The torch stays off until it is over the start of the cut, and you will Home it and set the start point again on Setup before it can fire." aria-label="More about restarting after a stop"></button></p>
+          </div>
+          <div id="doneActions" class="done-actions">
+            <div class="row done-continue">
               <label class="grow">Continue from cut <select id="restartCut" aria-label="Continue from cut number"></select></label>
               <button type="button" id="btnRestart" class="xl accent grow">Continue from cut 1</button>
             </div>
-          </div>
-          <div class="col">
             <button id="btnAgain" class="xl go">Cut another one</button>
             <button id="btnRezero" class="xl accent hidden">Set a new start point first</button>
             <button id="btnNewFile" class="xl">Cut a different part</button>
+            <button type="button" id="btnExport4" class="wide">⬇ Download G-code</button>
           </div>
         </div>
       </div>

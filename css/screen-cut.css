@@ -2164,3 +2164,44 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="1"] #pathLegend.hidden { display: none; }
 }
 .next-setup { display: none; }
+
+/* ---- r12 Cut step 3 running / stopped / done ---- */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="4"] #jobCard,
+  body[data-screen="cut"][data-step="4"] #kerfNote { display: none; }
+  body.app-shell[data-screen="cut"][data-step="4"] .step[data-step="4"] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+  body[data-screen="cut"][data-step="4"] #done {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+  body[data-screen="cut"][data-step="4"] #done.hidden { display: none; }
+  body[data-screen="cut"][data-step="4"] #doneActions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+    flex: none;
+    padding: 8px 0 0;
+    background: var(--card);
+  }
+  body[data-screen="cut"][data-step="4"] #doneActions .xl,
+  body[data-screen="cut"][data-step="4"] #doneActions .wide {
+    min-height: 44px;
+    margin: 0;
+    flex: 1 1 140px;
+  }
+  body[data-screen="cut"][data-step="4"] #restartBox { margin: 0 0 8px; }
+  body[data-screen="cut"][data-step="4"] #restartBox.hidden ~ #doneActions .done-continue { display: none; }
+  body[data-screen="cut"][data-step="4"] #doneInfo { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
+}
