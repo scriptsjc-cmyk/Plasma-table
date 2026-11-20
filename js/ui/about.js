@@ -41,6 +41,7 @@ export function paintVersionLines() {
   const t = versionText();
   if ($("verLine")) $("verLine").textContent = t;
   if ($("footVer")) $("footVer").textContent = t;
+  if ($("menuVer")) $("menuVer").textContent = t;
 }
 export function paintAbout() {
   if ($("aboutVer")) $("aboutVer").innerHTML = `<b>${RUN.id}</b><br><span class="muted small">commit ${RUN.commit} · built ${RUN.built}</span>`;

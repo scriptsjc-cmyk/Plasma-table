@@ -17,13 +17,38 @@ export function syncLaptopUi() {
   paintSidewaysHint();
 }
 
+const SHELL_MQ = "(min-width: 1280px) and (hover: hover) and (pointer: fine)";
+export function isShellLaptop() {
+  try { return !!(window.matchMedia && window.matchMedia(SHELL_MQ).matches); }
+  catch (e) { return false; }
+}
+
+let makeHome = null;
+export function placeMakeBar() {
+  const bar = $("makeBar");
+  const top = document.querySelector(".topbar");
+  const stop = $("btnStop");
+  if (!bar || !top) return;
+  if (!makeHome) makeHome = { parent: bar.parentNode, next: bar.nextElementSibling };
+  const on = isShellLaptop() && document.body.dataset.screen === "make" && !document.body.classList.contains("header-hidden");
+  if (on) {
+    if (bar.parentNode !== top) top.insertBefore(bar, stop || null);
+  } else if (makeHome.parent && bar.parentNode !== makeHome.parent) {
+    makeHome.parent.insertBefore(bar, makeHome.next);
+  }
+}
+
 export function bindLaptopUi() {
   syncLaptopUi();
+  placeMakeBar();
   try {
     const mq = window.matchMedia(LAPTOP_MQ);
-    const on = () => syncLaptopUi();
+    const on = () => { syncLaptopUi(); placeMakeBar(); };
     if (mq.addEventListener) mq.addEventListener("change", on);
     else if (mq.addListener) mq.addListener(on);
+    const shell = window.matchMedia(SHELL_MQ);
+    if (shell.addEventListener) shell.addEventListener("change", placeMakeBar);
+    else if (shell.addListener) shell.addListener(placeMakeBar);
   } catch (e) { /* older engines */ }
   window.addEventListener("resize", () => paintSidewaysHint());
   window.addEventListener("orientationchange", () => paintSidewaysHint());
@@ -33,7 +58,7 @@ export function bindLaptopUi() {
     paintSidewaysHint();
   });
   try {
-    new MutationObserver(() => paintSidewaysHint()).observe(document.body, { attributes: true, attributeFilter: ["data-screen", "class"] });
+    new MutationObserver(() => { paintSidewaysHint(); placeMakeBar(); }).observe(document.body, { attributes: true, attributeFilter: ["data-screen", "class"] });
   } catch (e) { /* ignore */ }
 }
 
