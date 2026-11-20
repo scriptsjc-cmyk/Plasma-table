@@ -141,7 +141,7 @@ function extraFormHtml(it, sh) {
     html += `<div class="skbtns"><button type="button" data-pro="flangestd">Fill from BS EN 1092-1 / ASME B16.5…</button></div>`;
   }
   if (sketch.opts && sketch.opts.pro) {
-    html += `<p class="muted small"><label class="check"><input type="checkbox" id="sfShowKerf"${sketch.opts.showKerf ? " checked" : ""}> Show torch path (kerf preview)</label>
+    html += `<p class="muted small insp-arrange"><label class="check"><input type="checkbox" id="sfShowKerf"${sketch.opts.showKerf ? " checked" : ""}> Show torch path (kerf preview)</label>
       <button type="button" class="quiet" data-pro="cutctl">Cut control…</button></p>`;
   }
   return html;

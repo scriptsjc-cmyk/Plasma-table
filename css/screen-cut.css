@@ -2248,3 +2248,15 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="3"] #zeroCard a,
   body[data-screen="cut"][data-step="3"] #zeroCard .chkcut { clear: both; display: block; }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="1"] .mat-col > h3 { padding-right: 160px; }
+  body[data-screen="cut"][data-step="1"] .mat-col #matTipInfo { margin-right: 120px; }
+  body[data-screen="cut"][data-step="1"] .ampsdl { display: none; }
+  body[data-screen="cut"][data-step="1"] #speedBox { margin-bottom: 52px; }
+  body[data-screen="cut"][data-step="3"] #btnOriginOpts {
+    position: static;
+    grid-column: 1 / -1;
+    margin: 0 0 8px;
+  }
+}

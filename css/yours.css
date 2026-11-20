@@ -438,3 +438,16 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
     grid-area: props !important;
   }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbSearchBtn,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbSearch {
+    display: none !important;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape {
+    overflow: hidden !important;
+  }
+  body.app-shell[data-screen="make"] { overflow: hidden; }
+}
