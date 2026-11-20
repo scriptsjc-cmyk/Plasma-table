@@ -22,33 +22,61 @@ const SIZES = [
   ["1920x970", "d1920x970"],
 ];
 
-// Brief section 5 — run in the page; returns problems (empty = pass).
+// Brief section 5 checker, with two harness corrections that do not loosen real clip/overlap
+// checks: (1) display:contents / 0×0 ancestors cannot clip; (2) when a modal dialog is open,
+// only that dialog (and STOP, which must stay uncovered) is inspected, so the page behind
+// is not reported as the dialog's problems.
 const fitProblems = () => {
   const out = [];
   const exempt = el => el.closest("#howtoDlg, #settingsDlg");
   const shown = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el);
     return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none"; };
-  if (document.scrollingElement.scrollHeight > innerHeight + 1) out.push("page scrolls");
+  const isBox = (el, s, r) => s.display !== "contents" && r.width > 0 && r.height > 0;
+  const modal = [...document.querySelectorAll("[role=dialog], dialog, .shapelib, .presetbrowser, .acctdlg, .numpad, .impdlg")].find((el) => {
+    if (el.id === "howtoDlg" || el.id === "settingsDlg") return false;
+    if (el.classList.contains("hidden") || el.hidden || el.getAttribute("aria-hidden") === "true") return false;
+    if (el.tagName === "DIALOG" && !el.open && !el.hasAttribute("open")) return false;
+    return shown(el);
+  });
+  const scope = modal
+    ? (el) => el === modal || modal.contains(el) || el.id === "btnStop" || (el.closest && el.closest("#btnStop"))
+    : () => true;
+  if (!modal && document.scrollingElement.scrollHeight > innerHeight + 1) out.push("page scrolls");
+  if (modal) {
+    const r = modal.getBoundingClientRect();
+    if (r.bottom > innerHeight + 1 || r.right > innerWidth + 1 || r.top < -1 || r.left < -1) out.push("dialog off-screen: " + (modal.id || "dialog"));
+  }
   for (const el of document.querySelectorAll("body *")) {
-    if (!shown(el) || exempt(el)) continue;
+    if (!shown(el) || exempt(el) || !scope(el)) continue;
     const s = getComputedStyle(el);
-    if (/(auto|scroll)/.test(s.overflowY) && el.scrollHeight > el.clientHeight + 2) out.push("scrolls: " + (el.id || el.className));
+    if (/(auto|scroll)/.test(s.overflowY) && isBox(el, s, el.getBoundingClientRect()) && el.scrollHeight > el.clientHeight + 2) out.push("scrolls: " + (el.id || el.className));
     if (/^(BUTTON|INPUT|SELECT|A)$/.test(el.tagName)) {
       const r = el.getBoundingClientRect();
       if (r.bottom > innerHeight + 1 || r.right > innerWidth + 1) out.push("off-screen: " + (el.id || el.textContent.trim().slice(0, 30)));
       for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
         const ps = getComputedStyle(p);
-        if (ps.overflow !== "visible") { const pr = p.getBoundingClientRect();
-          if (r.top < pr.top - 1 || r.bottom > pr.bottom + 1) { out.push("clipped: " + (el.id || el.textContent.trim().slice(0, 30))); break; } }
+        const pr = p.getBoundingClientRect();
+        if (!isBox(p, ps, pr)) continue;
+        if (ps.overflow !== "visible") {
+          if (r.top < pr.top - 1 || r.bottom > pr.bottom + 1) { out.push("clipped: " + (el.id || el.textContent.trim().slice(0, 30))); break; }
+        }
       }
     }
   }
-  const ctl = [...document.querySelectorAll("button, input, select")].filter(e => shown(e) && !exempt(e) && !e.closest("dialog:not([open])"));
+  const ctl = [...document.querySelectorAll("button, input, select")].filter(e => shown(e) && !exempt(e) && scope(e) && !e.closest("dialog:not([open])"));
   for (let i = 0; i < ctl.length; i++) for (let j = i + 1; j < ctl.length; j++) {
     if (ctl[i].contains(ctl[j]) || ctl[j].contains(ctl[i])) continue;
     const a = ctl[i].getBoundingClientRect(), b = ctl[j].getBoundingClientRect();
     const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
     if (ox > 4 && oy > 4) out.push("overlap: " + (ctl[i].id || ctl[i].textContent.trim().slice(0, 20)) + " / " + (ctl[j].id || ctl[j].textContent.trim().slice(0, 20)));
+  }
+  if (modal) {
+    const stop = document.getElementById("btnStop");
+    if (stop && shown(stop)) {
+      const a = modal.getBoundingClientRect(), b = stop.getBoundingClientRect();
+      const ox = Math.min(a.right, b.right) - Math.max(a.left, b.left), oy = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+      if (ox > 4 && oy > 4) out.push("dialog covers STOP");
+    }
   }
   return [...new Set(out)];
 };
@@ -125,22 +153,31 @@ for (const [size, prof] of SIZES) {
   await check(page, size, "make-advanced");
 
   const dialogs = [
-    ["preset-parts", () => { window.plasmaTest.openPresetBrowser(); }],
-    ["more-shapes", () => { const b = document.getElementById("bgMore") || document.getElementById("shapeLib"); if (document.getElementById("bgMore")) document.getElementById("bgMore").click(); else if (window.plasmaTest.useShape) {} }],
-    ["save-part", () => { try { window.plasmaTest.saveCurrent && window.plasmaTest.saveCurrent(); } catch (e) { const d = document.getElementById("saveDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; } } }],
-    ["account", () => { try { window.plasmaTest.openAccount(); } catch (e) {} }],
-    ["claim-machine", () => { try { window.plasmaTest.openClaim(); } catch (e) {} }],
-    ["import-dxf", () => { try { window.plasmaTest.openImport(); } catch (e) {} }],
-    ["size", () => { const d = document.getElementById("sizeDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; } }],
-    ["straight-cut", () => { const d = document.getElementById("straightDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; } }],
-    ["conflict", () => { const d = document.getElementById("conflictDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; } }],
-    ["migrate", () => { const d = document.getElementById("migrateDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; } }],
-    ["announcements", () => { const d = document.getElementById("announceDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; } }],
-    ["admin", () => { try { window.plasmaTest.openAdmin(); } catch (e) { const d = document.getElementById("adminDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; } } }],
+    ["preset-parts", ["presetBrowser"], () => { window.plasmaTest.openPresetBrowser(); }],
+    ["more-shapes", ["shapeLib"], () => { const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode && T.setAppMode("beginner", { persist: false, autoFs: false }); const b = document.getElementById("bgMore"); if (b) b.click(); else if (document.getElementById("shapeLib")) { const d = document.getElementById("shapeLib"); d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
+    ["save-part", ["saveDlg"], () => { try { window.plasmaTest.saveCurrent && window.plasmaTest.saveCurrent(); } catch (e) {} const d = document.getElementById("saveDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
+    ["account", ["accountDlg"], () => { try { window.plasmaTest.openAccount(); } catch (e) {} }],
+    ["claim-machine", ["claimDlg"], () => { try { window.plasmaTest.openClaim(); } catch (e) {} }],
+    ["import-dxf", ["importDlg"], () => { try { window.plasmaTest.openImport(); } catch (e) {} }],
+    ["size", ["sizeDlg"], () => { const d = document.getElementById("sizeDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
+    ["straight-cut", ["straightDlg"], () => { const d = document.getElementById("straightDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
+    ["conflict", ["conflictDlg"], () => { const d = document.getElementById("conflictDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
+    ["migrate", ["migrateDlg"], () => { const d = document.getElementById("migrateDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
+    ["announcements", ["announceDlg"], () => { const d = document.getElementById("announceDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
+    ["admin", ["adminDlg"], () => { try { window.plasmaTest.openAdmin(); } catch (e) {} const d = document.getElementById("adminDlg"); if (d) { d.classList.remove("hidden"); d.hidden = false; d.removeAttribute("hidden"); d.setAttribute("aria-hidden", "false"); } }],
   ];
-  for (const [name, fn] of dialogs) {
+  for (const [name, ids, fn] of dialogs) {
     await closeDialogs(page);
+    await ev(page, () => window.plasmaTest.showScreen("menu", { force: true }));
     await openDlg(page, fn);
+    const opened = await ev(page, (ids) => ids.some((id) => {
+      const el = document.getElementById(id);
+      if (!el) return false;
+      const s = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return !el.classList.contains("hidden") && !el.hidden && s.display !== "none" && s.visibility !== "hidden" && r.width > 0 && r.height > 0;
+    }), ids);
+    t.check(`${size} dlg-${name}: dialog opened`, opened, ids.join(","));
     await check(page, size, `dlg-${name}`);
   }
   await closeDialogs(page);
