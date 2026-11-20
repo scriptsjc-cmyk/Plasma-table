@@ -79,11 +79,11 @@ export function placeMakeBar() {
       restoreNode(tools, skToolsHome);
     }
   }
-  if (tabs && top && main) {
+  // The Cut header is a two-row grid: menu + STOP on row 1, .tabs (Part / Setup / Cut / Layout) on row 2.
+  // Moving .tabs into .topbar-main puts Layout on the same row as the connection chip and they overlap at 1280.
+  if (tabs) {
     if (!tabsHome) tabsHome = { ref: null };
-    const onCut = isShellLaptop() && document.body.dataset.screen === "cut" && !document.body.classList.contains("header-hidden");
-    if (onCut) placeNode(tabs, tabsHome, main, $("connWrap") || $("btnTopMenu") || null);
-    else restoreNode(tabs, tabsHome);
+    restoreNode(tabs, tabsHome);
   }
 }
 
