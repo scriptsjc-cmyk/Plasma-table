@@ -1354,8 +1354,8 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     grid-column: var(--s3-main, 3);
     grid-row: 1;
     min-height: 0;
-    overflow: hidden;
-    align-self: stretch;
+    overflow: visible;
+    align-self: start;
   }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard {
     grid-column: var(--s3-main, 3);
