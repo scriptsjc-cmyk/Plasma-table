@@ -18,10 +18,7 @@ const KEEPALIVE_FLOOR_MS = 3000;
 export const TORCH_TEST_MAX_HOLD_MS = 2000;
 export const TORCH_TEST_COOLDOWN_MS = 3000;
 const TICKS = [
-  "Earth clamp on",
-  "Area clear, hands away",
-  "Torch pointing at scrap or slats",
-  "Air on",
+  "Ready: torch over scrap, earth on, air on, hands clear.",
 ];
 
 const state = { lit: false, armed: false, keep: 0, litAt: 0, coolUntil: 0, cutoff: false };
@@ -66,11 +63,12 @@ export function torchTestEnabled() { return !torchTestWhy(); }
 async function confirmFirstUse() {
   return askConfirm({
     title: "Fire the torch?",
-    body: "Hold Test torch to fire, and let go to stop. It turns off after 2 seconds and needs a fresh press (then a short wait).\n\nTorch over scrap, earth clamp on, hands clear. STOP stays available.",
+    body: "Hold Test torch to fire, let go to stop. It cuts off after 2 seconds, then a short wait. STOP stays available.",
     ok: "I understand",
     cancel: "Cancel",
     danger: true,
     ticks: TICKS,
+    compact: true,
   });
 }
 

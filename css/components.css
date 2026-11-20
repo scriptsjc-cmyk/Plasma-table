@@ -96,15 +96,32 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
 }
 
 /* In-app confirm: sits under the header so STOP stays visible and clickable. */
-.safedlg { position: fixed; left: 0; right: 0; top: var(--topbar-h, 56px); bottom: 0; z-index: 125; background: rgba(20, 28, 36, .45); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; }
+.safedlg { position: fixed; left: 0; right: 0; top: var(--topbar-h, 56px); bottom: 0; z-index: 125; background: rgba(20, 28, 36, .45); display: flex; align-items: center; justify-content: center; padding: 24px 12px; }
 .safedlg.hidden { display: none; }
-.safedlg-card { background: var(--well); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 16px; width: min(480px, 100%); box-shadow: 0 8px 24px rgba(16, 24, 40, .2); }
+.safedlg:not(.hidden) { animation: safedlg-in .2s ease; }
+.safedlg-card { background: var(--well); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 16px; width: min(480px, 100%); box-shadow: 0 8px 24px rgba(16, 24, 40, .2); animation: safedlg-card-in .2s ease; }
+.safedlg-card.is-compact { width: min(360px, 100%); padding: 12px 14px; }
+.safedlg-card.is-compact h2 { font-size: 1.05rem; margin-bottom: 6px; }
+.safedlg-card.is-compact p { margin-bottom: 8px; font-size: 14px; }
 .safedlg-card h2 { margin: 0 0 8px; font-size: var(--fs-lg); }
 .safedlg-card p { margin: 0 0 10px; white-space: pre-wrap; }
+.safedlg-lines { margin: 0 0 12px; padding-left: 1.15em; font-size: 15px; line-height: 1.35; }
+.safedlg-lines li { margin: 0 0 4px; }
+.safedlg-lines.hidden, .safedlg-card p.hidden { display: none; }
 .safedlg-actions { justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .safedlg-actions button { min-height: var(--tap); }
+.safedlg-card.is-compact .safedlg-actions { margin-top: 4px; }
+.safedlg-card.is-compact .safedlg-actions button { min-height: 40px; padding: 6px 12px; font-size: 14px; }
 .safedlg-ticks { display: flex; flex-direction: column; gap: 6px; margin: 0 0 10px; }
 .safedlg-ticks.hidden { display: none; }
 .safedlg-tick { display: flex; align-items: flex-start; gap: 8px; font-size: var(--fs); cursor: pointer; }
 .safedlg-tick input { margin-top: 3px; }
+.safedlg-card.is-compact .safedlg-ticks { gap: 4px; margin-bottom: 8px; }
+.safedlg-card.is-compact .safedlg-tick { font-size: 14px; }
+.safedlg-card.is-compact .safedlg-tick input { width: 20px; height: 20px; min-width: 20px; min-height: 20px; margin-top: 2px; flex: none; }
+@keyframes safedlg-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes safedlg-card-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .safedlg:not(.hidden), .safedlg-card { animation: none; }
+}
 

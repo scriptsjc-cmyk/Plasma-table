@@ -52,3 +52,10 @@ body.app-shell.laptop-ui #setupView:not(.hidden) {
   overflow: hidden;
 }
 body.app-shell.laptop-ui #setupBedWrap { overflow: auto; }
+
+/* Tests card: keep Touch-off and Test torch, but don't spend a tall block on copy. */
+#setupView .card:has(#btnTorchTest) { padding: 10px 14px 12px; }
+#setupView .card:has(#btnTorchTest) h2 { margin-bottom: 6px; }
+#setupView .card:has(#btnTorchTest) .row { margin: 0 0 6px; gap: 8px; }
+#setupView .card:has(#btnTorchTest) .muted.small { margin: 0 0 4px; }
+#btnTorchTest, #btnTouchTest { min-height: 40px; padding: 6px 12px; }
