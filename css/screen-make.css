@@ -1510,3 +1510,58 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 
 .qb-filter-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 6px 0; padding: 4px 10px; min-height: 36px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-weak); color: var(--text); font-weight: 700; cursor: pointer; }
 .qb-filter-chip:hover { filter: brightness(1.04); }
+
+/* ---- r12 Make a part (Simple) on a laptop: one toolbar row, no banner, compact tiles ---- */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.beginner[data-screen="make"] #guideHead.guidehead { display: none; }
+  body[data-screen="make"] #exportRow { display: none; }
+  body.beginner[data-screen="make"] .bgshapes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  body.beginner[data-screen="make"] .bgshapes button {
+    min-height: 72px;
+    height: 72px;
+    padding: 4px 2px;
+    gap: 2px;
+    font-size: 12px;
+    flex-direction: column;
+  }
+  body.beginner[data-screen="make"] .bgshapes button svg { height: 28px; width: auto; }
+  body.beginner[data-screen="make"] .bgmore {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+  body.beginner[data-screen="make"] .bgmore button { min-height: 44px; font-size: 13px; }
+  body.beginner[data-screen="make"] #bgChange {
+    font-size: 0;
+    min-height: 32px;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    justify-content: flex-start;
+    width: auto;
+  }
+  body.beginner[data-screen="make"] #bgChange::before {
+    content: "← Templates";
+    font-size: 14px;
+    font-weight: 650;
+    text-decoration: underline;
+  }
+  body.beginner[data-screen="make"] #shapeForm,
+  body.beginner[data-screen="make"] .skform,
+  body.beginner[data-screen="make"] #srcShape .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 8px;
+  }
+  body.beginner[data-screen="make"] .cutthis,
+  body.beginner[data-screen="make"] #btnCutThis {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    min-height: 44px;
+  }
+}
