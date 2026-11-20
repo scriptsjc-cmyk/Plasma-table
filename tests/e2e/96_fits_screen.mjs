@@ -169,6 +169,183 @@ const fitProblems = () => {
   return [...new Set(out)];
 };
 
+// r13 done-when ("nothing overlaps or cuts off"): checks the r12/r13 box checker could not see —
+// text drawn on top of other text (page text, a lamp dot on its label, and canvas labels),
+// button text cut off inside its button, and empty panels (a bordered box or bar with nothing in it).
+// Canvas labels are recorded by wrapping fillText in the test page only; the app is not changed.
+const installLabelRecorder = () => {
+  const P = CanvasRenderingContext2D.prototype;
+  if (P.__r13rec) return;
+  const fill = P.fillText, clear = P.clearRect, rect = P.fillRect;
+  window.__r13labels = new Map();
+  const reset = function (x, y, w, h) {
+    const cv = this.canvas;
+    if (cv && w * h >= cv.width * cv.height * 0.9) window.__r13labels.set(cv, []);
+  };
+  P.clearRect = function (x, y, w, h) { const m = this.getTransform(); reset.call(this, x, y, w * m.a, h * m.d); return clear.apply(this, arguments); };
+  P.fillRect = function (x, y, w, h) { const m = this.getTransform(); reset.call(this, x, y, w * m.a, h * m.d); return rect.apply(this, arguments); };
+  P.fillText = function (text, x, y, maxW) {
+    const r = fill.apply(this, arguments);
+    try {
+      const s = String(text);
+      if (s.trim() && this.canvas) {
+        const mt = this.measureText(s), m = this.getTransform(), k = window.devicePixelRatio || 1;
+        let l = x - mt.actualBoundingBoxLeft, rr = x + mt.actualBoundingBoxRight;
+        if (maxW != null && rr - l > maxW) rr = l + maxW;
+        const t = y - mt.actualBoundingBoxAscent, b = y + mt.actualBoundingBoxDescent;
+        const px = (u, v) => [(m.a * u + m.c * v + m.e) / k, (m.b * u + m.d * v + m.f) / k];
+        const [x1, y1] = px(l, t), [x2, y2] = px(rr, b);
+        const list = window.__r13labels.get(this.canvas) || [];
+        list.push({ s, l: Math.min(x1, x2), r: Math.max(x1, x2), t: Math.min(y1, y2), b: Math.max(y1, y2) });
+        window.__r13labels.set(this.canvas, list);
+      }
+    } catch (e) {}
+    return r;
+  };
+  P.__r13rec = true;
+};
+
+const redrawCanvases = () => {
+  const T = window.plasmaTest;
+  try { T.refresh && T.refresh(); } catch (e) {}
+  try { T.drawPreview && T.drawPreview(); } catch (e) {}
+  try { T.sketch && T.sketch.draw && T.sketch.draw(); } catch (e) {}
+};
+
+const textProblems = () => {
+  const out = [];
+  const shown = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none" && +s.opacity !== 0; };
+  const label = el => (el.id || (el.textContent || "").trim().slice(0, 30) || el.className || el.tagName).toString().slice(0, 40);
+  const skip = el => !!(el.closest && el.closest("#howtoDlg, #settingsDlg, #toast, .toast, .popover, .tip, .hovertip, .info-pop, .info-tip, [role=tooltip], #connMenu, #topMenu, .menu-pop, .qb-pop, #qbMorePop, .info-body, .sr-only, .visually-hidden, [aria-hidden=true]"));
+  const modal = [...document.querySelectorAll("[role=dialog], dialog, .shapelib, .presetbrowser, .acctdlg, .numpad, .impdlg")].find((el) =>
+    el.id !== "howtoDlg" && el.id !== "settingsDlg" && !el.classList.contains("hidden") && !(el.tagName === "DIALOG" && !el.open && !el.hasAttribute("open")) && shown(el));
+  const inScope = el => !modal || modal.contains(el);
+  // screen-reader-only text (clip: rect(0 0 0 0), 1 px boxes) is not drawn
+  const srOnly = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e);
+    if (/rect\(0px,? 0px,? 0px,? 0px\)/.test(s.clip) || s.clipPath === "inset(50%)" || (s.position === "absolute" && parseFloat(s.width) <= 1 && parseFloat(s.height) <= 1)) return true; } return false; };
+  // the part of a text box that is actually painted: cut by every ancestor that clips (overflow not visible),
+  // and trimmed to the line height (a big font's glyph box is taller than its line)
+  const clipCache = new Map();
+  const clipOf = (el) => {
+    if (clipCache.has(el)) return clipCache.get(el);
+    let c = { left: -1e6, top: -1e6, right: 1e6, bottom: 1e6 };
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      const s = getComputedStyle(e);
+      if (s.overflowX !== "visible" || s.overflowY !== "visible") {
+        const r = e.getBoundingClientRect();
+        c = { left: Math.max(c.left, s.overflowX !== "visible" ? r.left : -1e6), right: Math.min(c.right, s.overflowX !== "visible" ? r.right : 1e6),
+          top: Math.max(c.top, s.overflowY !== "visible" ? r.top : -1e6), bottom: Math.min(c.bottom, s.overflowY !== "visible" ? r.bottom : 1e6) };
+      }
+    }
+    clipCache.set(el, c);
+    return c;
+  };
+  const painted = (el, r) => {
+    const lh = parseFloat(getComputedStyle(el).lineHeight);
+    let t = r.top, b = r.bottom;
+    if (lh > 0 && b - t > lh) { const m = (t + b) / 2; t = m - lh / 2; b = m + lh / 2; }
+    const c = clipOf(el);
+    const q = { left: Math.max(r.left, c.left), right: Math.min(r.right, c.right), top: Math.max(t, c.top), bottom: Math.min(b, c.bottom) };
+    q.width = q.right - q.left; q.height = q.bottom - q.top;
+    return q;
+  };
+  const hit = (a, b, m = 2) => Math.min(a.right ?? a.r, b.right ?? b.r) - Math.max(a.left ?? a.l, b.left ?? b.l) > m
+    && Math.min(a.bottom ?? a.b, b.bottom ?? b.b) - Math.max(a.top ?? a.t, b.top ?? b.t) > m;
+  // what actually paints on top at a point (so text under an opaque card / dialog is not counted)
+  const visibleAt = (el, r) => {
+    const x = Math.min(innerWidth - 1, Math.max(0, (r.left + r.right) / 2)), y = Math.min(innerHeight - 1, Math.max(0, (r.top + r.bottom) / 2));
+    const top = document.elementFromPoint(x, y);
+    return !!top && (top === el || el.contains(top) || top.contains(el));
+  };
+
+  // 1. page text on page text: every visible text line box vs every other one from a different element
+  const lines = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.nodeValue.trim()) continue;
+    const el = n.parentElement;
+    if (!el || skip(el) || !inScope(el) || !shown(el) || srOnly(el)) continue;
+    const s = getComputedStyle(el);
+    if (s.color === "rgba(0, 0, 0, 0)" || s.fontSize === "0px") continue;
+    const rg = document.createRange(); rg.selectNodeContents(n);
+    for (const r0 of rg.getClientRects()) {
+      const r = painted(el, r0);
+      if (r.width < 2 || r.height < 2 || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
+      lines.push({ el, r, txt: n.nodeValue.trim().slice(0, 24) });
+    }
+  }
+  for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) {
+    const A = lines[i], B = lines[j];
+    if (A.el === B.el) continue;
+    // the line box is the font's full height; ask for a real overlap (more than a third of the shorter line)
+    const oy = Math.min(A.r.bottom, B.r.bottom) - Math.max(A.r.top, B.r.top), ox = Math.min(A.r.right, B.r.right) - Math.max(A.r.left, B.r.left);
+    if (ox > 3 && oy > Math.min(A.r.height, B.r.height) / 3 && visibleAt(A.el, A.r) && visibleAt(B.el, B.r)) out.push("text-on-text: " + A.txt + " / " + B.txt);
+  }
+
+  // 2. an absolutely placed ::before dot / icon sitting on its own element's text
+  for (const el of document.querySelectorAll("body *")) {
+    if (skip(el) || !inScope(el) || !shown(el) || !el.textContent.trim()) continue;
+    const ps = getComputedStyle(el, "::before");
+    if (ps.content === "none" || ps.position !== "absolute") continue;
+    const w = parseFloat(ps.width), h = parseFloat(ps.height);
+    if (!(w > 2 && h > 2)) continue;
+    const er = el.getBoundingClientRect(), es = getComputedStyle(el);
+    const l = er.left + parseFloat(es.borderLeftWidth) + (parseFloat(ps.left) || 0), t = er.top + parseFloat(es.borderTopWidth) + (parseFloat(ps.top) || 0);
+    const dot = { l, t, r: l + w, b: t + h };
+    const rg = document.createRange(); rg.selectNodeContents(el);
+    if ([...rg.getClientRects()].some((r) => r.width > 1 && hit(dot, r, 1))) out.push("dot-on-text: " + label(el));
+  }
+
+  // 3. button text cut off inside its button (wraps past the bottom or runs past the side)
+  for (const el of document.querySelectorAll("button, a.btn, .btn")) {
+    if (skip(el) || !inScope(el) || !shown(el) || !el.textContent.trim()) continue;
+    const s = getComputedStyle(el);
+    if (s.overflow === "visible" && s.overflowX === "visible" && s.overflowY === "visible") {
+      // overflow visible: compare the painted text boxes with the button box (sr-only and clipped-away text excluded)
+      const br = el.getBoundingClientRect();
+      const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let cut = false;
+      for (let n = tw.nextNode(); n && !cut; n = tw.nextNode()) {
+        const pe = n.parentElement;
+        if (!n.nodeValue.trim() || !pe || srOnly(pe) || !shown(pe)) continue;
+        const rg = document.createRange(); rg.selectNodeContents(n);
+        cut = [...rg.getClientRects()].map((r) => painted(pe, r)).some((r) => r.width > 1 && r.height > 1 && (r.bottom > br.bottom + 1 || r.top < br.top - 1 || r.right > br.right + 1 || r.left < br.left - 1));
+      }
+      if (cut) out.push("text-cut: " + label(el));
+    } else if (s.textOverflow !== "ellipsis" && (el.scrollHeight > el.clientHeight + 2 || el.scrollWidth > el.clientWidth + 2)) {
+      out.push("text-cut: " + label(el));
+    }
+  }
+
+  // 4. empty panels: a card / pane / form box / bar with a border or fill but nothing in it
+  const hasContent = (el) => {
+    for (const d of el.querySelectorAll("canvas, img, svg, input, select, textarea, button, video, iframe")) if (shown(d)) return true;
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) if (n.nodeValue.trim() && n.parentElement && shown(n.parentElement)) return true;
+    return false;
+  };
+  for (const el of document.querySelectorAll(".card, .panel, .setup-pane, .shapeform, [id$=Card], .stepPane > .step > .nav, .empty-state")) {
+    if (skip(el) || !inScope(el) || !shown(el) || el.closest(".hidden")) continue;
+    const s = getComputedStyle(el), r = el.getBoundingClientRect();
+    const drawn = ["Top", "Right", "Bottom", "Left"].some((k) => parseFloat(s["border" + k + "Width"]) > 0 && s["border" + k + "Style"] !== "none") || s.backgroundColor !== "rgba(0, 0, 0, 0)" || el.matches(".setup-pane");
+    if (drawn && r.width > 8 && !hasContent(el)) out.push("empty-panel: " + label(el));
+  }
+
+  // 5. canvas labels drawn over each other (same canvas, latest frame)
+  if (window.__r13labels) {
+    for (const [cv, list] of window.__r13labels) {
+      if (!cv.isConnected || !shown(cv) || skip(cv) || !inScope(cv)) continue;
+      const seen = new Set(), L = list.filter((a) => { const k = a.s + "|" + Math.round(a.l) + "|" + Math.round(a.t); if (seen.has(k)) return false; seen.add(k); return true; });
+      for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) {
+        if (L[i].s === L[j].s) continue;
+        if (hit(L[i], L[j], 2)) out.push("canvas-label-overlap (" + (cv.id || "canvas") + "): " + L[i].s.slice(0, 28) + " / " + L[j].s.slice(0, 28));
+      }
+    }
+  }
+  return [...new Set(out)];
+};
+
 const getStopRect = () => {
   const el = document.getElementById("btnStop");
   if (!el) return null;
@@ -185,9 +362,11 @@ async function shot(page, size, state) {
 }
 
 async function check(page, size, state, stopSamples) {
+  await ev(page, installLabelRecorder);
+  await ev(page, redrawCanvases);
   await sleep(250);
   await shot(page, size, state);
-  const problems = await ev(page, fitProblems);
+  const problems = [...await ev(page, fitProblems), ...await ev(page, textProblems)];
   t.check(`${size} ${state}: fits`, problems.length === 0, JSON.stringify(problems).slice(0, 800));
   if (stopSamples) {
     const rect = await ev(page, getStopRect);
@@ -361,6 +540,13 @@ for (const [size, prof] of SIZES) {
     await ev(page, () => { const s = document.getElementById("btnStop"); if (s) s.click(); });
     await sleep(600);
     await check(page, size, "cut-stopped", stopSamples);
+    // r13: Unlock (alarm / E-stop banner) is well clear of STOP — at least 300 px away, so one can't be hit for the other.
+    const gap = await ev(page, () => {
+      const st = document.getElementById("btnStop").getBoundingClientRect();
+      return ["btnUnlock", "btnUnlock2"].map((id) => document.getElementById(id)).filter((b) => b && b.getBoundingClientRect().width > 0)
+        .map((b) => { const r = b.getBoundingClientRect(); const dx = Math.max(0, st.left - r.right, r.left - st.right), dy = Math.max(0, st.top - r.bottom, r.top - st.bottom); return { id: b.id, d: Math.round(Math.hypot(dx, dy)) }; });
+    });
+    t.check(`${size} cut-stopped: Unlock is clear of STOP`, gap.length > 0 && gap.every((g) => g.d >= 300), JSON.stringify(gap));
   } else {
     await ev(page, () => window.plasmaTest.goStep(4));
     await sleep(300);
@@ -379,6 +565,25 @@ for (const [size, prof] of SIZES) {
   });
   await sleep(400);
   await check(page, size, "machine-setup", stopSamples);
+  // r13: every Machine setup tab (the panel must not be empty, nothing on top of anything)
+  for (const tab of ["edges", "motors", "torch", "controller"]) {
+    await ev(page, (tab) => { const b = document.querySelector(`#setupView [data-setup-tab="${tab}"]`); if (b) b.click(); }, tab);
+    await sleep(300);
+    await check(page, size, "machine-setup-" + tab, stopSamples);
+  }
+  // Signed out (not an admin), the Controller tab explains itself instead of showing an empty panel.
+  await ev(page, async () => { try { await window.plasmaTest.account.signOut(); } catch (e) {} window.plasmaTest.refresh(); });
+  await ev(page, () => { const T = window.plasmaTest; T.showScreen("cut", { force: true }); const tab = document.querySelector('.tab[data-tab="setup"], #btnBarSetup'); if (tab) tab.click(); });
+  await sleep(300);
+  await ev(page, () => { const b = document.querySelector('#setupView [data-setup-tab="controller"]'); if (b) b.click(); });
+  await sleep(300);
+  const notAdmin = await ev(page, () => {
+    const pane = document.querySelector('#setupView .setup-pane[data-setup-pane="controller"]');
+    const r = pane && pane.getBoundingClientRect();
+    return { admin: document.body.classList.contains("is-admin"), pane: !!(r && r.width > 0 && r.height > 0), text: pane ? pane.innerText.trim().slice(0, 60) : "" };
+  });
+  t.check(`${size} machine-setup-controller-not-admin: panel says why it is empty`, !notAdmin.admin && notAdmin.pane && notAdmin.text.length > 10, JSON.stringify(notAdmin));
+  await check(page, size, "machine-setup-controller-not-admin", stopSamples);
 
   // r13: STOP stays the same size and place on every screen where it is shown (within 2 px).
   if (stopSamples.length) {
