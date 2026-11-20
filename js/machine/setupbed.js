@@ -46,6 +46,12 @@ export function paintSetupHomeNote() {
   if (lab) lab.title = full;
 }
 
+// A canvas text's box (CSS px, before any transform) for the current font, align and baseline.
+function textBox(ctx, text, x, y) {
+  const m = ctx.measureText(text);
+  return { l: x - m.actualBoundingBoxLeft, r: x + m.actualBoundingBoxRight, t: y - m.actualBoundingBoxAscent, b: y + m.actualBoundingBoxDescent };
+}
+
 const SETUP_TABS = ["edges", "motors", "torch", "controller"];
 export function setSetupTab(name) {
   const tab = SETUP_TABS.includes(name) ? name : "edges";
@@ -148,6 +154,7 @@ export function drawSetupBed() {
     ? "Home 0,0 — machine thinks it is here"
     : "Controller 0,0 (power-up — home not set)";
   ctx.fillText(homeLabel, hx + hxOff, hy + hyOff);
+  const homeBox = textBox(ctx, homeLabel, hx + hxOff, hy + hyOff);
   ctx.restore();
 
   const mp = S.status && S.status.MPos;
@@ -160,7 +167,17 @@ export function drawSetupBed() {
     ctx.textAlign = tx < w * 0.55 ? "left" : "right";
     ctx.textBaseline = ty < h * 0.5 ? "top" : "bottom";
     const lx = tx < w * 0.55 ? 16 : -16, ly = ty < h * 0.5 ? 18 : -18;
-    ctx.fillText(`Torch  X ${fmt(mp[0])}  Y ${fmt(mp[1])}  Z ${fmt(mp[2])} mm`, tx + lx, ty + ly);
+    const torchLabel = `Torch  X ${fmt(mp[0])}  Y ${fmt(mp[1])}  Z ${fmt(mp[2])} mm`;
+    // r13: never on top of the Home 0,0 label (the torch is often parked at home): step below or above it.
+    let [px, py] = [tx + lx, ty + ly];
+    const hit = (b, c) => Math.min(b.r, c.r) - Math.max(b.l, c.l) > 0 && Math.min(b.b, c.b) - Math.max(b.t, c.t) > 0;
+    if (hit(textBox(ctx, torchLabel, px, py), homeBox)) {
+      const below = ctx.textBaseline === "top" ? homeBox.b + 4 : homeBox.b + 4 + (textBox(ctx, torchLabel, 0, 0).b - textBox(ctx, torchLabel, 0, 0).t);
+      const above = ctx.textBaseline === "top" ? homeBox.t - 4 - (textBox(ctx, torchLabel, 0, 0).b - textBox(ctx, torchLabel, 0, 0).t) : homeBox.t - 4;
+      const fitsBelow = (ctx.textBaseline === "top" ? below + 16 : below) <= h - 2;
+      py = fitsBelow ? below : above;
+    }
+    ctx.fillText(torchLabel, px, py);
     ctx.restore();
   }
   const torchPx = mp ? [X(toView(mp[0], mp[1])[0]), Y(toView(mp[0], mp[1])[1])] : null;
