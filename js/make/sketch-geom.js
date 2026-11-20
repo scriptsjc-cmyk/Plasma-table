@@ -225,25 +225,50 @@ export class GeomMethods {
     // Make a part: a separate hole item that sits in this host travels with it.
     return this.items.filter((o) => o !== host && this.isHole(o) && (this.hostPart(o) || this.hostOf(o)) === host);
   }
-  // Shrink a bolt-circle (or similar) so it fits inside the host plate with an edge gap (C15).
+  // Shrink a bolt-circle or corner-hole pattern so it fits inside the host plate with an edge gap (C15, F4).
   fitPatternToHost(it, host) {
-    if (!it || !host || it.type !== "boltcircle") return true;
+    if (!it || !host) return true;
+    if (it.type !== "boltcircle" && it.type !== "cornerholes") return true;
     const hb = this.boxOf(host);
     if (!hb) return true;
     const w = hb[2] - hb[0], h = hb[3] - hb[1];
     const hole = Math.max(0, Number(it.p.hole) || 0);
     const gap = Math.max(5, hole * 0.5);
-    const maxPcd = Math.max(0, Math.min(w, h) - hole - 2 * gap);
-    const cur = Number(it.p.pcd) || 0;
-    if (cur > maxPcd + 0.05) {
-      if (maxPcd < hole + 1) {
-        this.onMessage("That ring of holes does not fit on this plate. Make the plate bigger or the holes smaller.");
-        return false;
+    if (it.type === "boltcircle") {
+      const maxPcd = Math.max(0, Math.min(w, h) - hole - 2 * gap);
+      const cur = Number(it.p.pcd) || 0;
+      if (cur > maxPcd + 0.05) {
+        if (maxPcd < hole + 1) {
+          this.onMessage("That ring of holes does not fit on this plate. Make the plate bigger or the holes smaller.");
+          return false;
+        }
+        it.p.pcd = Math.round(maxPcd * 10) / 10;
+        this.onMessage("Ring Ø set to " + it.p.pcd + " mm so it fits on the plate with a " + Math.round(gap) + " mm edge gap.");
       }
-      it.p.pcd = Math.round(maxPcd * 10) / 10;
-      this.onMessage("Ring Ø set to " + it.p.pcd + " mm so it fits on the plate with a " + Math.round(gap) + " mm edge gap.");
+      return true;
     }
+    // Corner holes (4): default the centre-to-centre size from the part, inset from the edges.
+    const maxW = Math.max(0, w - hole - 2 * gap);
+    const maxH = Math.max(0, h - hole - 2 * gap);
+    if (maxW < 0.5 || maxH < 0.5) {
+      this.onMessage("Those corner holes do not fit on this part. Make the part bigger or the holes smaller.");
+      return false;
+    }
+    it.p.w = Math.round(maxW * 10) / 10;
+    it.p.h = Math.round(maxH * 10) / 10;
+    this.onMessage("Corner holes set to " + it.p.w + " × " + it.p.h + " mm centre-to-centre, in from the edges.");
     return true;
+  }
+  holePlacementWhy(it, host) {
+    if (!it || !host) return "That hole could not be placed on the part.";
+    const hb = this.boxOf(host), b = this.boxOf(it);
+    if (!hb || !b) return "That hole could not be placed on the part.";
+    const hole = Math.max(Number(it.p.hole) || 0, Number(it.p.d) || 0, b[2] - b[0], b[3] - b[1]);
+    const pw = hb[2] - hb[0], ph = hb[3] - hb[1];
+    if (hole > Math.min(pw, ph) + 0.05) {
+      return "That hole is bigger than the solid part of the shape. Make the hole smaller or the part bigger.";
+    }
+    return "Those holes sit outside the part. Move them in from the edges, or make the part bigger.";
   }
   holeOwner(it) {
     if (!this.layout || !this._holes || !it || !this._holes.has(it.id) || !this.isHole(it)) return null;

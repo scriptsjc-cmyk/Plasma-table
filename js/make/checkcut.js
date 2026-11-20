@@ -127,7 +127,7 @@ function renderGroups(groups) {
   const title = { error: "Must fix", warn: "Check these", info: "Notes", ok: "OK" };
   const used = new Set();
   let html = "";
-  const item = (g) => `<li class="${g.level || ""}" data-gi="${groups.indexOf(g)}"><b>${g.n || ""}</b><span>${g.text}</span></li>`;
+  const item = (g) => `<li class="${g.level || ""}" data-gi="${groups.indexOf(g)}"><b>${g.n || ""}</b><span>${g.text}</span> <button type="button" class="small showme">Show me</button></li>`;
   for (const level of order) {
     const list = groups.filter((g) => (g.level || "info") === level);
     if (!list.length) continue;

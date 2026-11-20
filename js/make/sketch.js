@@ -164,11 +164,16 @@ export class Sketch {
       this.onMessage("A hole smaller than 2 mm will not cut (and may not show on the drawing). Use at least 2 mm, or bigger than the kerf.");
       return;
     }
-    if (host && it.type === "boltcircle") this.fitPatternToHost(it, host);
+    if (host && (it.type === "boltcircle" || it.type === "cornerholes")) {
+      if (this.fitPatternToHost(it, host) === false) {
+        this.past.pop();
+        return;
+      }
+    }
     this.items.push(it);
     if (hole && host) {                                                  // holes drop into the middle of the part (or the solid spot nearest it, e.g. beside a ring's bore)
       const ok = this.placeHoleIn(it, host);
-      if (!ok && !quiet) this.onMessage("That hole is bigger than the solid part of the shape, or it falls off the plate. Make the hole smaller or the part bigger.");
+      if (!ok && !quiet) this.onMessage(this.holePlacementWhy(it, host));
     } else {
       const b = this.allBoxExcept([it]);
       if (b) { it.x = Math.round(b[2] + 15); it.y = Math.round(b[1]); }
