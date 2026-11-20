@@ -244,14 +244,17 @@ function drawBg(sk, ctx, S, C, w, h) {
   ctx.textAlign = "right";
   ctx.textBaseline = "top";
   // Top-right of the sheet, so it does not cover the corner mark at the top-left.
-  const title = `${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`;
-  ctx.fillText(title, Math.max(8, sr - 6), Math.max(4, st + 6));
-  boxesAdd(cv, textBox(ctx, title, Math.max(8, sr - 6), Math.max(4, st + 6)));
-  // part numbers are drawn later (drawTop) at each part's centre: keep earlier labels off them too
+  // part numbers are drawn later (drawTop) at each part's centre: keep the labels drawn here off them
   for (const it of sk.items) {
     const b = sk.boxOf(it), [px, py] = S((b[0] + b[2]) / 2, (b[1] + b[3]) / 2);
     boxesAdd(cv, { l: px - 10, r: px + 10, t: py - 10, b: py + 10, part: true });
   }
+  const title = `${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`;
+  const tx = Math.max(8, sr - 6);
+  let ty = Math.max(4, st + 6);
+  for (let k = 0; k < 6 && hitsAny(cv, textBox(ctx, title, tx, ty)); k++) ty += 18;   // step down past a part number
+  ctx.fillText(title, tx, ty);
+  boxesAdd(cv, textBox(ctx, title, tx, ty));
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   const parked = sk.items.filter((it) => sk.boxOf(it)[0] >= sheet.w + 20);
