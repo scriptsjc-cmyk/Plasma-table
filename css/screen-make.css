@@ -2114,3 +2114,57 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     border-radius: 999px;
   }
 }
+
+/* r13 #7–9: Make Simple size form — title on its own row, a 2-column field grid at
+   full card width, one-line labels (full name in the tooltip), Turn it / Add a hole
+   side by side, and "← Templates" styled like the other back buttons. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.beginner[data-screen="make"] #shapeForm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  body.beginner[data-screen="make"] #shapeForm > .selhead { margin: 0; }
+  body.beginner[data-screen="make"] #srcShape #shapeForm .grid2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+    width: 100%;
+  }
+  body.beginner[data-screen="make"] #shapeForm .grid2 > label { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  body.beginner[data-screen="make"] #shapeForm .plabel {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+  }
+  body.beginner[data-screen="make"] #shapeForm .grid2 input,
+  body.beginner[data-screen="make"] #shapeForm .grid2 select { width: 100%; min-width: 0; min-height: 34px; height: 34px; }
+  body.beginner[data-screen="make"] #srcShape .skbtns.bigbtns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  body.beginner[data-screen="make"] #srcShape .skbtns.bigbtns button {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    font-size: 15px;
+    margin: 0;
+  }
+  body.beginner[data-screen="make"] #srcShape .skbtns.bigbtns button[data-sk="remove"] { grid-column: 1 / -1; min-height: 32px; }
+  body.beginner[data-screen="make"] #bgChange {
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: var(--r);
+    align-self: flex-start;
+  }
+  body.beginner[data-screen="make"] #bgChange::before {
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+}

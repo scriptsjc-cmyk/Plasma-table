@@ -124,9 +124,9 @@ function paramField(it, param) {
   const val = it.p[k];
   if (meta && meta.type === "select") {
     const opts = (meta.options || []).map((o) => `<option value="${esc(String(o.v))}"${String(o.v) === String(val) ? " selected" : ""}>${esc(o.l)}</option>`).join("");
-    return `<label>${esc(label)}<select data-p="${esc(k)}" data-psel="1">${opts}</select></label>`;
+    return `<label><span class="plabel" title="${esc(label)}">${esc(label)}</span><select data-p="${esc(k)}" data-psel="1">${opts}</select></label>`;
   }
-  return `<label>${esc(label)}<input type="number" step="any" min="0" inputmode="decimal" data-p="${esc(k)}" value="${esc(String(val))}"></label>`;
+  return `<label><span class="plabel" title="${esc(label)}">${esc(label)}</span><input type="number" step="any" min="0" inputmode="decimal" data-p="${esc(k)}" value="${esc(String(val))}"></label>`;
 }
 function extraFormHtml(it, sh) {
   let html = "";
