@@ -110,7 +110,9 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
     grid-template-columns: 1fr 1fr;
     gap: 6px;
   }
-  body.laptop-ui #setupView .lamp { padding: 6px 8px; }
+  /* Keep room on the left for the lamp dot so it never sits on the input name. */
+  body.laptop-ui #setupView .lamp { padding: 6px 8px 6px 30px; }
+  body.laptop-ui #setupView .lamps.grid .lamp::before { left: 9px; top: 8px; width: 13px; height: 13px; }
   body.laptop-ui #setupView .lamp span { font-size: var(--fs-xs); }
   body.laptop-ui #setupView #log { max-height: 120px; overflow: hidden; }
 }
@@ -258,4 +260,24 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
   body.laptop-ui #setupView .status2 span { display: inline; font-size: var(--fs-s); }
   body.laptop-ui #setupView .status2 span::after { content: ":"; }
   body.laptop-ui #setupView .status2 b { font-size: var(--fs-s); }
+}
+
+/* r13 done-when: the Torch & sensors tab fits (Inputs and Tests both whole) down to 1280x600.
+   Smaller heading, tighter lamps (dot kept clear of the name), tighter demo buttons on short screens. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] h2 { font-size: var(--fs-m); margin: 0 0 4px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .card > p { margin: 4px 0; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .lamps.grid { gap: 4px 6px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .lamp { padding: 4px 8px 4px 30px; gap: 0; line-height: 1.25; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .lamps.grid .lamp::before { top: 7px; }
+  body.laptop-ui #setupView #demoInputs { margin-top: 6px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .card > .row { margin: 0 0 4px; }
+}
+@media (min-width: 1280px) and (max-height: 700px) and (hover: hover) and (pointer: fine) {
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .card,
+  body.laptop-ui #setupView .setup-pane .card:has(#btnTorchTest) { padding: 8px 10px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .lamp { padding: 2px 6px 2px 26px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .lamps.grid .lamp::before { left: 7px; top: 5px; }
+  body.laptop-ui #setupView #demoInputs { margin-top: 4px; }
+  body.laptop-ui #setupView #demoInputs button { min-height: 34px; padding-top: 4px; padding-bottom: 4px; }
 }
