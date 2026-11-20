@@ -6,10 +6,26 @@ import { $ , esc } from "../core/dom.js";
 import { S } from "../core/state.js";
 import { showSource } from "./useshape.js";
 import { getPrefs, savePrefs } from "../core/prefs.js";
-import { pageSizeFor, slicePage, paintPager, bindPager, bindPagerKeys } from "../ui/pager.js";
+import { slicePage, paintPager, bindPager, bindPagerKeys } from "../ui/pager.js";
 
 let cat = "all";
 let page = 1;
+
+const PB_PAGE = { minW: 140, minH: 128, gap: 10, fallback: 8 };
+
+function gridPageSize(grid) {
+  if (!grid) return PB_PAGE.fallback;
+  const r = grid.getBoundingClientRect();
+  const s = getComputedStyle(grid);
+  const padX = (parseFloat(s.paddingLeft) || 0) + (parseFloat(s.paddingRight) || 0);
+  const padY = (parseFloat(s.paddingTop) || 0) + (parseFloat(s.paddingBottom) || 0);
+  const gap = parseFloat(s.rowGap || s.columnGap || s.gap) || PB_PAGE.gap;
+  const w = Math.max(0, r.width - padX), h = Math.max(0, r.height - padY);
+  if (w < 8 || h < 8) return PB_PAGE.fallback;
+  const cols = Math.max(1, Math.floor((w + gap) / (PB_PAGE.minW + gap)));
+  const rows = Math.max(1, Math.floor((h + gap) / (PB_PAGE.minH + gap)));
+  return Math.max(1, cols * rows);
+}
 
 export function openPresetBrowser() {
   const el = $("presetBrowser");
@@ -59,20 +75,20 @@ function renderPresetBrowser() {
   const list = ids.map((id) => presetOrShape(id) || PRESET_SHAPES.find((s) => s.id === id)).filter(Boolean)
     .filter((s) => !q || matchesQuery((s.name + " " + (s.tip || "") + " " + s.id + " " + (s.aka || "")), q));
   const empty = cat === "favs" ? "Star parts to keep them here." : cat === "recent" ? "Parts you pick will show up here." : `No parts match “${esc(q)}”.`;
-  const per = pageSizeFor(grid, { minW: 128, minH: 108, gap: 10, fallback: 8 });
+  const per = gridPageSize(grid);
   const sliced = slicePage(list, page, per);
   page = sliced.page;
   grid.innerHTML = sliced.items.length
     ? sliced.items.map((s) => {
         const on = favs.includes(s.id);
-        return `<div class="pb-tilewrap"><button type="button" class="pb-tile" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 96, 72)}<span class="pb-name">${esc(s.name)}</span></button><button type="button" class="pb-fav${on ? " on" : ""}" data-pbfav="${esc(s.id)}" aria-pressed="${on ? "true" : "false"}" title="${on ? "Remove from favourites" : "Add to favourites"}" aria-label="${on ? "Remove from favourites" : "Add to favourites"}">${on ? "★" : "☆"}</button></div>`;
+        return `<div class="pb-tilewrap"><button type="button" class="pb-tile" data-shape="${esc(s.id)}" title="${esc(s.tip || s.name)}">${shapeThumb(s, 96, 72)}<span class="pb-name" title="${esc(s.name)}">${esc(s.name)}</span></button><button type="button" class="pb-fav${on ? " on" : ""}" data-pbfav="${esc(s.id)}" aria-pressed="${on ? "true" : "false"}" title="${on ? "Remove from favourites" : "Add to favourites"}" aria-label="${on ? "Remove from favourites" : "Add to favourites"}">${on ? "★" : "☆"}</button></div>`;
       }).join("")
     : `<p class="muted">${empty}</p>`;
   paintPager($("pbPage"), sliced, `Page ${sliced.page} of ${sliced.pages}`);
   if (!list.length) { const bar = $("pbPage"); if (bar) bar.hidden = true; }
   // Measure after layout so the first open uses a real page size, not the fallback.
   requestAnimationFrame(() => {
-    const again = pageSizeFor(grid, { minW: 128, minH: 108, gap: 10, fallback: 8 });
+    const again = gridPageSize(grid);
     if (again !== per) renderPresetBrowser();
   });
 }
@@ -124,7 +140,7 @@ export function bindPresetBrowser() {
   if (grid && !grid._pbRo && typeof ResizeObserver !== "undefined") {
     let last = 0;
     grid._pbRo = new ResizeObserver(() => {
-      const next = pageSizeFor(grid, { minW: 128, minH: 108, gap: 10, fallback: 8 });
+      const next = gridPageSize(grid);
       if (next !== last) { last = next; renderPresetBrowser(); }
     });
     grid._pbRo.observe(grid);

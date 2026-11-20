@@ -1866,12 +1866,22 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search { display: none !important; }
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #qbMorePop .qb-search { display: flex !important; }
   .presetbrowser .pbcats {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    align-content: start;
-    gap: 4px;
+    display: flex !important;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 8px 8px;
+    overflow: hidden;
   }
-  .presetbrowser .pbcats button { min-height: 24px; font-size: 11px; padding: 0 6px; }
+  .presetbrowser .pbcats button {
+    min-height: 0;
+    flex: 1 1 0;
+    max-height: 36px;
+    font-size: 12px;
+    padding: 0 8px;
+  }
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
@@ -2029,39 +2039,78 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 }
 
 
-/* r13: favourite star sits inside the card; category labels stay on one line. */
+/* r13: fill the preset grid from its laid-out size; star in a reserved corner;
+   categories are a one-line sidebar. */
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  .presetbrowser .pbgrid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    overflow: hidden;
+    align-content: stretch;
+    grid-auto-rows: minmax(0, 1fr);
+  }
   .presetbrowser .pbcats button {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: left;
     justify-content: flex-start;
+    width: 100%;
   }
   .presetbrowser .pb-tilewrap {
-    display: block;
-    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 28px;
+    height: 100%;
     min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--line, #c8c8c8);
+    border-radius: 12px;
+    background: var(--card, #fff);
   }
   .presetbrowser .pb-tile {
+    grid-column: 1;
+    grid-row: 1;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    min-height: 108px;
+    align-items: center;
+    justify-content: center;
+    width: auto;
     height: 100%;
-    padding: 8px 8px 8px 8px;
+    min-height: 0;
+    padding: 6px 4px 6px 8px;
+    gap: 4px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .presetbrowser .pb-tile svg,
+  .presetbrowser .pb-tile img {
+    width: auto;
+    height: auto;
+    max-width: 96px;
+    max-height: 72px;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .presetbrowser .pb-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
   .presetbrowser .pb-fav {
-    position: absolute;
-    top: 4px;
-    right: 4px;
+    grid-column: 2;
+    grid-row: 1;
+    position: static;
+    align-self: start;
     z-index: 2;
     width: 28px;
     min-width: 28px;
     height: 28px;
-    margin: 0;
+    min-height: 28px;
+    margin: 4px 4px 0 0;
     border: 0;
-    background: color-mix(in srgb, var(--card, #fff) 88%, transparent);
+    background: transparent;
     border-radius: 999px;
   }
 }
