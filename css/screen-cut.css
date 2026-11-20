@@ -2215,3 +2215,10 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="4"] #restartBox.hidden ~ #doneActions .done-continue { display: none; }
   body[data-screen="cut"][data-step="4"] #doneInfo { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
 }
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.app-shell[data-screen="cut"][data-step="3"] #playRow { display: none; }
+  body[data-screen="cut"][data-step="1"] #advCut:not([open]) > *:not(summary) { display: none !important; }
+  body[data-screen="cut"][data-step="1"] #speedBox .speedends,
+  body[data-screen="cut"][data-step="1"] #speedBox #spNote { display: none; }
+}

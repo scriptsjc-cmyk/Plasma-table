@@ -1782,3 +1782,62 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     flex: 1 1 auto;
   }
 }
+
+/* r12: keep the Advanced make header on one row */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="make"] .topbar #makeBar {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow: visible;
+  }
+  body[data-screen="make"] .topbar #makeBar > h1 { display: none; }
+  body[data-screen="make"] .topbar #makeBar #qbPinned button span,
+  body[data-screen="make"] .topbar #makeBar #qbPinned button kbd { display: none; }
+  body[data-screen="make"] .topbar #makeBar #qbPinned button {
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+  }
+  body[data-screen="make"] .topbar #makeBar .sktools button {
+    min-height: 36px;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+  body.pro-mode[data-screen="make"] #srcShape .varbox h4 { margin: 0 0 4px; }
+  body.pro-mode[data-screen="make"] #srcShape .tip { display: none; }
+}
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  .presetbrowser .pbcats button { min-height: 28px; font-size: 12px; padding: 0 8px; }
+  .presetbrowser .pb-tilewrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 32px;
+    align-items: start;
+    gap: 0;
+  }
+  .presetbrowser .pb-tile { grid-column: 1; grid-row: 1; min-height: 120px; }
+  .presetbrowser .pb-fav {
+    grid-column: 2;
+    grid-row: 1;
+    position: static;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    margin: 4px 0 0;
+  }
+}
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.beginner[data-screen="make"] #srcShape .skbtns.holeadd {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+  body.beginner[data-screen="make"] #srcShape .skbtns.holeadd button { min-height: 36px; }
+  body.beginner.bg-picked[data-screen="make"] #bgPick { overflow: hidden; max-height: 40px; }
+  body.beginner[data-screen="make"] #srcShape { overflow: hidden; }
+}
