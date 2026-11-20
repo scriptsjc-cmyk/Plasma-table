@@ -50,4 +50,10 @@ ck("STOP sits above the header in the layer scale", parseInt(varOf(light, "z-sto
   ck("STOP is the top layer: no dialog, numpad, popover or toast token is at or above the header", z.length > 7 && !over.length, over.join(", "));
 }
 
+// r13 section 4: !important only goes down. 456 before r13 section 4, 216 after the first removal pass. Lower IMPORTANT_MAX when you remove more.
+const IMPORTANT_MAX = 216;
+let important = 0;
+for (const f of fs.readdirSync(cssDir).filter((x) => x.endsWith(".css"))) important += (fs.readFileSync(cssDir + f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").match(/!important/g) || []).length;
+ck(`!important count does not rise (now ${important}, max ${IMPORTANT_MAX})`, important <= IMPORTANT_MAX, String(important));
+
 process.exit(t.done() ? 1 : 0);
