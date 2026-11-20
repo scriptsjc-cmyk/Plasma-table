@@ -100,7 +100,7 @@ body.shape-fs #jobStats, body.shape-fs #exportRow { display: none !important; }
 .exportrow { position: relative; }
 .exportpop { position: absolute; bottom: 100%; left: 0; z-index: var(--z-panel-pop); background: var(--well);
   border: 1px solid var(--line); border-radius: var(--r); padding: 10px; min-width: 240px; box-shadow: var(--shadow); }
-.exportpop.hidden { display: none !important; }
+.exportpop.hidden { display: none; }
 body.app-shell .previewDock { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
   padding: 4px 6px 2px; flex: none; border-top: 1px solid var(--line); background: var(--card); min-height: 32px; }
 body.app-shell .previewDock .fit, body.app-shell .previewDock .stats, body.app-shell .previewDock .exportrow { margin: 0; }
@@ -175,7 +175,7 @@ body.beginner .matline { font-size: var(--fs-l); margin: 0 0 10px; }
 body.beginner #materials button { min-height: 76px; font-size: var(--fs-xl); }
 body.beginner #thicknesses { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
 body.beginner #thicknesses button { min-height: 64px; font-size: var(--fs-l); }
-body.beginner #cutCheck2, body.beginner .step[data-step="2"] details, body.beginner .step[data-step="2"] .matpreset-wrap { display: none !important; }
+body.beginner #cutCheck2, body.beginner .step[data-step="2"] details, body.beginner .step[data-step="2"] .matpreset-wrap { display: none; }
 body.beginner .amps .big { font-size: var(--fs-readout-l); }
 body.beginner #btnZero { min-height: 72px; font-size: var(--fs-xl); }
 body.beginner #btnTrace { min-height: 56px; font-size: var(--fs-m); }
@@ -607,7 +607,7 @@ body.estop-latched .unlockwhy { display: block; flex: 0 1 220px; font-size: var(
    every overlay (numpad, dialogs), and the full-screen overlays start below the header. */
 body.machine-connected[data-screen="cut"] .topbar { z-index: var(--z-pin-header); }
 body.machine-connected[data-screen="cut"] .numpad,
-body.machine-connected[data-screen="cut"] .shapelib { top: var(--topbar-h, 56px) !important; }
+body.machine-connected[data-screen="cut"] .shapelib { top: var(--topbar-h, 56px); }
 /* ...and with it showing, the "Practice table" pill gives way (ellipsis) instead of running under it */
 body.short-land[data-screen="cut"] #topMenu #connPill { flex: 0 1 auto; min-width: 0; }
 .dimops button { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0; font-size: var(--fs-l); font-weight: 700; }
@@ -862,10 +862,10 @@ body.short-land .dimedit label { margin-bottom: 2px; }
                     checklist   |                 | Back / Start / Download
      The picture spans every row and each side card spans the rows it shares, so no card leaves a gap. */
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid {
-    grid-template-columns: var(--s3-cols, minmax(290px, 22vw) minmax(0, 1fr) minmax(340px, 27vw)) !important;
-    grid-template-rows: auto auto minmax(0, 1fr) auto !important; grid-template-areas: none !important; }
+    grid-template-columns: var(--s3-cols, minmax(290px, 22vw) minmax(0, 1fr) minmax(340px, 27vw));
+    grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: none; }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .stepPane,
-  body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) { display: contents !important; overflow: visible; }
+  body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) { display: contents; overflow: visible; }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane { grid-column: var(--s3-bed, 2); grid-row: 1 / 5; order: 0; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > * { min-width: 0; margin: 0; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .setupcard { min-height: 0; overflow: auto; overscroll-behavior: contain; }
@@ -977,9 +977,9 @@ body[data-screen="cut"] .topbar {
 }
 
 /* Show machine belongs on Setup and Cut, not on Part. */
-body[data-screen="cut"][data-step="1"] #showMachWrap { display: none !important; }
+body[data-screen="cut"][data-step="1"] #showMachWrap { display: none; }
 body[data-screen="cut"][data-step="3"] #showMachWrap,
-body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important; visibility: visible; pointer-events: auto; }
+body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex; visibility: visible; pointer-events: auto; }
 
 
 .cutstatus {
@@ -1072,7 +1072,7 @@ body[data-screen="cut"] .tabs { position: relative; }
 
 
 /* ---- r9: two-row Cut header; E-STOP spans both rows; no cut-tab row on Machine setup ---- */
-body[data-screen="cut"][data-tab="setup"] .tabs { display: none !important; }
+body[data-screen="cut"][data-tab="setup"] .tabs { display: none; }
 
 /* Cut header: on a phone the account row and STOP stay on one compact line,
    with the Cut / steps row underneath. On a laptop, E-STOP spans both rows. */
@@ -1184,7 +1184,7 @@ body[data-screen="cut"][data-step="4"] #showMachWrap.showmach {
   top: 8px;
   left: 8px;
   right: auto;
-  display: flex !important;
+  display: flex;
   align-items: center;
   gap: 4px;
   font-size: var(--fs-xs);
@@ -1206,7 +1206,7 @@ body[data-screen="cut"][data-step="4"] #showMachWrap.showmach input {
 /* r9 item 4: the Connected / Not connected pill stays visible on Cut and Machine setup.
    A phone on its side already has a tight one-row header (Back, state, TORCH, STOP);
    connection stays the USB control there, so the pill steps aside. */
-body[data-screen="cut"] #connPill { display: inline-flex !important; }
+body[data-screen="cut"] #connPill { display: inline-flex; }
 body.short-land[data-screen="cut"] #connPill { display: none !important; }
 
 /* Plasma etch amp-dial pause: same slot as runHelp so the laptop run panel doesn't grow. */
@@ -1228,7 +1228,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 /* ---- r10 laptop chrome: a flat reserved STOP, a quieter header ---- */
 @media (min-width: 900px) {
   body[data-screen="cut"] .tabs .tab,
-  body[data-screen="cut"] .cutbar-key { display: none !important; }
+  body[data-screen="cut"] .cutbar-key { display: none; }
 
   body:not(.short-land)[data-screen="cut"] #btnStop.estop,
   body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop {
@@ -1318,14 +1318,14 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 @media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid {
     grid-template-columns: var(--s3-cols, 300px minmax(0, 1fr) 380px) !important;
-    grid-template-rows: minmax(0, 1fr) auto auto !important;
+    grid-template-rows: minmax(0, 1fr) auto auto;
     grid-template-areas: none !important;
     gap: 12px !important;
     padding: 12px !important;
   }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .stepPane,
   body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) {
-    display: contents !important;
+    display: contents;
     overflow: visible;
   }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane {
@@ -1339,7 +1339,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > * { min-width: 0; margin: 0; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > h2,
-  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 { display: none !important; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 { display: none; }
 
   /* Left: Sheet & parts fills the column */
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #layoutCard {
@@ -1484,7 +1484,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp.on[data-in="estop"]::before { background: var(--alarm); }
   body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp.on[data-in="torch"]::before { background: var(--torch); }
   /* E-stop chip must stay visible and turn red when pressed */
-  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp[data-in="estop"] { display: inline-flex !important; }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp[data-in="estop"] { display: inline-flex; }
   body[data-screen="cut"][data-step="3"] #bedStartHelp { display: none; }
   body[data-screen="cut"][data-step="3"] #zeroState { display: none; }
   body[data-screen="cut"][data-step="3"] #originCard,
@@ -1621,14 +1621,14 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 
 
   /* TORCH OFF already lives in the lamp chips; keep TORCH ON in the header */
-  body[data-screen="cut"][data-step="3"] #torchPill.off { display: none !important; }
+  body[data-screen="cut"][data-step="3"] #torchPill.off { display: none; }
 
   /* Before you cut: one checklist; hide the old duplicate corner messages */
   body[data-screen="cut"][data-step="3"] #cutBarStart,
   body[data-screen="cut"][data-step="3"] #checkZero,
   body[data-screen="cut"][data-step="3"] #zeroWarn,
   body[data-screen="cut"][data-step="3"] #blockers,
-  body[data-screen="cut"][data-step="3"] #startWhy { display: none !important; }
+  body[data-screen="cut"][data-step="3"] #startWhy { display: none; }
   body[data-screen="cut"][data-step="3"] #checkCard > summary { padding: 6px 10px 4px; }
   body[data-screen="cut"][data-step="3"] #checkCard .checkmat { margin: 0; padding: 0 10px; }
   body[data-screen="cut"][data-step="3"] #beforeCut {
@@ -1788,7 +1788,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   }
   body[data-screen="cut"][data-step="3"] .previewDock > #qbWhy,
   body[data-screen="cut"][data-step="3"] .previewDock > #jobStats,
-  body[data-screen="cut"][data-step="3"] .previewDock > #exportRow { display: none !important; }
+  body[data-screen="cut"][data-step="3"] .previewDock > #exportRow { display: none; }
   body[data-screen="cut"][data-step="3"] .previewDock > #fit {
     position: static;
     flex: none;
@@ -1930,11 +1930,11 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 .conn-wrap { display: contents; }
 @media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
   body[data-screen="cut"] .conn-wrap { display: inline-flex; position: relative; align-items: center; gap: 6px; }
-  body.app-shell #demoAcctBar { display: none !important; }
+  body.app-shell #demoAcctBar { display: none; }
   #demoTag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 700; background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn); }
-  #demoTag.hidden { display: none !important; }
+  #demoTag.hidden { display: none; }
   .conn-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: var(--z-conn-menu); min-width: 180px; padding: 8px; background: var(--card, var(--c-white)); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 28px color-mix(in srgb, var(--c-black) 18%, transparent); display: flex; flex-direction: column; gap: 6px; }
-  .conn-menu.hidden, .conn-menu[hidden] { display: none !important; }
+  .conn-menu.hidden, .conn-menu[hidden] { display: none; }
   .conn-menu #btnDisconnect,
   .conn-menu #btnLinkMachine { min-height: 40px; width: 100%; font-size: var(--fs-s); margin: 0; }
   /* connPill stays visible; the wrap takes its place in the header flex */
@@ -1944,7 +1944,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
    The wrap must not hide the pill on the phone. */
 #demoTag { display: none; }
 @media not all and (min-width: 1200px), (max-height: 559px), (hover: none) {
-  #demoTag, #connMenu { display: none !important; }
+  #demoTag, #connMenu { display: none; }
 }
 
 /* Fit / zoom / picked-part tools belong on Setup only; never outsize STOP on Cut */
@@ -2361,7 +2361,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   }
   body[data-screen="cut"][data-step="3"] #playRow.hidden { display: none; }
   /* Start point options: only when connected, in the torch card, not over Check cut */
-  body:not(.machine-connected)[data-screen="cut"][data-step="3"] #btnOriginOpts { display: none !important; }
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] #btnOriginOpts { display: none; }
   body.machine-connected[data-screen="cut"][data-step="3"] .previewPane > #btnOriginOpts {
     position: absolute;
     right: 8px;
@@ -2683,7 +2683,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
    give Download G-code a clear outlined icon, and keep the jog pad inside the card. */
 @media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid {
-    grid-template-rows: minmax(0, 1fr) auto auto !important;
+    grid-template-rows: minmax(0, 1fr) auto auto;
     grid-auto-rows: auto;
   }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane {
