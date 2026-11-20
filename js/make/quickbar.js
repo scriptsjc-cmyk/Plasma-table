@@ -87,6 +87,7 @@ function paintPinnedTools(B, wrap, qb) {
 
 export function renderQuickBar() {
   const qb = $("quickBar"); if (!qb || !sketch) return;
+  if (screen() !== "make" && !S.shapeFs) { paletteQ = ""; if (moreOpen) toggleMore(false); }
   const on = screen() === "make" && S.src === "shape" && ((S.cur === 1 && isProMode()) || S.shapeFs);
   qb.classList.toggle("hidden", !on);
   const wrap = document.getElementById("quickBarWrap") || qb.closest(".scrollrow-wrap");
@@ -146,6 +147,7 @@ export function renderQuickBar() {
   const infoOf = (id) => toolInfo(id) || { icon: "", label: id, group: "Tools" };
   const addId = (id) => { const n = infoOf(id); parts.push(B(id, n.icon, n.label)); };
   if (q) {
+    parts.push(`<button type="button" id="qbFilterChip" class="qb-filter-chip" title="Clear the tool filter" aria-label="Clear filter">Showing: ${esc(q)} ×</button>`);
     for (const grp of grouped) {
       parts.push(`<div class="qb-group" role="heading" aria-level="3">${esc(grp.g)}</div>`);
       parts.push(...grp.items.map(([id, ic, lab]) => B(id, ic, lab)));
@@ -171,6 +173,8 @@ export function renderQuickBar() {
   const hadFocus = document.activeElement && (document.activeElement.id === "qbSearch" || document.activeElement.id === "qbMoreSearch");
   const focusId = hadFocus ? document.activeElement.id : "";
   qb.innerHTML = parts.join("");
+  const chip = qb.querySelector("#qbFilterChip");
+  if (chip) chip.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); paletteQ = ""; moreOpen = true; renderQuickBar(); });
   if (hadFocus) {
     const s = $(focusId) || $("qbSearch") || $("qbMoreSearch");
     if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
@@ -215,7 +219,7 @@ function bindQbRoving() {
 export function quickAction(a) {
   switch (a) {
     case "presets": openPresetBrowser(); break;
-    case "more": toggleMore(); break;
+    case "more": toggleMore(); return;
     case "customise": openToolbarCustom(); toggleMore(false); break;
     case "rect": case "disc": case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
       if (shapeDef(a)) sketch.add(a); else toast("That shape isn't available.", true); break;
@@ -393,9 +397,10 @@ export function bindQuickBar() {
     const b = e.target.closest("[data-qb]");
     if (!b) return;
     const id = b.dataset.qb;
+    if (id === "more") e.stopPropagation();
     if (Date.now() < (S.uiBlockUntil || 0) && id !== "undo" && id !== "redo") return;
     if (!b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(id);
-    if (id !== "more") toggleMore(false);
+    if (id !== "more") { paletteQ = ""; toggleMore(false); }
   });
   document.addEventListener("click", (e) => {
     if (!moreOpen) return;

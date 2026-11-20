@@ -1507,3 +1507,6 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     top: auto;
   }
 }
+
+.qb-filter-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 6px 0; padding: 4px 10px; min-height: 36px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-weak); color: var(--text); font-weight: 700; cursor: pointer; }
+.qb-filter-chip:hover { filter: brightness(1.04); }
