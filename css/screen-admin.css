@@ -76,6 +76,8 @@
 body.is-admin .admin-only { display: revert; }
 body.is-admin .card.admin-only { display: block; }
 body.is-admin button.admin-only { display: inline-flex; }
+/* Non-admins see why the Controller tab has no buttons instead of an empty panel. */
+body.is-admin .not-admin-only, body:not(.laptop-ui) #controllerAdminNote { display: none; }
 #advCut { margin: 12px 0 4px; }
 #advCut > summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; font-weight: 700; }
 /* round 5 look M3: Settings wording for the mode you are in (body[data-mode] is set on every screen by js/ui/mode.js) */
