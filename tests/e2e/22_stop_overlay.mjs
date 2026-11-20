@@ -38,8 +38,14 @@ const refresh = (page) => page.evaluate(() => window.plasmaTest.refreshGate());
   ck("r5 a real tap on STOP over the cover and the numpad latches the E-stop", await T(page, "window.plasmaTest.estopOn()"));
   await page.evaluate(() => { document.getElementById("numPad").classList.add("hidden"); window.plasmaTest.estopReset(); document.getElementById("btnUnlock").click(); }); await sleep(1200);
   for (const st of [{ state: "Run" }, { state: "Hold:0" }, { state: "Jog" }, { state: "Home" }, { state: "Alarm" }, { state: "Idle", torch: true }]) {
-    await page.evaluate((st) => { const S = window.plasmaTest.S; S.status = { ...S.status, state: "Idle", torch: false, ...st }; window.plasmaTest.refresh(); }, st);
-    const o = await overlayShown(page), c = await coverAt(page, "btnStop");
+    // Set the state and read the screen in one step: the practice table's own status reports (every few hundred ms)
+    // would otherwise put the state back to Idle between two separate page calls (seen as a random state failing).
+    const { o, c } = await page.evaluate((st) => {
+      const S = window.plasmaTest.S; S.status = { ...S.status, state: "Idle", torch: false, ...st }; window.plasmaTest.refresh();
+      const o = getComputedStyle(document.getElementById("turnOverlay")).display !== "none";
+      const e = document.getElementById("btnStop"), r = e.getBoundingClientRect(), t = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return { o, c: { w: r.width, h: r.height, top: t && (t.closest("#turnOverlay") ? "overlay" : (t.closest("#btnStop") ? "btnStop" : t.id || t.tagName)), shown: r.width > 0 } };
+    }, st);
     ck(`1a ${JSON.stringify(st)}: overlay hidden, STOP on top and big`, !o && c.top === "btnStop" && c.w >= 72 && c.h >= 72, JSON.stringify({ o, c }));
   }
   await page.evaluate(() => { const S = window.plasmaTest.S; S.status = { ...S.status, state: "Idle", torch: false }; window.plasmaTest.refresh(); });
