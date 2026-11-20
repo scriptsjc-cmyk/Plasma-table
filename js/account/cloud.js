@@ -89,13 +89,34 @@ export function fromAuthPayload(data, profile) {
     profile: profile || null,
   };
 }
+async function fetchProfileRows(userId) {
+  const q = "/rest/v1/profiles?id=eq." + encodeURIComponent(userId);
+  try {
+    return await authFetch(q + "&select=*");
+  } catch (e) {
+    // 400 is often a schema-cache miss after prefs was added, or a column select=* cannot serialise.
+    // Retry with a safe column list so login still works; prefs stay local until SQL is applied.
+    if (e && (e.status === 400 || e.status === 406 || e.status === 404)) {
+      try { return await authFetch(q + "&select=id,display_name,mode,role"); }
+      catch (e2) { return null; }
+    }
+    throw e;
+  }
+}
+function profileFromRow(p, sess) {
+  if (!p) return { id: sess.user.id, email: sess.user.email, display_name: "", mode: "beginner", role: "user" };
+  return { id: p.id || sess.user.id, email: sess.user.email, display_name: p.display_name || "", mode: p.mode === "pro" ? "pro" : "beginner", role: p.role === "admin" ? "admin" : "user" };
+}
 export async function loadCloudProfile() {
   await refreshIfNeeded();
   const sess = cloudSess();
   if (!sess || !sess.user) return null;
-  const rows = await authFetch("/rest/v1/profiles?id=eq." + encodeURIComponent(sess.user.id) + "&select=*");
+  let rows = null;
+  try { rows = await fetchProfileRows(sess.user.id); }
+  catch (e) { /* network / 401 after refresh: keep a usable profile so sign-in is not broken */ }
   const p = Array.isArray(rows) ? rows[0] : rows;
-  sess.profile = p ? { id: p.id, email: sess.user.email, display_name: p.display_name || "", mode: p.mode === "pro" ? "pro" : "beginner", role: p.role === "admin" ? "admin" : "user" } : null;
+  if (p) sess.profile = profileFromRow(p, sess);
+  else if (!sess.profile) sess.profile = profileFromRow(null, sess);
   if (p && profileRowHook) try { profileRowHook(p, sess.user.id); } catch (e) { /* prefs stay local */ }
   // The server's own answer wins over anything stored in this browser (supabase/b5-gating.sql). Until that SQL has been run the call
   // fails and we keep the old behaviour, remembered as "client-only" so the Admin panel can say so.
