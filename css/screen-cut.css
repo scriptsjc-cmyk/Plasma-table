@@ -956,7 +956,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="4"] #cutView .stepPane button { max-width: 300px; }
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button.xl, body[data-screen="cut"][data-step="4"] #cutView .stepPane button.xl { min-height: 48px; max-height: 56px; }
   body[data-screen="cut"][data-step="3"] #cutView #btnTrace { min-height: 44px; padding: 4px 10px; font-size: var(--fs-s); }
-  body[data-screen="cut"][data-step="4"] .runctl #btnPause { flex: 0 1 300px; min-height: 56px; }
+  body[data-screen="cut"][data-step="4"] .runctl #btnPause { flex: 0 1 240px; min-height: 56px; }   /* 240 x 56 stays smaller than the fixed 168 x 88 STOP */
 }
 
 
@@ -2397,10 +2397,10 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
    It no longer stretches down the two-row Cut header or grows with viewport width
    on Machine setup, so the operator's hand always goes to the same spot. */
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.app-shell:not(.short-land)[data-screen="cut"] .topbar,
-  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] .topbar,
-  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="setup"] .topbar,
-  body.app-shell:not(.short-land)[data-screen="make"].stop-needed .topbar {
+  body.app-shell:not(.short-land):not(.header-hidden)[data-screen="cut"] .topbar,
+  body.app-shell:not(.short-land):not(.header-hidden)[data-screen="cut"][data-tab="cut"] .topbar,
+  body.app-shell:not(.short-land):not(.header-hidden)[data-screen="cut"][data-tab="setup"] .topbar,
+  body.app-shell:not(.short-land):not(.header-hidden)[data-screen="make"].stop-needed .topbar {
     padding-top: 4px;
     padding-bottom: 4px;
     position: relative;
