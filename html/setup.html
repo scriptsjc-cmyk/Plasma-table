@@ -2,11 +2,12 @@
 <section id="setupView" class="view hidden">
   <div id="setupCards">
   <div class="card">
-    <h1>Machine edges (crash protection)</h1>
+    <h1>Usable machine edges (crash protection)</h1>
     <div class="grid2 status2">
       <div><span>Position</span><b id="refState" class="todo">Unknown</b></div>
       <div><span>Edges</span><b id="limState" class="todo">Not set</b></div>
     </div>
+    <p class="muted small">These are the usable edges — the area the torch can actually reach. That can be a little smaller than the bed size (the rails' travel, for example 1300 × 800 mm).</p>
     <p class="muted small" id="safetyHint"></p>
     <ol class="wizard" id="wizard">
       <li id="wz1"><p><b>Set home (0,0).</b> This table has no limit switches, so it cannot find home by itself. Jog the torch to your marked home corner, raised right up, then press “Set this as home (0,0)”. The motors do not move. The bed picture marks that corner.</p>

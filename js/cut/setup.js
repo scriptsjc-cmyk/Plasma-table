@@ -14,6 +14,7 @@ import { initNestUi, paintNest, nestNow } from "./nestui.js";
 import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
 import { MACH, drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
 import { drawAxisHints, bedViewRotated } from "./bedview.js";
+import { drawingSheet } from "../core/prefs.js";
 
 let H = null;
 const $ = (id) => document.getElementById(id);
@@ -39,18 +40,36 @@ function savedEdgeSize() {
 }
 function reachableSize() { return savedEdgeSize(); }
 function defaultSheet() {
-  const t = H.S.cfg && H.S.cfg.travel_mm, r = reachableSize();
+  const t = H.S.cfg && H.S.cfg.travel_mm;
+  const ds = drawingSheet(t);
+  if (ds && ds.w >= 50 && ds.h >= 50) { sheet.w = ds.w; sheet.h = ds.h; return; }
+  const r = reachableSize();
   if (r && t) { sheet.w = Math.min(t.x, r.x); sheet.h = Math.min(t.y, r.y); }
   else if (r) { sheet.w = r.x; sheet.h = r.y; }
   else if (t) { sheet.w = t.x; sheet.h = t.y; }
 }
 function sheetVsEdgesNote() {
   const r = reachableSize();
-  if (!r) return "";
-  if (sheet.w > r.x + 0.5 || sheet.h > r.y + 0.5) {
-    return ` The sheet (${r1(sheet.w)} × ${r1(sheet.h)} mm) is larger than the reachable area (${r1(r.x)} × ${r1(r.y)} mm). That's fine — only the cut path has to fit inside the machine edges.`;
+  const t = H.S && H.S.cfg && H.S.cfg.travel_mm;
+  let msg = " This is the material sheet size, not the machine bed or its usable edges.";
+  if (r) {
+    msg += ` Usable edges (the area the torch can reach) are ${r1(r.x)} × ${r1(r.y)} mm.`;
+    if (sheet.w > r.x + 0.5 || sheet.h > r.y + 0.5) {
+      msg += " The sheet is larger than that — that's fine: only the cut path has to fit inside the machine edges.";
+    }
+  } else if (t) {
+    msg += ` Bed size (travel) is ${r1(t.x)} × ${r1(t.y)} mm until you set usable edges in Machine setup.`;
   }
-  return "";
+  return msg;
+}
+function parkDidntFit(sk, group, rowY) {
+  const boxes = group.map((i) => sk.boxOf(i));
+  const minx = Math.min(...boxes.map((b) => b[0]));
+  const miny = Math.min(...boxes.map((b) => b[1]));
+  const h = Math.max(...boxes.map((b) => b[3])) - miny;
+  const x0 = sheet.w + 40;
+  for (const it of group) { it.x = r1(it.x + x0 - minx); it.y = r1(it.y + rowY - miny); }
+  return rowY + h + 12;
 }
 const saveSheet = () => { try { localStorage.setItem(KEY, JSON.stringify(sheet)); } catch { /* ignore */ } };
 // the usable area as the packer and the checks see it: the sheet (or the saved remnant shape), clipped to the machine's work area
@@ -220,6 +239,14 @@ function drawBg(sk, ctx, S, C, w, h) {
   const sl = Math.min(x0, x1), st = Math.min(y0, y1);
   ctx.textAlign = "left";
   ctx.fillText(`${sheet.remnant ? "Remnant " + sheet.remnant.name + " " : "Sheet "}${r1(sheet.w)} × ${r1(sheet.h)} mm${mat}`, Math.max(4, sl + 6), Math.max(14, st + 16));
+  const parked = sk.items.filter((it) => sk.boxOf(it)[0] >= sheet.w + 20);
+  if (parked.length) {
+    const [lx, ly] = S(sheet.w + 40, 0);
+    ctx.fillStyle = "#b42318";
+    ctx.font = "bold 12px Barlow, system-ui";
+    ctx.textAlign = "left";
+    ctx.fillText("Didn't fit", lx, ly - 10);
+  }
   const wa = workArea();
   // When Show machine is on, the table border already marks the work area.
   if (wa && !machineVisible()) {
@@ -361,14 +388,19 @@ function arrangeAll() {
   // park everything far away, then place one by one
   const far = sheet.w + sheet.h + 5000;
   for (const g of groups) for (const it of g) { it.x += far; it.y += far; }
-  let fail = 0;
+  let fail = 0, parkedY = 0;
   for (const g of groups) {
     const b0 = g.map((i) => sk.boxOf(i)), bx = Math.min(...b0.map((b) => b[0]));
-    if (!placeFree(sk, g)) { fail++; for (const it of g) { it.x -= far; it.y -= far; } }
+    if (!placeFree(sk, g)) {
+      fail++;
+      for (const it of g) { it.x -= far; it.y -= far; }
+      parkedY = parkDidntFit(sk, g, parkedY);
+    }
     void bx;
   }
   sk.commit(); sk.fitView(); paint();
-  H.toast(fail ? `${fail} part${fail > 1 ? "s" : ""} didn't fit on the sheet. Make the sheet bigger or remove some.` : "Parts arranged with the right gaps.", !!fail);
+  const total = groups.length, placed = total - fail;
+  H.toast(fail ? `${placed} of ${total} fitted. ${fail} didn't fit — they're in the “Didn't fit” row beside the sheet.` : "Parts arranged with the right gaps.", !!fail);
   void gap;
 }
 
@@ -457,7 +489,7 @@ const closeAdd = () => { $("addPartsDlg").classList.add("hidden"); H.S.uiBlockUn
 export function addToSheet(lists) {
   const sk = H.sketch(); if (!sk) return { added: 0, failed: 0 };
   sk.remember();
-  let added = 0, failed = 0, firstIds = [];
+  let added = 0, failed = 0, firstIds = [], parkedY = 0;
   for (const L of lists) {
     for (let q = 0; q < Math.max(0, L.qty | 0); q++) {
       const fresh = [];
@@ -469,7 +501,7 @@ export function addToSheet(lists) {
       }
       if (!fresh.length) continue;
       if (placeFree(sk, fresh)) { added++; firstIds.push(...fresh.map((i) => i.id)); }
-      else { failed++; for (const it of fresh) { it.x = r1(sheet.w + 10); it.y = 0; } }   // parked just off the sheet's right edge (red) so it can't be missed
+      else { failed++; parkedY = parkDidntFit(sk, fresh, parkedY); }
     }
   }
   sk.pick(firstIds.slice(0, 1)); sk.commit(); sk.onSelect(); sk.fitView();
@@ -565,7 +597,7 @@ function bind() {
     const total = lists.reduce((n, l) => n + l.qty, 0);
     if (!total) { H.toast("Choose at least one part (quantity 1 or more).", true); return; }
     const r = addToSheet(lists); closeAdd();
-    H.toast(r.failed ? `Added ${r.added}; ${r.failed} didn't fit on the sheet (shown red off the corner).` : `Added ${r.added} part${r.added === 1 ? "" : "s"} to the bed.`, !!r.failed);
+    H.toast(r.failed ? `${r.added} of ${r.added + r.failed} fitted. ${r.failed} didn't fit — they're in the “Didn't fit” row beside the sheet.` : `Added ${r.added} part${r.added === 1 ? "" : "s"} to the bed.`, !!r.failed);
     if (H.afterAdd) H.afterAdd(r);
   };
 }

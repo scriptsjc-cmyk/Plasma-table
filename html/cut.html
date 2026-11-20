@@ -95,7 +95,7 @@
         <details class="setupcard" id="layoutCard" open>
           <summary><b>Parts on the bed</b> <span id="layoutState" class="layoutstate"></span></summary>
           <div class="sheetrow">
-            <label>Sheet width <span class="unitin"><input id="sheetW" type="number" min="50" step="any" inputmode="decimal"> <span class="unit">mm</span></span></label>
+            <label>Sheet width (material) <span class="unitin"><input id="sheetW" type="number" min="50" step="any" inputmode="decimal"> <span class="unit">mm</span></span></label>
             <label>Height <span class="unitin"><input id="sheetH" type="number" min="50" step="any" inputmode="decimal"> <span class="unit">mm</span></span></label>
             <label>Clearance <span class="unitin"><input id="sheetClr" type="number" min="0" step="0.5" inputmode="decimal" value="2"> <span class="unit">mm</span></span></label>
           </div>
@@ -162,7 +162,7 @@
                 <p id="connectLockText" class="locknote">Or, to cut for real:</p>
                 <button type="button" id="btnLinkMachine" class="xl go">Link a machine</button>
               </div>
-              <p id="connectHelp" class="muted small">Works in Chrome or Edge on a computer. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as "Standard Serial over Bluetooth link"). Close the FluidNC installer or any other program using the port first.</p>
+              <p id="connectHelp" class="muted small">USB and Bluetooth need Chrome or Edge on a computer. Safari and Firefox can't talk to the table. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as "Standard Serial over Bluetooth link"). Close the FluidNC installer or any other program using the port first.</p>
             </div>
             <div class="row wrap homerow">
               <button class="do-home">⌂ Home</button>
