@@ -4,6 +4,7 @@ import { S } from "../core/state.js";
 import { $, esc, toast } from "../core/dom.js";
 import { cmd } from "../machine/access.js";
 import { loadJob } from "../core/hooks.js";
+import { syncCutPrefsToAccount } from "../core/prefs.js";
 
 const MAT_TIPS = {
   "Mild steel": "Mild steel: the easiest to get right. Start at the recommended speed and adjust 10% at a time.",
@@ -90,6 +91,7 @@ export function renderMaterials() {
     <p class="ampssrc muted small">Starting points from the PrimeWeld CUT60 chart (a close 60 A equivalent) and P-80 pierce-height notes. Values marked estimate are not in those charts — test on scrap.</p>
     ${r.note ? `<div class="ampsnote">⚠ ${esc(r.note)}</div>` : ""}`;
   try { localStorage.setItem("plasma.material", JSON.stringify({ m: S.material, t: S.thickness })); } catch (e) { /* ignore */ }
+  try { syncCutPrefsToAccount(); } catch (e) { /* ignore */ }
   renderSpeed();
   renderMatPreset();
 }
@@ -104,7 +106,7 @@ export function ampsNow() { const p = matchPreset(S.material, S.thickness); retu
 function savedSpeeds() { try { return JSON.parse(localStorage.getItem("plasma.speeds") || "{}"); } catch (e) { return {}; } }
 function savedSpeed() { return savedSpeeds()[speedKey()] || null; }
 export function saveSpeed(v) {
-  try { const all = savedSpeeds(); all[speedKey()] = v; localStorage.setItem("plasma.speeds", JSON.stringify(all)); } catch (e) { /* ignore */ }
+  try { const all = savedSpeeds(); all[speedKey()] = v; localStorage.setItem("plasma.speeds", JSON.stringify(all)); syncCutPrefsToAccount(); } catch (e) { /* ignore */ }
 }
 export function defaultSpeed() { S.speed = savedSpeed() || row().feed_mm_min; }
 export function applyMatchingPreset() {

@@ -55,6 +55,7 @@ export function ingestCloudPrefs(row, userId) {
   const winner = mergeNewestPrefs(local, remote);
   writeLocal(id, winner);
   if (stamp(local) >= stamp(remote)) schedulePush(id);
+  try { import("../machine/settings.js").then((m) => m.loadLocalPresets && m.loadLocalPresets()); } catch (e) { /* ignore */ }
   return getPrefs();
 }
 

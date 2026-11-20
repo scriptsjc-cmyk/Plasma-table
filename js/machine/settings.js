@@ -7,6 +7,7 @@ import { filterConsoleCommand, renderAdvancedMachine } from "./admin-machine.js"
 import { DIALECTS } from "./dialect.js";
 import { defaultEtchSettings, sanitizeEtchSettings } from "../cut/etch.js";
 import { probeDisplayOn } from "./probefilter.js";
+import { syncCutPrefsToAccount } from "../core/prefs.js";
 
 const KEY = "plasma.settings.v1";
 
@@ -128,10 +129,10 @@ const LOCAL_PRESETS = "plasma.cutPresets.local";
 export function currentSettings() { return state; }
 export function initSettings(opts) { host = opts || {}; state = loadSettings(); loadLocalPresets(); }
 
-function loadLocalPresets() {
+export function loadLocalPresets() {
   try { presets = JSON.parse(localStorage.getItem(LOCAL_PRESETS) || "[]") || []; } catch (e) { presets = []; }
 }
-function saveLocalPresets() { try { localStorage.setItem(LOCAL_PRESETS, JSON.stringify(presets)); } catch (e) { /* ignore */ } }
+function saveLocalPresets() { try { localStorage.setItem(LOCAL_PRESETS, JSON.stringify(presets)); syncCutPrefsToAccount(); } catch (e) { /* ignore */ } }
 
 export async function refreshPublishedPresets() {
   try {

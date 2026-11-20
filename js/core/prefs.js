@@ -57,6 +57,9 @@ export function defaultPrefs() {
     cadLast: {},
     pbFavs: [],
     pbRecent: [],
+    speeds: {},
+    material: null,
+    cutPresets: [],
     updatedAt: 0,
   };
 }
@@ -102,9 +105,60 @@ export function sanitizePrefs(raw) {
   out.cadLast = sanitizeCadLast(src.cadLast);
   out.pbFavs = sanitizeIdList(src.pbFavs, 40);
   out.pbRecent = sanitizeIdList(src.pbRecent, 20);
+  out.speeds = sanitizeSpeeds(src.speeds);
+  out.material = sanitizeMaterial(src.material);
+  out.cutPresets = sanitizeCutPresets(src.cutPresets);
   const at = Number(src.updatedAt);
   out.updatedAt = Number.isFinite(at) && at > 0 && at < 1e15 ? Math.round(at) : 0;
   return out;
+}
+
+
+function sanitizeSpeeds(raw) {
+  if (!isObj(raw)) return {};
+  const out = {};
+  let n = 0;
+  for (const [k, v] of Object.entries(raw)) {
+    if (n >= 80) break;
+    if (typeof k !== "string" || !k || k.length > 80) continue;
+    const num = Number(v);
+    if (!Number.isFinite(num) || num <= 0 || num > 50000) continue;
+    out[k] = Math.round(num * 10) / 10;
+    n++;
+  }
+  return out;
+}
+function sanitizeMaterial(raw) {
+  if (!isObj(raw)) return null;
+  const m = String(raw.m || raw.material || "").trim().slice(0, 40);
+  const t = Number(raw.t != null ? raw.t : raw.thickness);
+  if (!m || !Number.isFinite(t) || t <= 0 || t > 100) return null;
+  return { m, t: Math.round(t * 100) / 100 };
+}
+function sanitizeCutPresets(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const row of raw.slice(0, 40)) {
+    if (!isObj(row)) continue;
+    const material = String(row.material || "").trim().slice(0, 40);
+    const thickness_mm = Number(row.thickness_mm);
+    if (!material || !Number.isFinite(thickness_mm) || thickness_mm <= 0) continue;
+    const rec = { material, thickness_mm: Math.round(thickness_mm * 100) / 100 };
+    for (const k of ["pierce_delay_s", "pierce_height_mm", "cut_height_mm", "cut_speed_mm_min", "feed_mm_min", "kerf_mm", "amps"]) {
+      const v = Number(row[k]);
+      if (Number.isFinite(v) && v >= 0) rec[k] = v;
+    }
+    if (typeof row.notes === "string") rec.notes = row.notes.slice(0, 200);
+    out.push(rec);
+  }
+  return out;
+}
+function mirrorCutPrefs(p) {
+  try {
+    if (p.speeds && Object.keys(p.speeds).length) localStorage.setItem("plasma.speeds", JSON.stringify(p.speeds));
+    if (p.material) localStorage.setItem("plasma.material", JSON.stringify(p.material));
+    if (p.cutPresets && p.cutPresets.length) localStorage.setItem("plasma.cutPresets.local", JSON.stringify(p.cutPresets));
+  } catch (e) { /* ignore */ }
 }
 
 function sanitizeCadLast(raw) {
@@ -177,11 +231,21 @@ function persist(userId) {
 
 export function getPrefs() { return { ...current }; }
 
+export function syncCutPrefsToAccount(userId) {
+  let speeds = {}, material = null, cutPresets = [];
+  try { speeds = JSON.parse(localStorage.getItem("plasma.speeds") || "{}") || {}; } catch (e) { speeds = {}; }
+  try { material = JSON.parse(localStorage.getItem("plasma.material") || "null"); } catch (e) { material = null; }
+  try { cutPresets = JSON.parse(localStorage.getItem("plasma.cutPresets.local") || "[]") || []; } catch (e) { cutPresets = []; }
+  return savePrefs({ speeds, material, cutPresets }, userId);
+}
+
+
 export function loadPrefs(userId) {
   currentKey = prefsKey(userId);
   try {
     const raw = JSON.parse(localStorage.getItem(currentKey) || "null");
     current = sanitizePrefs(raw);
+    mirrorCutPrefs(current);
   } catch (e) { current = defaultPrefs(); }
   return getPrefs();
 }
