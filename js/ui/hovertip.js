@@ -46,6 +46,7 @@ function place(el, text) {
   }
   tip.textContent = text;
   tip.hidden = false;
+  tip.style.maxWidth = text.length > 120 ? "360px" : "280px";
   const r = el.getBoundingClientRect();
   const tw = tip.offsetWidth, th = tip.offsetHeight;
   let x = r.left + r.width / 2 - tw / 2;
@@ -62,20 +63,46 @@ function hide() {
   if (tip) tip.hidden = true;
 }
 
-function schedule(el) {
+function schedule(el, immediate) {
   const text = textOf(el);
   if (!text) { hide(); return; }
   if (current === el && tip && !tip.hidden) { place(el, text); return; }
   clearTimeout(timer);
   current = el;
+  if (immediate) { place(el, text); return; }
   timer = setTimeout(() => { if (current === el) place(el, text); }, DELAY);
+}
+
+function isInfoIcon(el) {
+  return !!(el && el.classList && el.classList.contains("info-i"));
+}
+
+// Fill a short visible label plus an outline “i” whose data-tip holds the full explanation.
+// The long text also stays in .info-body so phone layouts and textContent checks still see it.
+export function setInfoText(el, shortLabel, fullText, ariaLabel) {
+  if (!el) return;
+  const short = String(shortLabel || "").replace(/\s+/g, " ").trim();
+  const tip = String(fullText || short).replace(/\s+/g, " ").trim();
+  el.classList.add("has-info");
+  const lab = document.createElement("span");
+  lab.className = "info-label";
+  lab.textContent = short;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "info-i";
+  btn.setAttribute("data-tip", tip);
+  btn.setAttribute("aria-label", ariaLabel || "More information");
+  const body = document.createElement("span");
+  body.className = "info-body";
+  body.textContent = tip.startsWith(short) ? tip.slice(short.length) : (short ? " " + tip : tip);
+  el.replaceChildren(lab, btn, body);
 }
 
 export function bindHoverTips() {
   document.addEventListener("pointerover", (e) => {
     const el = e.target && e.target.closest && e.target.closest(SELECTOR);
     if (!el) return;
-    schedule(el);
+    schedule(el, isInfoIcon(el));
   });
   document.addEventListener("pointerout", (e) => {
     const el = e.target && e.target.closest && e.target.closest(SELECTOR);
@@ -86,8 +113,17 @@ export function bindHoverTips() {
   });
   document.addEventListener("focusin", (e) => {
     const el = e.target && e.target.closest && e.target.closest(SELECTOR);
-    if (el) schedule(el);
+    if (el) schedule(el, isInfoIcon(el));
   });
   document.addEventListener("focusout", hide);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") hide(); });
+  document.addEventListener("click", (e) => {
+    const el = e.target && e.target.closest && e.target.closest(".info-i");
+    if (el) {
+      e.preventDefault();
+      schedule(el, true);
+      return;
+    }
+    if (tip && !tip.hidden && current && isInfoIcon(current) && !current.contains(e.target)) hide();
+  });
 }
