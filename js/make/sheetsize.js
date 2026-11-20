@@ -12,6 +12,11 @@ export function paintSheetSize() {
   if (!box) return;
   const on = !!(sketch && sketch.opts && sketch.opts.pro);
   box.classList.toggle("hidden", !on);
+  if (box.tagName === "DETAILS") {
+    let laptop = false;
+    try { laptop = window.matchMedia("(min-width: 1280px) and (hover: hover) and (pointer: fine)").matches; } catch (e) {}
+    if (!box.dataset.userToggled) box.open = !laptop;
+  }
   if (!on) return;
   const s = currentSheet();
   const w = $("sheetSizeW"), h = $("sheetSizeH");
@@ -36,5 +41,9 @@ export function bindSheetSize() {
     el.addEventListener("change", apply);
     el.addEventListener("keydown", (e) => { if (e.key === "Enter") apply(); });
   });
+  const box = $("sheetSizeBox");
+  if (box && box.tagName === "DETAILS") {
+    box.addEventListener("toggle", () => { box.dataset.userToggled = "1"; });
+  }
   paintSheetSize();
 }

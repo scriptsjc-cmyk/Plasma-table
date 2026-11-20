@@ -33,6 +33,10 @@ export function bindTopMenu() {
   if (save) save.addEventListener("click", () => { const b = $("btnSavePartQuick"); if (b) b.click(); });
   const exp = $("menuExportGcode");
   if (exp) exp.addEventListener("click", () => { const b = $("btnExport"); if (b) b.click(); });
+  const openDxf = $("menuOpenDxf");
+  if (openDxf) openDxf.addEventListener("click", () => { const b = $("btnMakeImport"); if (b) b.click(); });
+  const expDxf = $("menuExportDxf");
+  if (expDxf) expDxf.addEventListener("click", () => { const b = $("btnMakeExport"); if (b) b.click(); });
 }
 
 // ---------------------------------------------------------------- phone "More" sheet on the cutting screen

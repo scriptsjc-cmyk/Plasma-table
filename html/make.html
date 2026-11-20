@@ -142,13 +142,14 @@
           <h3 class="addtiles insp-holes">Add holes <span class="muted small has-info"><span class="info-label">(pick a part first)</span><button type="button" class="info-i" data-tip="Pick a part first and the holes land in its middle." aria-label="More about adding holes"></button><span class="info-body"> and they land in its middle</span></span></h3>
           <div id="holeTiles" class="tiles small addtiles insp-holes"></div>
           <div id="shapeForm" class="shapeform insp-size"></div>
-          <div id="sheetSizeBox" class="sheetsize insp-size">
-            <h3>Drawing sheet</h3>
+          <details id="sheetSizeBox" class="sheetsize insp-size">
+            <summary>Drawing sheet</summary>
             <div class="grid2">
               <label>Width <input id="sheetSizeW" type="number" min="50" max="20000" step="any" inputmode="decimal"> mm</label>
               <label>Height <input id="sheetSizeH" type="number" min="50" max="20000" step="any" inputmode="decimal"> mm</label>
             </div>
-          </div>
+            <p class="muted small has-info insp-size"><span class="info-label">All sizes are in mm, finished size.</span><button type="button" class="info-i" data-tip="All sizes in mm and are the finished part – the cut width is allowed for automatically." aria-label="More about sizes and cut width"></button><span class="info-body"> All sizes in mm and are the finished part – the cut width is allowed for automatically.</span></p>
+          </details>
           <section id="layersPanel" class="layerspanel insp-part" aria-label="Parts list">
             <div class="layershead">
               <h3>Parts</h3>
@@ -184,7 +185,7 @@
             <label>Up<input id="cpY" type="number" min="1" value="1" inputmode="numeric"></label>
             <label>Gap (mm)<input id="cpGap" type="number" min="0" value="10" inputmode="decimal"></label>
           </div>
-          <p class="muted small has-info insp-size"><span class="info-label">All sizes are in mm, finished size.</span><button type="button" class="info-i" data-tip="All sizes in mm and are the finished part – the cut width is allowed for automatically." aria-label="More about sizes and cut width"></button><span class="info-body"> All sizes in mm and are the finished part – the cut width is allowed for automatically.</span></p>
+          
         </div>
 </template>
 <template data-slot="make-dialogs">

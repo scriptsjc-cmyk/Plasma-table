@@ -16,6 +16,20 @@ function homeSlot(card) {
 
 // On the laptop Setup step, Home sits in the centre of the jog pad. Everywhere
 // else it stays in the Home / Raise / Go to start row.
+
+let originHome = null;
+function placeOriginOpts() {
+  const btn = $("btnOriginOpts");
+  const pane = document.querySelector(".previewPane");
+  if (!btn) return;
+  if (!originHome) originHome = { parent: btn.parentNode, next: btn.nextElementSibling };
+  const on = isSetupLaptop() && document.body.dataset.screen === "cut" && document.body.dataset.step === "3" && document.body.classList.contains("machine-connected");
+  if (on && pane && btn.parentNode !== pane) pane.appendChild(btn);
+  else if (!on && originHome.parent && btn.parentNode !== originHome.parent) {
+    const next = (originHome.next && originHome.next.parentNode === originHome.parent) ? originHome.next : null;
+    try { originHome.parent.insertBefore(btn, next); } catch (e) { originHome.parent.appendChild(btn); }
+  }
+}
 export function placeTorchHome() {
   const card = $("zeroCard"); if (!card) return;
   const home = card.querySelector(".do-home"); if (!home) return;
@@ -45,6 +59,7 @@ function paintCanvasChips() {
 }
 export function placeSetupColumns() {
   paintCanvasChips();
+  placeOriginOpts();
 
   const layout = $("layoutCard");
   const check = $("checkCard");

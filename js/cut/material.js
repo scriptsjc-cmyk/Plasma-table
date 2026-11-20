@@ -148,6 +148,7 @@ function renderSpeed() {
   sl.style.background = `linear-gradient(90deg, #2a3038 ${pct(lo)}%, #14532d ${pct(lo)}%, #14532d ${pct(hi)}%, #2a3038 ${pct(hi)}%)`;
   sl.style.borderRadius = "8px";
   $("spVal").textContent = S.speed;
+  const sum = $("spValSum"); if (sum) sum.textContent = S.speed;
   $("spRange").textContent = `good: ${lo}–${hi}`;
   const mine = savedSpeed();
   let note = `Recommended for ${S.material.toLowerCase()} ${S.thickness} mm: <b>${rec}</b> mm/min.`;
@@ -186,7 +187,18 @@ export function setSpeed(v) {
   renderSpeed();
   loadJob();
 }
+
+function syncSpeedBox() {
+  const el = $("speedBox");
+  if (!el || el.tagName !== "DETAILS") return;
+  let laptop = false;
+  try { laptop = window.matchMedia("(min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine)").matches; } catch (e) {}
+  el.open = !laptop;
+}
 export function bindMaterial() {
+  syncSpeedBox();
+  try { window.matchMedia("(min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine)").addEventListener("change", syncSpeedBox); } catch (e) {}
+
   if ($("matPreset")) $("matPreset").onchange = () => applyMatPreset($("matPreset").value);
   // step 2
   $("materials").onclick = (e) => {

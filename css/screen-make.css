@@ -1677,13 +1677,9 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     margin: 0;
     align-items: center;
   }
+  /* Open DXF / Export DXF live in the ☰ menu on a laptop so the header stays on one row */
   body[data-screen="make"] .topbar #makeBar #btnMakeImport,
-  body[data-screen="make"] .topbar #makeBar #btnMakeExport {
-    min-height: 36px;
-    padding: 0 8px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
+  body[data-screen="make"] .topbar #makeBar .makeexp-wrap { display: none; }
 }
 @media (max-width: 1279px), (hover: none), (pointer: coarse) {
   .insp-tabs { display: none !important; }
@@ -1885,4 +1881,48 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 
 @media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
   body.beginner[data-screen="make"] #srcShape .skbtns.bigbtns button[data-sk="remove"] { min-height: 32px; }
+}
+
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.pro-mode[data-screen="make"] #srcShape,
+  body.advanced-mode[data-screen="make"] #srcShape { overflow: hidden; }
+  body.pro-mode[data-screen="make"] #sheetSizeBox,
+  body.advanced-mode[data-screen="make"] #sheetSizeBox {
+    margin: 8px 0 0;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    background: var(--well);
+    flex: 0 0 auto;
+  }
+  body.pro-mode[data-screen="make"] #sheetSizeBox > summary,
+  body.advanced-mode[data-screen="make"] #sheetSizeBox > summary {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 10px;
+    cursor: pointer;
+    font-weight: 650;
+    font-size: 13px;
+    list-style: none;
+  }
+  body.pro-mode[data-screen="make"] #sheetSizeBox > summary::-webkit-details-marker,
+  body.advanced-mode[data-screen="make"] #sheetSizeBox > summary::-webkit-details-marker { display: none; }
+  body.pro-mode[data-screen="make"] #sheetSizeBox:not([open]) > *:not(summary),
+  body.advanced-mode[data-screen="make"] #sheetSizeBox:not([open]) > *:not(summary),
+  body.pro-mode[data-screen="make"] #sheetSizeBox:not([open]) #sheetSizeW,
+  body.advanced-mode[data-screen="make"] #sheetSizeBox:not([open]) #sheetSizeW,
+  body.pro-mode[data-screen="make"] #sheetSizeBox:not([open]) #sheetSizeH,
+  body.advanced-mode[data-screen="make"] #sheetSizeBox:not([open]) #sheetSizeH { display: none !important; }
+  body.pro-mode[data-screen="make"] #srcShape > .insp-size.has-info,
+  body.advanced-mode[data-screen="make"] #srcShape > .insp-size.has-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+  /* leave room above the pinned Cut this part button */
+  body.pro-mode[data-screen="make"] #srcShape,
+  body.advanced-mode[data-screen="make"] #srcShape { padding-bottom: 8px; }
 }

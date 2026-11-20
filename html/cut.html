@@ -51,7 +51,8 @@
               <div id="cutCheck2" class="cutcheck"></div>
             </div>
           </div>
-          <div class="speed" id="speedBox">
+          <details class="speed" id="speedBox">
+            <summary class="speedsum">Cut speed <b id="spValSum">0</b> mm/min</summary>
             <div class="speedhead"><b>Cut speed</b><button id="spReset" class="small">Use recommended</button></div>
             <div class="speedrow">
               <button id="spDown" class="xl" aria-label="Slower">−</button>
@@ -61,7 +62,7 @@
             <input type="range" id="spSlider" aria-label="Cut speed">
             <div class="speedends"><span>slower</span><span id="spRange"></span><span>faster</span></div>
             <p id="spNote" class="spnote"></p>
-          </div>
+          </details>
           <details class="adjust" id="advCut">
             <summary>More cut options</summary>
             <p class="muted small has-info"><span class="info-label">Leave a box empty for the recommended Auto value.</span><button type="button" class="info-i" data-tip="Leave a box empty to use the recommended value shown in it as “Auto”." aria-label="More about Auto values"></button><span class="info-body"> Leave a box empty to use the recommended value shown in it as “Auto”.</span></p>
