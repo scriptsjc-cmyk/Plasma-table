@@ -828,6 +828,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   .cutbar-start[data-state="unset"] { color: var(--warn-text); background: var(--warn-bg); border-color: var(--warn); }
   .cutbar-key { flex: 0 1 auto; min-width: 0; margin-left: auto; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cutbar-layout { flex: none; min-height: 32px; padding: 2px 12px; }
+  body[data-screen="cut"]:not([data-step="3"]):not([data-step="4"]) .cutbar-layout { display: none; }
   body.cut-arrange .cutbar-key { display: none; }
   .cutbar-layout[aria-pressed="true"] { background: var(--accent-weak); border-color: var(--accent); }
 

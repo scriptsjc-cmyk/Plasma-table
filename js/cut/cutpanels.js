@@ -153,7 +153,13 @@ export function resetLayout() { L = DEFAULT(); savePrefs({ cutLayout: null }, us
 // every refresh: no Layout while a job is live (and leave it if one starts), dividers follow the step
 export function paintCutPanels() {
   const b = $("btnLayout"); if (!b) return;
-  b.disabled = liveJob();
+  // Layout only does something on Setup (step 3) and Cut (step 4). Hide it on Part, Make, and Machine setup.
+  const useful = !!stepKey() && document.body.dataset.screen === "cut";
+  b.hidden = !useful;
+  b.classList.toggle("hidden", !useful);
+  const r = $("btnLayoutReset");
+  if (r && !useful) { r.hidden = true; r.classList.add("hidden"); }
+  b.disabled = liveJob() || !useful;
   b.title = liveJob() ? "Not while a job is running" : "Move and resize the panels";
   if (arranging() && (liveJob() || !active())) setArrange(false);
   if (grid) { paintDividers(); paintCovers(); }
