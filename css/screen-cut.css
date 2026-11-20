@@ -1310,3 +1310,137 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     border-color: transparent;
   }
 }
+
+/* ------------------------------------------------------------------
+   r11 Setup step (Get to cutting step 2): three-column laptop grid.
+   Viewport ≥ 1200px. No page scroll and no overflow:auto/scroll boxes
+   inside the step — popovers hold anything that does not fit. */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid {
+    grid-template-columns: 300px minmax(0, 1fr) 380px !important;
+    grid-template-rows: minmax(0, 1fr) auto auto !important;
+    grid-template-areas: none !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .stepPane,
+  body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) {
+    display: contents !important;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > * { min-width: 0; margin: 0; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > h2,
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #cutCheck3 { display: none !important; }
+
+  /* Left: Sheet & parts fills the column */
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #layoutCard {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    max-height: none;
+    min-height: 0;
+    overflow: hidden;
+    align-self: stretch;
+  }
+  /* Right: Torch takes remaining height; checklist and Start sit under it */
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #zeroCard {
+    grid-column: 3;
+    grid-row: 1;
+    min-height: 0;
+    overflow: hidden;
+    align-self: stretch;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > #checkCard {
+    grid-column: 3;
+    grid-row: 2;
+    max-height: none;
+    overflow: hidden;
+    align-self: stretch;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav {
+    grid-column: 3;
+    grid-row: 3;
+    padding: 0;
+    position: static;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    gap: 8px;
+  }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnStart { grid-column: 2; grid-row: 1; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnExport3 { grid-column: 1; grid-row: 1; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #startWhy { grid-column: 1 / -1; margin: 0; font-size: 13px; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav .back { display: none; } /* moved under the left column in a later pass; keep in the DOM */
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnMore3 { display: none; }
+
+  /* Cards are not collapsible and never scroll internally */
+  body[data-screen="cut"][data-step="3"] .step[data-step="3"] > .setupcard,
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .setupcard {
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  body[data-screen="cut"][data-step="3"] #layoutCard[open],
+  body[data-screen="cut"][data-step="3"] #zeroCard[open],
+  body[data-screen="cut"][data-step="3"] #checkCard[open] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  body[data-screen="cut"][data-step="3"] #layoutCard > summary,
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary,
+  body[data-screen="cut"][data-step="3"] #checkCard > summary {
+    flex: none;
+    pointer-events: none;
+    list-style: none;
+    cursor: default;
+  }
+  body[data-screen="cut"][data-step="3"] #layoutCard > summary::-webkit-details-marker,
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary::-webkit-details-marker,
+  body[data-screen="cut"][data-step="3"] #checkCard > summary::-webkit-details-marker,
+  body[data-screen="cut"][data-step="3"] #layoutCard > summary::marker,
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary::marker,
+  body[data-screen="cut"][data-step="3"] #checkCard > summary::marker { display: none; content: none; }
+  body[data-screen="cut"][data-step="3"] #layoutCard::details-content,
+  body[data-screen="cut"][data-step="3"] #zeroCard::details-content,
+  body[data-screen="cut"][data-step="3"] #checkCard::details-content { display: contents; }
+
+  /* The old internal scroller is just a flow container on laptop */
+  body[data-screen="cut"][data-step="3"] .zerobody {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+    padding-bottom: 0;
+  }
+  body[data-screen="cut"][data-step="3"] .zeroscroll {
+    display: contents;
+    overflow: visible;
+    mask-image: none;
+    padding-bottom: 0;
+  }
+
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  body[data-screen="cut"][data-step="3"] #layoutCard .sheetrow label {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
