@@ -19,7 +19,8 @@ export function setConnected(on, label = "") {
   S.connected = on;
   if (on && $("lostBar")) $("lostBar").classList.add("hidden");
   const connLabel = on ? (S.demo ? "Practice table" : "Connected") : "Not connected";
-  $("connPill").innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-dot"></use></svg> <span class="connword">${connLabel}</span>`;
+  const connWord = on && S.demo ? "Practice" : connLabel;
+  $("connPill").innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-dot"></use></svg> <span class="connword">${connWord}</span>`;
   $("connPill").title = on && S.fluidnc ? "Connected (FluidNC)" : connLabel;
   $("connPill").setAttribute("aria-label", connLabel + ": connection menu");
   document.body.classList.toggle("demo-on", !!(on && S.demo));

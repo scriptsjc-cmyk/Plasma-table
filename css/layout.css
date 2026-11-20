@@ -970,9 +970,10 @@ body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
   }
   body.app-shell[data-screen="cut"] #connPill,
   body.app-shell.demo-on[data-screen="cut"] #connPill {
-    max-width: 7.5em;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: none;
+    min-width: 7em;
+    overflow: visible;
+    text-overflow: unset;
     white-space: nowrap;
   }
   body.app-shell[data-screen="cut"] .tabs { flex: 0 1 auto; min-width: 0; }
