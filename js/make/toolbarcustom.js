@@ -43,7 +43,7 @@ for (const it of HEADER_TOOLS) TOOL_INFO.set(it[0], { icon: it[1], label: it[2],
 export const KNOWN_TOOLS = new Set(TOOL_INFO.keys());
 
 // Catalogue lists every align/distribute tool; the default rail stays compact (C25, C46).
-const DEFAULT_SKIP = new Set(["alignr", "alignt", "aligncx", "aligncy", "alignc", "distx", "disty", "etch", "arctan", "curvepoints", "maketan", "makeconc", "ungroup", "drivedim", "sliver", "flangestd"]);
+const DEFAULT_SKIP = new Set(["alignr", "alignt", "aligncx", "aligncy", "alignc", "distx", "disty", "curvepoints", "maketan", "makeconc", "ungroup", "drivedim", "sliver", "flangestd"]);
 export const DEFAULT_TOOL_IDS = TOOL_GROUPS.flatMap((grp) => grp.items.map((it) => it[0])).filter((id) => !DEFAULT_SKIP.has(id));
 
 export function toolInfo(id) { return TOOL_INFO.get(id) || null; }

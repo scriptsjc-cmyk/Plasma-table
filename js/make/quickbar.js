@@ -24,7 +24,15 @@ function sizeDimForSelection() {
 let paletteQ = "";
 let moreOpen = false;
 // Most-used tools stay on the rail; the rest live under More (C46).
-export const PRIMARY_TOOL_IDS = ["undo", "redo", "snap", "presets", "rect", "disc", "draw", "measure", "join", "subtract", "offset", "fillet", "trim", "fit", "dup", "del"];
+const TOOL_SYNONYMS = {
+  etch: "score mark scribe etch line",
+  presets: "flange pipe elbow preset tabs parts library",
+  draw: "line outline polyline",
+  arc3: "3-point arc three point arc",
+  arctan: "tangent arc",
+  spline: "curve spline path",
+};
+export const PRIMARY_TOOL_IDS = ["undo", "redo", "snap", "presets", "rect", "disc", "draw", "arc3", "arctan", "spline", "etch", "measure", "join", "subtract", "offset", "fillet", "trim", "fit", "dup", "del"];
 
 export function moreToolsOpen() { return moreOpen; }
 export function toggleMore(force) {
@@ -141,7 +149,7 @@ export function renderQuickBar() {
   const chosenSet = new Set(chosen);
   const grouped = [];
   for (const grp of TOOL_GROUPS) {
-    const items = grp.items.filter(([id, , lab]) => chosenSet.has(id) && (!q || matchesQuery(lab + " " + id + " " + grp.g, q)));
+    const items = grp.items.filter(([id, , lab]) => chosenSet.has(id) && (!q || matchesQuery(lab + " " + id + " " + grp.g + " " + (TOOL_SYNONYMS[id] || ""), q)));
     if (items.length) grouped.push({ g: grp.g, items });
   }
   const infoOf = (id) => toolInfo(id) || { icon: "", label: id, group: "Tools" };
@@ -231,7 +239,7 @@ export function quickAction(a) {
         sketch.remember();
         for (const it of list) it.op = "score";
         sketch.commit(); sketch.draw(); sketch.onSelect && sketch.onSelect();
-        toast(list.length === 1 ? "Set to Score: it will be etched first, not cut through." : list.length + " parts set to Score: they will be etched first, not cut through.");
+        toast(list.length === 1 ? "Set to Etch / mark: it will be etched first, not cut through." : list.length + " parts set to Etch / mark: they will be etched first, not cut through.");
       } else {
         sketch.setTool("draw");
         sketch.drawEtch = true;
