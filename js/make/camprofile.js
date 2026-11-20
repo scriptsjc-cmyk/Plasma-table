@@ -41,7 +41,7 @@ export function camRadiusAt(deg, p) {
 }
 
 export function camPlateContours(p = {}) {
-  const step = Math.max(1, Math.min(5, Number(p.step) || 2));
+  const step = Math.max(0.5, Math.min(5, Number(p.step) || 1));
   const pts = [];
   for (let a = 0; a < 360 - 0.5 * step; a += step) {
     const r = camRadiusAt(a, p);

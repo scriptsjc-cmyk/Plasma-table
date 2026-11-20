@@ -481,6 +481,15 @@ export class EditMethods {
     }
     const [cx, cy] = cxy;
     this.polarPick = null;
+    {
+      const src = list[0], b = this.boxOf(src);
+      const scx = (b[0] + b[2]) / 2, scy = (b[1] + b[3]) / 2;
+      let rWarn = Math.hypot(scx - cx, scy - cy);
+      if (!(rWarn > 0.05) || (Number.isFinite(pcdN) && pcdN > 0)) rWarn = R;
+      const span = Math.max(b[2] - b[0], b[3] - b[1]);
+      const chord = 2 * rWarn * Math.sin(Math.PI / n);
+      if (chord < span - 0.5) this.onMessage("Those copies will overlap. Use a larger circle or fewer copies if that is not what you want.");
+    }
     this.remember();
     const ids = [...this.sel.ids];
     const pcdGiven = Number.isFinite(pcdN) && pcdN > 0;
@@ -563,18 +572,38 @@ export class EditMethods {
     const host = list[0], cutters = list.slice(1);
     const outer = this.contoursOf(host)[0]; if (!outer) return;
     this.remember();
-    let cur = { outer: outer.pts, holes: this.contoursOf(host).slice(1).map((h) => h.pts) };
+    let cur = { outer: outer.pts, holes: this.contoursOf(host).slice(1).map((h) => ({ pts: h.pts, circle: h.circle })) };
+    const circleOf = (c, it) => c.circle || (it.type === "disc" && it.p && it.p.d > 0 ? { cx: (this.boxOf(it)[0] + this.boxOf(it)[2]) / 2, cy: (this.boxOf(it)[1] + this.boxOf(it)[3]) / 2, r: it.p.d / 2 } : null);
+    const insidePoly = (pts, poly) => pts.every((p) => {
+      // even-odd point in polygon
+      let n = 0;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const a = poly[i], b = poly[j];
+        if (((a[1] > p[1]) !== (b[1] > p[1])) && (p[0] < (b[0] - a[0]) * (p[1] - a[1]) / ((b[1] - a[1]) || 1e-12) + a[0])) n++;
+      }
+      return n % 2 === 1;
+    });
     for (const ct of cutters) {
       for (const c of this.contoursOf(ct)) {
+        const circ = circleOf(c, ct);
+        if (circ && insidePoly(c.pts, cur.outer)) {
+          cur.holes = [...cur.holes, { pts: c.pts, circle: circ }];
+          continue;
+        }
         const r = differenceOutlines(cur.outer, c.pts);
         if (!r) { this.onMessage("Those shapes don't overlap – move the cutter onto the part."); this.restore(this.past.pop()); return; }
-        cur = { outer: r.outer, holes: [...(r.holes || []), ...cur.holes] };
+        cur = { outer: r.outer, holes: [...(r.holes || []).map((h) => ({ pts: h, circle: null })), ...cur.holes] };
       }
     }
     const b = bbox([{ pts: cur.outer }]);
-    const local = (pts) => cleanContour({ pts: pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true });
+    const local = (ring) => {
+      const pts = ring.pts || ring;
+      const m = cleanContour({ pts: pts.map(([x, y]) => [r1(x - b[0]), r1(y - b[1])]), closed: true });
+      if (ring.circle) m.circle = { cx: r1(ring.circle.cx - b[0]), cy: r1(ring.circle.cy - b[1]), r: r1(ring.circle.r) };
+      return m;
+    };
     const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
-      shape: { cs: [local(cur.outer), ...cur.holes.filter((h) => h && h.length >= 3).map(local)] } };
+      shape: { cs: [local({ pts: cur.outer }), ...cur.holes.filter((h) => h && (h.pts || h).length >= 3).map(local)] } };
     const drop = new Set(list);
     this.items = this.items.filter((i) => !drop.has(i));
     this.items.push(it);

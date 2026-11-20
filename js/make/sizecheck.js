@@ -31,10 +31,13 @@ export function askSize(design, unitsNote, done, opts = {}) {
   sizePending = { design, done, sz, k: 1 };
   $("sizeText").innerHTML = `This drawing is <b>${r1(sz.w)} × ${r1(sz.h)} mm</b>. Is that right?`;
   const hint = [];
-  if (unitsNote) hint.push(`The file says its units are ${unitsNote}.`);
-  if (sz.w < 25 && sz.h < 25) hint.push("That is very small. If you drew it in inches, pick the inches button.");
+  if (unitsNote) hint.push(`The file's $INSUNITS says ${unitsNote}. The size above is already converted to millimetres. Choose Yes if that looks right.`);
+  if (sz.w < 25 && sz.h < 25) hint.push("That is very small. If you drew it in inches and the file did not say so, pick the inches button.");
   if (sz.w > 1500 || sz.h > 1500) hint.push("That is bigger than most tables. If it came from a program that uses inches by mistake, try ÷ 25.4.");
   $("sizeUnits").textContent = hint.join(" ");
+  const inchFile = /inch/i.test(String(unitsNote || ""));
+  if ($("sizeInch")) $("sizeInch").setAttribute("aria-pressed", inchFile ? "true" : "false");
+  if ($("sizeMm")) $("sizeMm").setAttribute("aria-pressed", /mm/i.test(String(unitsNote || "")) ? "true" : "false");
   $("sizeTo").value = "";
   if ($("sizeAllRow")) {      // several files: one answer can cover the rest
     $("sizeAll").checked = false;
