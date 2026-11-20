@@ -108,5 +108,24 @@ for (const [scr, conn] of [["make", true], ["cut", true], ["cut", false]]) {
   await page.context().close();
 }
 
+// r13 section 3: every visible icon-only button has a tooltip (title), on the menu, Make (Simple and Advanced), Part, Setup and Machine setup.
+{
+  const page = await newPage(br, "d1366x640", { base: srv.base });
+  const scan = () => ev(page, () => [...document.querySelectorAll("button, [role=button], summary")]
+    .filter((b) => b.getClientRects().length && getComputedStyle(b).visibility !== "hidden" && !(b.innerText || "").trim() && !b.title && !(b.classList.contains("info-i") && b.getAttribute("aria-label")))   // an "i" opens its own hover tip
+    .map((b) => b.id || b.className || b.tagName));
+  const bad = [];
+  const add = async (tag) => (await scan()).forEach((x) => bad.push(tag + ": " + x));
+  await ev(page, () => window.plasmaTest.showScreen("menu")); await page.waitForTimeout(300); await add("menu");
+  await ev(page, () => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("rect"); }); await page.waitForTimeout(300); await add("make");
+  await ev(page, () => { const b = document.querySelector('.modesw-btn[data-mode="pro"], .modesw-btn[data-mode="advanced"]'); if (b) b.click(); }); await page.waitForTimeout(400); await add("make advanced");
+  await demoToShape(page, { stay: "cut" }); await ensurePracticeHomed(page); await add("part");
+  await ev(page, () => window.plasmaTest.goStep(3)); await page.waitForTimeout(400); await add("setup");
+  await ev(page, () => document.querySelector('.tab[data-tab="setup"]') && window.plasmaTest.showScreen("cut")); await page.waitForTimeout(200);
+  await ev(page, () => import(new URL("js/ui/nav.js", location.href).href).then((n) => n.showTab("setup"))); await page.waitForTimeout(400); await add("machine setup");
+  ck("every visible icon-only button has a tooltip", !bad.length, bad.slice(0, 12));
+  await page.context().close();
+}
+
 await br.close(); srv.close();
 process.exit(t.done() ? 1 : 0);

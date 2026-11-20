@@ -35,6 +35,10 @@ button.accent { background: var(--accent); border-color: var(--accent); color: v
 button.accent:hover:not(:disabled) { filter: brightness(1.06); background: var(--accent); }
 button.accent:active:not(:disabled) { filter: brightness(0.92); }
 button.warn { background: var(--warn-bg); border-color: var(--warn); color: var(--warn); }
+/* r13 button types, named once: primary (.primary / .go / .accent, solid), secondary (the default outlined button, or .secondary),
+   quiet (.quiet / .minor, text only), danger (.danger) and icon (.iconbtn, always with a title). STOP has its own style. */
+button.danger { background: var(--alarm-bg); border-color: var(--alarm); color: var(--alarm-text); }
+button.danger:hover:not(:disabled) { background: var(--alarm-bg); border-color: var(--alarm); filter: brightness(0.97); }
 button.small { min-height: var(--tap); padding: 8px 12px; font-size: var(--fs-md); margin: 0; }
 button.quiet, button.minor { background: transparent; border-color: transparent; box-shadow: none; }
 button.quiet:hover:not(:disabled), button.minor:hover:not(:disabled) { background: var(--accent-weak); border-color: transparent; }
