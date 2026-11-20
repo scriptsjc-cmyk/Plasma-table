@@ -20,7 +20,7 @@ export function paintCutBar() {
   if (!S.connected) { el.hidden = true; el.textContent = "Not connected"; el.dataset.state = "off"; return; }
   const state = S.zeroSet ? "set" : "unset";
   const text = state === "set" ? "Sheet corner set ✓" : "Sheet corner not set";
-  el.hidden = false;
+  el.hidden = true; // r11: the sheet-corner state lives in Before you cut, not the header
   if (el.textContent !== text) el.textContent = text;
   el.dataset.state = state;
 }

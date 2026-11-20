@@ -29,5 +29,17 @@ export function placeTorchHome() {
 
 export function bindSetupLayout() {
   placeTorchHome();
+  bindBeforeCut();
   try { window.matchMedia(SETUP_LAPTOP_MQ).addEventListener("change", placeTorchHome); } catch (e) { /* placed once */ }
+}
+
+function bindBeforeCut() {
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest(".beforecut-link");
+    if (!b) return;
+    if (b.dataset.before === "cutStatus") {
+      const btn = $("cutStatus");
+      if (btn) btn.click();
+    }
+  });
 }

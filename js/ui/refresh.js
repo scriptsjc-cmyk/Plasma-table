@@ -14,7 +14,7 @@ import { M, S, sketch } from "../core/state.js";
 import { $, $$, clock, esc, fmtTime, placeToast } from "../core/dom.js";
 import { formatLen } from "../core/prefs.js";
 import { setInfoText } from "./hovertip.js";
-import { blockers, overlayLive, paintZeroWarn } from "../cut/checklist.js";
+import { blockers, paintBeforeCut, overlayLive, paintZeroWarn } from "../cut/checklist.js";
 import { etchPausePrompts } from "../cut/etch.js";
 import { drawPreview, fit, wcoNow } from "../cut/preview.js";
 import { syncHeaderButtons } from "./header.js";
@@ -160,6 +160,7 @@ export function refresh() {
   $("btnStart").disabled = b.length > 0 || !machineAllowed();
   paintStartWhy(b);
   // each reason is text with a small "Show me" button that jumps to the control (r7 U28: no sentence-sized button outsizes STOP)
+  paintBeforeCut();
   $("blockers").innerHTML = b.length && S.cur === 3 ? `Can't start yet:<ul>${b.map((x) => `<li><span>${esc(x)}</span> <button type="button" class="blocker-jump small" data-jump="${esc(jumpFor(x))}">Show me</button></li>`).join("")}</ul>` : "";
   paintSetupCards();
 

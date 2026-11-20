@@ -41,12 +41,19 @@ export function renderChecklist() {
   const hint = $("checkHint");
   if (hint) {
     const dry = S.prepared && S.prepared.dry_run;
-    hint.textContent = (dry
-      ? "Press Start for a short reminder. Practice run: the torch stays off. The first pierce will touch off."
-      : "Press Start for a short safety reminder before the cut begins. The first pierce will touch off.")
+    const lab = hint.querySelector(".info-label");
+    const body = hint.querySelector(".info-body");
+    const btn = hint.querySelector(".info-i");
+    const short = "The first pierce touches off the sheet.";
+    const extra = (dry ? " Practice run: the torch stays off." : " Press Start for a short safety reminder before the cut begins.")
       + (S.fluidnc ? " If the laptop disconnects, the cut keeps going." : "");
+    if (lab) lab.textContent = short;
+    else hint.textContent = short + extra;
+    if (body) body.textContent = extra;
+    if (btn) btn.setAttribute("data-tip", short + extra);
   }
   paintZeroWarn();
+  paintBeforeCut();
   refresh();
 }
 // Every refresh: the start-point line and the "start point not set" warning follow S.zeroSet (so a STOP clears it at once)
@@ -105,6 +112,61 @@ export function blockers() {
   for (const t of Setup.blockText()) b.push(t);
   return b;
 }
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function isCornerBlocker(text) {
+  return /sheet corner/i.test(text);
+}
+function isHomeBlocker(text) {
+  return /set home again|doesn't know where it is|press Home|needs homing|not been homed/i.test(text);
+}
+function isHardStop(text) {
+  return /e-stop is on|e-stop is pressed|e-stop is ON/i.test(text);
+}
+function machineHomed() {
+  return !!(S.connected && S.safety && S.safety.referenced);
+}
+function warningCount() {
+  const groups = (S.check && S.check.groups) || [];
+  let n = groups.filter((g) => g && g.level && g.level !== "ok").length;
+  if (!n) {
+    const btn = $("cutStatus");
+    if (btn && btn.classList.contains("is-bad")) {
+      const m = String(btn.textContent || "").match(/(\d+)/);
+      if (m) n = Number(m[1]);
+    }
+  }
+  return n;
+}
+// Built from blockers() and current state. Does not change blockers() itself.
+export function paintBeforeCut() {
+  const list = $("beforeCut"); if (!list) return;
+  const rows = [];
+  const add = (ok, label, kind, action) => {
+    const cls = kind === "stop" ? "is-stop" : (ok ? "is-ok" : "is-todo");
+    const mark = kind === "stop" ? "!" : (ok ? "✓" : (kind === "warn" ? "①" : "!"));
+    const act = action ? `<button type="button" class="beforecut-link" data-before="${esc(action)}">${esc(label)}</button>` : esc(label);
+    rows.push(`<li class="${cls}"><span class="beforecut-mark" aria-hidden="true">${mark}</span><span class="beforecut-text">${act}</span></li>`);
+  };
+  add(machineHomed(), machineHomed() ? "Machine homed" : "Home the machine", machineHomed() ? "ok" : "todo");
+  const cornerOk = zeroIsConfirmed();
+  add(cornerOk, cornerOk ? "Sheet corner set" : "Jog to the sheet's back-left corner and press Start here", cornerOk ? "ok" : "todo");
+  const warnings = warningCount();
+  const checkOk = warnings === 0;
+  add(checkOk, checkOk ? "Check cut" : `Check cut: ${warnings} warning${warnings === 1 ? "" : "s"}`, checkOk ? "ok" : "warn", "cutStatus");
+  const seen = new Set();
+  for (const t of blockers()) {
+    if (isCornerBlocker(t) || isHomeBlocker(t)) continue;
+    const key = String(t).replace(/\s+/g, " ").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    add(false, key, isHardStop(t) ? "stop" : "todo");
+  }
+  list.innerHTML = rows.join("");
+}
+
 // ------------------------------------------------------------------ refresh everything that depends on state
 // r3: nothing may cover STOP while this is true (job running or paused, machine doing anything, torch possibly on)
 export function overlayLive() {

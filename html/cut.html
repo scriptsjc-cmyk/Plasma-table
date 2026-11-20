@@ -188,11 +188,12 @@
         </details>
 
         <details class="setupcard" id="checkCard" open>
-          <summary><b>Ready to cut</b></summary>
+          <summary><b>Before you cut</b></summary>
           <p class="checkmat"><span id="checkMat"></span> <button type="button" id="btnChangeMat" class="small" aria-label="Change material or part" title="Change material or part">Change</button></p>
           <p id="checkZero" class="checkzero"></p>
           <ul class="checklist" id="checklist" hidden></ul>
-          <p class="muted small" id="checkHint">Press Start for a short safety reminder before the cut begins. The first pierce will touch off.</p>
+          <ul class="beforecut" id="beforeCut"></ul>
+          <p class="muted small has-info" id="checkHint"><span class="info-label">The first pierce touches off the sheet.</span><button type="button" class="info-i" data-tip="The first pierce touches off the sheet. Press Start for a short safety reminder before the cut begins." aria-label="More about the first pierce"></button><span class="info-body"> Press Start for a short safety reminder before the cut begins.</span></p>
           <p id="zeroWarn" class="warntext hidden">Press Start here at the sheet corner. The part already cuts where you placed it.</p>
         <div id="startCutRow" class="startcut hidden">
           <label>Start from cut
