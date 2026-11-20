@@ -1839,3 +1839,24 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] #gridSnap { display: flex; }
   body[data-screen="cut"][data-step="3"] #btnOriginOpts { display: inline-flex; }
 }
+
+/* r11: connection dropdown and Demo tag (laptop) */
+.conn-wrap { display: contents; }
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"] .conn-wrap { display: inline-flex; position: relative; align-items: center; gap: 6px; }
+  body.app-shell #demoAcctBar { display: none !important; }
+  #demoTag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn); }
+  #demoTag.hidden { display: none !important; }
+  .conn-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 90; min-width: 180px; padding: 8px; background: var(--card, #fff); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent); display: flex; flex-direction: column; gap: 6px; }
+  .conn-menu.hidden, .conn-menu[hidden] { display: none !important; }
+  .conn-menu #btnDisconnect,
+  .conn-menu #btnLinkMachine { min-height: 40px; width: 100%; font-size: 14px; margin: 0; }
+  /* connPill stays visible; the wrap takes its place in the header flex */
+  body[data-screen="cut"] #connWrap #connPill { display: inline-flex; }
+}
+/* below the laptop breakpoint the wrap is display:none — but then connPill inside is hidden!
+   The wrap must not hide the pill on the phone. */
+#demoTag { display: none; }
+@media not all and (min-width: 1200px), (max-height: 559px), (hover: none) {
+  #demoTag, #connMenu { display: none !important; }
+}

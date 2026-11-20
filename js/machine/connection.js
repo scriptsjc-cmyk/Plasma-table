@@ -20,9 +20,12 @@ export function setConnected(on, label = "") {
   if (on && $("lostBar")) $("lostBar").classList.add("hidden");
   const connLabel = on ? (S.demo ? "Practice table" : "Connected") : "Not connected";
   $("connPill").innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-dot"></use></svg> <span class="connword">${connLabel}</span>`;
-  $("connPill").title = on && S.fluidnc ? "Connected (FluidNC)" : connLabel; $("connPill").setAttribute("aria-label", connLabel + (on ? ": open Machine setup" : ": connect"));
+  $("connPill").title = on && S.fluidnc ? "Connected (FluidNC)" : connLabel;
+  $("connPill").setAttribute("aria-label", connLabel + ": connection menu");
   document.body.classList.toggle("demo-on", !!(on && S.demo));
   $("connPill").className = "pill " + (on ? "on" : "off");
+  const tag = $("demoTag");
+  if (tag) tag.classList.toggle("hidden", !(on && S.demo));
   if (!on) {
     S.fluidnc = false;
     // Keep the sheet corner unless the machine actually lost its place (home / alarm / reset).
@@ -115,12 +118,49 @@ function paintConnectHelp() {
     : "This browser can't use USB or Bluetooth.";
   setInfoText(el, short, full, "More about connecting");
 }
+function closeConnMenu() {
+  const menu = $("connMenu"), pill = $("connPill");
+  if (!menu) return;
+  menu.hidden = true;
+  menu.classList.add("hidden");
+  if (pill) pill.setAttribute("aria-expanded", "false");
+}
+function toggleConnMenu() {
+  const menu = $("connMenu"), pill = $("connPill");
+  if (!menu || !pill) return;
+  const open = menu.hidden || menu.classList.contains("hidden");
+  menu.hidden = !open;
+  menu.classList.toggle("hidden", !open);
+  pill.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) {
+    const first = menu.querySelector("button:not(.hidden)");
+    if (first) first.focus();
+  }
+}
+
 export function bindConnection() {
   paintConnectHelp();
   $("btnConnect").onclick = connectUSB;
   $("btnDemo").onclick = connectDemo;
   if ($("btnLostOk")) $("btnLostOk").onclick = () => $("lostBar").classList.add("hidden");
-  $("connPill").onclick = () => (S.connected ? showTab("setup") : connectUSB());
+  $("connPill").onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if ($("connWrap") && window.matchMedia && window.matchMedia("(min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine)").matches) {
+      toggleConnMenu();
+      return;
+    }
+    if (S.connected) showTab("setup");
+    else connectUSB();
+  };
+  document.addEventListener("pointerdown", (e) => {
+    const menu = $("connMenu"), wrap = $("connWrap");
+    if (!menu || menu.hidden) return;
+    if (wrap && wrap.contains(e.target)) return;
+    closeConnMenu();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeConnMenu(); });
+
   $("btnDisconnect").onclick = disconnect;
   window.addEventListener("beforeunload", (e) => {
     try { torchTestOff(); } catch (err) { /* best effort */ }

@@ -57,7 +57,11 @@ export function placeSetupColumns() {
   const sel = $("layoutSel");
   remember(mat, "mat"); remember(start, "start"); remember(back, "back");
   remember(fit, "fit"); remember(zoom, "zoom"); remember(sel, "sel");
+  const disc = $("btnDisconnect"), link = $("btnLinkMachine"), menu = $("connMenu");
+  remember(disc, "disc"); remember(link, "link");
   if (isSetupLaptop()) {
+    if (menu && disc && disc.parentNode !== menu) menu.appendChild(disc);
+    if (menu && link && link.parentNode !== menu) menu.appendChild(link);
     if (layout && mat && mat.parentNode !== layout) layout.appendChild(mat);
     if (layout && start && start.parentNode !== layout) layout.appendChild(start);
     if (layout && back && back.parentNode !== layout) layout.appendChild(back);
@@ -66,6 +70,7 @@ export function placeSetupColumns() {
     if (pane && sel && sel.parentNode !== pane) pane.appendChild(sel);
     if (back) back.textContent = "← Back to part";
   } else {
+    restore(link, "link"); restore(disc, "disc");
     restore(sel, "sel"); restore(zoom, "zoom"); restore(fit, "fit");
     restore(start, "start"); restore(mat, "mat"); restore(back, "back");
     if (back) back.textContent = "← Back";
