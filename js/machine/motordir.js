@@ -52,7 +52,11 @@ function writeFlag(key, on) {
 }
 function readTestStep() {
   try {
-    const n = Number(localStorage.getItem(TEST_KEY));
+    // localStorage.getItem is null when the key is missing; Number(null) is 0,
+    // which would look like "start the guided test" and lock cut for everyone.
+    const raw = localStorage.getItem(TEST_KEY);
+    if (raw == null || raw === "") return -1;
+    const n = Number(raw);
     return Number.isInteger(n) && n >= 0 && n < TEST_STEPS.length ? n : -1;
   } catch (e) { return -1; }
 }

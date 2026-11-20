@@ -26,6 +26,12 @@ async function openSetup(page) {
 
 const page = await newPage(br, "d1366", { base: srv.base, consoleErrors: false });
 
+const freshLock = await ev(page, () => {
+  const st = window.plasmaTest.motorDirState();
+  return { lock: st.lockWhy || "", testStep: st.testStep, pending: !!st.pendingRestart, raw: localStorage.getItem("plasma.motorDir.guidedTest") };
+});
+t.check("a fresh load does not lock cut for the motor direction test", !freshLock.lock && freshLock.testStep < 0 && !freshLock.pending && freshLock.raw == null, JSON.stringify(freshLock));
+
 // ------------------------------------------------------------------ not connected
 await ev(page, () => { const T = window.plasmaTest; T.showScreen("make"); T.setShapeFs(false); T.setAppMode("advanced", { autoFs: false, persist: false }); });
 await openSetup(page);
@@ -79,6 +85,11 @@ const grbl0 = await ev(page, () => {
   };
 });
 t.check("practice table (GRBL) enables the toggles, all off at $3=0", !grbl0.fluidnc && grbl0.enabled && !grbl0.xOff && grbl0.mask === 0 && !grbl0.x && !grbl0.y && !grbl0.z, JSON.stringify(grbl0));
+const afterConnect = await ev(page, () => {
+  const st = window.plasmaTest.motorDirState();
+  return { lock: st.lockWhy || "", testStep: st.testStep, pending: !!st.pendingRestart };
+});
+t.check("connecting the practice table does not start the motor direction test or lock cut", !afterConnect.lock && afterConnect.testStep < 0 && !afterConnect.pending, JSON.stringify(afterConnect));
 
 page.dialogs.length = 0;
 page._safeConfirmAuto = "accept";
