@@ -55,13 +55,34 @@ export function fit() {
   const b = S.prepared.stats.bounds, w = wcoNow(), ref = S.safety.ref, L = S.safety.limits;
   const over = fitOverflow(b, w, ref, L);
   if (!over.length) return { cls: "good", text: "✓ Fits on the machine" };
-  let text = `✗ Won't fit: ${over.join(", ")}. Move the start point.`;
-  // If the same part would fit with the sheet corner at the home corner, the
-  // start point is what's wrong — not the part or a sheet that's larger than the edges.
-  if (!fitOverflow(b, ref, ref, L).length) {
-    text += " The start point is away from the home corner. Jog to the sheet's back-left (the home corner) and press Start here.";
+  const parsed = String(over[0] || "").match(/(\d+)\s*mm too far (left|right|back|forward)/);
+  const n = parsed ? Number(parsed[1]) : 0;
+  const dir = parsed ? parsed[2] : "";
+  const toward = { left: "right", right: "left", back: "forward", forward: "back" }[dir];
+  const startWrong = !fitOverflow(b, ref, ref, L).length;
+  if (startWrong) {
+    return {
+      cls: "bad", bad: true,
+      text: `Won't fit: ${over.join(", ")}. The start point is away from the home corner. Jog to the sheet's back-left and press Start here.`,
+      fixLabel: "Show Start here",
+      fix: () => { const el = $("btnZero"); if (el) el.scrollIntoView({ block: "center", behavior: "smooth" }); },
+    };
   }
-  return { cls: "bad", bad: true, text };
+  const text = toward && n
+    ? `Won't fit: ${over.join(", ")}. Move the part ${n} mm ${toward}.`
+    : `Won't fit: ${over.join(", ")}. Move the part on the sheet so it sits inside the machine edges.`;
+  const shift = { left: [n, 0], right: [-n, 0], back: [0, n], forward: [0, -n] }[dir];
+  return {
+    cls: "bad", bad: true, text,
+    fixLabel: shift ? "Fix" : "",
+    fix: shift ? () => {
+      if (!sketch || !sketch.items) return;
+      if (sketch.remember) sketch.remember();
+      for (const it of sketch.items) { it.x += shift[0]; it.y += shift[1]; }
+      if (sketch.commit) sketch.commit();
+      if (Setup && Setup.paint) Setup.paint();
+    } : undefined,
+  };
 }
 export function drawPreview() {
   const cv = $("preview");

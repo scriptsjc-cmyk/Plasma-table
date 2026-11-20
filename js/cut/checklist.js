@@ -16,7 +16,13 @@ import { probeDisplayOn } from "../machine/probefilter.js";
 // ------------------------------------------------------------------ step 3 (second half): checks
 // Round 5 (safety): the first line, "Start point set", is not a box you tick. It follows the machine's zeroConfirmed flag
 // (S.zeroSet): ticked by Start here, unticked by STOP / reset / home / alarm, and never editable by hand.
+function zeroIsConfirmed() {
+  return !!(S.zeroSet && (!S.connected || (S.safety && S.safety.referenced)));
+}
 function zeroLineText() {
+  if (S.zeroSet && S.connected && S.safety && S.safety.referenced === false) {
+    return "Set home again before cutting — the table may have lost its place.";
+  }
   if (!S.zeroSet) return "Sheet corner not set yet — press Start here";
   return "Sheet corner set ✓";
 }
@@ -43,10 +49,10 @@ export function renderChecklist() {
 // Every refresh: the start-point line and the "start point not set" warning follow S.zeroSet (so a STOP unticks it at once)
 export function paintZeroWarn() {
   const zw = $("zeroWarn");
-  if (zw) zw.classList.toggle("hidden", !!S.zeroSet);
+  if (zw) zw.classList.toggle("hidden", zeroIsConfirmed());
   const box = document.querySelector('#checklist input[data-chk="zero"]');
   if (!box) return;
-  box.checked = !!S.zeroSet;
+  box.checked = zeroIsConfirmed();
   const label = box.nextElementSibling, text = zeroLineText();
   if (label && label.textContent !== text) label.textContent = text;
 }

@@ -42,7 +42,7 @@ export function paintCutStatus() {
   btn.classList.toggle("is-ok", !bad);
   btn.setAttribute("aria-expanded", pop && !pop.hidden ? "true" : "false");
   btn.innerHTML = bad
-    ? `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label">Check the cut</span><span class="cutstatus-n">${issues.length}</span>`
+    ? `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label">Check the cut: ${issues.length} warning${issues.length === 1 ? "" : "s"}</span>`
     : `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label">Cut looks ready</span>`;
   btn.removeAttribute("title");
   if (pop) {

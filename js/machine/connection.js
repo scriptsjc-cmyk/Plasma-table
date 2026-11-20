@@ -22,7 +22,13 @@ export function setConnected(on, label = "") {
   $("connPill").title = on && S.fluidnc ? "Connected (FluidNC)" : connLabel; $("connPill").setAttribute("aria-label", connLabel + (on ? ": open Machine setup" : ": connect"));
   document.body.classList.toggle("demo-on", !!(on && S.demo));
   $("connPill").className = "pill " + (on ? "on" : "off");
-  if (!on) { S.fluidnc = false; S.zeroSet = false; }
+  if (!on) {
+    S.fluidnc = false;
+    // Keep the sheet corner unless the machine actually lost its place (home / alarm / reset).
+    if (S.safety && S.safety.referenced === false) S.zeroSet = false;
+  } else if (S.safety && S.safety.referenced === false) {
+    S.zeroSet = false;
+  }
   if (on && label) toast("Connected to " + label);
   // the connect card ("Connect and set the start point"): connect buttons while disconnected, Disconnect once connected
   for (const id of ["btnConnect", "btnDemo", "connectHelp"]) if ($(id)) $(id).classList.toggle("hidden", !!(on || (id === "btnConnect" && S.noUsb)));
@@ -42,7 +48,7 @@ export function setConnected(on, label = "") {
 }
 async function connectUSB() {
   if (!requireMachine("Link your machine to run jobs")) return;
-  if (!WebSerialTransport.supported()) { toast("This browser can't use USB. Use Chrome or Edge on a computer.", true); return; }
+  if (!WebSerialTransport.supported()) { toast("This browser can't use USB or Bluetooth. Use Chrome or Edge on a computer — Safari and Firefox can't talk to the table.", true); return; }
   if (S.usbBusy) return;
   S.usbBusy = true;
   const t = new WebSerialTransport();
@@ -97,7 +103,15 @@ export async function keepAwake(on) {
     if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
   } catch (e) { /* fine */ }
 }
+function paintConnectHelp() {
+  const el = $("connectHelp"); if (!el) return;
+  const ok = WebSerialTransport.supported();
+  el.textContent = ok
+    ? "USB and Bluetooth need Chrome or Edge on a computer. Safari and Firefox can't talk to the table. Plug in the USB cable, or pair the table in Windows Bluetooth settings first, then press Connect and pick its port (Bluetooth shows as \"Standard Serial over Bluetooth link\"). Close the FluidNC installer or any other program using the port first."
+    : "This browser can't use USB or Bluetooth. Open this page in Chrome or Edge on a computer — Safari and Firefox don't support the connection the table needs.";
+}
 export function bindConnection() {
+  paintConnectHelp();
   $("btnConnect").onclick = connectUSB;
   $("btnDemo").onclick = connectDemo;
   if ($("btnLostOk")) $("btnLostOk").onclick = () => $("lostBar").classList.add("hidden");

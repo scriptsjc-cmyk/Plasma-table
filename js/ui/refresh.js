@@ -61,7 +61,10 @@ export function paintChrome() {
   }
   const zs = $("zeroState");
   if (zs) {
-    if (S.zeroSet) {
+    if (S.zeroSet && S.connected && S.safety && S.safety.referenced === false) {
+      zs.textContent = "Set home again before cutting — the table may have lost its place.";
+      zs.classList.add("warntext");
+    } else if (S.zeroSet) {
       zs.textContent = "Sheet corner set ✓  The part cuts where you place it.";
       zs.classList.remove("warntext");
     } else if (S.connected) {
@@ -124,7 +127,13 @@ export function refresh() {
   // stats + fit (preview pane)
   const f = fit();
   $("fit").className = "fit " + f.cls;
-  $("fit").textContent = f.text;
+  if (f.fixLabel) {
+    $("fit").innerHTML = `${esc(f.text)} <button type="button" class="small" id="fitFixBtn">${esc(f.fixLabel)}</button>`;
+    const fb = $("fitFixBtn");
+    if (fb) fb.onclick = (e) => { e.preventDefault(); e.stopPropagation(); if (typeof f.fix === "function") f.fix(); };
+  } else {
+    $("fit").textContent = f.text;
+  }
   $("fit").style.cursor = f.cls === "unknown" ? "pointer" : "";
   $("fit").title = f.cls === "unknown" ? "Open Machine setup" : "";
   if (S.prepared) {
