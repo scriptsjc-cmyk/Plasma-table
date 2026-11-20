@@ -2225,3 +2225,25 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     padding-bottom: 0;
   }
 }
+
+/* r13 #16: the category list reads like a sidebar — left-aligned, one line, the chosen one filled. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  .presetbrowser .pbcats button {
+    justify-content: flex-start;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+  .presetbrowser .pbcats button:hover { background: var(--well); }
+  .presetbrowser .pbcats button.on {
+    background: var(--accent-weak, var(--well));
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 650;
+    box-shadow: none;
+  }
+}
