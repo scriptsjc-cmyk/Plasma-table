@@ -1,7 +1,8 @@
-import { boxesOf, boxesAdd, boxesHit } from "../ui/labelboxes.js";
 // r7 J15: where the cut begins, marked on the bed (the first pierce). The mark follows its part while you
 // drag; the G-code is rebuilt on drop so the job cuts at that bed position. Work zero is the sheet's
 // bottom-left corner, not the part: nothing here sends a zero, origin or move command to the hardware.
+import { boxesOf, boxesAdd, boxesHit } from "../ui/labelboxes.js";
+
 let anchor = null;                  // { prep, id, off }: the first pierce, relative to the lower-left corner of its part's box
 
 function firstPierce(prep) {
