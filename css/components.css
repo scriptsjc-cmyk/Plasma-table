@@ -26,7 +26,7 @@
 .tiles.small { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 .selhead { margin-bottom: 10px; font-size: var(--fs-md); }
 /* keypad / cad dialogs */
-.numpad { position: fixed; inset: 0; z-index: 150; background: rgba(20, 28, 36, .45); display: flex;
+.numpad { position: fixed; inset: 0; z-index: var(--z-numpad); background: rgba(20, 28, 36, .45); display: flex;
   align-items: flex-end; justify-content: center; padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 .numpad.hidden { display: none !important; }
 .numpad-card { width: min(420px, 100%); background: var(--well); border: 1px solid var(--line);
@@ -42,7 +42,7 @@
   .numpad { align-items: center; }
 }
 /* shape library */
-.shapelib { position: fixed; inset: 0; z-index: 120; background: rgba(20, 28, 36, .45); display: flex;
+.shapelib { position: fixed; inset: 0; z-index: var(--z-dialog); background: rgba(20, 28, 36, .45); display: flex;
   align-items: flex-end; justify-content: center; padding: 8px;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
   padding-left: max(8px, env(safe-area-inset-left));
@@ -96,7 +96,7 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
 }
 
 /* In-app confirm: sits under the header so STOP stays visible and clickable. */
-.safedlg { position: fixed; left: 0; right: 0; top: var(--topbar-h, 56px); bottom: 0; z-index: 125; background: rgba(20, 28, 36, .45); display: flex; align-items: center; justify-content: center; padding: 24px 12px; }
+.safedlg { position: fixed; left: 0; right: 0; top: var(--topbar-h, 56px); bottom: 0; z-index: var(--z-dialog-top); background: rgba(20, 28, 36, .45); display: flex; align-items: center; justify-content: center; padding: 24px 12px; }
 .safedlg.hidden { display: none; }
 .safedlg:not(.hidden) { animation: safedlg-in .2s ease; }
 .safedlg-card { background: var(--well); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r); padding: 16px; width: min(480px, 100%); box-shadow: 0 8px 24px rgba(16, 24, 40, .2); animation: safedlg-card-in .2s ease; }

@@ -22,13 +22,13 @@
 .cutcheck li.error b { background: var(--alarm); color: #fff; }
 .cutcheck li.warn b { background: var(--warn); color: #fff; }
 .cutcheck li.info b { background: var(--accent); color: #fff; }
-.cutcheck li.error { color: #7A1A12; }
+.cutcheck li.error { color: #7a1a12; }
 /* variants — wrap so nothing sits off-screen */
 .varbox { margin: 0 0 12px; }
 .varbox h4 { margin: 0 0 8px; font-size: var(--fs-sm); color: var(--muted); font-weight: 650; }
 .varrow, .varrow.wrap { display: flex; flex-wrap: wrap; gap: 8px; overflow: visible; padding: 2px 0 8px; }
 .protools { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin: 8px 0 4px; }
-.toolbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; gap: 8px;
+.toolbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); display: flex; gap: 8px;
   padding: 10px 12px max(10px, env(safe-area-inset-bottom)); background: var(--card); border-top: 1px solid var(--line); }
 .toolbar.hidden { display: none !important; }
 .quickbar button i { font-style: normal; font-size: var(--fs-m); line-height: 1; display: grid; place-items: center; }
@@ -69,7 +69,7 @@ body.beginner #proTools { display: none !important; }
 @media (max-width: 899px) and (orientation: portrait) {
   /* phone portrait: fixed bottom palette, keep canvas in view */
   body:not(.short-land) .cutgrid.with-qb #quickBar.quickbar {
-    position: sticky; bottom: 0; z-index: 20;
+    position: sticky; bottom: 0; z-index: var(--z-dock);
     max-height: 40dvh; overflow: auto;
     margin-bottom: 0;
     box-shadow: 0 -2px 8px rgba(16,24,40,.08);
@@ -88,12 +88,12 @@ body.shape-fs #quickBar { display: flex !important; grid-column: 1; grid-row: 1;
 body.shape-fs #quickBar .qb-group, body.shape-fs #quickBar .qb-search,
 body.short-land #quickBar .qb-group, body.short-land #quickBar .qb-search { flex: 0 0 auto; }
 body.shape-fs #fsBar { display: flex !important; }
-.fsbar { position: fixed; top: calc(var(--topbar-h, 56px) + 8px); right: 12px; z-index: 40;
+.fsbar { position: fixed; top: calc(var(--topbar-h, 56px) + 8px); right: 12px; z-index: var(--z-hud);
   display: flex; gap: 8px; align-items: center; background: var(--well); border: 1px solid var(--line);
   border-radius: var(--r); padding: 6px 8px; }
 .fsbar.hidden { display: none !important; }
 /* dimension typing */
-.dimedit { position: fixed; z-index: 140; background: var(--well); border: 1px solid var(--accent);
+.dimedit { position: fixed; z-index: var(--z-popover); background: var(--well); border: 1px solid var(--accent);
   border-radius: var(--r); padding: 8px 10px; box-shadow: var(--shadow); min-width: 200px; }
 .dimedit.hidden { display: none !important; }
 .dimedit label { display: block; font-weight: 650; margin-bottom: 4px; }
@@ -142,7 +142,7 @@ body.pro-mode .beginner-only { display: none !important; }
   margin-top: 4px; padding: 8px 12px; font-size: var(--fs-s); text-align: left; }
 .cutlist .grip { cursor: grab; color: var(--muted); font-size: var(--fs-l); padding: 0 4px; touch-action: none; }
 /* ---- size check + straight cut dialogs ---- */
-#sizeDlg, #straightDlg, #resizeDlg { top: var(--topbar-h, 56px); z-index: 125; }
+#sizeDlg, #straightDlg, #resizeDlg { top: var(--topbar-h, 56px); z-index: var(--z-dialog-top); }
 .sizetext { font-size: var(--fs-l); margin: 4px 0 8px; }
 .sizescale { align-items: flex-end; margin-top: 8px; }
 .sizescale input { max-width: 110px; }
@@ -411,7 +411,7 @@ body.short-land .dimedit { padding: 6px 10px; }
 body.short-land .dimedit > p.small { display: none; }
 body.short-land .dimedit .dimops { margin-top: 4px; }
 /* ---- Round 5: Add text and Trace a picture (js/maketools.js) ---- */
-.mtdlg { z-index: 140; }
+.mtdlg { z-index: var(--z-popover); }
 .mtdlg .shapelib-card { max-height: calc(100dvh - 24px); overflow: auto; display: flex; flex-direction: column; gap: 8px; }
 .mtdlg textarea { width: 100%; min-height: 64px; resize: vertical; }
 .mtdlg canvas { width: 100%; height: auto; max-height: 34dvh; border: 1px solid var(--line, #cbd5df); border-radius: 10px; background: #fff; }
@@ -503,7 +503,7 @@ body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
   body.pro-mode:not(.beginner)[data-screen="make"] { --pt-insp-w: 0px; }
   body.pro-mode:not(.beginner)[data-screen="make"] #cutView:has(#ptInspector) { grid-template-columns: minmax(0, 1fr); }
   body.pro-mode:not(.beginner)[data-screen="make"] #cutView:has(#ptInspector) > #ptInspector {
-    position: fixed; left: 0; right: 0; bottom: 0; width: auto; max-height: 55dvh; z-index: 20;
+    position: fixed; left: 0; right: 0; bottom: 0; width: auto; max-height: 55dvh; z-index: var(--z-dock);
     border-left: 0; border-top: 1px solid var(--line-strong); border-radius: 14px 14px 0 0; box-shadow: var(--shadow);
     background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(6px); }
   body.pro-mode[data-screen="make"] #ptInspector.is-collapsed { max-height: none; }
@@ -624,7 +624,7 @@ body.phone-ui[data-screen="make"].pro-mode .stepPane {
   box-shadow: none;
   padding: 0;
   border: 0;
-  z-index: 21;
+  z-index: var(--z-sheet);
   grid-area: preview;
   pointer-events: none;
 }
@@ -654,7 +654,7 @@ body.phone-ui[data-screen="make"].pro-mode #edgePanel:not(.hidden) {
   bottom: calc(var(--phonebar-h, 56px) + 120px);
   max-height: 48%;
   overflow: auto;
-  z-index: 21;
+  z-index: var(--z-sheet);
   margin: 0;
   border-radius: 16px 16px 0 0;
   box-shadow: 0 -8px 24px rgba(16, 24, 40, .18);
@@ -687,7 +687,7 @@ body.phone-ui[data-screen="make"].beginner #phoneBar,
 body.phone-ui[data-screen="make"].beginner #phoneSheet { display: none !important; }
 
 .phonebar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 22;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-sheet-bar);
   display: flex; align-items: stretch; gap: 2px;
   min-height: var(--phonebar-h);
   padding: 4px 4px max(4px, env(safe-area-inset-bottom));
@@ -706,14 +706,14 @@ body.phone-ui[data-screen="make"].beginner #phoneSheet { display: none !importan
 body.app-shell.phone-ui[data-screen="make"]:not(.short-land) .previewDock,
 body.app-shell.phone-ui.short-land[data-screen="make"] .previewDock {
   position: relative !important;
-  z-index: 23 !important;
+  z-index: var(--z-sheet-dock) !important;
   left: auto; right: auto; bottom: auto;
   max-height: none;
   overflow: visible;
   background: var(--card);
 }
 .phonesheet {
-  position: fixed; left: 0; right: 0; bottom: calc(var(--phonebar-h, 56px) + 120px); z-index: 21;
+  position: fixed; left: 0; right: 0; bottom: calc(var(--phonebar-h, 56px) + 120px); z-index: var(--z-sheet);
   max-height: 48%; overflow: auto;
   background: var(--card);
   border-radius: 16px 16px 0 0;
@@ -857,7 +857,7 @@ body.phone-ui.advanced-mode[data-screen="make"] #srcShape #layersPanel.is-open {
   position: fixed;
   left: 10px; right: 10px; bottom: 64px; top: auto;
   max-height: 55dvh;
-  z-index: 30;
+  z-index: var(--z-float);
   pointer-events: auto;
   margin: 0;
   box-shadow: var(--shadow);
@@ -871,7 +871,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 /* type-while-drawing HUD */
 .drawhud {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
-  z-index: 40; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  z-index: var(--z-hud); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
   padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line-strong);
   background: color-mix(in srgb, var(--card) 94%, transparent); box-shadow: var(--shadow);
   max-width: min(640px, calc(100vw - 24px));
@@ -882,7 +882,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 
 /* right-click menu */
 .cadctx {
-  position: fixed; z-index: 50; min-width: 180px; padding: 6px;
+  position: fixed; z-index: var(--z-ctx); min-width: 180px; padding: 6px;
   border-radius: 10px; border: 1px solid var(--line-strong);
   background: var(--card); box-shadow: var(--shadow);
   display: flex; flex-direction: column; gap: 2px;
@@ -894,7 +894,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 
 /* Preset parts browser */
 .presetbrowser {
-  position: fixed; left: 0; right: 0; bottom: 0; top: var(--topbar-h, 56px); z-index: 125;
+  position: fixed; left: 0; right: 0; bottom: 0; top: var(--topbar-h, 56px); z-index: var(--z-dialog-top);
   display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, #000 35%, transparent);
   opacity: 0; pointer-events: none;
@@ -941,7 +941,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
   bottom: calc(var(--phonebar-h, 56px) + 12px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 35;
+  z-index: var(--z-float-hint);
   display: flex; align-items: center; gap: 10px;
   max-width: min(420px, calc(100vw - 16px));
   padding: 8px 10px 8px 14px;
@@ -957,7 +957,7 @@ body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; fle
 
 /* Customise toolbar: a roomy dialog, not a control that sits on the canvas. */
 .toolbarcustom {
-  position: fixed; inset: 0; z-index: 60;
+  position: fixed; inset: 0; z-index: var(--z-bar);
   display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, #000 35%, transparent);
   opacity: 0; pointer-events: none;
@@ -1024,7 +1024,7 @@ body.phone-ui[data-screen="make"].advanced-mode .cutgrid {
   left: 0; right: 0;
   bottom: var(--phonebar-h, 56px);
   top: auto;
-  z-index: 21;
+  z-index: var(--z-sheet);
   max-height: 64px;
   height: 64px;
   overflow: hidden;
@@ -1091,7 +1091,7 @@ body.phone-ui[data-screen="make"].advanced-mode .cutgrid {
 
 /* G-code download pop on Make (Cut keeps its own rules in screen-cut.css) */
 body[data-screen="make"] .exportpop {
-  position: absolute; bottom: 100%; left: 0; z-index: 16;
+  position: absolute; bottom: 100%; left: 0; z-index: var(--z-panel-pop);
   min-width: 260px; padding: 12px;
   background: var(--well); border: 1px solid var(--line); border-radius: var(--r);
   box-shadow: var(--shadow);
@@ -1110,7 +1110,7 @@ body.beginner[data-screen="make"] .guidehead #ghStep { display: none !important;
 body:not(.beginner) #btnSimpleSnap { display: none; }
 #btnSimpleSnap.on, #btnDragPan.on { outline: none; }
 #btnSimpleSnap:focus-visible, #btnDragPan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.hovertip { position: fixed; z-index: 9999; max-width: 280px; padding: 6px 10px; background: #1a1a1a; color: #fff; font-size: var(--fs-s); line-height: 1.35; border-radius: 6px; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.hovertip { position: fixed; z-index: var(--z-hovertip); max-width: 280px; padding: 6px 10px; background: #1a1a1a; color: #fff; font-size: var(--fs-s); line-height: 1.35; border-radius: 6px; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 .makecheck-pick { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin: 8px 0; }
 .makecheck-field { display: flex; flex-direction: column; gap: 6px; }
 .makecheck-lab { font-weight: 650; }
@@ -1168,7 +1168,7 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
 body.phone-ui .fold3d-expand,
 body:not(.laptop-ui) .fold3d-expand { display: none !important; }
 .fold3d-lb {
-  position: fixed; inset: 0; z-index: 180;
+  position: fixed; inset: 0; z-index: var(--z-lightbox);
   display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, #000 45%, transparent);
   padding: 16px;
@@ -1273,15 +1273,15 @@ body.laptop-ui .fold3d-wrap canvas.fold3d { height: 300px; }
   overflow-wrap: anywhere;
   line-height: 1.2;
 }
-.cc-error { color: var(--cad-danger, #C42B1C); }
-.cc-warn { color: var(--cad-lock, #C05600); }
+.cc-error { color: var(--cad-danger, #c42b1c); }
+.cc-warn { color: var(--cad-lock, #c05600); }
 #makeCheckOut li[data-gi]:hover { text-decoration: underline; }
 
 /* C34: drawing export drops below the Make header button, not above it off the screen. */
 .makeexp-wrap { position: relative; display: inline-flex; align-items: center; flex: 0 0 auto; }
 #makeExportPop {
   position: absolute; top: 100%; bottom: auto; left: 0; margin-top: 4px;
-  z-index: 30; min-width: 260px;
+  z-index: var(--z-float); min-width: 260px;
 }
 
 
@@ -1336,7 +1336,7 @@ body.beginner .skopts { display: none !important; }
   body[data-screen="make"] #exportRow,
   body[data-screen="make"] .previewDock .exportrow {
     position: relative;
-    z-index: 24;
+    z-index: var(--z-sheet-row);
     flex-wrap: nowrap;
   }
 }
@@ -1358,7 +1358,7 @@ body.beginner .skopts { display: none !important; }
   flex-direction: column;
   gap: 4px;
   position: absolute;
-  z-index: 45;
+  z-index: var(--z-hud-pop);
   background: var(--card);
   border: 1px solid var(--line-strong);
   border-radius: 12px;
@@ -1405,7 +1405,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 .pb-fav.on { color: #c05600; }
 
 .shortcut-sheet {
-  position: fixed; inset: 0; z-index: 160;
+  position: fixed; inset: 0; z-index: var(--z-shortcuts);
   display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, #000 35%, transparent);
   min-width: 0; padding: 16px;
@@ -1965,7 +1965,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
-    z-index: 40;
+    z-index: var(--z-hud);
     min-width: 200px;
     padding: 8px;
     display: flex;

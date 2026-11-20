@@ -30,7 +30,7 @@ body.yours-btns-large { --tool-h: 52px; --tool-minw: 72px; --tool-fs: 13px; --to
 .scrollrow-wrap.fade-end > .scrollrow-fade.end { opacity: 1; }
 
 /* ---- #quickBar sits at the bottom (or top) of the canvas. Bottom/top wrap so every tool is visible. ---- */
-#quickBarWrap { min-width: 0; z-index: 16; min-height: calc(var(--tool-h, 36px) + 8px); }
+#quickBarWrap { min-width: 0; z-index: var(--z-panel-pop); min-height: calc(var(--tool-h, 36px) + 8px); }
 .cutgrid.with-qb #quickBar.quickbar {
   display: flex !important; flex-direction: row !important; flex-wrap: wrap !important;
   overflow-x: hidden !important; overflow-y: visible !important;

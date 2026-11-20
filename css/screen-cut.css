@@ -98,7 +98,7 @@ body.shape-fs #jobStats, body.shape-fs #exportRow { display: none !important; }
   .settab, .howto-step, #btnSettings, #btnHowto { min-height: 44px; }
 }
 .exportrow { position: relative; }
-.exportpop { position: absolute; bottom: 100%; left: 0; z-index: 16; background: var(--well);
+.exportpop { position: absolute; bottom: 100%; left: 0; z-index: var(--z-panel-pop); background: var(--well);
   border: 1px solid var(--line); border-radius: var(--r); padding: 10px; min-width: 240px; box-shadow: var(--shadow); }
 .exportpop.hidden { display: none !important; }
 body.app-shell .previewDock { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px;
@@ -300,8 +300,8 @@ body[data-step="3"] #exportRow { display: none; }
    from the app or reset), so a running job carries on underneath. Off unless body.turn-on (?turn=1 or localStorage plasma.turnOverlay=1). */
 .turnoverlay { display: none; }
 @media (max-width: 599px) and (orientation: portrait) {
-  body.turn-on:not(.turn-upright)[data-screen="cut"][data-step="3"]:not(.job-live):has(.tab[data-tab="cut"].sel) .turnoverlay { display: flex; position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: 2147483000; background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
-  body.turn-on:not(.turn-upright)[data-screen="cut"][data-step="3"] .topbar { z-index: 2147483001; }
+  body.turn-on:not(.turn-upright)[data-screen="cut"][data-step="3"]:not(.job-live):has(.tab[data-tab="cut"].sel) .turnoverlay { display: flex; position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-pin-content); background: #111820; color: #fff; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+  body.turn-on:not(.turn-upright)[data-screen="cut"][data-step="3"] .topbar { z-index: var(--z-pin-header); }
   body.turn-on .turnoverlay .turnicon { font-size: var(--fs-icon-xl); line-height: 1; animation: turnspin 2.4s ease-in-out infinite; }
   body.turn-on .turnoverlay .turntext { font-size: var(--fs-xl); font-weight: 700; }
   .turnoverlay .turnhint { margin: 0; max-width: 300px; font-size: var(--fs-m); color: #c9d4df; }
@@ -311,7 +311,7 @@ body[data-step="3"] #exportRow { display: none; }
   body[data-step="3"] .previewDock .fit { font-size: var(--fs-xs); margin: 0; }
 }
 /* the import dialog always fits under the top bar: the file list scrolls, the Import button stays on screen */
-.impdlg { z-index: 125; align-items: flex-start; padding: 6px; }
+.impdlg { z-index: var(--z-dialog-top); align-items: flex-start; padding: 6px; }
 .impdrop { min-height: 70px !important; margin: 8px 0; }
 .implist { display: grid; gap: 6px; max-height: 38vh; overflow: auto; margin: 8px 0; }
 .improw { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
@@ -605,7 +605,7 @@ body.estop-latched .unlockwhy { display: block; flex: 0 1 220px; font-size: var(
 #btnStop.holding { filter: brightness(1.25); }
 /* Round 5 (safety): while a machine is connected, nothing covers STOP on the cutting screen. The header that holds it is lifted above
    every overlay (numpad, dialogs), and the full-screen overlays start below the header. */
-body.machine-connected[data-screen="cut"] .topbar { z-index: 2147483001; }
+body.machine-connected[data-screen="cut"] .topbar { z-index: var(--z-pin-header); }
 body.machine-connected[data-screen="cut"] .numpad,
 body.machine-connected[data-screen="cut"] .shapelib { top: var(--topbar-h, 56px) !important; }
 /* ...and with it showing, the "Practice table" pill gives way (ellipsis) instead of running under it */
@@ -965,7 +965,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
 /* E-STOP sits in its own yellow zone so it stands out; size is not reduced. */
 body[data-screen="cut"] #btnStop,
 body.header-hidden.header-stop-float #btnStop {
-  box-shadow: 0 0 0 4px #F5C542, 0 0 0 6px #8A6A00;
+  box-shadow: 0 0 0 4px #f5c542, 0 0 0 6px #8a6a00;
   background-clip: padding-box;
   border-radius: 14px;
 }
@@ -1007,8 +1007,8 @@ body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important;
   color: var(--warn-text);
 }
 .cutstatus-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
-.cutstatus.is-ok .cutstatus-dot { background: var(--go, #1B7A3D); }
-.cutstatus.is-bad .cutstatus-dot { background: #E0B400; }
+.cutstatus.is-ok .cutstatus-dot { background: var(--go, #1b7a3d); }
+.cutstatus.is-bad .cutstatus-dot { background: #e0b400; }
 .cutstatus-n { font-weight: 800; }
 @keyframes cutPulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(224, 180, 0, 0.55); }
@@ -1021,7 +1021,7 @@ body[data-screen="cut"][data-step="4"] #showMachWrap { display: flex !important;
   position: absolute;
   top: 100%;
   left: 8px;
-  z-index: 140;
+  z-index: var(--z-popover);
   min-width: 260px;
   max-width: min(420px, 90vw);
   margin-top: 6px;
@@ -1158,7 +1158,7 @@ body.header-hidden[data-screen="cut"][data-tab="cut"] .tabs {
   top: 0;
   left: 0;
   right: calc(var(--stop-float-w, 0px) + 16px + env(safe-area-inset-right, 0px));
-  z-index: 130;
+  z-index: var(--z-header);
   margin: 0;
   padding: 2px 8px 2px max(52px, env(safe-area-inset-left, 0px));
   background: var(--card);
@@ -1217,7 +1217,7 @@ body.short-land[data-screen="cut"] #connPill { display: none !important; }
   font-weight: 700;
   font-size: var(--fs-m);
   line-height: 1.35;
-  background: #F5C542;
+  background: #f5c542;
   color: #1a1400;
 }
 #ampPauseMsg.amppause.hidden { display: none; }
@@ -1901,7 +1901,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 .is-setup-pop {
   display: block !important;
   position: fixed;
-  z-index: 80;
+  z-index: var(--z-tip);
   max-width: min(420px, calc(100vw - 24px));
   max-height: min(70vh, 520px);
   overflow: auto;
@@ -1933,7 +1933,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body.app-shell #demoAcctBar { display: none !important; }
   #demoTag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-xs); font-weight: 700; background: var(--warn-bg); color: var(--warn-text); border: 1px solid var(--warn); }
   #demoTag.hidden { display: none !important; }
-  .conn-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 90; min-width: 180px; padding: 8px; background: var(--card, #fff); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent); display: flex; flex-direction: column; gap: 6px; }
+  .conn-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: var(--z-conn-menu); min-width: 180px; padding: 8px; background: var(--card, #fff); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 28px color-mix(in srgb, #000 18%, transparent); display: flex; flex-direction: column; gap: 6px; }
   .conn-menu.hidden, .conn-menu[hidden] { display: none !important; }
   .conn-menu #btnDisconnect,
   .conn-menu #btnLinkMachine { min-height: 40px; width: 100%; font-size: var(--fs-s); margin: 0; }

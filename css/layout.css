@@ -9,13 +9,13 @@ html, body { margin: 0; background: var(--bg); color: var(--text);
   font: var(--fs-md)/1.45 var(--font); }
 .muted { color: var(--muted); }
 /* top bar */
-.topbar { position: sticky; top: 0; z-index: 130; display: flex; align-items: center; gap: 8px;
+.topbar { position: sticky; top: 0; z-index: var(--z-header); display: flex; align-items: center; gap: 8px;
   padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top));
   padding-left: max(12px, env(safe-area-inset-left));
   padding-right: max(12px, env(safe-area-inset-right));
   background: var(--card); border-bottom: 1px solid var(--line); min-width: 0; }
 .topbar-main { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; overflow-x: auto; }
-#btnStop { flex: none; position: relative; z-index: 131; }
+#btnStop { flex: none; position: relative; z-index: var(--z-stop); }
 @media (max-width: 640px) {
   .brand #machineName { display: none; }
   .topbar, .topbar-main { gap: 4px; }
@@ -176,7 +176,7 @@ h3 .muted.small { text-transform: none; font-weight: 400; }
 canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px solid var(--line); background: var(--cad-canvas); }
 /* toast */
 .toast { position: fixed; left: 50%; top: calc(var(--topbar-h, 56px) + 10px); transform: translateX(-50%); background: var(--text);
-  color: #fff; font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: 145;
+  color: #fff; font-size: var(--fs-md); padding: 10px 16px; border-radius: var(--r); z-index: var(--z-toast);
   box-shadow: 0 8px 24px rgba(16, 24, 40, .2); max-width: min(92vw, 480px);
   pointer-events: none; /* a toast must never swallow a tap meant for STOP or the quick bar */ }
 .toast.err { background: var(--toast-err, var(--stop)); color: #fff; }
@@ -198,7 +198,7 @@ canvas.map { width: 100%; display: block; border-radius: var(--r); border: 1px s
 .cutgrid.with-qb #quickBar.quickbar {
   display: flex; flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 4px;
   overflow: visible; padding: 6px; background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--r); position: static; z-index: 15; min-width: 0; }
+  border-radius: var(--r); position: static; z-index: var(--z-panel); min-width: 0; }
 .quickbar button { flex: 1 1 calc(20% - 4px); min-width: 44px; max-width: 100%; min-height: var(--tap); padding: 4px 6px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   font-size: var(--fs-xs); font-weight: 650; line-height: 1.15; background: var(--well); }
@@ -480,8 +480,8 @@ body.demo-on #connPill { background: var(--warn-bg); border-color: var(--warn); 
 @media (max-width: 640px) {
   body.demo-on #connPill { max-width: 40vw; font-size: var(--fs-xs); }
 }
-.whytip { position: fixed; z-index: 80; max-width: min(280px, calc(100vw - 16px)); padding: 8px 10px;
-  background: #1F2A37; color: #fff; border-radius: 6px; font-size: var(--fs-s); font-weight: 650; line-height: 1.35;
+.whytip { position: fixed; z-index: var(--z-tip); max-width: min(280px, calc(100vw - 16px)); padding: 8px 10px;
+  background: #1f2a37; color: #fff; border-radius: 6px; font-size: var(--fs-s); font-weight: 650; line-height: 1.35;
   box-shadow: 0 8px 24px rgba(16, 24, 40, .28); pointer-events: none; }
 .whytip.hidden { display: none; }
 button.secondary, .fit-demo-btn { background: var(--well); border: 1px solid var(--line-strong); color: var(--text); font-weight: 650; }
@@ -566,7 +566,7 @@ body.short-land .appfoot { display: none; }
     top: calc(100% + 4px);
     left: 8px;
     right: 96px;
-    z-index: 120;
+    z-index: var(--z-dialog);
     flex-direction: column;
     align-items: stretch;
     flex-wrap: nowrap;
@@ -705,7 +705,7 @@ body.header-hidden[data-screen="cut"] .topbar {
   overflow: visible;
   pointer-events: none;
   gap: 0;
-  z-index: 2147483001;          /* same as a connected Cut bar: STOP stays above overlays */
+  z-index: var(--z-pin-header);          /* same as a connected Cut bar: STOP stays above overlays */
 }
 body.header-hidden[data-screen="make"] .topbar-main,
 body.header-hidden[data-screen="cut"] .topbar-main {
@@ -721,7 +721,7 @@ body.header-hidden[data-screen="cut"] #btnShowHeader {
   position: fixed;
   top: max(8px, env(safe-area-inset-top, 0px));
   left: max(8px, env(safe-area-inset-left, 0px));
-  z-index: 2147483002;
+  z-index: var(--z-pin-show-header);
   width: 36px; height: 36px; min-width: 36px; min-height: 36px;
   padding: 0; border: 0; background: transparent;
   opacity: 0.4;
@@ -770,7 +770,7 @@ body.header-hidden.header-stop-float #btnStop {
   top: max(4px, env(safe-area-inset-top, 0px));
   right: max(8px, env(safe-area-inset-right, 0px));
   left: auto;
-  z-index: 2147483003;
+  z-index: var(--z-pin-stop);
   pointer-events: auto;
   display: flex !important;
   margin: 0;
@@ -880,7 +880,7 @@ body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
     top: calc(100% + 4px);
     right: 8px;
     left: auto;
-    z-index: 140;
+    z-index: var(--z-popover);
     flex-direction: column;
     align-items: stretch;
     flex-wrap: nowrap;
