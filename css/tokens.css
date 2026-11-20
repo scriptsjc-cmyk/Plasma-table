@@ -86,8 +86,8 @@
      local stacking inside one panel. Dialogs sit under the header (top: --topbar-h) so STOP stays visible and clickable. */
   --z-panel: 15; --z-panel-pop: 16; --z-dock: 20; --z-sheet: 21; --z-sheet-bar: 22; --z-sheet-dock: 23;
   --z-sheet-row: 24; --z-float: 30; --z-float-hint: 35; --z-hud: 40; --z-hud-pop: 45; --z-ctx: 50;
-  --z-bar: 60; --z-tip: 80; --z-conn-menu: 90; --z-dialog: 120; --z-dialog-top: 125; --z-header: 130;
-  --z-stop: 131; --z-popover: 140; --z-toast: 145; --z-numpad: 150; --z-shortcuts: 160; --z-lightbox: 180;
+  --z-bar: 60; --z-tip: 80; --z-conn-menu: 90; --z-dialog: 120; --z-dialog-top: 125; --z-header: 190;
+  --z-stop: 191; --z-popover: 140; --z-toast: 145; --z-numpad: 150; --z-shortcuts: 160; --z-lightbox: 180;
   --z-hovertip: 9999; --z-pin-content: 2147483000; --z-pin-header: 2147483001; --z-pin-show-header: 2147483002; --z-pin-stop: 2147483003;
   --space: 8px; --space-2: 16px; --space-3: 24px;
   --r: 8px;

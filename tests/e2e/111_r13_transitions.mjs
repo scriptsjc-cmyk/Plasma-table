@@ -80,5 +80,33 @@ for (const [label, prof] of [["1366x640", "d1366x640"], ["1920x970", "d1920x970"
   await page.context().close();
 }
 
+// r13 section 3: STOP is the top layer. Open every dialog, numpad and sheet in turn (Make with STOP showing, and Cut): STOP is
+// still what a tap on its centre hits, and the dialog's top edge sits below the header, not under it.
+for (const [scr, conn] of [["make", true], ["cut", true], ["cut", false]]) {
+  const page = await newPage(br, "d1366x640", { base: srv.base });
+  if (conn) { await demoToShape(page, { stay: "cut" }); await ensurePracticeHomed(page); }
+  else { await ev(page, () => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(3); }); }
+  if (scr === "make") await ev(page, () => window.plasmaTest.showScreen("make"));
+  await page.waitForTimeout(400);
+  const res = await ev(page, () => {
+    const out = [];
+    const stop = document.getElementById("btnStop"), bar = document.querySelector(".topbar");
+    for (const d of document.querySelectorAll(".numpad, .shapelib, .safedlg, .presetbrowser, .fold3d-lb, .shortcut-sheet")) {
+      const had = d.classList.contains("hidden"), hadAttr = d.hasAttribute("hidden");
+      d.classList.remove("hidden"); d.removeAttribute("hidden");
+      if (getComputedStyle(d).display !== "none") {
+        const r = stop.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        const dr = d.getBoundingClientRect(), br = bar.getBoundingClientRect();
+        out.push({ id: d.id || d.className, onStop: !!(hit && stop.contains(hit)), below: dr.top >= br.bottom - 2 });
+      }
+      if (had) d.classList.add("hidden"); if (hadAttr) d.setAttribute("hidden", "");
+    }
+    return out;
+  });
+  const bad = res.filter((x) => !x.onStop || !x.below);
+  ck(`${scr}${conn ? " connected" : " not connected"}: STOP stays on top of every dialog, numpad and sheet, and none starts under the header (${res.length} checked)`, res.length > 10 && !bad.length, bad);
+  await page.context().close();
+}
+
 await br.close(); srv.close();
 process.exit(t.done() ? 1 : 0);

@@ -1168,7 +1168,7 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
 body.phone-ui .fold3d-expand,
 body:not(.laptop-ui) .fold3d-expand { display: none !important; }
 .fold3d-lb {
-  position: fixed; inset: 0; z-index: var(--z-lightbox);
+  position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-lightbox);
   display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, var(--c-black) 45%, transparent);
   padding: 16px;
@@ -1405,7 +1405,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 .pb-fav.on { color: var(--c-c05600); }
 
 .shortcut-sheet {
-  position: fixed; inset: 0; z-index: var(--z-shortcuts);
+  position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-shortcuts);
   display: flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, var(--c-black) 35%, transparent);
   min-width: 0; padding: 16px;

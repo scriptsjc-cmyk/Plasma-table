@@ -26,7 +26,7 @@
 .tiles.small { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 .selhead { margin-bottom: 10px; font-size: var(--fs-md); }
 /* keypad / cad dialogs */
-.numpad { position: fixed; inset: 0; z-index: var(--z-numpad); background: rgba(20, 28, 36, .45); display: flex;
+.numpad { position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-numpad); background: rgba(20, 28, 36, .45); display: flex;
   align-items: flex-end; justify-content: center; padding: 12px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 .numpad.hidden { display: none !important; }
 .numpad-card { width: min(420px, 100%); background: var(--well); border: 1px solid var(--line);
@@ -42,7 +42,7 @@
   .numpad { align-items: center; }
 }
 /* shape library */
-.shapelib { position: fixed; inset: 0; z-index: var(--z-dialog); background: rgba(20, 28, 36, .45); display: flex;
+.shapelib { position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-dialog); background: rgba(20, 28, 36, .45); display: flex;
   align-items: flex-end; justify-content: center; padding: 8px;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
   padding-left: max(8px, env(safe-area-inset-left));
