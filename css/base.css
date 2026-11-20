@@ -104,3 +104,8 @@ a { color: var(--accent-text); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* loading placeholders: grey rows where a list is about to appear (Your parts) */
+@keyframes phPulse { 50% { opacity: .55; } }
+.ph-row { height: 64px; margin: 0 0 8px; border-radius: var(--r); background: var(--line); opacity: .8; }
+@media (prefers-reduced-motion: no-preference) { body:not(.running-job) .ph-row { animation: phPulse 1.2s ease-in-out infinite; } }

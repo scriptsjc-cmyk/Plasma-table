@@ -32,6 +32,9 @@ export async function refreshPartsList() {
   const box = $("partsList");
   if (!box) return;
   if (!A.isSignedIn()) { box.innerHTML = "<p class='muted'>Sign in to see saved parts.</p>"; return; }
+  // first load: grey placeholder rows instead of a blank box while the list comes back
+  if (!box.children.length) box.innerHTML = "<div class='ph-row' aria-hidden='true'></div>".repeat(3);
+  box.setAttribute("aria-busy", "true");
   try {
     partsRows = await A.listParts();
     const groups = groupParts(partsRows), names = groups.map((g) => g.name), closed = closedFolders();
@@ -66,6 +69,7 @@ export async function refreshPartsList() {
       if (again !== per) refreshPartsList();
     });
   } catch (e) { box.innerHTML = "<p class='muted'>" + esc(e.message) + "</p>"; }
+  finally { box.removeAttribute("aria-busy"); }
 }
 // older parts have no preview stored yet: build one in the background (not saved, just shown)
 async function fillMissingMeta() {
