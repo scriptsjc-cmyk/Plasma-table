@@ -960,3 +960,21 @@ body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
   body[data-screen="make"] .topbar > #makeBar .small { min-height: 36px; padding: 4px 8px; }
 }
 
+
+/* r12: keep the cut header on one row so Layout and the connection chip do not overlap. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.app-shell[data-screen="cut"] .topbar-main {
+    flex-wrap: nowrap;
+    overflow: visible;
+    min-width: 0;
+  }
+  body.app-shell[data-screen="cut"] #connPill,
+  body.app-shell.demo-on[data-screen="cut"] #connPill {
+    max-width: 7.5em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body.app-shell[data-screen="cut"] .tabs { flex: 0 1 auto; min-width: 0; }
+  body.app-shell[data-screen="cut"] #btnLayout { flex: 0 0 auto; }
+}

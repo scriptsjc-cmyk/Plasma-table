@@ -865,7 +865,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
     grid-template-columns: var(--s3-cols, minmax(290px, 22vw) minmax(0, 1fr) minmax(340px, 27vw)) !important;
     grid-template-rows: auto auto minmax(0, 1fr) auto !important; grid-template-areas: none !important; }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .stepPane,
-  body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) { display: contents !important; }
+  body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) { display: contents !important; overflow: visible; }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane { grid-column: var(--s3-bed, 2); grid-row: 1 / 5; order: 0; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > * { min-width: 0; margin: 0; }
   body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .setupcard { min-height: 0; overflow: auto; overscroll-behavior: contain; }
@@ -1326,6 +1326,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .stepPane,
   body.app-shell[data-screen="cut"][data-step="3"] .stepPane > .step[data-step="3"]:not(.hidden) {
     display: contents !important;
+    overflow: visible;
   }
   body.app-shell[data-screen="cut"][data-step="3"] .cutgrid > .previewPane {
     grid-column: var(--s3-bed, 2);
@@ -1346,7 +1347,7 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     grid-row: 1 / -1;
     max-height: none;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
     align-self: stretch;
   }
   /* Right: Torch takes remaining height; checklist and Start sit under it */
@@ -1966,6 +1967,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body.app-shell[data-screen="cut"][data-step="1"] .cutgrid > .stepPane,
   body.app-shell[data-screen="cut"][data-step="1"] .stepPane > .step[data-step="1"]:not(.hidden) {
     display: contents;
+    overflow: visible;
   }
   body.app-shell[data-screen="cut"][data-step="1"] .cutgrid > .previewPane {
     grid-column: 2;
@@ -1980,6 +1982,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="1"] .step[data-step="1"] > #srcShape { display: none; }
   body[data-screen="cut"][data-step="1"] #pickPane {
     display: contents;
+    overflow: visible;
   }
   body[data-screen="cut"][data-step="1"] #pickPane > .part-col {
     grid-column: 1;

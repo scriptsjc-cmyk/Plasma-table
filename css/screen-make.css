@@ -1752,3 +1752,33 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   #shapeLib #libGrid { grid-column: 2; grid-row: 3; overflow: hidden; }
   #shapeLib #libPage { grid-column: 2; grid-row: 4; }
 }
+
+/* r12: Simple, part picked — keep Cut this part clear of the size/hole fields. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.beginner[data-screen="make"] .step[data-step="1"] {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+  body.beginner[data-screen="make"] .step[data-step="1"] > .nav {
+    flex: 0 0 auto;
+    margin-top: auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    background: var(--card, var(--well));
+    padding: 8px 0 4px;
+  }
+  body.beginner[data-screen="make"] .step[data-step="1"] > .nav #next1 {
+    min-height: var(--tap-primary, 44px);
+    width: 100%;
+  }
+  body.beginner[data-screen="make"] #srcShape,
+  body.beginner[data-screen="make"] #bgPick {
+    overflow: hidden;
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+}
