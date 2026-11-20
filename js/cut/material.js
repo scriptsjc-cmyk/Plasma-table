@@ -5,6 +5,7 @@ import { $, esc, toast } from "../core/dom.js";
 import { cmd } from "../machine/access.js";
 import { loadJob } from "../core/hooks.js";
 import { syncCutPrefsToAccount } from "../core/prefs.js";
+import { setInfoText } from "../ui/hovertip.js";
 
 const MAT_TIPS = {
   "Mild steel": "Mild steel: the easiest to get right. Start at the recommended speed and adjust 10% at a time.",
@@ -77,6 +78,8 @@ export function renderMaterials() {
   const delay = o.pierce_delay_s || r.pierce_delay_s;
   const maxT = r.max_cuttable_mm || material().max_cuttable_mm || S.chart.max_cuttable_mm;
   const est = (src) => /estimate|interpolated|user-reported/i.test(src || "") ? ' <span class="est">(estimate)</span>' : "";
+  const air = r.air_bar ?? S.chart.air_bar;
+  const ampsMore = `Kerf ${kerf} mm. Air ${air} bar.${maxT ? ` Max cuttable ${maxT} mm on this 60 A / P-80.` : ""} Starting points from the PrimeWeld CUT60 chart (a close 60 A equivalent) and P-80 pierce-height notes. Values marked estimate are not in those charts — test on scrap.`;
   $("ampsCard").innerHTML = `
     <div>Set the plasma to</div>
     <div class="big">${ampsNow()} A</div>
@@ -85,10 +88,10 @@ export function renderMaterials() {
       <div><dt>Pierce</dt><dd>${esc(String(delay))} s at ${esc(String(ph))} mm${est(r.pierce_delay_source || r.pierce_height_source)}</dd></div>
       <div><dt>Cut height</dt><dd>${esc(String(ch))} mm${est(r.cut_height_source)}</dd></div>
       <div><dt>Kerf</dt><dd>${esc(String(kerf))} mm${est(r.kerf_source)}</dd></div>
-      <div><dt>Air</dt><dd>${esc(String(r.air_bar ?? S.chart.air_bar))} bar</dd></div>
+      <div><dt>Air</dt><dd>${esc(String(air))} bar</dd></div>
       ${maxT ? `<div><dt>Max cuttable</dt><dd>${esc(String(maxT))} mm on this 60 A / P-80</dd></div>` : ""}
     </dl>
-    <p class="ampssrc muted small">Starting points from the PrimeWeld CUT60 chart (a close 60 A equivalent) and P-80 pierce-height notes. Values marked estimate are not in those charts — test on scrap.</p>
+    <p class="ampssrc muted small has-info"><span class="info-label">Kerf ${esc(String(kerf))} mm · Air ${esc(String(air))} bar</span><button type="button" class="info-i" data-tip="${esc(ampsMore)}" aria-label="More about amps, air and kerf"></button><span class="info-body"> ${esc(ampsMore)}</span></p>
     ${r.note ? `<div class="ampsnote">⚠ ${esc(r.note)}</div>` : ""}`;
   try { localStorage.setItem("plasma.material", JSON.stringify({ m: S.material, t: S.thickness })); } catch (e) { /* ignore */ }
   try { syncCutPrefsToAccount(); } catch (e) { /* ignore */ }
@@ -151,8 +154,24 @@ function renderSpeed() {
   if (mine && mine === S.speed) note += " Using <b>your saved speed</b>.";
   const off = S.speed < rec * 0.75 || S.speed > rec * 1.25;
   if (off) note += " That's a long way from normal – test on scrap first.";
-  $("spNote").innerHTML = note;
-  $("spNote").className = "spnote" + (off ? " warn" : "");
+  const sp = $("spNote");
+  if (sp) {
+    const short = `Recommended: ${rec} mm/min`;
+    const full = note.replace(/<[^>]+>/g, "");
+    setInfoText(sp, short, full, "More about the recommended cut speed");
+    sp.className = "spnote has-info" + (off ? " warn" : "");
+  }
+  let warn = $("spWarn");
+  if (!warn && $("speedBox")) {
+    warn = document.createElement("p");
+    warn.id = "spWarn";
+    warn.className = "warntext small";
+    $("speedBox").appendChild(warn);
+  }
+  if (warn) {
+    warn.textContent = off ? "That's a long way from normal – test on scrap first." : "";
+    warn.hidden = !off;
+  }
   $("matTip").textContent = MAT_TIPS[S.material] || "";
   const tipBtn = $("matTipInfo");
   if (tipBtn) {

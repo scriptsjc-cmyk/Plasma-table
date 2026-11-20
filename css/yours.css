@@ -440,9 +440,9 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search,
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbSearchBtn,
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbSearch {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search #qbSearchBtn,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search #qbSearch {
     display: none !important;
   }
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape,
@@ -459,10 +459,19 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
     overflow: hidden !important;
   }
   body.pro-mode[data-screen="make"] #sheetSizeBox,
-  body.advanced-mode[data-screen="make"] #sheetSizeBox,
+  body.advanced-mode[data-screen="make"] #sheetSizeBox {
+    margin: 8px 0 0;
+    padding: 0;
+  }
+  body.pro-mode[data-screen="make"] #sheetSizeBox h3,
+  body.advanced-mode[data-screen="make"] #sheetSizeBox h3 { font-size: 13px; margin: 0 0 4px; }
   body.pro-mode[data-screen="make"] #srcShape > .insp-size.has-info,
   body.advanced-mode[data-screen="make"] #srcShape > .insp-size.has-info {
-    display: none !important;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 0;
+    font-size: 12px;
   }
   body.pro-mode[data-screen="make"] #srcShape .shapeform input,
   body.pro-mode[data-screen="make"] #srcShape .shapeform select {
@@ -471,12 +480,4 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
   }
   body.pro-mode[data-screen="make"] #srcShape .shapeform label { font-size: 12px; gap: 2px; }
   body.pro-mode[data-screen="make"] #srcShape .shapeform { padding: 8px; margin-top: 0; }
-  body.pro-mode[data-screen="make"] #srcShape .shapeform input[disabled] { display: none; }
-}
-
-@media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
-  body.pro-mode[data-screen="make"] #shapeForm label:has([data-pos]),
-  body.pro-mode[data-screen="make"] #shapeForm label:has([data-angle]),
-  body.advanced-mode[data-screen="make"] #shapeForm label:has([data-pos]),
-  body.advanced-mode[data-screen="make"] #shapeForm label:has([data-angle]) { display: none; }
 }

@@ -770,7 +770,7 @@ body.laptop-ui.pro-mode[data-screen="make"] #ptInspector {
     align-items: stretch;
   }
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar .qb-group,
-  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar .qb-search { display: none; }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar > .qb-search { display: none; }
   body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar button {
     flex: 0 0 auto;
     width: 100%;
@@ -1467,7 +1467,7 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     align-items: stretch;
   }
   body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-group,
-  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search { display: none; }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search { display: none; }
   body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button {
     flex: 0 0 auto;
     width: 100%;
@@ -1511,10 +1511,13 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 .qb-filter-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 6px 0; padding: 4px 10px; min-height: 36px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-weak); color: var(--text); font-weight: 700; cursor: pointer; }
 .qb-filter-chip:hover { filter: brightness(1.04); }
 
+.topmenu .make-only { display: none; }
+
 /* ---- r12 Make a part (Simple) on a laptop: one toolbar row, no banner, compact tiles ---- */
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   body.beginner[data-screen="make"] #guideHead.guidehead { display: none; }
   body[data-screen="make"] #exportRow { display: none; }
+  body[data-screen="make"] .topmenu .make-only { display: flex; align-items: center; }
   body.beginner[data-screen="make"] .bgshapes {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
@@ -1675,7 +1678,12 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     align-items: center;
   }
   body[data-screen="make"] .topbar #makeBar #btnMakeImport,
-  body[data-screen="make"] .topbar #makeBar .makeexp-wrap { display: none; }
+  body[data-screen="make"] .topbar #makeBar #btnMakeExport {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
 }
 @media (max-width: 1279px), (hover: none), (pointer: coarse) {
   .insp-tabs { display: none !important; }
@@ -1858,7 +1866,8 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.advanced-mode[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm > :not(.insp-arrange) { display: none !important; }
   body.pro-mode[data-screen="make"] .stepPane #srcShape,
   body.advanced-mode[data-screen="make"] .stepPane #srcShape { overflow: hidden !important; }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-search { display: none !important; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search { display: none !important; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #qbMorePop .qb-search { display: flex !important; }
   .presetbrowser .pbcats {
     display: grid !important;
     grid-template-columns: 1fr 1fr;

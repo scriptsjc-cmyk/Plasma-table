@@ -2061,10 +2061,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="1"] #matLine,
   body[data-screen="cut"][data-step="1"] #matTip,
   body[data-screen="cut"][data-step="1"] .matpreset-wrap,
-  body[data-screen="cut"][data-step="1"] .speedends,
-  body[data-screen="cut"][data-step="1"] #spSlider,
-  body[data-screen="cut"][data-step="1"] #spNote,
-  body[data-screen="cut"][data-step="1"] .speedhead { display: none; }
+  body[data-screen="cut"][data-step="1"] .speedends { display: none; }
   body[data-screen="cut"][data-step="1"] #materials.choice {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2217,10 +2214,10 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.app-shell[data-screen="cut"][data-step="3"] #playRow { display: none; }
   body[data-screen="cut"][data-step="1"] #advCut:not([open]) > *:not(summary) { display: none !important; }
-  body[data-screen="cut"][data-step="1"] #speedBox .speedends,
-  body[data-screen="cut"][data-step="1"] #speedBox #spNote { display: none; }
+  body[data-screen="cut"][data-step="1"] #speedBox .speedends { display: none; }
+  body[data-screen="cut"][data-step="3"] .previewDock { overflow: hidden; }
+  body[data-screen="cut"][data-step="3"] #playRow { min-width: 0; flex: 1 1 auto; }
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
@@ -2231,8 +2228,11 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   }
   body[data-screen="cut"][data-step="1"] .mat-col > h3 { padding-right: 88px; }
   body[data-screen="cut"][data-step="1"] #speedBox { margin-top: auto; }
-  body[data-screen="cut"][data-step="1"] #speedBox .speedhead { display: none; }
+  body[data-screen="cut"][data-step="1"] #speedBox .speedhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 4px; }
+  body[data-screen="cut"][data-step="1"] #speedBox .speedhead .small { min-height: 28px; padding: 0 8px; }
   body[data-screen="cut"][data-step="1"] #speedBox .speedrow { gap: 4px; }
+  body[data-screen="cut"][data-step="1"] #speedBox #spDown,
+  body[data-screen="cut"][data-step="1"] #speedBox #spUp { min-height: 36px; min-width: 36px; }
   body[data-screen="cut"][data-step="1"] #speedBox #spSlider { margin: 2px 0; }
   body[data-screen="cut"][data-step="1"] #dryRun { margin: 4px 0; }
   body[data-screen="cut"][data-step="3"] #btnOriginOpts { max-width: 100%; }
@@ -2252,7 +2252,8 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   body[data-screen="cut"][data-step="1"] .mat-col > h3 { padding-right: 160px; }
   body[data-screen="cut"][data-step="1"] .mat-col #matTipInfo { margin-right: 120px; }
-  body[data-screen="cut"][data-step="1"] .ampsdl { display: none; }
+  body[data-screen="cut"][data-step="1"] .ampsdl { display: grid; margin: 2px 0; font-size: 12px; }
+  body[data-screen="cut"][data-step="1"] .ampsdl > div:nth-child(n+4) { display: none; }
   body[data-screen="cut"][data-step="1"] #speedBox { margin-bottom: 52px; }
   body[data-screen="cut"][data-step="3"] #btnOriginOpts {
     position: static;
@@ -2262,7 +2263,10 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body[data-screen="cut"][data-step="1"] #speedBox #spDown,
-  body[data-screen="cut"][data-step="1"] #speedBox #spUp { display: none; }
-  body[data-screen="cut"][data-step="3"] #btnOriginOpts { display: none !important; }
+  body[data-screen="cut"][data-step="3"] #btnOriginOpts {
+    display: inline-flex !important;
+    position: static;
+    grid-column: 1 / -1;
+    margin: 0 0 8px;
+  }
 }

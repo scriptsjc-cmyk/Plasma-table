@@ -261,10 +261,12 @@ function renderShapeFormCore() {
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
     ${customSizeHtml(it, b)}
     <div class="grid2">${(it.type === "custom" ? [] : sh.params).map((pr) => paramField(it, pr)).join("")}
+      ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
+    </div>
+    <div class="grid2 insp-arrange">
       <label>${esc(posXLab)}<input type="number" step="any" inputmode="decimal" data-pos="x" value="${posX}"></label>
       <label>${esc(posYLab)}<input type="number" step="any" inputmode="decimal" data-pos="y" value="${posY}"></label>
       <label>Angle °<input type="number" step="any" inputmode="decimal" data-angle="1" value="${Math.round((it.rot || 0) * 10) / 10}"></label>
-      ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
     </div>
     ${extraFormHtml(it, sh)}
     <div class="skbtns insp-arrange">

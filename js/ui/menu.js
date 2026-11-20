@@ -29,6 +29,10 @@ export function bindTopMenu() {
     closeTopMenu();
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeTopMenu(); });
+  const save = $("menuSavePart");
+  if (save) save.addEventListener("click", () => { const b = $("btnSavePartQuick"); if (b) b.click(); });
+  const exp = $("menuExportGcode");
+  if (exp) exp.addEventListener("click", () => { const b = $("btnExport"); if (b) b.click(); });
 }
 
 // ---------------------------------------------------------------- phone "More" sheet on the cutting screen

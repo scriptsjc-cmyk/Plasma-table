@@ -24,32 +24,30 @@ export function isShellLaptop() {
 }
 
 let makeHome = null, tabsHome = null, skToolsHome = null, skOptsHome = null;
-function safeInsert(parent, el, before, restore) {
+function safeInsert(parent, el, before) {
   if (!parent || !el) return;
   const ref = (before && before.parentNode === parent) ? before : null;
   if (el.parentNode === parent && el.nextElementSibling === ref) return;
-  // A stale neighbour used to throw; skip the move unless we must return the node home.
-  if (before && !ref && !restore) return;
+  // If the stored neighbour has moved, append rather than throw or skip, so tools are not left behind.
   try { parent.insertBefore(el, ref); } catch (e) {
-    if (restore && el.parentNode !== parent) parent.appendChild(el);
+    if (el.parentNode !== parent) parent.appendChild(el);
   }
 }
 function placeNode(el, homeKey, parent, before) {
   if (!el) return;
   if (!homeKey.ref) homeKey.ref = { parent: el.parentNode, next: el.nextElementSibling };
-  if (parent && el.parentNode !== parent) safeInsert(parent, el, before || null, false);
+  if (parent && el.parentNode !== parent) safeInsert(parent, el, before || null);
 }
 function restoreNode(el, homeKey) {
   const h = homeKey.ref;
   if (!el || !h || !h.parent) return;
-  safeInsert(h.parent, el, h.next, true);
+  safeInsert(h.parent, el, h.next);
 }
 export function placeMakeBar() {
   const bar = $("makeBar");
   const tabs = document.querySelector(".topbar .tabs") || document.querySelector("header .tabs") || document.querySelector(".tabs");
   const top = document.querySelector(".topbar");
   const stop = $("btnStop");
-  const main = document.querySelector(".topbar-main");
   if (bar && top) {
     if (!makeHome) makeHome = { ref: null };
     const on = isShellLaptop() && document.body.dataset.screen === "make" && !document.body.classList.contains("header-hidden");
