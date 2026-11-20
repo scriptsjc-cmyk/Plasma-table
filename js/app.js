@@ -71,6 +71,7 @@ import { bindDialogKeys } from "./ui/dialogs.js";
 import { bindRun } from "./cut/run.js";
 import { bindTurnCover } from "./cut/turncover.js";
 import { bindCutBar } from "./cut/cutbar.js";
+import { bindSetupLayout } from "./cut/setuplayout.js";
 import { bindCutStatus } from "./cut/cutstatus.js";
 import { bindCheckCut } from "./make/checkcut.js";
 import { bindHoverTips } from "./ui/hovertip.js";
@@ -159,6 +160,7 @@ async function init() {
   try { S.showMachine = localStorage.getItem("plasma.showMachine") !== "0"; } catch (e) { /* ignore */ }
   $("showMach").checked = S.showMachine;
   mountJogPads();
+  bindSetupLayout();
   initFlow({
     signedIn: () => Acc.isSignedIn(), bypass: testBypass(),
     stop: () => { try { torchTestOff(); } catch (e) { /* ignore */ } if (M && M.grbl) cmd("stop"); },       // soft reset + Test-torch M5

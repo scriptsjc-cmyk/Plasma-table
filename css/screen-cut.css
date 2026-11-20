@@ -1443,4 +1443,156 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  /* ---- Torch card: pad + readout side by side, lamps as chips ---- */
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 6px 10px 4px;
+  }
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary > b { font-size: var(--fs-md); }
+  body[data-screen="cut"][data-step="3"] #zeroCard > summary > .info-i { pointer-events: auto; }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    pointer-events: none;
+  }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.2;
+    background: var(--card);
+  }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--line-strong);
+    flex: none;
+  }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp.on::before { background: var(--warn); }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp.on[data-in="estop"]::before { background: var(--alarm); }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp.on[data-in="torch"]::before { background: var(--torch); }
+  /* E-stop chip must stay visible and turn red when pressed */
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp[data-in="estop"] { display: inline-flex !important; }
+  body[data-screen="cut"][data-step="3"] #bedStartHelp { display: none; }
+  body[data-screen="cut"][data-step="3"] #zeroState { display: none; }
+  body[data-screen="cut"][data-step="3"] #originCard,
+  body[data-screen="cut"][data-step="3"] #originHelp { display: none; }
+
+
+  /* When connected, hide the connect block — jogging is in view. When not, show Connect / Practice instead of the pad. */
+  body.machine-connected[data-screen="cut"][data-step="3"] #connectCard { display: none; }
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] .jogmount,
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] .homerow,
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] .keyhint,
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] #btnZero,
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] #btnGoStart,
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] #btnTrace,
+  body:not(.machine-connected)[data-screen="cut"][data-step="3"] #originCard { display: none; }
+  body[data-screen="cut"][data-step="3"] #connectCard #btnDisconnect,
+  body[data-screen="cut"][data-step="3"] #connectCard #connectLock { display: none; }
+  body[data-screen="cut"][data-step="3"] #connectCard { padding: 8px 0 0; border: 0; background: none; }
+  body[data-screen="cut"][data-step="3"] #connectCard .row { display: flex; gap: 8px; }
+  body[data-screen="cut"][data-step="3"] #connectCard .xl { flex: 1 1 0; min-height: 44px; font-size: 15px; }
+
+  body[data-screen="cut"][data-step="3"] .zerobody {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 8px;
+    align-content: start;
+    padding: 0 10px 8px;
+  }
+  body[data-screen="cut"][data-step="3"] .zerobody > #connectCard,
+  body[data-screen="cut"][data-step="3"] .zerobody > #bedStartHelp,
+  body[data-screen="cut"][data-step="3"] .zerobody > #originCard,
+  body[data-screen="cut"][data-step="3"] .zerobody > #originHelp,
+  body[data-screen="cut"][data-step="3"] .zerobody > .keyhint,
+  body[data-screen="cut"][data-step="3"] .zerobody > #btnZero { grid-column: 1 / -1; }
+  body[data-screen="cut"][data-step="3"] .homerow { display: contents; }
+  body[data-screen="cut"][data-step="3"] .do-raise { display: none; }
+  body[data-screen="cut"][data-step="3"] .jogmount { grid-column: 1 / -1; min-height: 0; }
+  body[data-screen="cut"][data-step="3"] #btnGoStart { grid-column: 1; min-height: 38px; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #btnTrace { grid-column: 2; min-height: 38px; font-size: 13px; }
+  body[data-screen="cut"][data-step="3"] #btnZero {
+    min-height: 44px;
+    font-size: 16px;
+    width: 100%;
+  }
+
+  /* Jog wrap: pad on the left, readout + step size on the right */
+  body[data-screen="cut"][data-step="3"] .jogwrap,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    grid-template-rows: auto auto 1fr;
+    gap: 6px 10px;
+    margin: 0;
+    align-items: start;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .lamps.mini,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap .lamps.mini { display: none; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas:
+      ". yp zp"
+      "xm home xp"
+      ". ym zm";
+    gap: 4px;
+    min-height: 0;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(1),
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(3),
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(8),
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(9),
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(11) { display: none; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(2) { grid-area: yp; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(4) { grid-area: zp; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(5) { grid-area: xm; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(6) { grid-area: home; display: flex; align-items: stretch; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(7) { grid-area: xp; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(10) { grid-area: ym; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog > :nth-child(12) { grid-area: zm; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .j { min-height: 40px; font-size: 16px; padding: 2px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home {
+    width: 100%;
+    min-height: 40px;
+    padding: 2px 4px;
+    font-size: 13px;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap .small-pos {
+    display: flex !important;
+    grid-column: 2;
+    grid-row: 1;
+    gap: 4px;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos div { flex: 1 1 0; padding: 2px 6px; min-width: 0; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: 18px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .steps {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .steps button { flex: 1 1 0; min-height: 32px; padding: 2px 4px; font-size: 13px; }
+
+  /* TORCH OFF already lives in the lamp chips; keep TORCH ON in the header */
+  body[data-screen="cut"][data-step="3"] #torchPill.off { display: none !important; }
 }
