@@ -20,7 +20,8 @@ async function waitIdle(page, timeout = 60000) {
   }, null, { timeout }).catch(() => {});
 }
 
-const OUT = "/workspace/plasma-table/briefs/r11-shots";
+// screenshots go to the briefs folder on the dev box, or tests/screenshots/r11 anywhere else (e.g. the CI runner)
+const OUT = fs.existsSync("/workspace/plasma-table/briefs") ? "/workspace/plasma-table/briefs/r11-shots" : new URL("../screenshots/r11", import.meta.url).pathname;
 fs.mkdirSync(OUT, { recursive: true });
 
 const SIZES = [
