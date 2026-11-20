@@ -157,7 +157,7 @@ t.check("the job panel shows the reachable 509 × 653 mm edges, not only the 130
   /reachable 509\s*×\s*653/i.test(afterHomeStart.jc) && /bed 1300\s*×\s*800/i.test(afterHomeStart.jc),
   afterHomeStart.jc);
 t.check("a 1300 × 800 mm sheet on a smaller reachable area is explained, and only the cut path has to fit",
-  /larger than the reachable area/i.test(afterHomeStart.note) && /only the cut path/i.test(afterHomeStart.note),
+  /larger than that|larger than the reachable area/i.test(afterHomeStart.note) && /only the cut path/i.test(afterHomeStart.note) && /usable edges/i.test(afterHomeStart.note),
   afterHomeStart.note);
 t.check("on the laptop Setup picture the sheet corner is at the top-left of the machine edges (home)",
   afterHomeStart.rot && afterHomeStart.o && afterHomeStart.far && afterHomeStart.homePx
