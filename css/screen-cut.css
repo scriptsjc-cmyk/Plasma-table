@@ -954,8 +954,8 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   #running > #liveSpeedBox .row button { flex: 1 1 0; min-width: 0; min-height: 44px; }
   #running > #liveSpeedBox #delayRow .row { flex-wrap: wrap; }
   #running > #liveSpeedBox #delayRow .row #delSave { flex: 1 0 100%; white-space: nowrap; }    /* its own row under − / +, never squeezed */
-  /* r13: the 300 px button cap let Save share the row on wide screens and squeezed − / + to 30 px; it always gets its own row */
-  body[data-screen="cut"] #running > #liveSpeedBox #delayRow .row #delSave { max-width: none; }
+  /* r13: − / + never shrink below a readable width, so Save (capped at 300 px) wraps to its own row on wide screens too */
+  #running > #liveSpeedBox #delayRow .row #delDown, #running > #liveSpeedBox #delayRow .row #delUp { flex: 1 0 80px; min-width: 80px; }
   #running > #liveSpeedBox p { margin: 4px 0 0; }
   #running > #livePanel { grid-area: live; margin: 0; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }   /* each reading on one line */
   #running > #livePanel .lp b { white-space: nowrap; }
@@ -2233,7 +2233,7 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
   body[data-screen="cut"][data-step="4"] #doneActions .xl,
   body[data-screen="cut"][data-step="4"] #doneActions .wide { height: auto; line-height: 1.2; padding-top: 6px; padding-bottom: 6px; }
   body[data-screen="cut"][data-step="4"] #cutView #doneActions .xl,
-  body[data-screen="cut"][data-step="4"] #cutView #doneActions .wide { max-width: none; }
+  body[data-screen="cut"][data-step="4"] #cutView #doneActions .wide { max-width: 280px; }   /* STOP stays the largest control */
   body[data-screen="cut"][data-step="4"] #restartBox { margin: 0 0 8px; }
   body[data-screen="cut"][data-step="4"] #restartBox.hidden ~ #doneActions .done-continue { display: none; }
   body[data-screen="cut"][data-step="4"] #doneInfo { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; }
