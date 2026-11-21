@@ -11,7 +11,7 @@ function refreshBar() {
 export const TOOL_GROUPS = [
   { g: "Shapes", items: [["presets", "▦", "Preset parts"], ["rect", "▭", "Rectangle"], ["disc", "◯", "Circle"], ["triangle", "△", "Triangle"], ["slot", "⊂⊃", "Slot"], ["sector", "◔", "Arc / sector"], ["lib", "⋯", "All shapes…"]] },
   { g: "Holes", items: [["hole", "◦", "Hole"], ["slothole", "⊖", "Slot hole"], ["boltcircle", "⁘", "Bolt circle"]] },
-  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["etch", "∽", "Etch / mark"], ["arc3", "⌓", "3-point arc"], ["arctan", "◜", "Tangent arc"], ["spline", "∿", "Spline"], ["curvepoints", "⋮", "Curve from points"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"], ["dims", "↔", "Size"], ["drivedim", "↦", "Hole distance"]] },
+  { g: "Draw", items: [["draw", "✎", "Draw outline"], ["etch", "∽", "Etch / mark"], ["arc3", "⌓", "3-point arc"], ["arctan", "◜", "Tangent arc"], ["spline", "∿", "Spline"], ["curvepoints", "⋮", "Curve from points"], ["edge", "⟋", "Edit edge"], ["measure", "📏", "Measure"], ["text", "Aa", "Add text"], ["trace", "▧", "Trace a picture"], ["dims", "↔", "Size"], ["drivedim", "↦", "Set hole position"]] },
   { g: "Snaps & constraints", items: [["snap", "⌗", "Snap"]] },
   { g: "Transform", items: [
     ["rot", "⟳", "Turn 90°"], ["mir", "⇋", "Mirror left-right"], ["mirv", "⇅", "Mirror up-down"],
@@ -22,7 +22,7 @@ export const TOOL_GROUPS = [
     ["rotpt", "↻", "Rotate about a point"], ["scalepct", "%", "Scale by %"],
     ["group", "▣", "Group"], ["ungroup", "▢", "Ungroup"],
   ] },
-  { g: "Boolean & offset", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"], ["sliver", "≋", "Merge slivers"]] },
+  { g: "Boolean & offset", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"], ["sliver", "≋", "Clean up tiny gaps"]] },
   { g: "Arrays", items: [["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["nest", "⊞", "Auto-arrange"]] },
   { g: "Cutting", items: [["cutctl", "⤳", "Cut control"], ["flangestd", "⊛", "Standard flange"]] },
   { g: "Edit", items: [["trim", "✂", "Trim"], ["extend", "━", "Extend"], ["break", "⤢", "Break"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["maketan", "⊙", "Make tangent"], ["makeconc", "◎", "Make concentric"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"]] },

@@ -54,7 +54,7 @@ const CAD_OK = {
   "Fill from a flange standard": "Fill in the sizes",
   "Fillet a corner": "Fillet",
   "Linear array": (v) => `Make ${v.n} copies`,
-  "Merge slivers closer than the cut width": "Merge slivers",
+  "Clean up tiny gaps (closer than the cut width)": "Clean up",
   "Offset the outline": "Offset",
   "Rotate about a point": "Rotate",
   "Scale by percent": "Scale",
@@ -199,7 +199,7 @@ export function runPro(cmd) {
   if (cmd === "sliver") {
     let kerf = 1.5;
     try { const el = document.getElementById("ovKerf"); if (el && el.value !== "") kerf = Number(el.value) || kerf; } catch (e) {}
-    openCad("Merge slivers closer than the cut width", [
+    openCad("Clean up tiny gaps (closer than the cut width)", [   // r15 4.22: plain name (was Merge slivers)
       { id: "kerf", label: "Cut width / kerf (mm)", value: kerf },
       { note: "Tiny holes and webs narrower than this are merged into the surrounding metal, so they are not left as uncuttable slivers. This does not run on its own — only when you ask." },
     ], (v) => sketch.mergeSlivers(v.kerf));

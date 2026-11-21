@@ -264,7 +264,7 @@ function renderShapeFormCore() {
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}
     ${customSizeHtml(it, b)}
     <div class="grid2">${(it.type === "custom" ? [] : sh.params).map((pr) => paramField(it, pr)).join("")}
-      ${it.type === "custom" ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
+      ${/* r15 4.16: the overall size only when Width and Height aren't already the fields above */ ""}${it.type === "custom" || (sh.params.some((pr) => pr[0] === "w") && sh.params.some((pr) => pr[0] === "h")) ? "" : `<label>Size<input type="text" disabled value="${Math.round((b[2] - b[0]) * 10) / 10} × ${Math.round((b[3] - b[1]) * 10) / 10} mm"></label>`}
     </div>
     <div class="grid2 insp-arrange">
       <label>${esc(posXLab)}<input type="number" step="any" inputmode="decimal" data-pos="x" value="${posX}"></label>
