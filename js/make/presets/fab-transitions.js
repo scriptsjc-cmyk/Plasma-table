@@ -7,6 +7,7 @@ import {
 import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment } from "../duct.js";
 import { SHEET_PARAMS, sheetFrom, elbowTable } from "../sheetopts.js";
 import { assembleFlat, atOrigin, rollSector } from "../flat3d.js";
+import { displayThickness } from "../fold3d.js";
 
 // ---- r15 5.2: the flashings' pieces are built once and used both for the cut (packed) and for the 3D (placed), so
 // the 3D is made from exactly the pieces that get cut.
@@ -90,15 +91,26 @@ function skylightPieces(p) {
 }
 // Each pan is an apron on the roof and an upstand against the curb: folded 90° at the apron width (the pans are cut
 // without a fold line, so the fold is placed where the apron ends).
+// r15 5.9 (Josh 21 Nov): each upstand is the curb side plus an apron width at each end, so in 3D the ends used to pass
+// through the next pan's upstand at every corner. Now, as fitted: the head and sill pans (along w) wrap their upstand ends
+// round the curb corners (snip the apron corner, fold the end against the curb side); the two side pans (along d) lap over
+// them one sheet out and one sheet up, and wrap round the head and sill. The cut pieces are unchanged; the 3D only
+// chooses where the folds go. The sheet lies on the curb / roof side of the drawn surface (side +1).
 function skylight3d(p) {
-  const a = p.apron, w = p.w, d = p.d, pcs = skylightPieces(p);
-  const fold = (len) => [{ pts: [[0, a], [len + 2 * a, a]], closed: false, role: "bend" }];
-  const X = XA, Z = ZA, root = [1, a / 2];           // the apron lies on the roof, whichever is wider
+  const a = p.apron, w = p.w, d = p.d, up = p.up, pcs = skylightPieces(p);
+  const t = Math.min(displayThickness(p), a / 4);
+  // k: how far past the curb corner the end folds sit (0 for the head and sill, one sheet for the side pans)
+  const fold = (len, k) => [
+    { pts: [[0, a], [len + 2 * a, a]], closed: false, role: "bend" },
+    { pts: [[a - k, a], [a - k, a + up]], closed: false, role: "bend", dir: "down" },
+    { pts: [[len + a + k, a], [len + a + k, a + up]], closed: false, role: "bend", dir: "down" },
+  ];
+  const X = XA, Z = ZA, root = [1, a / 2], side = 1;   // the apron lies on the roof, whichever is wider
   const items = [
-    { contours: pcs[0], bends: fold(w), root, pose: { o: [-w / 2 - a, 0, d / 2 + a], ax: X, ay: neg(Z) } },
-    { contours: pcs[1], bends: fold(w), root, pose: { o: [w / 2 + a, 0, -d / 2 - a], ax: neg(X), ay: Z } },
-    { contours: pcs[2], bends: fold(d), root, pose: { o: [w / 2 + a, 0, d / 2 + a], ax: neg(Z), ay: neg(X) } },
-    { contours: pcs[3], bends: fold(d), root, pose: { o: [-w / 2 - a, 0, -d / 2 - a], ax: Z, ay: X } },
+    { contours: pcs[0], bends: fold(w, 0), root, side, pose: { o: [-w / 2 - a, 0, d / 2 + a], ax: X, ay: neg(Z) } },
+    { contours: pcs[1], bends: fold(w, 0), root, side, pose: { o: [w / 2 + a, 0, -d / 2 - a], ax: neg(X), ay: Z } },
+    { contours: pcs[2], bends: fold(d, t), root, side, pose: { o: [w / 2 + a + t, t, d / 2 + a], ax: neg(Z), ay: neg(X) } },
+    { contours: pcs[3], bends: fold(d, t), root, side, pose: { o: [-w / 2 - a - t, t, -d / 2 - a], ax: Z, ay: X } },
   ];
   return assembleFlat(items);
 }
