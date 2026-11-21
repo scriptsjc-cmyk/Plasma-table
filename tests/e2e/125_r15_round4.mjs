@@ -424,6 +424,26 @@ try {
     t.check(`no page error (${prof} machine setup)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 4.26 the app brings its own Barlow (OFL), so every buyer sees Josh's layout
+  {
+    const fs = await import("node:fs");
+    const root = new URL("../../", import.meta.url).pathname;
+    const sw = fs.readFileSync(root + "sw.js", "utf8");
+    const files = fs.existsSync(root + "fonts") ? fs.readdirSync(root + "fonts") : [];
+    const woff = files.filter((f) => /^barlow-.*\.woff2$/.test(f));
+    t.check("4.26 fonts/ holds the Barlow woff2 files and the OFL licence", woff.length >= 4 && files.some((f) => /^OFL/i.test(f)), J(files));
+    t.check("4.26 the service worker precaches every Barlow file (works offline)", woff.length > 0 && woff.every((f) => sw.includes(`"fonts/${f}"`)), J(woff));
+    const page = await newPage(br, "d1440", { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    await ev(page, () => document.fonts.ready); await sleep(300);
+    const f = await ev(page, () => ({ fam: getComputedStyle(document.body).fontFamily, ok: [400, 500, 600, 700].map((w) => document.fonts.check(`${w} 16px Barlow`)),
+      loaded: [...document.fonts].filter((x) => x.family.replace(/"/g, "") === "Barlow" && x.status === "loaded").length,
+      res: performance.getEntriesByType("resource").filter((r) => /\.woff2/.test(r.name)).map((r) => new URL(r.name).origin === location.origin) }));
+    t.check("4.26 the page's font is Barlow first", /^"?Barlow"?\s*,/.test(f.fam), J(f));
+    t.check("4.26 Barlow is loaded from the app itself (no outside font service)", f.loaded >= 1 && f.res.length >= 1 && f.res.every(Boolean), J(f));
+    t.check(`no page error (fonts)`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("125 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
