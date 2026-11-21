@@ -97,6 +97,7 @@ function rowHtml(f, fr, issues) {
 
 export function renderFeatureList() {
   const host = $("featPanel"); if (!host) return;
+  syncFeatureSheet();
   const list = $("featList"), empty = host.querySelector(".feat-empty"), add = $("featAdd");
   const it = part();
   add.disabled = !it || !!it.lock;
@@ -297,6 +298,46 @@ export function drawingKey(p) {
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
   return "drawing:" + (h >>> 0).toString(36);
 }
+// ---------------------------------------------------------------- phone: the same list as a bottom sheet (plan 2.18)
+// "Features (N)" on the drawing opens #featSheet, which holds the very same #featPanel (moved in, moved back on close).
+let panelHome = null;
+const phoneMake = () => document.body.classList.contains("phone-ui") && document.body.dataset.screen === "make";
+function syncFeatureSheet() {
+  const btn = $("featSheetBtn"); if (!btn) return;
+  const it = part(), on = !!it && phoneMake() && !jobRunning();
+  btn.hidden = !on; btn.classList.toggle("hidden", !on);
+  if (!on) { closeFeatureSheet(); return; }
+  $("featSheetN").textContent = String((it.feats || []).length);
+  const cv = $("preview"), r = cv && cv.getBoundingClientRect();
+  if (r && r.width) { btn.style.left = `${Math.round(r.left + 8)}px`; btn.style.top = `${Math.round(r.top + 8)}px`; }
+  if (!$("featSheet").hidden) $("featSheetTitle").textContent = it.name ? `Features · ${it.name}` : "Features";
+}
+export function openFeatureSheet() {
+  const sheet = $("featSheet"), panel = $("featPanel"); if (!sheet || !panel || !part() || jobRunning()) return;
+  if (!panelHome) { panelHome = document.createComment("featPanel home"); panel.parentNode.insertBefore(panelHome, panel); }
+  $("featSheetBody").appendChild(panel);
+  sheet.hidden = false; sheet.classList.remove("hidden");
+  document.body.classList.add("feat-sheet-open");
+  renderFeatureList();
+  const c = $("featSheetClose"); if (c) c.focus({ preventScroll: true });
+}
+export function closeFeatureSheet() {
+  const sheet = $("featSheet"); if (!sheet || sheet.hidden) return;
+  closeMenus();
+  const panel = $("featPanel");
+  if (panel && panelHome && panelHome.parentNode) panelHome.parentNode.insertBefore(panel, panelHome);
+  sheet.hidden = true; sheet.classList.add("hidden");
+  document.body.classList.remove("feat-sheet-open");
+}
+export function bindFeatureSheet() {
+  const btn = $("featSheetBtn"); if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = "1";
+  btn.addEventListener("click", openFeatureSheet);
+  $("featSheetClose").addEventListener("click", () => { closeFeatureSheet(); syncFeatureSheet(); });
+  $("featSheet").addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.target.closest(".featmenu:not(.hidden)")) closeFeatureSheet(); });
+  window.addEventListener("resize", syncFeatureSheet);
+}
+
 export function offerLooseHoles(key) {
   hideOffer();
   const el = $("looseOffer"); if (!el || !key || jobRunning() || doneKeys().includes(key)) return false;

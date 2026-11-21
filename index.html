@@ -259,6 +259,7 @@
       <canvas id="preview"></canvas>
       <p id="previewHint" class="preview-hint hidden" hidden>Pick a part on the left</p>
       <div id="looseOffer" class="loose-offer hidden" role="group" aria-label="Loose holes" aria-live="polite"><span id="looseText"></span><button type="button" id="looseNo" class="small">No</button><button type="button" id="looseYes" class="small go">Yes</button></div>
+      <button type="button" id="featSheetBtn" class="feat-sheet-btn hidden" hidden aria-haspopup="dialog" aria-controls="featSheet">Features (<span id="featSheetN">0</span>)</button>
       <p id="dragChip" class="canvas-chip hidden"><span class="info-label">Drag a part to place it</span><button type="button" class="info-i" data-tip="Drag a part to place it. Blue lines show when it lines up; numbers show the gap. Red means too close, overlapping, or off the sheet." aria-label="More about moving parts on the bed"></button></p>
       <p id="fitChip" class="canvas-chip hidden"></p>
       <p id="pathLegend" class="canvas-chip hidden"><span class="info-label">Torch path</span><button type="button" class="info-i" data-tip="Orange: torch path. Amber dashed: etch. Grey: your part. Dots: where it pierces." aria-label="More about the colours on the cut preview"></button></p>
@@ -778,6 +779,10 @@
   <button type="button" data-ph="undo" title="Undo">Undo</button>
   <button type="button" data-ph="more" title="More tools" aria-expanded="false">More</button>
 </nav>
+<div id="featSheet" class="feat-sheet hidden" hidden role="dialog" aria-labelledby="featSheetTitle">
+  <div class="feat-sheet-head"><b id="featSheetTitle">Features</b><button type="button" id="featSheetClose" class="small">Close</button></div>
+  <div id="featSheetBody"></div>
+</div>
 <div id="phoneSheet" class="phonesheet hidden" hidden role="dialog" aria-label="Shape options">
   <button type="button" class="phonesheet-handle" id="phoneSheetClose" aria-label="Close"></button>
   <div id="phoneSheetBody"></div>

@@ -2343,3 +2343,20 @@ body.advanced-mode[data-screen="make"] #srcShape[data-insp="holes"] > .featpanel
 body:not([data-screen="make"]) #looseOffer,
 body.running-job #looseOffer,
 body.job-live #looseOffer { display: none; }
+
+/* r15 2.18: phone - the Features list as a bottom sheet (the same #featPanel, moved in while open) */
+#featSheetBtn { position: fixed; top: 8px; left: 8px; z-index: var(--z-float); min-height: 44px; padding: 0 14px;
+  border: 1px solid var(--line-strong, var(--line)); border-radius: var(--r, 6px); background: var(--card); color: var(--text);
+  box-shadow: var(--shadow); font-weight: 600; }
+#featSheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-float); max-height: 70vh; overflow-y: auto;
+  padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--card); color: var(--text);
+  border-top: 1px solid var(--line-strong, var(--line)); border-radius: 12px 12px 0 0; box-shadow: var(--shadow); }
+.feat-sheet-head { position: sticky; top: -8px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: -8px -12px 8px; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--line); }
+.feat-sheet-head button { min-height: 44px; padding: 0 16px; }
+#featSheet .feathead h3 { display: none; }
+#featSheet .feat-row .feat-open, #featSheet .feat-eye, #featSheet .feat-more, #featSheet #featAdd { min-height: 44px; }
+#featSheet .feat-edit input, #featSheet .feat-edit select { min-height: 44px; font-size: var(--fs-l); /* 16px or more so phones do not zoom in */ }
+body:not([data-screen="make"]) #featSheetBtn, body:not([data-screen="make"]) #featSheet,
+body:not(.phone-ui) #featSheetBtn, body.running-job #featSheetBtn, body.job-live #featSheetBtn,
+body.running-job #featSheet, body.job-live #featSheet { display: none; }

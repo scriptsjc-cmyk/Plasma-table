@@ -10,7 +10,7 @@ import { sketch } from "../core/state.js";
 import { renderQuickBar, focusToolSearch } from "./quickbar.js";
 import { bindShortcuts, openShortcutSheet, closeShortcutSheet } from "./shortcuts.js";
 import { initInspectorTabs } from "./inspector.js";
-import { bindFeatureList, bindLooseOffer, renderFeatureList } from "./part-features-ui.js";
+import { bindFeatureList, bindFeatureSheet, bindLooseOffer, renderFeatureList } from "./part-features-ui.js";
 
 export { isLaptopUi, syncLaptopUi, paintSidewaysHint, paintLayers };
 
@@ -19,6 +19,7 @@ export function bindCadUi() {
   initInspectorTabs();
   bindFeatureList();
   bindLooseOffer();
+  bindFeatureSheet();
   bindLayers();
   bindCtxMenu();
   bindDrawHud();
