@@ -45,6 +45,7 @@ export function sanitizeFeature(f) {
   if (f.from === "centre") out.from = "centre";
   if (f.k === "hole" && f.arcs && Number(f.arcs.n) >= 2) out.arcs = { n: Math.max(2, Math.min(64, Math.round(Number(f.arcs.n)))), a0: exact(NUM(f.arcs.a0, 0)), b: Math.abs(NUM(f.arcs.b, 0)), cw: !!f.arcs.cw };
   if (Number(f.link) > 0) out.link = Math.round(Number(f.link));
+  if (f.pat && PATTERNABLE.has(f.k)) { const p = sanitizePattern(f.pat); if (p) out.pat = p; }
   if (f.k === "corner" && f.at != null) {             // a Corners row that shapes the outline itself (plan 2.12)
     out.kind = CORNER_KINDS.includes(f.kind) ? f.kind : "round";
     out.at = f.at === "all" || f.at === "inside" ? f.at : Array.isArray(f.at) ? [...new Set(f.at.map((v) => Math.round(Number(v))).filter((v) => v >= 0 && v < 512))].sort((a, b) => a - b) : "all";
@@ -64,8 +65,26 @@ function clampKey(key, v) {
 }
 
 // set one field the way a typed value arrives; returns false when the value can't be used
-export function setFeatureValue(f, key, raw) {
+export function setFeatureValue(f, key, raw, fr) {
   const k = FEATURE_KINDS[f.k]; if (!k) return false;
+  if (key === "pt") {                                   // pattern type: none / grid / circle / line (fr = the part's W, H for a circle's centre)
+    if (raw === "none") { delete f.pat; return true; }
+    if (!PATTERNABLE.has(f.k) || !["grid", "circle", "line"].includes(raw)) return false;
+    const old = f.pat || {}, b = singleBox(f), step = exact(Math.ceil(Math.max(b[2] - b[0], b[3] - b[1]) + 10));
+    f.pat = sanitizePattern(raw === "grid" ? { t: "grid", cols: old.cols || 2, rows: old.rows || 1, px: old.px || step, py: old.py || step }
+      : raw === "circle" ? { t: "circle", n: old.n || 4, cx: fr ? fr.W / 2 : 0, cy: fr ? fr.H / 2 : 0 }
+      : { t: "line", n: old.n || 3, pitch: old.pitch || step, ang: 0 });
+    return true;
+  }
+  if (/^p(cols|rows|px|py|n|cx|cy|pitch|ang)$/.test(key)) {
+    if (!f.pat) return false;
+    const pk = key.slice(1), v = Number(raw);
+    if (!Number.isFinite(v) || !(pk in f.pat)) return false;
+    if (PAT_INT.has(pk) && !(v >= 1)) return false;
+    if ((pk === "px" || pk === "py" || pk === "pitch") && v === 0) return false;
+    f.pat[pk] = PAT_INT.has(pk) ? Math.max(1, Math.min(64, Math.round(v))) : exact(v);
+    return true;
+  }
   if (key === "op") { if (!["cut", "score", "mark"].includes(raw)) return false; f.op = raw; return true; }
   if (f.k === "corner" && f.at != null) {
     if (key === "kind") { if (!CORNER_KINDS.includes(raw)) return false; f.kind = raw; if (raw === "chamfer" && !(f.ang > 0)) f.ang = 45; if (raw !== "chamfer") delete f.ang; return true; }
@@ -161,7 +180,39 @@ export function holeCentres(f) {
 export const isHoleFeature = (f) => ["hole", "bolt", "grid", "edge"].includes(f.k);
 
 // the contours one feature cuts / etches, in the part frame
-export function featureContours(f) {
+// ---------------------------------------------------------------- Pattern on any feature (plan 2.6): copies of the one row
+// pat = { t: "grid", cols, rows, px, py } (copies step from the original) | { t: "circle", n, cx, cy } (turned round a centre,
+// part frame) | { t: "line", n, pitch, ang }. The original always stays where it was typed; holes use their own pattern kinds.
+export const PATTERNABLE = new Set(["slot", "rect", "shape", "text", "etch"]);
+const PAT_INT = new Set(["cols", "rows", "n"]);
+export function sanitizePattern(p) {
+  if (!p || !["grid", "circle", "line"].includes(p.t)) return null;
+  const I = (v, d) => Math.max(1, Math.min(64, Math.round(NUM(v, d)))), X = (v, d) => exact(NUM(v, d));
+  if (p.t === "grid") return { t: "grid", cols: I(p.cols, 2), rows: I(p.rows, 1), px: X(p.px, 40), py: X(p.py, 40) };
+  if (p.t === "circle") return { t: "circle", n: I(p.n, 4), cx: X(p.cx, 0), cy: X(p.cy, 0) };
+  return { t: "line", n: I(p.n, 3), pitch: X(p.pitch, 30), ang: X(p.ang, 0) };
+}
+// [dx, dy, turn°] of each copy (copy 0 = the original), turn about (cx, cy)
+function patternMoves(p) {
+  const out = [];
+  if (p.t === "grid") { for (let j = 0; j < p.rows; j++) for (let i = 0; i < p.cols; i++) out.push([i * p.px, j * p.py, 0]); }
+  else if (p.t === "line") { const [c, s] = cs(p.ang); for (let i = 0; i < p.n; i++) out.push([i * p.pitch * c, i * p.pitch * s, 0]); }
+  else for (let i = 0; i < p.n; i++) out.push([0, 0, (360 * i) / p.n]);
+  return out;
+}
+function moveContour(c, [dx, dy, a], p) {
+  if (!a) return { ...c, pts: c.pts.map(([x, y]) => [x + dx, y + dy]) };
+  const [co, si] = cs(a), R = ([x, y]) => [p.cx + (x - p.cx) * co - (y - p.cy) * si, p.cy + (x - p.cx) * si + (y - p.cy) * co];
+  return { ...c, pts: c.pts.map(R) };
+}
+// the contours of each copy, grouped (used by the live checks to find copies that overlap)
+export function patternCopies(f) {
+  const one = singleContours(f);
+  if (!f.pat || !PATTERNABLE.has(f.k)) return [one];
+  return patternMoves(f.pat).map((m) => one.map((c) => moveContour(c, m, f.pat)));
+}
+export function featureContours(f) { return patternCopies(f).flat(); }
+function singleContours(f) {
   const op = f.op && f.op !== "cut" ? f.op : null;
   const tag = (c) => (op ? { ...c, op } : c);
   if (f.k === "hole" && f.arcs) return [tag(drawnCircle(f.x, f.y, f.d / 2, f.arcs))];
@@ -234,6 +285,7 @@ export function applyCorners(c, rows) {
 }
 
 // every shown feature, flattened, shifted by (ox, oy) = the outline's bottom-left corner in the shape's own frame
+function singleBox(f) { const pts = singleContours(f).flatMap((c) => c.pts); return pts.length ? boxOf(pts) : [0, 0, 0, 0]; }
 export function flattenFeatures(feats, ox = 0, oy = 0) {
   const out = [];
   for (const f of feats || []) {
@@ -270,6 +322,10 @@ export function featureIssues(feats, outline, thickness = 3) {
     if (allPts.some((p) => !pointInPoly(p, outline)) || fc.some((c) => polysCross(c.pts, outline))) add(f.id, "Part of this is outside the part.");
     else if (fc.length && fc.some((c) => (!c.op) && minDist(c.pts, outline) < gap)) add(f.id, `Too close to the edge (keep at least ${exact(gap)} mm of metal).`);
   }
+  for (const { f } of shapes) if (f.pat && PATTERNABLE.has(f.k)) {
+    const cp = patternCopies(f).map((g) => g.filter((c) => c.closed !== false));
+    if (cp.some((a, i) => cp.some((b, j) => j > i && a.some((x) => b.some((y) => overlaps(x.pts, y.pts)))))) add(f.id, "Copies in this pattern overlap.");
+  }
   for (let i = 0; i < shapes.length; i++) for (let j = i + 1; j < shapes.length; j++) {
     const A = shapes[i], B = shapes[j];
     if (A.f.op && A.f.op !== "cut") continue; if (B.f.op && B.f.op !== "cut") continue;
@@ -285,6 +341,13 @@ export function featureIssues(feats, outline, thickness = 3) {
 
 // ---------------------------------------------------------------- one-line summary for the list row
 export function featureSummary(f) {
+  const base = featureSummaryOne(f), p = f.pat && PATTERNABLE.has(f.k) ? f.pat : null, n = (v) => String(exact(v));
+  if (!p) return base;
+  if (p.t === "grid") return `${base} · ${p.cols} × ${p.rows}, pitch ${n(p.px)} × ${n(p.py)}`;
+  if (p.t === "circle") return `${base} · ${p.n} round ${n(p.cx)}, ${n(p.cy)}`;
+  return `${base} · ${p.n} in a line, pitch ${n(p.pitch)}${p.ang ? ` at ${n(p.ang)}°` : ""}`;
+}
+function featureSummaryOne(f) {
   const n = (v) => String(exact(v));
   switch (f.k) {
     case "hole": return `Ø${n(f.d)} at ${n(f.x)}, ${n(f.y)}`;
@@ -313,6 +376,11 @@ export function mirrored(src, W) {
   if ("rot" in src) m.rot = mirAng(src.rot);
   if ("ang" in src) m.ang = mirAng(src.ang);
   if (src.pts) { m.pts = src.pts.map(([x, y]) => [-x, y]); m.rot = exact(((-src.rot % 360) + 360) % 360); }   // a drawn shape is mirrored, not turned
+  if (src.pat) {                                        // the copies mirror with it
+    const p = { ...src.pat };
+    if (p.t === "grid") p.px = exact(-p.px); else if (p.t === "circle") p.cx = exact(W - p.cx); else p.ang = mirAng(p.ang);
+    m.pat = p;
+  }
   return m;
 }
 // after editing f, bring its linked partners into line (a mirror twin follows its source and vice versa)
@@ -329,9 +397,11 @@ export function syncLinks(feats, f, W) {
   }
 }
 // a single hole becomes a 2 × 1 grid on the same centre; other kinds are copied 20 mm along
-export function patternOf(f, id) {
+export function patternOf(f, id, fr) {
   if (f.k === "hole") return { id, k: "grid", x: f.x, y: f.y, cols: 2, rows: 1, px: exact(Math.max(20, f.d * 2)), py: exact(Math.max(20, f.d * 2)), d: f.d, ...(f.op ? { op: f.op } : {}) };
-  return null;
+  if (!PATTERNABLE.has(f.k)) return null;
+  const g = { ...f, id }; setFeatureValue(g, "pt", "grid", fr);
+  return g;
 }
 
 // ---------------------------------------------------------------- hooks the sketch calls (kept here, plan 8.6)

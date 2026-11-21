@@ -4,7 +4,7 @@
 // The model lives in part-features.js; the sketch flattens features to plain contours before anything is cut.
 import { $, esc, toast } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
-import { CUTOUT_SHAPES, FEATURE_KINDS, adoptableHoles, FEATURE_OPS, exact, featureIssues, featureSummary, mirrored, newFeature, patternOf, setFeatureValue, syncLinks } from "./part-features.js";
+import { CUTOUT_SHAPES, FEATURE_KINDS, PATTERNABLE, adoptableHoles, FEATURE_OPS, exact, featureIssues, featureSummary, mirrored, newFeature, patternOf, setFeatureValue, syncLinks } from "./part-features.js";
 
 const ADD_ORDER = [["hole", "Hole"], ["slot", "Slot"], ["bolt", "Bolt circle"], ["grid", "Grid of holes"], ["edge", "Holes in a line"],
   ["rect", "Rectangle cut-out"], ["shape", "Shape cut-out"], ["text", "Text"], ["etch", "Etch line"], ["corner", "Corners"]];
@@ -56,6 +56,15 @@ function field(f, key, label, fr) {
   const v = key === "x" ? shownXY(f, fr)[0] : key === "y" ? shownXY(f, fr)[1] : f[key];
   return `<label>${esc(label)}<input type="number" step="any" inputmode="decimal" data-ff="${key}" value="${esc(String(v))}"></label>`;
 }
+// pattern of this feature (plan 2.6): one row, its copies
+function patternFields(f) {
+  const p = f.pat, t = p ? p.t : "none";
+  const types = [["none", "None"], ["grid", "Grid"], ["circle", "Circle"], ["line", "In a line"]];
+  const num = (key, label) => `<label>${esc(label)}<input type="number" step="any" inputmode="decimal" data-ff="p${key}" value="${esc(String(p[key]))}"></label>`;
+  const more = !p ? "" : p.t === "grid" ? num("cols", "Across") + num("rows", "Up") + num("px", "Pitch across") + num("py", "Pitch up")
+    : p.t === "circle" ? num("n", "Count") + num("cx", "Centre X") + num("cy", "Centre Y") : num("n", "Count") + num("pitch", "Pitch") + num("ang", "Angle °");
+  return `<label title="Copies of this feature, kept as one row">Pattern<select data-ff="pt">${types.map(([v, l]) => `<option value="${v}"${t === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>${more}`;
+}
 // a Corners row that shapes the outline (plan 2.12): kind, size, which corners
 function cornerEditor(f) {
   const size = f.kind === "chamfer" ? "Distance" : f.kind === "relief" ? "Circle Ø" : "Radius";
@@ -71,7 +80,7 @@ function editor(f, fr) {
   const pos = f.k === "corner" ? "" : `${field(f, "x", fromCentre(f) ? "X from centre" : "X (by centre)", fr)}${field(f, "y", fromCentre(f) ? "Y from centre" : "Y (by centre)", fr)}
       <label title="Corner = the part's bottom-left corner; Centre = the middle of the part">Measured from<select data-ff="from"><option value="corner"${fromCentre(f) ? "" : " selected"}>Corner</option><option value="centre"${fromCentre(f) ? " selected" : ""}>Centre</option></select></label>`;
   const op = f.k === "corner" ? "" : `<label>How it's made<select data-ff="op">${FEATURE_OPS.map(([v, l]) => `<option value="${v}"${(f.op || "cut") === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
-  return `<div class="feat-edit grid2">${k.keys.map(([key, label]) => field(f, key, label, fr)).join("")}${pos}${op}</div>`;
+  return `<div class="feat-edit grid2">${k.keys.map(([key, label]) => field(f, key, label, fr)).join("")}${pos}${op}${PATTERNABLE.has(f.k) ? patternFields(f) : ""}</div>`;
 }
 function rowHtml(f, fr, issues) {
   const k = FEATURE_KINDS[f.k], warn = issues.get(f.id), open = f.id === openId;
@@ -181,7 +190,7 @@ function setValue(fid, key, raw, inp) {
     if (key === "from") { if (raw === "centre") f.from = "centre"; else delete f.from; return true; }
     let v = raw;
     if ((key === "x" || key === "y") && fromCentre(f)) { const n = Number(raw); if (!Number.isFinite(n)) return false; v = n + (key === "x" ? fr.W : fr.H) / 2; }
-    if (!setFeatureValue(f, key, v)) return false;
+    if (!setFeatureValue(f, key, v, fr)) return false;
     if (f.k === "corner" && f.at == null && key === "r" && "r" in it.p) it.p.r = f.r;
     syncLinks(it.feats, f, fr.W);
     return true;
@@ -216,8 +225,8 @@ function act(fid, what) {
       const m = { ...mirrored(f, fr.W), id: nextId(it), link: f.id }; delete m.hide; it.feats.splice(i + 1, 0, m); return true;
     }
     if (what === "pattern") {
-      const p = patternOf(f, f.id);
-      if (!p) { toast("Pattern turns a single hole into a row of holes. For other features use Duplicate.", true); return false; }
+      const p = patternOf(f, f.id, fr);
+      if (!p) { toast("This feature can't be made into a pattern. Use Duplicate.", true); return false; }
       it.feats[i] = p; openId = f.id; return true;
     }
     return false;
@@ -245,7 +254,7 @@ export function bindFeatureList() {
       closeMenus(); if (same) return;
       const it = part(), f = it && (it.feats || []).find((x) => x.id === fid);
       m.querySelector('[data-fact="unlink"]').hidden = !(f && (f.link || it.feats.some((x) => x.link === fid)));
-      m.querySelector('[data-fact="pattern"]').hidden = !(f && f.k === "hole");
+      m.querySelector('[data-fact="pattern"]').hidden = !(f && (f.k === "hole" || (PATTERNABLE.has(f.k) && !f.pat)));
       menuFor = fid; placeMenu(m, t.closest(".feat-more")); return;
     }
     if (t.closest(".feat-eye")) { change((it) => { const f = it.feats.find((x) => x.id === fid); if (!f) return false; if (f.hide) delete f.hide; else f.hide = true; }); return; }

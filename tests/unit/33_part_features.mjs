@@ -160,6 +160,43 @@ for (const [hrot, hfx] of [[0, false], [90, false], [30, true]]) {
   t.check("join: one undo gives both parts back with their features", jk.items.length === 2 && (jk.items[0].feats || []).length === 2 && (jk.items[1].feats || []).length === 2 && jk.past.length === pastLen, J(jk.items.map((i) => (i.feats || []).length)));
 }
 
+// Pattern for any feature (plan 2.6 / 2.7): one row, copies built from the original's exact place
+{
+  const fr = { W: 200, H: 150 };
+  const centres = (f) => F.featureContours(f).map((c) => mid(c.pts).map((v) => Math.round(v * 1e6) / 1e6));
+  const sl = { ...F.newFeature("slot", 1, 200, 150), x: 40, y: 30, len: 20, wid: 6, rot: 0 };
+  const g = F.patternOf(sl, 1, fr);
+  t.check("pattern: Make a pattern on a slot keeps it ONE slot row with a 2-copy grid, the original unmoved", g && g.k === "slot" && g.x === 40 && g.y === 30 && g.pat && g.pat.t === "grid" && g.pat.cols === 2 && g.pat.rows === 1 && F.featureContours(g).length === 2, J(g));
+  F.setFeatureValue(g, "pcols", 3, fr); F.setFeatureValue(g, "ppx", 40, fr);
+  t.check("pattern: 3 across at pitch 40 -> slots at X 40, 80, 120 (exact)", J(centres(g)) === J([[40, 30], [80, 30], [120, 30]]), J(centres(g)));
+  t.check("pattern: the row says so", /3 × 1/.test(F.featureSummary(g)) && /pitch 40/.test(F.featureSummary(g)), F.featureSummary(g));
+  // round a centre: a rectangle cut-out 4 times round the part centre
+  const rc = { ...F.newFeature("rect", 2, 200, 150), x: 100, y: 115, w: 20, h: 10, r: 0, rot: 0 };
+  const cp = F.patternOf(rc, 2, fr); F.setFeatureValue(cp, "pt", "circle", fr); F.setFeatureValue(cp, "pn", 4, fr);
+  t.check("pattern: round the part centre by default, 4 copies 90° apart", J(centres(cp)) === J([[100, 115], [60, 75], [100, 35], [140, 75]]), J(centres(cp)));
+  const turned = F.featureContours(cp)[1], tb = box(turned.pts);
+  t.check("pattern: copies round a circle are turned with it (the 20 × 10 cut-out stands 10 × 20 at 90°)", Math.abs((tb[2] - tb[0]) - 10) < 1e-6 && Math.abs((tb[3] - tb[1]) - 20) < 1e-6, J(tb));
+  F.setFeatureValue(cp, "pn", 6, fr);
+  t.check("pattern: changing the count never moves the original or the centre", J(centres(cp)[0]) === J([100, 115]) && cp.pat.cx === 100 && cp.pat.cy === 75, J(cp.pat));
+  // in a line: etched text 3 times, 20 apart going up
+  const tx = { ...F.newFeature("text", 3, 200, 150), x: 100, y: 20, text: "A", h: 8 };
+  const one = F.featureContours(tx).length;
+  const ln = F.patternOf(tx, 3, fr); F.setFeatureValue(ln, "pt", "line", fr); F.setFeatureValue(ln, "pn", 3, fr); F.setFeatureValue(ln, "ppitch", 20, fr); F.setFeatureValue(ln, "pang", 90, fr);
+  const ys = F.featureContours(ln).map((c) => Math.round(box(c.pts)[1] * 1e6) / 1e6);
+  t.check("pattern: text in a line - 3 copies, each 20 mm higher, still etched", F.featureContours(ln).length === 3 * one && new Set(ys).size === 3 && Math.abs(Math.max(...ys) - Math.min(...ys) - 40) < 1e-6 && F.featureContours(ln).every((c) => c.op === "score"), J(ys));
+  // checks see the copies; mirror and save keep the pattern
+  const tight = { ...g, pat: { ...g.pat, px: 10 } };
+  t.check("pattern: copies closer than their size are flagged", (F.featureIssues([tight], [[0, 0], [200, 0], [200, 150], [0, 150]], 3).get(1) || []).some((m) => /overlap/i.test(m)), J([...F.featureIssues([tight], [[0, 0], [200, 0], [200, 150], [0, 150]], 3)]));
+  const far = { ...g, pat: { ...g.pat, cols: 9 } };
+  t.check("pattern: a copy past the edge is flagged", (F.featureIssues([far], [[0, 0], [200, 0], [200, 150], [0, 150]], 3).get(1) || []).some((m) => /outside|edge/i.test(m)), J([...F.featureIssues([far], [[0, 0], [200, 0], [200, 150], [0, 150]], 3)]));
+  const tw = F.mirrored(g, 200);
+  t.check("pattern: the mirror twin's copies mirror too (X 160, 120, 80)", J(centres(tw)) === J([[160, 30], [120, 30], [80, 30]]), J(centres(tw)));
+  t.check("pattern: save / reload keeps the pattern", J(F.sanitizeFeature(JSON.parse(JSON.stringify(cp))).pat) === J(cp.pat));
+  F.setFeatureValue(cp, "pt", "none", fr);
+  t.check("pattern: Pattern None goes back to the single feature", !cp.pat && F.featureContours(cp).length === 1, J(cp));
+  t.check("pattern: a hole still becomes a Grid of holes row (unchanged)", F.patternOf({ ...F.newFeature("hole", 9, 200, 150), d: 8 }, 9, fr).k === "grid");
+}
+
 // Cut out (plan 2.13): a shape cut from inside a part becomes a Shape cut-out row and the part stays editable
 {
   const near = (a, b, tol = 1e-6) => a.length === b.length && a.every((p, i) => Math.abs(p[0] - b[i][0]) < tol && Math.abs(p[1] - b[i][1]) < tol);

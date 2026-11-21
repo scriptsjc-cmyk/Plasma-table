@@ -224,6 +224,25 @@ try {
   const cr = await rows();
   t.check("cut out (toolbar): the Features tab lists it as 'Shape cut-out · drawn shape'", cr.some((r) => /Shape cut-out/.test(JSON.stringify(r)) && /drawn shape/.test(JSON.stringify(r))), J(cr));
 
+  // ---------------------------------------------------------------- Pattern on a slot (plan 2.6): one row with copies
+  await ev(page, () => { const s = window.plasmaTest.sketch; s.items = []; s.add("rect", true, {}); const g = s.items[0]; Object.assign(g.p, { w: 200, h: 150, r: 0 }); g._key = undefined; s.commit(); s.pick([g.id]); s.onSelect();
+    const b = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (b) b.click(); });
+  await sleep(250);
+  const sid = await addFeat("slot");
+  await setFeat(sid, "x", 40); await setFeat(sid, "y", 40);
+  await rowAct(sid, "pattern");
+  const patCuts = async () => (await cut()).cs.filter((c) => c.closed).map((c) => [Math.round(c.cx * 1000) / 1000, Math.round(c.cy * 1000) / 1000]);
+  const p1 = await patCuts();
+  t.check("pattern: ⋯ > Pattern on a slot gives one row '… · 2 × 1' and two patCuts cut", (await feats()).length === 1 && p1.length === 2 && (await rows()).some((r) => /2 × 1/.test(r.sum)), J({ p1, rows: await rows() }));
+  await setFeat(sid, "pcols", 3);
+  const p2 = await patCuts();
+  t.check("pattern: typing Across 3 cuts three patCuts in a row from the original (X 40 first)", p2.length === 3 && J(p2[0]) === J([40, 40]) && p2.every((c) => c[1] === 40), J(p2));
+  await setFeat(sid, "pt", "circle"); await setFeat(sid, "pn", 4);
+  const p3 = await patCuts();
+  t.check("pattern: Round a centre, Count 4 -> four patCuts round the part centre", p3.length === 4 && J(p3[0]) === J([40, 40]) && p3.some((c) => c[0] === 160 && c[1] === 110), J(p3));
+  await ev(page, () => window.plasmaTest.sketch.undo());
+  t.check("pattern: one undo goes back one step (count back to the grid's own count)", (await patCuts()).length !== 4, J(await patCuts()));
+
   // ---------------------------------------------------------------- Corners row on an outline with no corner radius (plan 2.12)
   await ev(page, () => {
     const s = window.plasmaTest.sketch; s.items = []; s.add("gusset", true, {}); const g = s.items[0]; g.p.cut = 30; g._key = undefined;
