@@ -116,12 +116,12 @@ for (const [id, extra] of [["chimround", 8], ["roofjack", 6]]) {
   const fs = solid(A.foldModel(s, p));
   t.check("dustpan: a bottom, a back and two sides, front open", fs.filter(horiz).length === 1 && fs.filter(vert).length === 3);
 }
-{ // pipe clamp (U-saddle): a half wrap over the pipe with the two feet flat on the wall, each with its fixing hole
+{ // pipe clamp (U-saddle): a half wrap over the pipe, folded 90° at both fold lines so the feet lie flat and bolt through
   const s = sh("pipeustrap"), p = defaults(s), fs = solid(A.foldModel(s, p));
   const feet = fs.filter((f) => horiz(f) && yRange(f)[1] < 1e-6);
-  t.check("pipe clamp: two flat feet on the wall, each with its hole", feet.length === 2 && feet.every((f) => f.holes.length === 1), JSON.stringify(feet.map((f) => f.holes.length)));
+  t.check("pipe clamp: two flat feet, each with its hole", feet.length === 2 && feet.every((f) => f.holes.length === 1), JSON.stringify(feet.map((f) => f.holes.length)));
   const top = Math.max(...fs.flatMap((f) => f.pts.map((q) => q[1])));
-  t.check("pipe clamp: the wrap goes over the pipe (top ≈ pipe Ø)", Math.abs(top - p.d) < 0.06 * p.d, String(top));
+  t.check("pipe clamp: the wrap is a half circle over the pipe (top ≈ pipe radius)", Math.abs(top - p.d / 2) < 0.06 * p.d, String(top));
   const xs = feet.map((f) => f.pts.map((q) => q[2]));
   t.check("pipe clamp: the feet point outwards, either side of the pipe", feet.length === 2 && ((Math.max(...xs[0]) <= -p.d / 2 + 0.5 && Math.min(...xs[1]) >= p.d / 2 - 0.5) || (Math.max(...xs[1]) <= -p.d / 2 + 0.5 && Math.min(...xs[0]) >= p.d / 2 - 0.5)), JSON.stringify(xs.map((x) => [Math.min(...x), Math.max(...x)])));
 }
