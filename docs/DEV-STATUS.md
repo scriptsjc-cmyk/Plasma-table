@@ -2,10 +2,10 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 19:05 (UK time). This push is Round 6 (plasma cut quality), all items 6.1–6.5; Round 5 is live. Live: see `version.json`.
+Last updated: 21 Nov 2026, 20:03 (UK time). This push is r15 5.9 / 5.10 (Josh 21 Nov) and Round 7 (7.5–7.9), with r15 7.5-saddle (Josh 21 Nov); Round 6 is live. Live: see `version.json`.
 
 ## Working on
-- Nothing open from Round 6; next is Round 7, starting with r15 5.9 / 5.10 (Josh 21 Nov). (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
+- Nothing open from Round 7. 7.8 left two pre-existing phone/laptop layout failures (below) for Round 8. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
@@ -116,15 +116,56 @@ Last updated: 21 Nov 2026, 19:05 (UK time). This push is Round 6 (plasma cut qua
     "after STOP" (timestamps checked). It now counts from the press itself; without a press time it keeps the old, stricter window @ f9d612d
   - Screenshots: briefs r6-1 … r6-7, r6-5b (Josh has them)
 
+- r15 5.9 / 5.10 (Josh 21 Nov), 3D only (cut G-code byte-identical), tests @ 73c9a08 (unit 46) + 0ca1437:
+  - 5.10 folded pieces are thickened from the drawn surface toward the inside of their bends (outside sizes = the sizes drawn) @ f6e823e
+  - 5.9 skylight curb flashing: head / sill pans wrap their upstand ends round the curb corners, side pans lap over them @ 861580e
+  - test changes (disclosed, they followed the approved spec): unit 35 skylight block now checks the wrapped model; unit 39 U-bracket
+    outside width = web (was web + sheet under the old about-the-middle rule)
+  - Screenshots: briefs r7-59-skylight-3d(-view/-expanded), r7-510-ubracket-3d(-view)
+- r15 Round 7 (tests and CI), all in the deploy gate (units run automatically):
+  - 7.5 unit 40_fold_consistency @ 5fc5fea (93 fold presets: areas within 2 %, same holes, every size field that changes the cut
+    changes the 3D, no overlapping outlines, exact sizes for foldubr / tube / rectelbow / redelbow). It found 3D models that did not match
+    their cut; each fixed from the cut, test first:
+    - rectangular duct elbow (sizes swapped, uncut stubs) @ d76d7f6; round duct take-off (was the tube alone) @ b3ee939; saddle-hole wrap
+      @ f2d6016 (+ unit 40 counts declared openings @ 321c02d); reducing elbow @ f048af5 / fef167c (see For Josh to decide);
+      offset rectangular transition ignored ox @ c8a6d62 / 0d3b012 (also: the bottom flange of offset transitions was moved with the top);
+      hopper with flanges drew a closed mitred flange frame the cut lip cannot fold into @ 5587b5e / 324a7a7
+    - **CUT CHANGE, offset square-to-round (`s2roffset`)** @ f3b1346 / 15a2237: its side panels folded back over themselves in the
+      flat (developSide3 took the fan point on the wrong side), so the blank was about a third too small (69,867 vs 103,241 mm² even at a
+      0.001 mm offset). Now the true development (unit 47: area, base and seam lengths against an independent triangulation). Josh can veto.
+    - 3D viewer: ghost parts (main duct, header, plate) were framed on their own, at another size and place @ 47cebc1 / ad726f9; sitting a
+      thickened 3D on the table moved shared points 2–3 times and left holes behind (only visible when the shift wasn't 0, e.g. the
+      take-off over its duct) @ e1c2af8 / 6018ae9 (unit 50)
+  - 7.6 unit 41_bend_deduction @ 53f23f4 (100 × 50 × 50 U at 2 mm, K 0.44 → 193.047786 mm, fold lines at leg − BD/2)
+  - 7.7 unit 42_small_hole_speed (done in Round 6)
+  - 7.8 phone 63 / 66 rerun 21 Nov 19:32: 63 fails 1 ("5 phone: picture ≥ 55 % of the Make pane": 200 of 373 px = 54 %), 66 fails 2 (laptop
+    toolbar "wraps under the picture" ×2: the r13 layout puts it in a column). At 5a609b2 (their last run) 63 failed 4 and 66 the same 2,
+    so nothing new; both stay out of the gate and are on the Round 8 list
+  - 7.9 unit 48_r15_html_escape (escape-in-innerHTML lint) @ c287745: every innerHTML / outerHTML / insertAdjacentHTML template in js/
+    must escape names, labels, titles, notes, messages, errors and file names; self-tests that it catches raw ones. Fixed @ 408a2f6:
+    Check cut dialog material names (attribute and text), its error text and result lines (my Round 6 code), start-point and coupon labels,
+    cut status, context menu, pager, the size-check file name (its inline copy now uses the shared `esc` from core/dom.js)
+  - **r15 7.5-saddle (Josh 21 Nov), CUT CHANGE**: the pipe-on-pipe saddle template was the right curve upside down
+    (R − √(R² − r²sin²θ) instead of √(R² − r²sin²θ) − √(R² − r²)), so it rocked on the header (6.35 mm gap for 100 on 110, 0.62 mm for
+    80 on 140). Tests @ c5b0540 (unit 49: exact intersection at 80/140, 100/110, 80/120, 50/200, 150/160, 100/100; the wrapped edge lies on
+    the header; the four presets cut it; the take-off 3D collar sits on its duct), fix @ a57c4a6 (take-off 3D duct turned to match)
+  - test changes (disclosed): unit 22 C9 "opposite offset panels are not identical" wanted south ≠ north for an x-only offset (only true
+    while the panels lapped); now east ≠ west and south = north. Unit 19 "offset s2r falls back to two halves" (the overlap was the bug)
+    now: one blank at defaults, two halves when it's too big for the bed. Unit 32's 1.7 hopflange "one closed frame" check now: the 3D
+    flange is the cut lip and no strips cross (the other 1.7 checks unchanged). tests/data/existing-preset-flat.json updated for
+    s2roffset, fishmouth, takeoff, britches, teetemp only
+  - Precheck: DXF/SVG 35 byte-identical. Presets vs live Round 6 (c31bd09), normal settings: 334 of 339 byte-identical; changed exactly
+    britches, fishmouth, takeoff, teetemp (7.5-saddle) and s2roffset (7.5). Classic mode vs the old baseline: those five plus dustpan (Round 5)
+  - Screenshots: briefs r7-75-redelbow-3d, -hopflange-3d, -recttransoff-3d, -takeoff-3d(-expanded), -s2roffset-3d, -fishmouth-cut (+ -view)
+  - Full gate passed (71 suites) at HEAD before the push
+
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
 - Item 2: the walk stopped a ONE-part job before its first pierce, so Save speed, "Stopped during cut N" and Continue from cut never
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- r15 5.9 / 5.10 (Josh 21 Nov), tests first: (a) the skylight pan flashings' upstands overlap at the corners in 3D; (b) 3D faces
-  thickened toward the inside of the bend, not about the middle. 3D only; cut G-code stays unchanged (precheck).
-- Then r15 Round 7, tests first.
+- r15 Round 8 (code tidy), plus the pre-existing failures list (incl. 63 ×1, 66 ×2 from 7.8).
 
 ## Not a bug
 - Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
@@ -135,14 +176,21 @@ Last updated: 21 Nov 2026, 19:05 (UK time). This push is Round 6 (plasma cut qua
   test to match each layout in Round 7/8 (no app change, nothing weakened).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
-- (The two Round 5 3D ideas: Josh approved them on 21 Nov; now r15 5.9 / 5.10 under Next up.)
+- **Reducing elbow (`redelbow`) cut does not make an elbow.** It cuts a square-ended cone and two "end" gores (each one square end, one
+  mitred end at bend / 4). Pieces only join where diameters and ends match, so the only way they go together is gore – cone – gore,
+  square to square: a straight reducer with a slanted cut at each end. The 3D now shows exactly that (r7-75-redelbow-3d). A real reducing
+  elbow needs a different development (e.g. tapering gores). Your call: redesign the cut, rename it, or keep it.
+- Saddle hole (`saddlehole`): the hole cut in the header wrap is a flat circle; the true developed hole is slightly wider round the wrap
+  (about 2.4 mm each side for 70 on 120). Fix or leave?
 
 ## Questions for the checker
 - e2e 20 STOP-STREAM change (f9d612d, accepted by the reviewer): it now counts job lines from the moment of the STOP press (button
   pointerdown / Space keydown), not from a mark taken ~ms before it. Please confirm independently that STOP still sends nothing from the
   job after the press: button and Space, mid-cut, on the practice table (timestamps of every byte after the press).
+- Cut changes in this push (please check independently): `s2roffset` (offset square-to-round, now the true development, unit 47) and the
+  saddle template in fishmouth / takeoff / britches / teetemp (unit 49: exact pipe-on-pipe intersection). Do the cut pieces fit?
 - 41 item 11 (your request): `node run-all.mjs 41` fails item 11 ×3 on 75b7df1, on 55c3d71, and on HEAD (rerun 21 Nov 15:50 at 82d99d8) with today's `tests/lib/browser.mjs`.
   The difference between your two runs is the launcher: 55c3d71 changed launchKillable from raw headless Chrome (no hover, so the
   touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
 - 2.17 (G-code unchanged when a part has no features): the developer checks it before every geometry/import push with `tmp/precheck.sh` (339 presets + 35 DXF/SVG byte-identical). Can you confirm it independently on the next push?
-- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×8, 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×6, 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×4, 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
+- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×8, 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×6, 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×1 (was ×4; rerun 21 Nov for 7.8), 66 ×2 (7.8), 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
