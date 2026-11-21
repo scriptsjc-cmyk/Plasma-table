@@ -1,0 +1,225 @@
+/* Cutting screen, Part step (r12 three columns on a laptop). Split from screen-cut.css in r15 8.1: it is linked straight after
+   it, so the rules keep their order. */
+/* ---- r12 Cut step 1 (Part): three columns on a laptop, no inner scroll ---- */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  body.app-shell[data-screen="cut"][data-step="1"] .cutgrid {
+    grid-template-columns: 300px minmax(0, 1fr) 360px;
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: none;
+    gap: var(--gap, 12px);
+    padding: var(--pad, 12px);
+    min-height: 0;
+    overflow: hidden;
+  }
+  body.app-shell[data-screen="cut"][data-step="1"] .cutgrid > .stepPane,
+  body.app-shell[data-screen="cut"][data-step="1"] .stepPane > .step[data-step="1"]:not(.hidden) {
+    display: contents;
+    overflow: visible;
+  }
+  body.app-shell[data-screen="cut"][data-step="1"] .cutgrid > .previewPane {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  body[data-screen="cut"][data-step="1"] .step[data-step="1"] > h2,
+  body[data-screen="cut"][data-step="1"] .step[data-step="1"] > #warnings,
+  body[data-screen="cut"][data-step="1"] .step[data-step="1"] > #bgPick,
+  body[data-screen="cut"][data-step="1"] .step[data-step="1"] > #srcShape { display: none; }
+  body[data-screen="cut"][data-step="1"] #pickPane {
+    display: contents;
+    overflow: visible;
+  }
+  body[data-screen="cut"][data-step="1"] #pickPane > .part-col {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+  }
+  body[data-screen="cut"][data-step="1"] #pickPane > .mat-col {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 8px 52px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    position: relative;
+  }
+  body[data-screen="cut"][data-step="1"] .part-col > h3 { margin: 0; font-size: var(--fs-lg); }
+  body[data-screen="cut"][data-step="1"] #bedStatus { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--fs-s); white-space: nowrap; }
+  body[data-screen="cut"][data-step="1"] #bedStatus.hidden { display: none; }
+  body[data-screen="cut"][data-step="1"] #drop.drop {
+    margin: 0;
+    padding: 8px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  body[data-screen="cut"][data-step="1"] #drop .drop-detail { display: none; }
+  body[data-screen="cut"][data-step="1"] .pickrow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="1"] .pickrow .xl {
+    min-height: 44px;
+    font-size: var(--fs-s);
+    margin: 0;
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+  body[data-screen="cut"][data-step="1"] #btnEditDrawing {
+    grid-column: 1 / -1;
+    min-height: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    text-decoration: underline;
+    font-size: var(--fs-s);
+    font-weight: 650;
+    justify-content: flex-start;
+  }
+  body[data-screen="cut"][data-step="1"] #recentWrap { min-height: 0; overflow: hidden; }
+  body[data-screen="cut"][data-step="1"] .mat-col > h3 { margin: 0; font-size: var(--fs-lg); display: flex; align-items: center; gap: 6px; }
+  body[data-screen="cut"][data-step="1"] .mat-col .s2cols,
+  body[data-screen="cut"][data-step="1"] .mat-col .s2a { display: contents; }
+  body[data-screen="cut"][data-step="1"] .mat-col .s2b,
+  body[data-screen="cut"][data-step="1"] #cutCheck2,
+  body[data-screen="cut"][data-step="1"] #matLine,
+  body[data-screen="cut"][data-step="1"] #matTip,
+  body[data-screen="cut"][data-step="1"] .matpreset-wrap,
+  body[data-screen="cut"][data-step="1"] .speedends { display: none; }
+  body[data-screen="cut"][data-step="1"] #materials.choice {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="1"] #materials.choice button {
+    min-height: 36px;
+    font-size: var(--fs-xs);
+    padding: 4px 6px;
+    border-radius: 0;
+    white-space: nowrap;
+  }
+  body[data-screen="cut"][data-step="1"] #materials.choice button:first-child { border-radius: var(--r) 0 0 var(--r); }
+  body[data-screen="cut"][data-step="1"] #materials.choice button:last-child { border-radius: 0 var(--r) var(--r) 0; }
+  body[data-screen="cut"][data-step="1"] .mat-col > h3 + * { }
+  body[data-screen="cut"][data-step="1"] .mat-col h3:nth-of-type(2) { margin: 4px 0 0; font-size: var(--fs-s); font-weight: 650; }
+  body[data-screen="cut"][data-step="1"] #thicknesses.choice {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="1"] #thicknesses.choice button {
+    min-height: 36px;
+    height: 36px;
+    padding: 0 4px;
+    font-size: var(--fs-xs);
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="1"] #ampsCard.amps {
+    margin: 0;
+    padding: 6px 8px;
+    font-size: var(--fs-s);
+    line-height: 1.35;
+  }
+  body[data-screen="cut"][data-step="1"] #ampsCard .big { font-size: var(--fs-l); }
+  body[data-screen="cut"][data-step="1"] #ampsCard .ampsdl > div:nth-child(n+4),
+  body[data-screen="cut"][data-step="1"] #ampsCard .ampsnote { display: none; }
+  body[data-screen="cut"][data-step="1"] #ampsCard .ampssrc.has-info {
+    display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: var(--fs-xs);
+  }
+  body[data-screen="cut"][data-step="1"] #speedBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="1"] #speedBox .speedrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    margin: 0;
+  }
+  body[data-screen="cut"][data-step="1"] #speedBox .xl { min-height: 36px; min-width: 36px; padding: 0; }
+  body[data-screen="cut"][data-step="1"] #advCut {
+    flex: none;
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    background: var(--well);
+  }
+  body[data-screen="cut"][data-step="1"] #advCut > summary { padding: 6px 10px; font-weight: 650; cursor: pointer; }
+  body[data-screen="cut"][data-step="1"] #advCut[open] {
+    position: absolute;
+    right: 8px;
+    bottom: 52px;
+    z-index: 6;
+    width: calc(100% - 16px);
+    max-height: min(70vh, 420px);
+    overflow: auto;
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--c-black) 18%, transparent);
+  }
+  body[data-screen="cut"][data-step="1"] .step[data-step="1"] > .nav {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: end;
+    position: relative;
+    z-index: 4;
+    margin: 0;
+    padding: 8px;
+    background: transparent;
+  }
+  body[data-screen="cut"][data-step="1"] .step[data-step="1"] > .nav #next1 {
+    pointer-events: auto;
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+    height: 44px;
+    min-height: 44px;
+    max-height: 44px;
+    margin: 0;
+    align-self: end;
+  }
+  body[data-screen="cut"][data-step="1"] .next-setup { display: inline; }
+  body[data-screen="cut"][data-step="1"] #pathLegend {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    padding: 2px 8px;
+    font-size: var(--fs-xs);
+    background: color-mix(in srgb, var(--well) 92%, transparent);
+    border-radius: var(--r);
+    box-shadow: 0 1px 2px var(--black-12);
+  }
+  body[data-screen="cut"][data-step="1"] #pathLegend.hidden { display: none; }
+}
+.next-setup { display: none; }

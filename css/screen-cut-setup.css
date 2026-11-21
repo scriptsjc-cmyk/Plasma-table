@@ -1,0 +1,109 @@
+/* Cutting screen, Setup polish on a laptop (r15 4.6–4.9), then the later r15 laptop additions (4.11, 4.12, 4.14, 4.25: header
+   pill, run and stopped panels). Split from screen-cut.css in r15 8.1: linked last, so the rules keep their order. */
+/* ---- r15 4.6–4.9: Setup polish on a laptop ---- */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  /* 4.6 the strip under the bed: the fit note may take two lines and the job size / time stack, so nothing is cut off */
+  body[data-screen="cut"][data-step="3"] .previewDock > #fit {
+    flex: 1 1 0; max-width: none; min-width: 0; white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2;
+  }
+  body[data-screen="cut"][data-step="3"] .previewDock > #fit:has(#fitFixBtn) #fitFixBtn { min-height: 26px; padding: 0 8px; }
+  body[data-screen="cut"][data-step="3"] #jobCard dl { flex-direction: column; align-items: flex-end; gap: 0; }
+  body[data-screen="cut"][data-step="3"] #jobCard dd { line-height: 1.25; }
+  body[data-screen="cut"][data-step="3"] #kerfNote { flex: none; }
+  body[data-screen="cut"][data-step="3"] .previewDock > #fit:empty + * { margin-left: auto; }
+  /* …and a Before you cut line wraps instead of ending in "…" */
+  body[data-screen="cut"][data-step="3"] #beforeCut li { white-space: normal; align-items: flex-start; }
+  body[data-screen="cut"][data-step="3"] #beforeCut .beforecut-text { white-space: normal; overflow: visible; text-overflow: clip; }
+  body[data-screen="cut"][data-step="3"] #beforeCut li:has(.beforecut-link) { align-items: center; }
+
+  /* 4.7 Layout and Check cut are buttons, so they look like the app's secondary button */
+  body.app-shell[data-screen="cut"] #btnLayout,
+  body.app-shell[data-screen="cut"][data-tab="cut"] #btnLayout,
+  body[data-screen="cut"][data-step="3"] #beforeCut .beforecut-link {
+    background: var(--well); border: 1px solid var(--line-strong); color: var(--text); font-weight: 650;
+    text-decoration: none; border-radius: var(--r); min-height: 32px; padding: 4px 12px;
+  }
+  body[data-screen="cut"][data-step="3"] #beforeCut .beforecut-link { color: inherit; white-space: nowrap; }
+  body.app-shell[data-screen="cut"] #btnLayout:hover:not(:disabled),
+  body[data-screen="cut"][data-step="3"] #beforeCut .beforecut-link:hover { background: var(--accent-weak); border-color: var(--accent); }
+  body.app-shell[data-screen="cut"] #btnLayout[aria-pressed="true"] { background: var(--accent-weak); border-color: var(--accent); }
+
+  /* 4.8 Download G-code: the download icon and the word "G-code" (its full name stays the tooltip / accessible name) */
+  body[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnExport3,
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnExport3 {
+    width: auto; min-width: 44px; max-width: none; padding: 0 12px; gap: 6px;
+  }
+  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-label {
+    display: inline; position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: nowrap; font-size: var(--fs-s); font-weight: 650;
+  }
+  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-verb { display: none; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnStart,
+  body[data-screen="cut"][data-step="3"] .nav #btnStart { width: calc(100% - 128px); }
+
+  /* 4.9 Torch card: one "i" (the keyboard tip is in it), bigger lamps, and X / Y / Z as one readout row across the card */
+  body[data-screen="cut"][data-step="3"] #zeroCard .keyhint { display: none; }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp { font-size: var(--fs-s); min-height: 24px; padding: 2px 9px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap { grid-template-rows: auto auto 1fr; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap .small-pos {
+    grid-column: 1 / -1; grid-row: 1; height: 32px; min-height: 32px; max-height: 32px; gap: 6px;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos > div { height: 32px; padding: 0 6px; align-items: center; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos span { font-size: var(--fs-s); }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: var(--fs-m); font-variant-numeric: tabular-nums; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog { grid-row: 2 / -1; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .steps { grid-row: 2; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .j,
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home { min-height: 32px; height: 32px; }
+}
+/* r15 4.9: on a short laptop screen the readout row and the pad are a little shorter, so Start here stays whole */
+@media (min-width: 1200px) and (min-height: 560px) and (max-height: 700px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="3"] .jogwrap,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap { row-gap: 4px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap .small-pos,
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos > div { height: 28px; min-height: 28px; max-height: 28px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog { gap: 3px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .j,
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home { min-height: 30px; height: 30px; }
+  body[data-screen="cut"][data-step="3"] .zerobody { row-gap: 4px; }
+}
+
+/* ---- r15 4.11, 4.12, 4.14, 4.25 on a laptop ---- */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  /* 4.25 one status pill in the header: "● Practice · Ready" (a lit torch joins it as a loud TORCH ON end). TORCH OFF isn't
+     a separate pill here: the Torch lamp on Setup and the "Torch off" line while cutting say it. The ids all stay. */
+  body[data-screen="cut"] #torchPill.off:not([hidden]) { display: none; }
+  body[data-screen="cut"] #connWrap:has(~ #stateBadge:not(.hidden), ~ #practiceChip:not(.hidden)) #connPill { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  body[data-screen="cut"] #practiceChip:not(.hidden),
+  body[data-screen="cut"] #stateBadge:not(.hidden),
+  body[data-screen="cut"] #torchPill.on:not([hidden]) {
+    margin-left: -6px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-width: 0;
+    align-self: stretch; display: inline-flex; align-items: center; min-height: 0; padding-top: 0; padding-bottom: 0;
+  }
+  body[data-screen="cut"] #stateBadge:not(.hidden)::before,
+  body[data-screen="cut"] #practiceChip:not(.hidden)::before,
+  body[data-screen="cut"] #torchPill.on:not([hidden])::before { content: "·"; margin-right: 6px; font-weight: 700; }
+  body[data-screen="cut"] #practiceChip:has(~ #stateBadge:not(.hidden)),
+  body[data-screen="cut"] #stateBadge:has(~ #torchPill.on:not([hidden])) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+  /* 4.11 while cutting the calm state is a plain "Torch off" line, not a box that looks like a button; TORCH ON keeps its loud box */
+  body[data-screen="cut"] #running .torchbig:not(.on) {
+    border: 0; background: transparent; box-shadow: none; min-height: 0; padding: 2px 0; font-weight: 650; font-size: var(--fs-s); color: var(--muted);
+  }
+
+  /* 4.12 readouts keep their width as the numbers change */
+  body[data-screen="cut"] #running .runpos b { flex: 1 1 0; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  body[data-screen="cut"] #running #pct,
+  body[data-screen="cut"] #running #timeLeft { font-variant-numeric: tabular-nums; }
+
+  /* 4.14 Stopped: the next steps come straight after the message, and each keeps its words on one line (the row wraps instead) */
+  body[data-screen="cut"][data-step="4"] #doneActions { margin-top: 4px; }
+  body[data-screen="cut"][data-step="4"] #cutView #doneActions > button.xl,
+  body[data-screen="cut"][data-step="4"] #cutView #doneActions > button.wide { flex: 1 1 auto; min-width: max-content; white-space: nowrap; }
+}
+
+/* r15 6.1: Slow down for small holes (More cut options) */
+.slowholes { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; }
+.slowholes-note { margin: 0 0 6px; }
