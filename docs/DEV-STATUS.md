@@ -2,10 +2,11 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 20:03 (UK time). This push is r15 5.9 / 5.10 (Josh 21 Nov) and Round 7 (7.5–7.9), with r15 7.5-saddle (Josh 21 Nov); Round 6 is live. Live: see `version.json`.
+Last updated: 21 Nov 2026, 21:35 (UK time). This push is r15 Round 8 part 1 (8.3, 8.4, 8.5, 8.6) and Josh's 21 Nov decisions: r15 7.5-redelbow and 7.5-saddlehole (CUT CHANGES), s2roffset kept. Round 7 is live. Live: see `version.json`.
 
 ## Working on
-- Nothing open from Round 7. 7.8 left two pre-existing phone/laptop layout failures (below) for Round 8. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
+- Round 8 part 2: 8.1 (CSS @layer, screen-cut.css split, container queries) and the pre-existing failures list.
+- 8.2 is waiting on a design question (For Josh to decide).
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
@@ -132,7 +133,7 @@ Last updated: 21 Nov 2026, 20:03 (UK time). This push is r15 5.9 / 5.10 (Josh 21
       hopper with flanges drew a closed mitred flange frame the cut lip cannot fold into @ 5587b5e / 324a7a7
     - **CUT CHANGE, offset square-to-round (`s2roffset`)** @ f3b1346 / 15a2237: its side panels folded back over themselves in the
       flat (developSide3 took the fan point on the wrong side), so the blank was about a third too small (69,867 vs 103,241 mm² even at a
-      0.001 mm offset). Now the true development (unit 47: area, base and seam lengths against an independent triangulation). Josh can veto.
+      0.001 mm offset). Now the true development (unit 47: area, base and seam lengths against an independent triangulation). Josh 21 Nov: keep.
     - 3D viewer: ghost parts (main duct, header, plate) were framed on their own, at another size and place @ 47cebc1 / ad726f9; sitting a
       thickened 3D on the table moved shared points 2–3 times and left holes behind (only visible when the shift wasn't 0, e.g. the
       take-off over its duct) @ e1c2af8 / 6018ae9 (unit 50)
@@ -159,13 +160,46 @@ Last updated: 21 Nov 2026, 20:03 (UK time). This push is r15 5.9 / 5.10 (Josh 21
   - Screenshots: briefs r7-75-redelbow-3d, -hopflange-3d, -recttransoff-3d, -takeoff-3d(-expanded), -s2roffset-3d, -fishmouth-cut (+ -view)
   - Full gate passed (71 suites) at HEAD before the push
 
+- r15 Round 8 part 1 (code tidy), all in the deploy gate (units run automatically):
+  - tests/tools/visual-snap.mjs @ f91220b: 9 scenes × 6 sizes, in-browser pixel compare. Baseline at 8b0c852; after 8.3–8.6 all 54
+    shots identical (only the known 4 px logo flicker).
+  - 8.3 one HTML-escape helper (core/dom.js esc) @ 02aaf7b / ba31ff3 (unit 51)
+  - 8.6 the Sketch's Features methods in their own make/sketch-features.js @ b850391 / 4daccee (unit 52)
+  - 8.5 fold3d.js split into fold3d-geom / -models / -render / -view + vec3.js; fold3d.js is a barrel with the same exports
+    @ 9de61f4 / 45d837d (unit 53: same exports, sizes, layering)
+  - 8.4 index.html 1,218 → 415 lines: dialogs and sheets move to html/ partials (new account.html, settings.html; more in make.html and
+    cut.html), each filled at the spot where it sat @ 9c37a43 / 1200a26 (unit 54: the page built from the partials has the same 849
+    ids in the same order; STOP, E-stop / alarm / link-lost banners, safety prompt and turn overlay stay in the shell). The live DOM
+    (id, parent, order) is identical at 1440×800 and iPhone 14 landscape. Test change (disclosed): unit 14 reads the built page for the
+    claim dialog's role="alert" (now stricter: it must be inside #claimDlg)
+  - pre-existing e2e 59 "30" fixed: the committed sw.js precache list was missing 16 modules (the deploy re-stamps it, so live was fine,
+    but a local offline reload came up without the app; this also fixes 40_layout_a11y [OFFLINE], so 40 is ×5 now) @ dda10cb / 1d71682
+    (unit 55 keeps it in step)
+  - **r15 7.5-redelbow (Josh 21 Nov), CUT CHANGE** @ 334a6d7 / 29dbe2b (+ 4c23be4 / e838c88: older saved parts open with 4 gores):
+    the reducing elbow is n gores that taper and turn. One cone from the big Ø to the small Ø is cut by mitre planes tilted ±β
+    (β = bend / 2(n−1), lobster-back lengths from CLR), and each gore is turned half a turn about its joint plane's normal through the
+    joint ellipse's centre. The ellipse lands on itself, so the gores meet exactly, and the axis turns 2β per joint. Each flat pattern is
+    that gore's part of the cone's development; the 3D is built from the same gores; new true-length table. New js/make/redelbow.js.
+    Fields: "Length along the cone" replaced by "Number of pieces" (default 4). Unit 56 at 5 sizes: no stretch, seams close, joints
+    planar and shared, ends round at Ø d / Ø d2 and turned by the bend, CLR chord within 5 %, taper, cut = gores, 3D on the gores.
+    Test changes (disclosed): unit 40's old "gore + cone + gore" size check replaced (Ø d wide, round Ø d base, n gores); the
+    lobster-back elbows' flange frames are unchanged
+  - **r15 7.5-saddlehole (Josh 21 Nov), CUT CHANGE** @ 07803be / 2c53c79: the header wrap's hole is the true branch-on-header
+    intersection, s = R·asin((r/R)·sinθ), y = r·cosθ: 2r along the pipe, 2R·asin(r/R) round it (100 on 110: 125.5 × 100, was a
+    Ø 100 circle). The 3D wrap leaves out exactly that hole. A branch bigger than the header gives no hole and a note (unit 57)
+  - tests/data/existing-preset-flat.json updated for redelbow and saddlehole only
+  - Precheck: DXF/SVG 35 byte-identical. Classic mode vs the old baseline: redelbow and saddlehole are the only new differences (the rest
+    are dustpan, s2roffset, fishmouth, takeoff, britches, teetemp from Rounds 5 / 7)
+  - Screenshots: briefs r8-redelbow-cut / -3d, r8-saddlehole-cut / -3d (100 on 110)
+  - Full gate passed (78 suites) at 2c53c79 before the push (120_every_tool passed on its retry)
+
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
 - Item 2: the walk stopped a ONE-part job before its first pierce, so Save speed, "Stopped during cut N" and Continue from cut never
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- r15 Round 8 (code tidy), plus the pre-existing failures list (incl. 63 ×1, 66 ×2 from 7.8).
+- Round 8 part 2: 8.1, 8.2 (after Josh decides), pre-existing failures list (incl. 63 ×1, 66 ×2 from 7.8).
 
 ## Not a bug
 - Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
@@ -176,21 +210,25 @@ Last updated: 21 Nov 2026, 20:03 (UK time). This push is r15 5.9 / 5.10 (Josh 21
   test to match each layout in Round 7/8 (no app change, nothing weakened).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
-- **Reducing elbow (`redelbow`) cut does not make an elbow.** It cuts a square-ended cone and two "end" gores (each one square end, one
-  mitred end at bend / 4). Pieces only join where diameters and ends match, so the only way they go together is gore – cone – gore,
-  square to square: a straight reducer with a slanted cut at each end. The 3D now shows exactly that (r7-75-redelbow-3d). A real reducing
-  elbow needs a different development (e.g. tapering gores). Your call: redesign the cut, rename it, or keep it.
-- Saddle hole (`saddlehole`): the hole cut in the header wrap is a flat circle; the true developed hole is slightly wider round the wrap
-  (about 2.4 mm each side for 70 on 120). Fix or leave?
+- Reducing elbow and saddle hole: decided 21 Nov (both redesigned, above).
+- **8.2 (stop moving header controls in JS, place them with CSS grid areas):** CSS can only arrange children of one grid container. The
+  controls laptop.js moves are in different parts of the page: #makeBar (top of the Make screen, moved into the header at 1280+) and
+  Pick all / Fit / Clear / Snap / guides (in the shape form, moved into the bar and its Select ▾ / Snap ▾ menus in Advanced). Doing it
+  in CSS means giving each one a single home in the markup, which changes what you see. (a) #makeBar lives in the header: under 1280
+  px it would sit above the safety banners instead of below them, and it would hide with the header in full-screen editing (today it
+  stays). (b) Pick all / Clear / Snap / guides live in the header menus at every size, so the beginner form loses them. Options: do (a)
+  and (b); do only (a); or keep the JS moves and tidy them (one table of where each control goes, no safeInsert). My suggestion is the
+  last one: it changes nothing on screen.
 
 ## Questions for the checker
 - e2e 20 STOP-STREAM change (f9d612d, accepted by the reviewer): it now counts job lines from the moment of the STOP press (button
   pointerdown / Space keydown), not from a mark taken ~ms before it. Please confirm independently that STOP still sends nothing from the
   job after the press: button and Space, mid-cut, on the practice table (timestamps of every byte after the press).
-- Cut changes in this push (please check independently): `s2roffset` (offset square-to-round, now the true development, unit 47) and the
-  saddle template in fishmouth / takeoff / britches / teetemp (unit 49: exact pipe-on-pipe intersection). Do the cut pieces fit?
+- Cut changes in this push (please check independently): the reducing elbow (`redelbow`, unit 56: do the gores meet and make the
+  bend?) and the saddle hole (`saddlehole`, unit 57: does the branch fit the hole?). Last push: `s2roffset` (unit 47) and the saddle
+  template in fishmouth / takeoff / britches / teetemp (unit 49).
 - 41 item 11 (your request): `node run-all.mjs 41` fails item 11 ×3 on 75b7df1, on 55c3d71, and on HEAD (rerun 21 Nov 15:50 at 82d99d8) with today's `tests/lib/browser.mjs`.
   The difference between your two runs is the launcher: 55c3d71 changed launchKillable from raw headless Chrome (no hover, so the
   touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
 - 2.17 (G-code unchanged when a part has no features): the developer checks it before every geometry/import push with `tmp/precheck.sh` (339 presets + 35 DXF/SVG byte-identical). Can you confirm it independently on the next push?
-- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×8, 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×6, 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×1 (was ×4; rerun 21 Nov for 7.8), 66 ×2 (7.8), 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
+- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×9 here (×9 at 8b0c852 too), 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×5 (OFFLINE fixed in Round 8), 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×1 (was ×4; rerun 21 Nov for 7.8), 66 ×2 (7.8), 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
