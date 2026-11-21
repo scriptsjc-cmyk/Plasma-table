@@ -1,11 +1,11 @@
 // Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...).
 import { MIN, cleanContour, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
-import { assessOffset, bbox, bulgeMidpoint, classifyContainment, differenceOutlines, offsetLoop, pointInPoly, selfIntersects, signedArea, unionMany, unionOutlines } from "../core/geom.js";
+import { assessOffset, bbox, bulgeMidpoint, classifyContainment, differenceOutlines, offsetLoop, pointInPoly, polysCross, selfIntersects, signedArea, unionMany, unionOutlines } from "../core/geom.js";
 import { fitContour } from "../core/arcs.js";
 import { nestUnitsSync, turnAngles, ringsBox } from "../cut/nest.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
-import { carryFeatures, keepMatching, moveFeatureBy } from "./part-features.js";
+import { carryFeatures, cutterToFeature, keepMatching, moveFeatureBy } from "./part-features.js";
 
 export class EditMethods {
   // Turn 90 keeps each shape's bottom-left and, when width/height exist, swaps them
@@ -583,9 +583,48 @@ export class EditMethods {
     // First-picked shape is the host (Fusion-style target body); later picks are cutters.
     const host = list[0], cutters = list.slice(1);
     const outer = this.contoursOf(host)[0]; if (!outer) return;
-    this.remember();
-    let cur = { outer: outer.pts, holes: this.contoursOf(host).slice(1).map((h) => ({ pts: h.pts, circle: h.circle })) };
     const circleOf = (c, it) => c.circle || (it.type === "disc" && it.p && it.p.d > 0 ? { cx: (this.boxOf(it)[0] + this.boxOf(it)[2]) / 2, cy: (this.boxOf(it)[1] + this.boxOf(it)[3]) / 2, r: it.p.d / 2 } : null);
+    const inside = (pts, poly) => pts.every((p) => pointInPoly(p, poly)) && !polysCross(pts, poly);
+    // r15 2.13: a cutter wholly inside the part becomes a Shape cut-out (or Hole) row and the part stays editable.
+    // Only a cutter across the edge changes the outline; that makes an "Outline" part, its rows carried (never baked in).
+    const rowable = !(host.type === "custom" && !host.shape) && !this.isHole(host);
+    // each outermost closed loop of a cutter is one row (a bolt circle gives 4 Hole rows; a ring's inner loop falls out with the scrap)
+    const loops = (ct) => { const cs = this.contoursOf(ct); return cs.length && cs.every((c) => c.closed !== false && !c.op) ? this.loopsOf(ct).outers : []; };
+    const within = (ct) => { const ls = loops(ct); return ls.length > 0 && ls.every((c) => inside(c.pts, outer.pts)); };
+    const inner = cutters.filter(within), edge = cutters.filter((c) => !within(c));
+    const addRows = (to) => {
+      to.feats = to.feats || []; let id = to.feats.reduce((m, f) => Math.max(m, f.id), 0);
+      for (const ct of inner) for (const c of loops(ct)) { const f = cutterToFeature(this, to, c, circleOf(c, ct), ++id); if (f) to.feats.push(f); }
+      to._key = undefined;
+    };
+    if (rowable && !edge.length) {
+      this.remember();
+      addRows(host);
+      const drop = new Set(cutters);
+      this.items = this.items.filter((i) => !drop.has(i));
+      this.pick([host.id]); this.commit(); this.onSelect();
+      this.onMessage(`Cut out. ${host.name || "The part"} stays editable: the cut-out is a row in its Features tab.`);
+      return;
+    }
+    this.remember();
+    const feats = host.feats; delete host.feats; host._key = undefined;   // the host's rows are carried over, not baked in
+    let it;
+    try { it = this.cutOutline(host, rowable ? edge : cutters, circleOf); }
+    finally { if (feats) host.feats = feats; host._key = undefined; }
+    if (!it) { this.onMessage("Those shapes don't overlap – move the cutter onto the part."); this.restore(this.past.pop()); return; }
+    const drop = new Set(list);
+    this.items = this.items.filter((i) => !drop.has(i));
+    this.items.push(it);
+    const carried = rowable && feats ? carryFeatures(this, [host], it) : [];
+    if (carried.length) it.feats = carried;
+    if (rowable && inner.length) addRows(it);
+    this.pick([it.id]); this.commit(); this.onSelect();
+    this.onMessage("Cut out. The new outline is one part; its holes and cut-outs are rows in the Features tab.");
+  }
+  // the outline left after cutting these shapes from the host (shapes inside a non-editable host are cut as holes)
+  cutOutline(host, cutters, circleOf) {
+    const outer = this.contoursOf(host)[0];
+    let cur = { outer: outer.pts, holes: this.contoursOf(host).slice(1).map((h) => ({ pts: h.pts, circle: h.circle })) };
     const insidePoly = (pts, poly) => pts.every((p) => {
       // even-odd point in polygon
       let n = 0;
@@ -603,7 +642,7 @@ export class EditMethods {
           continue;
         }
         const r = differenceOutlines(cur.outer, c.pts);
-        if (!r) { this.onMessage("Those shapes don't overlap – move the cutter onto the part."); this.restore(this.past.pop()); return; }
+        if (!r) return null;
         cur = { outer: r.outer, holes: [...(r.holes || []).map((h) => ({ pts: h, circle: null })), ...cur.holes] };
       }
     }
@@ -614,13 +653,8 @@ export class EditMethods {
       if (ring.circle) m.circle = { cx: r1(ring.circle.cx - b[0]), cy: r1(ring.circle.cy - b[1]), r: r1(ring.circle.r) };
       return m;
     };
-    const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
+    return { id: this.nextId++, type: "custom", name: "Outline", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
       shape: { cs: [local({ pts: cur.outer }), ...cur.holes.filter((h) => h && (h.pts || h).length >= 3).map(local)] } };
-    const drop = new Set(list);
-    this.items = this.items.filter((i) => !drop.has(i));
-    this.items.push(it);
-    this.pick([it.id]); this.commit(); this.onSelect();
-    this.onMessage("Cut out. The result is one part you can copy or resize.");
   }
   nest(gap, sheetW, sheetH, opts = {}) {
     if (!this.items.length) return;

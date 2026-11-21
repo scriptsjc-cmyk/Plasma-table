@@ -44,6 +44,11 @@ export function sanitizeFeature(f) {
   if (f.from === "centre") out.from = "centre";
   if (f.k === "hole" && f.arcs && Number(f.arcs.n) >= 2) out.arcs = { n: Math.max(2, Math.min(64, Math.round(Number(f.arcs.n)))), a0: exact(NUM(f.arcs.a0, 0)), b: Math.abs(NUM(f.arcs.b, 0)), cw: !!f.arcs.cw };
   if (Number(f.link) > 0) out.link = Math.round(Number(f.link));
+  if (f.k === "shape") {
+    const pts = drawnPts(f.pts);
+    if (f.shape === "drawn" && pts) out.pts = pts;
+    else if (!CUTOUT_SHAPES.includes(out.shape)) out.shape = "triangle";
+  }
   return out;
 }
 
@@ -56,7 +61,7 @@ function clampKey(key, v) {
 export function setFeatureValue(f, key, raw) {
   const k = FEATURE_KINDS[f.k]; if (!k) return false;
   if (key === "op") { if (!["cut", "score", "mark"].includes(raw)) return false; f.op = raw; return true; }
-  if (STRING_KEYS.has(key)) { if (key === "shape" && !CUTOUT_SHAPES.includes(raw)) return false; f[key] = String(raw).slice(0, 80); return true; }
+  if (STRING_KEYS.has(key)) { if (key === "shape" && !CUTOUT_SHAPES.includes(raw) && !(raw === "drawn" && f.pts)) return false; f[key] = String(raw).slice(0, 80); return true; }
   const v = Number(raw);
   if (!Number.isFinite(v)) return false;
   if (!(key === "x" || key === "y" || k.keys.some(([kk]) => kk === key))) return false;
@@ -105,7 +110,19 @@ function roundRectPts(w, h, r) {
   for (const [cx, cy, a0] of corners) for (let i = 0; i <= n; i++) { const [c, s] = cs(a0 + (90 * i) / n); pts.push([cx + r * c, cy + r * s]); }
   return pts;
 }
-function shapePts(shape, w, h) {
+// a drawn cut-out (from the Cut out tool): its points relative to its box centre, at the size it was drawn
+function drawnPts(pts) {
+  if (!Array.isArray(pts) || pts.length < 3 || pts.length > 5000) return null;
+  const out = pts.map((p) => (Array.isArray(p) ? [Number(p[0]), Number(p[1])] : [NaN, NaN]));
+  return out.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y)) ? out : null;
+}
+function boxOf(pts) { return pts.reduce((b, [x, y]) => [Math.min(b[0], x), Math.min(b[1], y), Math.max(b[2], x), Math.max(b[3], y)], [Infinity, Infinity, -Infinity, -Infinity]); }
+function shapePts(shape, w, h, drawn) {
+  if (shape === "drawn" && drawn) {                  // scaled to the typed width / height (unchanged size = the exact drawn points)
+    const b = boxOf(drawn), W0 = b[2] - b[0], H0 = b[3] - b[1];
+    const sx = W0 > 0 && Math.abs(w - W0) > 1e-6 ? w / W0 : 1, sy = H0 > 0 && Math.abs(h - H0) > 1e-6 ? h / H0 : 1;
+    return drawn.map(([x, y]) => [x * sx, y * sy]);
+  }
   if (shape === "hexagon") return [[-w / 2, 0], [-w / 4, -h / 2], [w / 4, -h / 2], [w / 2, 0], [w / 4, h / 2], [-w / 4, h / 2]];
   if (shape === "diamond") return [[0, -h / 2], [w / 2, 0], [0, h / 2], [-w / 2, 0]];
   return [[-w / 2, -h / 2], [w / 2, -h / 2], [0, h / 2]];   // triangle, point up, box centred on the typed centre
@@ -140,7 +157,7 @@ export function featureContours(f) {
   if (isHoleFeature(f)) return holeCentres(f).map(([x, y]) => tag(circleAt(x, y, f.d / 2)));
   if (f.k === "slot") return [tag({ pts: turn(slotPts(f.len, f.wid), f.rot, f.x, f.y), closed: true })];
   if (f.k === "rect") return [tag({ pts: turn(roundRectPts(f.w, f.h, f.r), f.rot, f.x, f.y), closed: true })];
-  if (f.k === "shape") return [tag({ pts: turn(shapePts(f.shape, f.w, f.h), f.rot, f.x, f.y), closed: true })];
+  if (f.k === "shape") return [tag({ pts: turn(shapePts(f.shape, f.w, f.h, f.pts), f.rot, f.x, f.y), closed: true })];
   if (f.k === "etch") return [{ pts: turn([[-f.len / 2, 0], [f.len / 2, 0]], f.rot, f.x, f.y), closed: false, op: op || "score" }];
   if (f.k === "text") {
     let t; try { t = textToContours(String(f.text || ""), { size: f.h }); } catch (e) { return []; }
@@ -210,7 +227,7 @@ export function featureSummary(f) {
     case "grid": return `${f.cols} × ${f.rows} × Ø${n(f.d)}, pitch ${n(f.px)} × ${n(f.py)}`;
     case "edge": return `${f.n} × Ø${n(f.d)}, pitch ${n(f.pitch)}`;
     case "rect": return `${n(f.w)} × ${n(f.h)}${f.r ? ` R${n(f.r)}` : ""} at ${n(f.x)}, ${n(f.y)}`;
-    case "shape": return `${f.shape} ${n(f.w)} × ${n(f.h)} at ${n(f.x)}, ${n(f.y)}`;
+    case "shape": return `${f.shape === "drawn" ? "drawn shape" : f.shape} ${n(f.w)} × ${n(f.h)} at ${n(f.x)}, ${n(f.y)}`;
     case "text": return `"${f.text}" ${n(f.h)} high`;
     case "etch": return `${n(f.len)} long${f.rot ? `, ${n(f.rot)}°` : ""}`;
     case "corner": return `R${n(f.r)}`;
@@ -225,6 +242,7 @@ export function mirrored(src, W) {
   const m = { ...src, x: exact(W - src.x) };
   if ("rot" in src) m.rot = mirAng(src.rot);
   if ("ang" in src) m.ang = mirAng(src.ang);
+  if (src.pts) { m.pts = src.pts.map(([x, y]) => [-x, y]); m.rot = exact(((-src.rot % 360) + 360) % 360); }   // a drawn shape is mirrored, not turned
   return m;
 }
 // after editing f, bring its linked partners into line (a mirror twin follows its source and vice versa)
@@ -369,8 +387,21 @@ export function carryFeatures(sk, fromParts, to) {
   return out;
 }
 
+// Cut out tool (plan 2.13): a cutter lying inside the part becomes a row measured in the part's own frame.
+// A round cutter (a disc) becomes a Hole; anything else a drawn Shape cut-out with its exact points.
+export function cutterToFeature(sk, host, contour, circle, id) {
+  if (circle) {
+    const [[x, y]] = sk.worldToPart(host, [[circle.cx, circle.cy]]);
+    return { id, k: "hole", x: exact(x), y: exact(y), d: exact(2 * circle.r) };
+  }
+  const pts = sk.worldToPart(host, contour.pts); if (pts.length < 3) return null;
+  const b = boxOf(pts), cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+  return { id, k: "shape", shape: "drawn", x: exact(cx), y: exact(cy), w: exact(b[2] - b[0]), h: exact(b[3] - b[1]), rot: 0,
+    pts: pts.map(([x, y]) => [Math.round((x - cx) * 1e9) / 1e9, Math.round((y - cy) * 1e9) / 1e9]) };
+}
+
 // ---------------------------------------------------------------- DXF / SVG imports: circles inside the outline -> Hole rows (plan 2.16)
-// A closed loop that is a true circle (equal-bulge arcs round one centre, or a fine polygon on one circle) and sits inside
+// A closed loop that is a true circle (equal-bulge arcs round one centre, as the drawing gave it) and sits inside
 // the part's only outline becomes a Hole feature with the drawing's exact centre and size; it is dropped from the outline.
 function loopCircle(c) {
   // only a true circle as the drawing gave it: n equal-bulge arcs making one full turn round one centre. A polygon that

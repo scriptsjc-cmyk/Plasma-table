@@ -206,6 +206,23 @@ try {
   await ev(page, () => window.plasmaTest.sketch.undo());
   const un = await ev(page, () => ({ n: window.plasmaTest.sketch.items.length, f: (window.plasmaTest.sketch.items[0].feats || []).length }));
   t.check("adopt: one undo puts the loose hole back", un.n === 2 && un.f === nBefore, J(un));
+
+  // ---------------------------------------------------------------- Cut out keeps the plate editable (plan 2.13)
+  const pre = await ev(page, () => {
+    const s = window.plasmaTest.sketch; s.items = s.items.filter((i) => i === s.items[0]); const host = s.items[0];
+    s.add("triangle", true, {}); const tr = s.items[s.items.length - 1]; Object.assign(tr.p, { w: 30, h: 20 }); tr.x = host.x + 60; tr.y = host.y + 90; tr._key = undefined;
+    s.commit(); s.pick([host.id, tr.id]); s.onSelect();
+    return { type: host.type, p: JSON.stringify(host.p), n: (host.feats || []).length };
+  });
+  await sleep(200);
+  await page.click('[data-qb="subtract"]');
+  await sleep(300);
+  const co = await ev(page, () => { const s = window.plasmaTest.sketch, h = s.items[0]; return { n: s.items.length, type: h.type, p: JSON.stringify(h.p), feats: (h.feats || []).map((f) => [f.k, f.shape || ""]) }; });
+  t.check("cut out (toolbar): the plate stays the same editable plate with a Shape cut-out row", co.n === 1 && co.type === pre.type && co.p === pre.p && co.feats.length === pre.n + 1 && J(co.feats[co.feats.length - 1]) === J(["shape", "drawn"]), J({ pre, co }));
+  await ev(page, () => { const b = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (b) b.click(); });
+  await sleep(200);
+  const cr = await rows();
+  t.check("cut out (toolbar): the Features tab lists it as 'Shape cut-out · drawn shape'", cr.some((r) => /Shape cut-out/.test(JSON.stringify(r)) && /drawn shape/.test(JSON.stringify(r))), J(cr));
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("121 ran to the end", false, String(e && e.stack || e).slice(0, 400));

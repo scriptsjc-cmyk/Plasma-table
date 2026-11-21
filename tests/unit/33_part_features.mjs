@@ -160,6 +160,64 @@ for (const [hrot, hfx] of [[0, false], [90, false], [30, true]]) {
   t.check("join: one undo gives both parts back with their features", jk.items.length === 2 && (jk.items[0].feats || []).length === 2 && (jk.items[1].feats || []).length === 2 && jk.past.length === pastLen, J(jk.items.map((i) => (i.feats || []).length)));
 }
 
+// Cut out (plan 2.13): a shape cut from inside a part becomes a Shape cut-out row and the part stays editable
+{
+  const near = (a, b, tol = 1e-6) => a.length === b.length && a.every((p, i) => Math.abs(p[0] - b[i][0]) < tol && Math.abs(p[1] - b[i][1]) < tol);
+  const setup = (rot = 0) => {
+    const ck = A.newSketch();
+    ck.add("rect", true, {}); const host = ck.items[0]; Object.assign(host.p, { w: 200, h: 150, r: 10 }); host.x = 30; host.y = 20; host.rot = rot; host._key = undefined;
+    host.feats = [{ ...F.newFeature("hole", 1, 200, 150), x: 30, y: 30, d: 8.5 }];
+    ck.add("triangle", true, {}); const tri = ck.items[1];
+    ck.add("disc", true, {}); const disc = ck.items[2]; disc.p.d = 12;
+    return { ck, host, tri, disc };
+  };
+  const { ck, host, tri, disc } = setup();
+  const hb = ck.boxOf(host);
+  tri.x = hb[0] + 80; tri.y = hb[1] + 60; tri._key = undefined;                       // wholly inside the plate
+  disc.x = hb[0] + 150; disc.y = hb[1] + 100; disc._key = undefined;
+  const triWorld = ck.contoursOf(tri)[0].pts.map((p) => [...p]), discC = ck.contoursOf(disc)[0].circle;   // the disc cuts as this true circle
+  const hostP = J(host.p), pastLen = ck.past.length;
+  ck.pick([host.id, tri.id, disc.id]); ck.subtract();
+  const o = ck.items[0];
+  t.check("cut out: inside cutters leave ONE part, the same plate (type, sizes, id) - still editable", ck.items.length === 1 && o === host && o.type === "rect" && J(o.p) === hostP, J(ck.items.map((i) => [i.type, i.id])));
+  const rows = (o.feats || []).map((f) => f.k);
+  t.check("cut out: the triangle is a Shape cut-out row, the disc a Hole row, the plate's own row kept", J(rows) === J(["hole", "shape", "hole"]), J(o.feats));
+  const sh = (o.feats || []).find((f) => f.k === "shape") || {};
+  const cut = ck.contours().find((c) => c.feat === sh.id);
+  t.check("cut out: the Shape cut-out cuts exactly where the triangle was (no 0.1 mm rounding)", !!cut && near(cut.pts, triWorld), J({ cut: cut && cut.pts.slice(0, 3), triWorld: triWorld.slice(0, 3) }));
+  const dh = (o.feats || [])[2] || {};
+  t.check("cut out: the disc's Hole row has its exact centre and Ø12", dh.d === 12 && Math.abs(dh.x + hb[0] - discC.cx) < 1e-6 && Math.abs(dh.y + hb[1] - discC.cy) < 1e-6, J(dh));
+  t.check("cut out: the row reads as a drawn shape with its size", /drawn/i.test(F.featureSummary(sh)) && sh.w > 0 && sh.h > 0, F.featureSummary(sh));
+  // the row stays editable: move it and change its width
+  const w0 = sh.w; F.setFeatureValue(sh, "x", sh.x + 10); F.setFeatureValue(sh, "w", w0 * 2); o._key = undefined;
+  const cut2 = ck.contours().find((c) => c.feat === sh.id), b2 = box(cut2.pts), b1 = box(triWorld);
+  t.check("cut out: editing the row moves and resizes the cut-out", Math.abs((b2[2] - b2[0]) - 2 * (b1[2] - b1[0])) < 1e-6 && Math.abs((b2[0] + b2[2]) / 2 - ((b1[0] + b1[2]) / 2 + 10)) < 1e-6, J({ b1, b2 }));
+  const back = A.newSketch(); back.items = JSON.parse(JSON.stringify(ck.items)).map((i) => back.sanitizeItem(i));
+  t.check("cut out: a save / reload keeps the drawn cut-out", J(back.contours().find((c) => c.feat === sh.id).pts) === J(cut2.pts));
+  ck.undo();
+  t.check("cut out: one undo gives the plate, triangle and disc back", ck.items.length === 3 && (ck.items[0].feats || []).length === 1 && ck.past.length === pastLen, J(ck.items.map((i) => i.type)));
+  // a turned plate: the row is measured in the plate's own frame and still cuts where the triangle was
+  const r = setup(90); const rb = r.ck.boxOf(r.host);
+  r.tri.x = rb[0] + 25; r.tri.y = rb[1] + 60; r.tri._key = undefined;
+  const rw = r.ck.contoursOf(r.tri)[0].pts.map((p) => [...p]);
+  r.ck.pick([r.host.id, r.tri.id]); r.ck.subtract();
+  const rs = (r.host.feats || []).find((f) => f.k === "shape");
+  t.check("cut out: on a plate turned 90° the cut-out still cuts where it was drawn", r.ck.items.length === 2 && rs && near(r.ck.contours().find((c) => c.feat === rs.id).pts, rw), J(rs));
+  // a cutter with several loops: every hole of a bolt circle becomes a row (none dropped)
+  const m = setup(); const mb = m.ck.boxOf(m.host);
+  m.ck.pick([m.host.id]); m.ck.add("boltcircle", true, {}); const bc = m.ck.items.find((i) => i.type === "boltcircle"); bc.x = mb[0] + 60; bc.y = mb[1] + 40; bc._key = undefined;
+  const bcC = m.ck.contoursOf(bc).map((c) => c.circle && [c.circle.cx, c.circle.cy, c.circle.r]);
+  m.ck.pick([m.host.id, bc.id]); m.ck.subtract();
+  const bh = (m.host.feats || []).slice(1);
+  t.check("cut out: a bolt circle cutter gives one Hole row per hole, each at its exact centre", bcC.length >= 3 && bh.length === bcC.length && bh.every((f, i) => f.k === "hole" && Math.abs(f.x + mb[0] - bcC[i][0]) < 1e-6 && Math.abs(f.y + mb[1] - bcC[i][1]) < 1e-6 && Math.abs(f.d - 2 * bcC[i][2]) < 1e-6), J({ bh, bcC }));
+  // a cutter across the edge changes the outline: that makes an "Outline" part, and the plate's rows are carried, not baked in
+  const e = setup(); const eb = e.ck.boxOf(e.host);
+  e.tri.x = eb[2] - 20; e.tri.y = eb[1] + 60; e.tri._key = undefined;
+  e.ck.pick([e.host.id, e.tri.id]); e.ck.subtract();
+  const eo = e.ck.items.find((i) => i.type === "custom") || {};
+  t.check("cut out: across the edge -> one 'Outline' part with a notch, the plate's Hole kept as a row", e.ck.items.length === 2 && eo.type === "custom" && eo.name === "Outline" && J((eo.feats || []).map((f) => [f.k, f.d])) === J([["hole", 8.5]]) && eo.shape.cs.length === 1, J({ t: eo.type, n: eo.name, f: eo.feats, cs: eo.shape && eo.shape.cs.length }));
+}
+
 // DXF / SVG imports: circles inside the only outline open as Hole rows (plan 2.16); anything else stays in the outline
 {
   const b = Math.tan(Math.PI / 8), circ = (cx, cy, r) => ({ pts: [[cx + r, cy], [cx, cy + r], [cx - r, cy], [cx, cy - r]], bulges: [b, b, b, b] });

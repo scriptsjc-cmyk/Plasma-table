@@ -51,7 +51,7 @@ const fromCentre = (f) => f.from === "centre";
 const shownXY = (f, fr) => (fromCentre(f) ? [exact(f.x - fr.W / 2), exact(f.y - fr.H / 2)] : [f.x, f.y]);
 
 function field(f, key, label, fr) {
-  if (key === "shape") return `<label>${esc(label)}<select data-ff="shape">${CUTOUT_SHAPES.map((s) => `<option value="${s}"${f.shape === s ? " selected" : ""}>${s}</option>`).join("")}</select></label>`;
+  if (key === "shape") return `<label>${esc(label)}<select data-ff="shape">${(f.pts ? [...CUTOUT_SHAPES, "drawn"] : CUTOUT_SHAPES).map((s) => `<option value="${s}"${f.shape === s ? " selected" : ""}>${s === "drawn" ? "drawn shape" : s}</option>`).join("")}</select></label>`;
   if (key === "text") return `<label class="wide2">${esc(label)}<input type="text" data-ff="text" maxlength="80" value="${esc(f.text)}"></label>`;
   const v = key === "x" ? shownXY(f, fr)[0] : key === "y" ? shownXY(f, fr)[1] : f[key];
   return `<label>${esc(label)}<input type="number" step="any" inputmode="decimal" data-ff="${key}" value="${esc(String(v))}"></label>`;
