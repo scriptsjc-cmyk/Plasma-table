@@ -2,10 +2,10 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 17:06 (UK time). This push is Round 5 (folded parts, flat patterns, 3D), all items 5.1–5.8; Round 4 + follow-ups are live. Live: see `version.json`.
+Last updated: 21 Nov 2026, 19:05 (UK time). This push is Round 6 (plasma cut quality), all items 6.1–6.5; Round 5 is live. Live: see `version.json`.
 
 ## Working on
-- Nothing open from Round 5; next is Round 6. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
+- Nothing open from Round 6; next is Round 7, starting with r15 5.9 / 5.10 (Josh 21 Nov). (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
@@ -82,27 +82,65 @@ Last updated: 21 Nov 2026, 17:06 (UK time). This push is Round 5 (folded parts, 
     @ 7a949ef, 4a5f10e, tests @ 3f2d109
   - Screenshots: briefs r5-1 … r5-8 (Josh has them)
 
+- r15 Round 6 (plasma cut quality), checked by unit 42–45 and the new e2e 127_r15_round6 (28 checks, in the deploy gate @ 182c853):
+  - r15 6.1 (also plan 7.7) holes under 25 mm cut at 60 % of the cut speed: cut chart `small_holes` (on, 25 mm, 60 %, source
+    noted), switch "Slow down for small holes" in More cut options (remembered). CAM tags the run `(PORTA-SLOW 60)`; the job builder
+    sets the slower F at that pierce only, and the time estimate counts it @ 2aff779, tests @ a5219fe, 0a284c3
+  - r15 6.2 round holes (r ≥ 0.8 mm, lead-in on) pierce near the centre and spiral out onto the line: two arcs inside the hole,
+    tangent at the join. Only where every point of the lead is scrap; outlines, discs and tight holes keep the old lead @ 54476ef, test @ 7d544bc
+  - r15 6.4 automatic cut order = nearest-next plus a 2-opt pass per depth; holes still before outlines; never more travel; capped by
+    work, not by the clock, so the same drawing always gives the same G-code @ f506695, test @ 251f8de
+  - r15 6.3 one small-hole rule (`js/make/holerule.js`, under 1.5 × thickness) for the Features rows and every hole-size field: shown
+    live under the field with "Mark for drilling" (draws a drill cross, mark op, instead of cutting it; "Cut it instead" undoes; one undo
+    step); Features hole rows get op "Mark for drilling" @ 1e75c5b, tests @ 642c0bf, ba783aa. Limits: the phone quick sheet has no note
+    yet; drill marks match by size, so two hole fields of the same size on one part are marked together
+  - r15 6.5 Check cut in Make checks straight away for the job's material and thickness ("Checked for the job's sheet: mild steel, 3 mm."),
+    with Change to pick another (it becomes the job's); no job material = asks as before @ f21c4b0, test @ fe3ad70
+    Also fixed, found in the r6 screenshots: the Check cut box was the only dialog without the overlay class (since 12 Nov), so it
+    opened under the page and squashed the drawing; it now opens over it like the others, with the dialog card background
+    @ b3c76e9, 846d218, tests @ 416f4ef, ef6996d
+  - e2e 127 also checks the app's own job: a flange's round holes spiral in and the outline is cut last @ 36e6080
+  - **Cut change, on purpose:** G-code differs for 187 of 339 presets (precheck, new defaults): 155 only by the spiral hole leads,
+    2 only by the cut order (boltcircle, holegrid), 30 by both (baseplate, flanges, motormount, brackets…); 0 for any other reason.
+    The other 152 (no round holes big enough, one cut) are byte-identical. 2 of 35 DXF/SVG differ (motor-mount.dxf, plate-circles.svg:
+    round holes). Slow-hole tags come on top of this in the app (chart setting). The old path is still there
+    (`holeSpiral: false, tidyOrder: false`): with it, precheck gives 339 presets identical except dustpan (the Round 5 fix) and 35 DXF/SVG
+    identical. A second check (`tmp/r6-cutsame.mjs`) takes every cut with its lead removed: the same cuts for all 339 presets
+    (505 spiral leads, 32 parts in a new order, 0 bad), and every hole still before its outline
+  - Test kit change (disclosed, nothing loosened): `tests/lib/analyze.mjs` records where each move ends and `tests/lib/verify.mjs` also
+    accepts a loop that starts after a two-arc spiral lead. The old one-move-lead check is unchanged
+  - **Found by the gate (DEMO-SAFETY), fixed:** on connect, the motor-direction read could ask the controller `$$` after Start; the ask
+    waited behind the job and went out right after it ended (only with jobs over ~5 s, so the longer Round 6 demo job showed it). It now
+    never asks while a job runs @ 84acdc8, test @ b78e33f (e2e 127, fails before the fix)
+  - e2e 20 STOP-STREAM counted from a mark taken just before the STOP press, so a job line written 10 ms before the press counted as
+    "after STOP" (timestamps checked). It now counts from the press itself; without a press time it keeps the old, stricter window @ f9d612d
+  - Screenshots: briefs r6-1 … r6-7, r6-5b (Josh has them)
+
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
 - Item 2: the walk stopped a ONE-part job before its first pierce, so Save speed, "Stopped during cut N" and Continue from cut never
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- r15 Round 6, tests first.
+- r15 5.9 / 5.10 (Josh 21 Nov), tests first: (a) the skylight pan flashings' upstands overlap at the corners in 3D; (b) 3D faces
+  thickened toward the inside of the bend, not about the middle. 3D only; cut G-code stays unchanged (precheck).
+- Then r15 Round 7, tests first.
 
 ## Not a bug
 - Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
-  Josh: keep as is (21 Nov, relayed). A stop is always sent first.
+  Josh 21 Nov: keep as is (his own answer card). A stop is always sent first.
 - Report ❌ "41 item 11 since 55c3d71": not the app. 55c3d71 also changed `tests/lib/browser.mjs` launchKillable to a real laptop
   Chrome (hover + fine pointer), so 41 now gets the r13 laptop bed layout, where Link a machine sits in the header connection menu
   by design. 75b7df1's app code shows the same layout under the new launcher. 41 still expects the touch layout; I'll fix the
   test to match each layout in Round 7/8 (no app change, nothing weakened).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
-- Ideas from Round 5 (need Josh's OK; not built): the skylight pan flashings' upstands overlap at the corners in 3D (the cut pieces
-  are unchanged and correct); the 3D thickens each face about its middle, not to the inside of the bend.
+- (The two Round 5 3D ideas: Josh approved them on 21 Nov; now r15 5.9 / 5.10 under Next up.)
 
 ## Questions for the checker
+- e2e 20 STOP-STREAM change (f9d612d, accepted by the reviewer): it now counts job lines from the moment of the STOP press (button
+  pointerdown / Space keydown), not from a mark taken ~ms before it. Please confirm independently that STOP still sends nothing from the
+  job after the press: button and Space, mid-cut, on the practice table (timestamps of every byte after the press).
 - 41 item 11 (your request): `node run-all.mjs 41` fails item 11 ×3 on 75b7df1, on 55c3d71, and on HEAD (rerun 21 Nov 15:50 at 82d99d8) with today's `tests/lib/browser.mjs`.
   The difference between your two runs is the launcher: 55c3d71 changed launchKillable from raw headless Chrome (no hover, so the
   touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
