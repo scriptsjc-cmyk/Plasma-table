@@ -88,11 +88,18 @@ for (const [id, legs] of [["signbr", ["wall", "arm"]], ["foldshelf", ["wall", "s
   for (const f of m.faces) { const k = key(f); if (seen.has(k)) dup++; seen.set(k, 1); }
   t.check("1.7 hopflange: the top flange is drawn once in 3D (no duplicate faces)", dup === 0, `${dup} duplicate faces`);
   t.check("1.7 hopflange: four top flange faces in 3D", m.faces.length === 8, `${m.faces.length} faces`);
-  // the four flange faces close up into one frame round the top opening, with mitred corners (no gaps, no crossing strips)
+  // r15 7.5: the four flange faces are the cut lip (strips trimmed at the corners as the joined blank cuts them; a closed
+  // mitred frame showed ~1,750 mm² of metal that is not cut) and no two strips cross. (Was: area = the closed frame.)
   const fl = m.faces.slice(4), quad = (f) => { const q = f.pts; let s2 = [0, 0, 0]; for (let i = 0; i < q.length; i++) { const a = q[i], b = q[(i + 1) % q.length];
     s2 = [s2[0] + a[1] * b[2] - a[2] * b[1], s2[1] + a[2] * b[0] - a[0] * b[2], s2[2] + a[0] * b[1] - a[1] * b[0]]; } return Math.hypot(...s2) / 2; };
-  const fa = fl.reduce((sum, f) => sum + quad(f), 0), frame = (p.a2 + 2 * p.lip) * (p.b2 + 2 * p.lip) - p.a2 * p.b2;
-  t.check("1.7 hopflange: the 3D top flange is one closed frame (area = the frame round the opening)", Math.abs(fa - frame) / frame < 0.02, `3D ${fa.toFixed(0)} vs frame ${frame.toFixed(0)}`);
+  const fa = fl.reduce((sum, f) => sum + quad(f), 0), lipCut = body.a - plain.a;
+  t.check("1.7 hopflange: the 3D top flange is the cut lip (area within 0.5 %)", Math.abs(fa - lipCut) / lipCut < 0.005, `3D ${fa.toFixed(0)} vs cut lip ${lipCut.toFixed(0)}`);
+  // convex strips in the top plane (x, z): separating-axis test, touching allowed
+  const xz = (f) => f.pts.map((q) => [q[0], q[2]]);
+  const apart = (P, Q) => [P, Q].some((S) => S.some((a, i) => { const b = S[(i + 1) % S.length], nx = a[1] - b[1], nz = b[0] - a[0];
+    const pr = (R) => R.map((v) => v[0] * nx + v[1] * nz), p1 = pr(P), p2 = pr(Q); return Math.max(...p1) <= Math.min(...p2) + 1e-6 || Math.max(...p2) <= Math.min(...p1) + 1e-6; }));
+  let cross = 0; for (let i = 0; i < fl.length; i++) for (let j = i + 1; j < fl.length; j++) if (!apart(xz(fl[i]), xz(fl[j]))) cross++;
+  t.check("1.7 hopflange: no two top flange strips cross in 3D", cross === 0, `${cross} crossing pairs`);
 }
 
 process.exit(t.done() ? 1 : 0);
