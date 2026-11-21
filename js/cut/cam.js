@@ -23,13 +23,17 @@ import { isEtchOp, emitEtchGcode } from "./etch.js";
 //   leadType   "auto" (default, same as today) | "straight" | "arc"
 //   leadSide   "auto" (default, scrap side) | "outside" | "inside"
 //              Auto type + auto side is byte-identical to the previous G-code.
+//   holeSpiral true (default): r15 6.2, a round hole with the auto lead pierces near its centre and spirals out onto the
+//              line (two arcs, tangent where they meet the circle). false = the old straight lead.
+//   tidyOrder  true (default): r15 6.4, the automatic order is improved with a 2-opt pass (less travel). false = nearest-next only.
 //   smallHoles { under, pct }  r15 6.1: holes smaller than `under` mm (largest size) are tagged "(PORTA-SLOW pct)" so the
 //              job builder cuts them at pct % of the chart feed. A comment only: the moves don't change.
 // A cut's key is its position in the `contours` list you pass in, so it stays the same while the order changes.
-export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "design", order: wantOrder = null, skip = [], starts = {}, tabs = null, tabOver = {}, leadOut = 0, overcut = 0, keepOrigin = false, etch = null, leadType = "auto", leadSide = "auto", smallHoles = null } = {}) {
+export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "design", order: wantOrder = null, skip = [], starts = {}, tabs = null, tabOver = {}, leadOut = 0, overcut = 0, keepOrigin = false, etch = null, leadType = "auto", leadSide = "auto", smallHoles = null, holeSpiral = true, tidyOrder = true } = {}) {
   const leadOpt = {
     type: (leadType === "straight" || leadType === "arc") ? leadType : "auto",
     side: (leadSide === "inside" || leadSide === "outside") ? leadSide : "auto",
+    spiral: holeSpiral !== false && Number(leadIn) > 0.3,
   };
   const warnings = [];
   const half = Math.max(0, kerf) / 2;
@@ -162,7 +166,15 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
       const L = T(run.lead), S = T(run.start);
       if (c.slow) lines.push(`(PORTA-SLOW ${c.slow})`);
       lines.push(`G0 X${fmt(L[0])} Y${fmt(L[1])}`, "M3");
-      if (Math.hypot(L[0] - S[0], L[1] - S[1]) > 1e-6) {
+      if (run.leadPath && run.leadPath.length) {                 // r15 6.2: spiral lead-in, arc by arc from the pierce
+        let px = +fmt(L[0]), py = +fmt(L[1]);
+        for (const [g, p, ij] of run.leadPath) {
+          const q = T(p), qx = +fmt(q[0]), qy = +fmt(q[1]);
+          const ij2 = ijOnRounded([px, py], [qx, qy], ij);
+          lines.push(`${g} X${fmt(qx)} Y${fmt(qy)} I${fmtIJ(ij2[0])} J${fmtIJ(ij2[1])}`);
+          px = qx; py = qy;
+        }
+      } else if (Math.hypot(L[0] - S[0], L[1] - S[1]) > 1e-6) {
         if (run.leadArc && run.leadArc.ij) {
           const ij2 = ijOnRounded(L, S, run.leadArc.ij);
           lines.push(`${run.leadArc.g === "G2" ? "G2" : "G3"} X${fmt(S[0])} Y${fmt(S[1])} I${fmtIJ(ij2[0])} J${fmtIJ(ij2[1])}`);
@@ -209,6 +221,27 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
   };
 }
 
+// r15 6.2: spiral lead-in for a round hole of (kerfed) radius r, joining the circle at angle `ang`. Two anticlockwise
+// half-turns: from the pierce (0.1 r from the centre, on the join's side) across to 0.55 r on the far side, then out to the
+// line, arriving along the circle's own direction (the second arc's centre is on the line from the join to the centre).
+// Every point stays inside the hole. `samples` are points along it, to check it only crosses scrap.
+function spiralLead(cx, cy, r, ang) {
+  const u = [Math.cos(ang), Math.sin(ang)], v = [-u[1], u[0]];
+  const W = (x, y) => [cx + x * u[0] + y * v[0], cy + x * u[1] + y * v[1]];
+  const p = 0.1 * r, q = 0.55 * r;
+  const P = W(p, 0), Q = W(-q, 0), S = W(r, 0), C1 = W((p - q) / 2, 0), C2 = W((r - q) / 2, 0);
+  const samples = [P];
+  for (let k = 1; k <= 12; k++) {
+    const a = (k / 12) * Math.PI, r1 = (p + q) / 2, r2 = (r + q) / 2;
+    samples.push(W((p - q) / 2 + r1 * Math.cos(a), r1 * Math.sin(a)));            // first half-turn, over the top
+    samples.push(W((r - q) / 2 + r2 * Math.cos(Math.PI + a), r2 * Math.sin(Math.PI + a)));   // second, under the bottom
+  }
+  return {
+    pierce: P, start: S, samples,
+    leadPath: [["G3", Q, [C1[0] - P[0], C1[1] - P[1]]], ["G3", S, [C2[0] - Q[0], C2[1] - Q[1]]]],
+  };
+}
+
 function makeCut(c, pts, circle, leadIn, warnings, inMaterial, startAt, leadOpt = {}) {
   const scrap = (p) => (inMaterial ? !inMaterial(p) : (c.hole ? pointInPoly(p, pts) : !pointInPoly(p, pts)));
   const type = leadOpt.type || "auto";
@@ -223,8 +256,8 @@ function makeCut(c, pts, circle, leadIn, warnings, inMaterial, startAt, leadOpt 
   };
   if (circle) {
     const { cx, cy, r } = circle;
-    const pathOf = (start, lead, leadArc) => ({
-      depth: c.depth, start, lead, leadArc: leadArc || null,
+    const pathOf = (start, lead, leadArc, leadPath) => ({
+      depth: c.depth, start, lead, leadArc: leadArc || null, leadPath: leadPath || null,
       path: [[c.hole ? "G3" : "G2", start, [cx - start[0], cy - start[1]]]],
       pathPts: circlePts(cx, cy, r), scrap,
     });
@@ -233,6 +266,12 @@ function makeCut(c, pts, circle, leadIn, warnings, inMaterial, startAt, leadOpt 
       const angles = [];
       if (startAt) angles.push(Math.atan2(startAt[1] - cy, startAt[0] - cx));
       else for (let k = 0; k < 24; k++) angles.push((k / 24) * 2 * Math.PI);
+      if (c.hole && leadOpt.spiral && r >= 0.8) {
+        for (const ang of angles) {
+          const sp = spiralLead(cx, cy, r, ang);
+          if (sp.samples.every((q) => scrap(q))) return pathOf(sp.start, sp.pierce, null, sp.leadPath);
+        }
+      }
       for (const ang of angles) {
         const start = [cx + r * Math.cos(ang), cy + r * Math.sin(ang)];
         const inward = [-Math.cos(ang), -Math.sin(ang)], outward = [Math.cos(ang), Math.sin(ang)];
@@ -532,7 +571,7 @@ export function nearestOnRing(ring, P) {          // for dragging a handle along
 }
 
 function buildRuns(c, { tabs, tabOver, leadOut, overcut, leadIn, warnings }) {
-  const plain = { runs: [{ lead: c.lead, start: c.start, path: c.path, leadArc: c.leadArc || null }], tabPts: [], leadOutPt: null };
+  const plain = { runs: [{ lead: c.lead, start: c.start, path: c.path, leadArc: c.leadArc || null, leadPath: c.leadPath || null }], tabPts: [], leadOutPt: null };
   const closedPart = !c.open && !c.hole;
   const ov = tabOver || {};
   const wantTabs = closedPart ? ((ov.pts && ov.pts.length) ? ov.pts.length : Number(ov.count ?? (tabs && tabs.count) ?? 0)) : 0;
@@ -568,7 +607,7 @@ function buildRuns(c, { tabs, tabOver, leadOut, overcut, leadIn, warnings }) {
     const path = sliceSegs(segs, a, b);
     if (i === cuts.length - 1 && oc > 1e-6) path.push(...sliceSegs(segs, 0, oc));
     const st = pointAt(segs, a);
-    runs.push(i === 0 ? { lead: c.lead, start: c.start, path, leadArc: c.leadArc || null } : { lead: st, start: st, path });
+    runs.push(i === 0 ? { lead: c.lead, start: c.start, path, leadArc: c.leadArc || null, leadPath: c.leadPath || null } : { lead: st, start: st, path });
   });
   // lead-out: from where the last run ends, run off into scrap
   let leadOutPt = null;

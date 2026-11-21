@@ -42,6 +42,7 @@ export function analyze(lines) {
           const n = Math.max(8, Math.ceil(sw / (Math.PI / 90)));
           for (let k = 1; k <= n; k++) { const a = cw ? a0 - sw * k / n : a0 + sw * k / n; cur.pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
         } else cur.pts.push([nx, ny]);
+        cur.ends.push(cur.pts.length - 1);          // where each move ends in pts (r15 6.2: to step over a multi-move lead-in)
       }
       for (const [px, py] of [[x, y], [nx, ny]]) { minx = Math.min(minx, px); maxx = Math.max(maxx, px); miny = Math.min(miny, py); maxy = Math.max(maxy, py); }
       if (!torch) pendingLead = [nx, ny];
@@ -52,7 +53,7 @@ export function analyze(lines) {
     if (m.includes(3) || m.includes(4)) {
       if (torch) note("double-M3", i, l0);
       torch = true; m3++;
-      cur = { lead: pendingLead ? [...pendingLead] : [x, y], line: i + 1, pts: [[x, y]], order: blocks.length };
+      cur = { lead: pendingLead ? [...pendingLead] : [x, y], line: i + 1, pts: [[x, y]], ends: [], order: blocks.length };
     }
     if (m.includes(2) || m.includes(30)) { if (torch) { note("M30-with-torch-on", i, l0); } torch = false; }
   });

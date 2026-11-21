@@ -1,6 +1,16 @@
 // Full independent verification of a design -> G-code -> prepared job chain.
 import { analyze, area, inPoly, bb, selfCross } from "./analyze.mjs";
 const cleanC = (c) => c.pts.map(([x, y]) => [x, y]);
+// where a block's closed loop starts: at the pierce (no lead), or after its lead-in of one move (straight / arc) or two moves
+// (r15 6.2 spiral for round holes). -1 = the path doesn't close.
+const loopStart = (b) => {
+  const p = b.pts, e = p[p.length - 1];
+  if ([p[0], p[1]].some((q) => q && Math.hypot(q[0] - e[0], q[1] - e[1]) < 0.01)) return Math.hypot(p[0][0] - e[0], p[0][1] - e[1]) < 0.01 ? 0 : 1;   // as before
+  const k = b.ends && b.ends[1];                                    // a two-move (spiral) lead-in
+  if (k != null && k < p.length - 1 && Math.hypot(p[k][0] - e[0], p[k][1] - e[1]) < 0.01) return k;
+  return -1;
+};
+const loopPts = (b) => b.pts.slice(Math.max(1, loopStart(b)));
 
 export function verifyDesign(A, t, label, contours, { kerf = 1.5, leadIn = 3, cut = A.cutFor(), checkOrder = true } = {}) {
   const id = (s) => `${label}: ${s}`;
@@ -44,21 +54,21 @@ export function verifyDesign(A, t, label, contours, { kerf = 1.5, leadIn = 3, cu
   for (const o of closed) for (const p of closed) if (p !== o && p.a > o.a && inPoly(o.pts[0], p.pts) && inPoly(o.pts[Math.floor(o.pts.length / 2)], p.pts)) o.depth++;
   const material = (pt) => closed.filter((o) => inPoly(pt, o.pts)).length % 2 === 1;
   const blocks = an.blocks;
-  t.check(id("every block's path closed (end == start)"), blocks.every((b) => { const p = b.pts; const e = p[p.length - 1]; return [p[0], p[1]].some((s) => s && Math.hypot(s[0] - e[0], s[1] - e[1]) < 0.01); }),
+  t.check(id("every block's path closed (end == start)"), blocks.every((b) => loopStart(b) >= 0),
     blocks.map((b, i) => [i, Math.min(Math.hypot(b.pts[0][0] - b.pts.at(-1)[0], b.pts[0][1] - b.pts.at(-1)[1]), Math.hypot(b.pts[1][0] - b.pts.at(-1)[0], b.pts[1][1] - b.pts.at(-1)[1]))]).filter((x) => x[1] >= 0.01).slice(0, 3).join(" "), "PATH-OPEN");
   const matched = new Map();
   for (const o of closed) {
     const cx = (o.box[0] + o.box[2]) / 2, cy = (o.box[1] + o.box[3]) / 2, w = o.box[2] - o.box[0], h = o.box[3] - o.box[1];
-    const cands = blocks.map((b, i) => ({ b, i, bx: bb(b.pts.slice(1)) })).filter(({ bx }) => Math.abs((bx[0] + bx[2]) / 2 - cx) < 0.6 && Math.abs((bx[1] + bx[3]) / 2 - cy) < 0.6 && Math.abs((bx[2] - bx[0]) - w) < kerf + 0.6 && Math.abs((bx[3] - bx[1]) - h) < kerf + 0.6);
+    const cands = blocks.map((b, i) => ({ b, i, bx: bb(loopPts(b)) })).filter(({ bx }) => Math.abs((bx[0] + bx[2]) / 2 - cx) < 0.6 && Math.abs((bx[1] + bx[3]) / 2 - cy) < 0.6 && Math.abs((bx[2] - bx[0]) - w) < kerf + 0.6 && Math.abs((bx[3] - bx[1]) - h) < kerf + 0.6);
     if (!cands.length) { o.dropped = true; continue; }
-    const m = cands.sort((p, q) => Math.abs(area(p.b.pts.slice(1)) - o.a) - Math.abs(area(q.b.pts.slice(1)) - o.a))[0];
+    const m = cands.sort((p, q) => Math.abs(area(loopPts(p.b)) - o.a) - Math.abs(area(loopPts(q.b)) - o.a))[0];
     matched.set(o, m); o.bi = m.i;
   }
   const dropped = closed.filter((o) => o.dropped);
   t.check(id("every closed contour is cut, or a 'left out' warning is shown"), dropped.length === 0 || cam.warnings.some((w) => /left out|smaller than/.test(w)), `${dropped.length} dropped, warnings=${cam.warnings.join("|")}`, "GCODE-DROP");
   let wrongKerf = 0, leadBad = 0, selfX = 0, cw = 0, ccwBad = 0;
   for (const [o, m] of matched) {
-    const pa = area(m.b.pts.slice(1)), isHole = o.depth % 2 === 1;
+    const pa = area(loopPts(m.b)), isHole = o.depth % 2 === 1;
     const delta = Math.abs(pa) - o.a;
     if (kerf > 0 && Math.abs(delta) > 0.02 * o.a + 0.05) { if (isHole ? delta >= 0 : delta <= 0) wrongKerf++; }
     // direction: part edges clockwise (negative area), holes counter-clockwise (positive)
