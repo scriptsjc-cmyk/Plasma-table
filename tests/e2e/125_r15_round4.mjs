@@ -378,6 +378,52 @@ try {
     t.check(`no page error (${prof} make)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 4.23 + 4.24 Machine setup on a laptop
+  for (const prof of ["d1440", "d1366", "d1280x600"]) {
+    const page = await newPage(br, prof, { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    await ev(page, () => { const T = window.plasmaTest; T.setAppMode && T.setAppMode("pro", { persist: false, autoFs: false }); T.showScreen("cut"); const b = document.getElementById("menuSetup"); if (b) b.click(); });
+    await page.waitForFunction(() => { const cv = document.getElementById("setupBed"); return cv && cv.offsetParent; }, null, { timeout: 10000 });
+    await sleep(500);
+    const geo = () => ev(page, () => {
+      const r = (e) => { if (!e || !e.getClientRects().length) return null; const b = e.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height }; };
+      const w = document.querySelector("#setupBedWrap .jogwrap");
+      const xy = ["Y:1", "X:-1", "X:1", "Y:-1"].map((k) => { const [a, d] = k.split(":"); return r(w && w.querySelector(`.jog .j[data-axis="${a}"][data-dir="${d}"]`)); });
+      const z = [...(w ? w.querySelectorAll(".jog .j.z") : [])].map(r);
+      const bs = [...(w ? w.querySelectorAll(".pos b") : [])].map((b) => ({ w: b.getBoundingClientRect().width, num: getComputedStyle(b).fontVariantNumeric }));
+      const st = w && w.querySelector(".steps"), sc = st && getComputedStyle(st);
+      return { jog: r(w && w.querySelector(".jog")), steps: r(st), lamps: r(w && w.querySelector(".lamps")), pos: r(w && w.querySelector(".pos")), xy, z, bs,
+        stepGroup: !!st && (st.getAttribute("role") === "group") && /step/i.test(st.getAttribute("aria-label") || "") && /step/i.test(st.innerText),
+        stepBox: !!sc && (parseFloat(sc.borderTopWidth) > 0 || !/rgba\(0, 0, 0, 0\)/.test(sc.backgroundColor)),
+        h2: r(document.querySelector("#setupBedWrap > h2")), h2bg: getComputedStyle(document.querySelector("#setupBedWrap > h2")).backgroundColor,
+        cv: r(document.getElementById("setupBed")), mount: r(document.querySelector("#setupBedWrap .jogmount")) };
+    });
+    const g = await geo();
+    const xs = [...new Set(g.xy.filter(Boolean).map((b) => Math.round(b.l + b.w / 2)))], ys = [...new Set(g.xy.filter(Boolean).map((b) => Math.round(b.t + b.h / 2)))];
+    const [yp, xm, xp, ym] = g.xy;
+    const plus = g.xy.every(Boolean) && xs.length === 3 && ys.length === 3 && yp.b <= xm.t + 1 && xm.b <= ym.t + 1 && xm.r <= xp.l;
+    t.check(`4.23 ${prof}: the X/Y arrows are a 3 × 3 pad (Y+ over X− · X+ over Y−)`, plus, J({ xs, ys }));
+    const left = g.jog && g.steps && g.lamps && g.xy.every(Boolean) && Math.max(...g.xy.map((b) => b.r)) <= Math.min(g.steps.l, g.lamps.l) && g.jog.l <= g.steps.l;
+    t.check(`4.23 ${prof}: the arrow pad is on the left of the strip, the lamps and steps to its right`, !!left, J({ jog: g.jog, steps: g.steps, lamps: g.lamps }));
+    t.check(`4.23 ${prof}: the step sizes are their own labelled group ("Step", boxed)`, g.stepGroup && g.stepBox, J({ stepGroup: g.stepGroup, stepBox: g.stepBox }));
+    // fixed-width readouts: numbers of any length don't move the strip
+    await ev(page, async () => { const T = window.plasmaTest; T.S.status.WPos = [0, 0, 0]; (await import(window.__J.jog)).renderPos(); });
+    await sleep(150);
+    const a = await geo();
+    await ev(page, async () => { const T = window.plasmaTest; T.S.status.WPos = [-1234.5, 888.8, -12.3]; (await import(window.__J.jog)).renderPos(); });
+    await sleep(150);
+    const b = await geo();
+    const same = a.bs.length === 3 && b.bs.length === 3 && a.bs.every((x, i) => Math.abs(x.w - b.bs[i].w) < 0.6) && a.bs.every((x) => /tabular-nums/.test(x.num))
+      && a.jog && b.jog && Math.abs(a.jog.l - b.jog.l) < 0.6 && Math.abs(a.steps.l - b.steps.l) < 0.6 && Math.abs(a.mount.h - b.mount.h) < 0.6;
+    t.check(`4.23 ${prof}: X / Y / Z readouts are fixed width (tabular numbers; 0.0 and −1234.5 take the same room)`, same, J({ a: a.bs, b: b.bs }));
+    const posFits = b.pos && b.mount && b.pos.r <= b.mount.r + 0.5 && b.pos.l >= b.mount.l - 0.5;
+    t.check(`4.23 ${prof}: the readouts sit inside the strip`, !!posFits, J({ pos: b.pos, mount: b.mount }));
+    // 4.24 "Bed and home" is the head of the bed picture's card, not a title above the jog strip
+    const inCard = g.h2 && g.cv && g.mount && g.h2.t >= g.mount.b - 0.5 && Math.abs(g.h2.b - g.cv.t) <= 1.5 && Math.abs(g.h2.l - g.cv.l) <= 1.5 && Math.abs(g.h2.r - g.cv.r) <= 1.5 && !/rgba\(0, 0, 0, 0\)/.test(g.h2bg);
+    t.check(`4.24 ${prof}: "Bed and home" sits inside the bed picture's card`, !!inCard, J({ h2: g.h2, cv: g.cv, mount: g.mount, bg: g.h2bg }));
+    t.check(`no page error (${prof} machine setup)`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("125 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
