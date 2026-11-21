@@ -2,10 +2,10 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 13:35 (UK time). Round 3 is live @ fd60dcd (CI run 44904366501 green). Live: see `version.json`.
+Last updated: 21 Nov 2026, 15:52 (UK time). Round 4 pushed in this push (gate 52/52 locally, tmp/precheck.sh identical). Live: see `version.json`.
 
 ## Working on
-- r15 Round 4 (screen polish), starting next. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
+- Nothing open: Round 4 is pushed. Round 5 next. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
@@ -34,32 +34,48 @@ Last updated: 21 Nov 2026, 13:35 (UK time). Round 3 is live @ fd60dcd (CI run 44
     (the saved-part rows in Add parts are a pick list, so they keep tick boxes; the safety dialog's buttons were not touched)
   - 339 presets + 35 DXF/SVG byte-identical before the push (tmp/precheck.sh)
 
+- r15 Round 4 (screen polish), all checked by the new e2e 125_r15_round4 (212 checks, in the deploy gate @ 82d99d8):
+  - your 11:47 New problems 1 + 2 (phone help line said twice; sideways pill over the Features sheet) @ 719194e, test @ c6c5189
+  - r15 4.x-extra (Josh 21 Nov): ☰ Export DXF / SVG on a laptop opens its pop-up (it sat in a hidden wrapper); same fault fixed
+    for Save G-code as (e2e 47 now gets past it) @ 9f58d62, test @ 5118952
+  - r15 4.1 + 4.2 were already done by 7.2 @ 55c3d71 (tests @ 872e3e3 pass before any change)
+  - r15 4.3 Practice run is a switch, 4.4 Cut speed shown once, 4.5 run options in the left column @ 3a6720e, test @ 872e3e3
+  - r15 4.6–4.10 Setup: bed line + checklist wrap, Layout / Check cut secondary, Download G-code shows icon + "G-code",
+    Torch card one i, bigger lamps, one X/Y/Z row, touch-off tag clear of the X beam and axis names @ 92b0334, test @ f04dd16
+  - r15 4.11–4.14 + 4.25 one header pill (● Practice · Ready, a lit TORCH ON joins it loud), Torch off a plain line,
+    tabular readouts, Demo hint on Setup only, Stopped actions one line each under the message @ 13695b3, test @ e8e09fa
+  - r15 4.16 + 4.22 no greyed Size box; "Set hole position" / "Clean up tiny gaps" (old names still searchable) @ 9fadbda
+  - r15 4.15 + 4.17–4.21 versions in 2 columns, X/Y chips off the outline, one Arc ▾ rail button, Select/Snap normal weight,
+    Delete red only when it can delete, Snap only in the header (still in ⋯ More), preset names on 2 lines, quiet Remove;
+    ⋯ More's 28 px rows now really apply at 600 px tall so it still fits over the drawing @ 9935557, tests @ 1632269
+  - r15 4.23 + 4.24 Machine setup jog strip (3 × 3 pad left, fixed-width readouts, boxed "Step" group), "Bed and home"
+    heads the bed card @ fc315ec, test @ 089c3b4
+  - r15 4.26 Barlow bundled (OFL, fonts/OFL.txt), page font, precached @ cf46f75, test @ 7787224. Your 1440 × 800
+    "Lowest point / Floating head" overlap: the bold term now stays on one line (same commit)
+  - 339 presets + 35 DXF/SVG byte-identical before this push (tmp/precheck.sh)
+
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
 - Item 2: the walk stopped a ONE-part job before its first pierce, so Save speed, "Stopped during cut N" and Continue from cut never
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- Your 11:47 report, New problems 1 and 2 (phone): the Set the size / More cut options help line shows twice; the "Turn your phone
-  sideways" pill sits over the Features sheet. Fixing these first in Round 4.
-- r15 Round 4 (screen polish), items 1–26, in the order of your prep (4.3, 4.4, 4.2/4.5, 4.9, 4.11/4.25, 4.13, 4.26)
+- r15 Round 5, tests first.
 
 ## Not a bug
+- Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
+  Josh: keep as is (21 Nov, relayed). A stop is always sent first.
 - Report ❌ "41 item 11 since 55c3d71": not the app. 55c3d71 also changed `tests/lib/browser.mjs` launchKillable to a real laptop
   Chrome (hover + fine pointer), so 41 now gets the r13 laptop bed layout, where Link a machine sits in the header connection menu
   by design. 75b7df1's app code shows the same layout under the new launcher. 41 still expects the touch layout; I'll fix the
   test to match each layout in Round 7/8 (no app change, nothing weakened).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
-- Menu > Export DXF / SVG on a laptop opens nothing: the pop-up sits inside a wrapper hidden at laptop sizes (css/screen-make.css,
-  from 5a609b2, 20 Nov). Same family: e2e 47 waits for "Save G-code as" and it never shows. Fix now, or Round 7/8?
-- e2e 49 ESTOP ×3: Space sends "!", Ctrl-X and then "$$" (a settings read), where the STOP button sends only "!" and Ctrl-X; and
-  Space on Make is not ignored. Same on 71e68d5. A stop is always sent first, so it is the safe direction, but it is the STOP path,
-  so I have not touched it (house rule). Your call.
+- Nothing open (the Export pop-up was fixed in 4.x-extra; the space bar is under Not a bug).
 
 ## Questions for the checker
-- 41 item 11 (your request): `node run-all.mjs 41` fails item 11 ×3 on both 75b7df1 and 55c3d71 with today's `tests/lib/browser.mjs`.
+- 41 item 11 (your request): `node run-all.mjs 41` fails item 11 ×3 on 75b7df1, on 55c3d71, and on HEAD (rerun 21 Nov 15:50 at 82d99d8) with today's `tests/lib/browser.mjs`.
   The difference between your two runs is the launcher: 55c3d71 changed launchKillable from raw headless Chrome (no hover, so the
   touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
 - 2.17 (G-code unchanged when a part has no features): the developer checks it before every geometry/import push with `tmp/precheck.sh` (339 presets + 35 DXF/SVG byte-identical). Can you confirm it independently on the next push?
-- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×8, 83, 85 (C46/C48/C49), 96_fold3d ×3, 106_r9_features ×2 (F10 rail list, ME1 checklist), 47 (Save G-code as never shows), 49 ESTOP ×3. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
+- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×8, 83, 85 (C46/C48/C49), 96_fold3d ×3, 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×6, 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×4, 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
