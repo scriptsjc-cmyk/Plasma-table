@@ -816,6 +816,9 @@ export class EdgeMethods {
         const on = e && e.ci === ci && e.vi === i;
         const hover = this.filletHover && this.filletHover.ci === ci && this.filletHover.vi === i;
         const inside = insides && insides.has(i);
+        // r15 2.14: dots only at real corners, not where an arc joins smoothly (the picked edge keeps its end dots)
+        const ends = e && e.ci === ci && (e.ei === i || (e.ei + 1) % n === i);
+        if (!on && !hover && !ends && !this.filletPick && !isRealCorner(pts, bs, i, closed)) continue;
         const rad = hover ? 8 : (on || (this.filletPick && inside) ? 6.5 : 4.5);
         ctx.beginPath(); ctx.arc(X, Y, rad, 0, 7);
         ctx.fillStyle = hover ? C.sel : (on ? C.sel : C.canvas);
@@ -836,3 +839,17 @@ export class EdgeMethods {
     }
   }
 }
+
+// is vertex i a real corner (the outline changes direction there), or just where an arc meets a line or arc smoothly?
+const BULGE_TURN = (b) => 2 * Math.atan(Number(b) || 0);             // tangent at an arc's ends is the chord turned by ±half the arc angle
+export function isRealCorner(pts, bulges, i, closed, minDeg = 3) {
+  const n = pts.length;
+  if (!closed && (i === 0 || i === n - 1)) return true;
+  const a = pts[(i - 1 + n) % n], p = pts[i], q = pts[(i + 1) % n];
+  const bin = bulges[(i - 1 + n) % n], bout = bulges[i];
+  const tin = Math.atan2(p[1] - a[1], p[0] - a[0]) + BULGE_TURN(bin);
+  const tout = Math.atan2(q[1] - p[1], q[0] - p[0]) - BULGE_TURN(bout);
+  let d = Math.abs(tout - tin) % (2 * Math.PI); if (d > Math.PI) d = 2 * Math.PI - d;
+  return d * 180 / Math.PI > minDeg;
+}
+
