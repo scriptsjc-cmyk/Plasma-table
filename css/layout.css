@@ -360,6 +360,8 @@ body.shape-fs canvas#preview { flex: 1; min-height: 0; height: auto !important; 
 /* ---- UX2: viewport-fitting app shell (zero page scroll on a typical laptop) ---- */
 html, body.app-shell { height: 100%; height: 100dvh; }
 body.app-shell .tabs { max-width: none; width: 100%; margin: 0; padding: 0 8px; flex: none; }
+/* r15: the header never gives up height to the screen under it (a squeezed two-row Cut header ran over the panels at 1366 x 640) */
+body.app-shell .topbar { flex-shrink: 0; }
 body.app-shell .tab { min-height: 44px; }
 body.app-shell .banner.big { font-size: var(--fs-md); border-width: 2px; }
 body.app-shell #appMain {
