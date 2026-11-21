@@ -2,10 +2,10 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 15:52 (UK time). Round 4 pushed in this push (gate 52/52 locally, tmp/precheck.sh identical). Live: see `version.json`.
+Last updated: 21 Nov 2026, 16:12 (UK time). Round 4 is live @ ec7cf4b (CI run 44921063938 green); this push adds two Round 4 follow-ups. Live: see `version.json`.
 
 ## Working on
-- Nothing open: Round 4 is pushed. Round 5 next. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
+- r15 Round 5 (folded parts, flat patterns, 3D), starting with 5.1 bend allowance, tests first. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
@@ -53,6 +53,9 @@ Last updated: 21 Nov 2026, 15:52 (UK time). Round 4 pushed in this push (gate 52
   - r15 4.26 Barlow bundled (OFL, fonts/OFL.txt), page font, precached @ cf46f75, test @ 7787224. Your 1440 × 800
     "Lowest point / Floating head" overlap: the bold term now stays on one line (same commit)
   - 339 presets + 35 DXF/SVG byte-identical before this push (tmp/precheck.sh)
+  - follow-ups found in the Round 4 screenshots: Machine setup opened from Cut › Setup lost its Floating head / Torch / E-stop
+    lamps (a Cut jog-card rule, from 20 Nov) @ d464c55, test @ 5f129d5; Snap showed on the rail as well right after
+    switching to Advanced (rail drawn before the header Snap ▾) @ 98e7a66, test @ 7cfe949. e2e 125 now 220 checks.
 
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
