@@ -180,15 +180,16 @@ export function refresh() {
 
   // start button + reasons
   const b = blockers();
+  let linkWhy = "";
   if (!machineAllowed() && !S.demo) {
-    const linkWhy = Acc.hasLinkedMachine() ? "Demo accounts can't control a real machine. Use Practice (no machine)." : "Link a machine to run jobs.";
+    linkWhy = Acc.hasLinkedMachine() ? "Demo accounts can't control a real machine. Use Practice (no machine)." : "Link a machine to run jobs.";
     if (!b.includes(linkWhy)) b.unshift(linkWhy);
   }
   paintZeroWarn();
   $("btnStart").disabled = b.length > 0 || !machineAllowed();
   paintStartWhy(b);
   // each reason is text with a small "Show me" button that jumps to the control (r7 U28: no sentence-sized button outsizes STOP)
-  paintBeforeCut();
+  paintBeforeCut(linkWhy);
   $("blockers").innerHTML = b.length && S.cur === 3 ? `Can't start yet:<ul>${b.map((x) => `<li><span>${esc(x)}</span> <button type="button" class="blocker-jump small" data-jump="${esc(jumpFor(x))}">Show me</button></li>`).join("")}</ul>` : "";
   paintSetupCards();
 

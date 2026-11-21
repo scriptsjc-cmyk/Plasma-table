@@ -303,6 +303,10 @@ function bindBeforeCut() {
       const btn = $("cutStatus");
       if (btn) btn.click();
     }
+    if (b.dataset.before === "link") {   // r15 Round 8: the locked list's "Link a machine" (the demo-account line opens the same prompt)
+      const btn = $("btnLinkMachine");
+      if (btn) btn.click();
+    }
   });
 }
 

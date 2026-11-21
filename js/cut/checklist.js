@@ -138,7 +138,12 @@ function warningCount() {
   return n;
 }
 // Built from blockers() and current state. Does not change blockers() itself.
-export function paintBeforeCut() {
+// r15 Round 8 (pre-existing 41 item 11): refresh() passes the "link a machine" reason when Start is locked for that (it is
+// not one of blockers()); on the laptop bed it is the list's first row, a button that opens the link prompt, and "Home the
+// machine" only shows once a machine is connected (with no machine the list already says "Not connected to the table").
+let linkWhyNow = "";
+export function paintBeforeCut(linkWhy) {
+  if (linkWhy !== undefined) linkWhyNow = linkWhy || "";
   const list = $("beforeCut"); if (!list) return;
   const rows = [];
   const add = (ok, label, kind, action) => {
@@ -147,7 +152,8 @@ export function paintBeforeCut() {
     const act = action ? `<button type="button" class="beforecut-link" data-before="${esc(action)}">${esc(label)}</button>` : esc(label);
     rows.push(`<li class="${cls}"><span class="beforecut-mark" aria-hidden="true">${mark}</span><span class="beforecut-text" title="${esc(label)}">${act}</span></li>`);
   };
-  add(machineHomed(), machineHomed() ? "Machine homed" : "Home the machine", machineHomed() ? "ok" : "todo");
+  if (linkWhyNow) add(false, linkWhyNow.replace(/\.$/, ""), "todo", "link");
+  if (S.connected) add(machineHomed(), machineHomed() ? "Machine homed" : "Home the machine", machineHomed() ? "ok" : "todo");
   const cornerOk = zeroIsConfirmed();
   add(cornerOk, cornerOk ? "Sheet corner set" : "Jog to the sheet's back-left corner and press Start here", cornerOk ? "ok" : "todo");
   const warnings = warningCount();
