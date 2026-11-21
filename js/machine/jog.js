@@ -12,7 +12,9 @@ export function mountJogPads() {
   for (const mount of $$(".jogmount")) {
     mount.appendChild($("jogTpl").content.cloneNode(true));
     const steps = mount.querySelector(".steps");
-    steps.innerHTML = S.cfg.jog.steps_mm.map((s) => `<button data-step="${s}">${s} mm</button>`).join("");
+    // r15 4.23: the step sizes are one labelled group (the "Step" word shows where there's room: Machine setup on a laptop)
+    steps.setAttribute("role", "group"); steps.setAttribute("aria-label", "Jog step");
+    steps.innerHTML = `<span class="steps-label" aria-hidden="true">Step</span>` + S.cfg.jog.steps_mm.map((s) => `<button data-step="${s}">${s} mm</button>`).join("");
   }
   document.addEventListener("click", (e) => {
     const sb = e.target.closest(".steps button");
