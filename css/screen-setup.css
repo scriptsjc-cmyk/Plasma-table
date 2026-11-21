@@ -114,7 +114,7 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
   body.laptop-ui #setupView .lamp { padding: 6px 8px 6px 30px; }
   body.laptop-ui #setupView .lamps.grid .lamp::before { left: 9px; top: 8px; width: 13px; height: 13px; }
   body.laptop-ui #setupView .lamp span { font-size: var(--fs-xs); }
-  body.laptop-ui #setupView #log { max-height: 120px; overflow: hidden; }
+  body.laptop-ui #setupView #log { max-height: 120px; overflow-y: auto; }   /* r15: scrolls, newest line in view (hidden, it showed the oldest and cut off the newest) */
 }
 
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {

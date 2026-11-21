@@ -11,6 +11,11 @@ export function log(text, level = "rx") {
   d.className = level; d.textContent = text; el.appendChild(d);
   while (el.childNodes.length > 300) el.removeChild(el.firstChild);
   el.scrollTop = el.scrollHeight;
+  // lines logged while the Controller pane was hidden could not scroll it; when it is shown (it gets a size), show the newest
+  if (!el._toEnd && typeof ResizeObserver === "function") {
+    el._toEnd = new ResizeObserver(() => { if (el.clientHeight) el.scrollTop = el.scrollHeight; });
+    el._toEnd.observe(el);
+  }
 }
 export async function sendConsoleLine(raw, inputEl) {
   const l = String(raw || "").trim();
