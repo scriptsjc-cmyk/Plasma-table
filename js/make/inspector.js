@@ -33,6 +33,20 @@ export function maybeOpenSizeTab() {
   if (!isShellLaptop()) return;
   if (!document.body.classList.contains("pro-mode") && !document.body.classList.contains("advanced-mode")) return;
   const host = $("srcShape");
-  if (!host || host.dataset.insp === "holes" || host.dataset.insp === "arrange") return;
+  if (!host) return;
+  // r15 7.3: while an edge or a corner is being edited its panel (on the Part tab) stays in view
+  if (panelOpen()) { setInspectorTab("part"); return; }
+  if (host.dataset.insp === "holes" || host.dataset.insp === "arrange") return;
   setInspectorTab("size");
+}
+
+function panelOpen() {
+  return ["edgePanel", "filletPanel"].some((id) => { const el = $(id); return !!el && !el.classList.contains("hidden"); });
+}
+
+// the Edit edge / Fillet panels live on the Part tab: showing one brings that tab forward
+export function showPartTabFor(panel) {
+  const host = $("srcShape");
+  if (!host || !panel || panel.classList.contains("hidden") || !host.contains(panel)) return;
+  if (host.dataset.insp && host.dataset.insp !== "part") setInspectorTab("part");
 }

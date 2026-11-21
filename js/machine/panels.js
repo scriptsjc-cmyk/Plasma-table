@@ -8,6 +8,7 @@ import { useShape } from "../make/useshape.js";
 import { cmd } from "./access.js";
 import { overrides } from "../cut/material.js";
 import { sendConsoleLine } from "./console.js";
+import { showPartTabFor } from "../make/inspector.js";
 
 // ------------------------------------------------------------------ wiring
 
@@ -19,6 +20,7 @@ export function fillEdgePanel() {
   box.classList.toggle("hidden", !show);
   if (show) box.removeAttribute("hidden"); else box.setAttribute("hidden", "");
   if (!show) return;
+  showPartTabFor(box);
   if ($("edgeLen")) $("edgeLen").value = String(Math.round(info.length * 100) / 100);
   if ($("edgeAng")) $("edgeAng").value = String(Math.round((($("edgeAngMode") && $("edgeAngMode").value === "rel" ? info.relAngle : info.angle) || 0) * 10) / 10);
   if ($("edgeBulge")) $("edgeBulge").value = String(Math.round(info.bulge * 1000) / 1000);
@@ -35,6 +37,7 @@ export function fillFilletPanel() {
   box.classList.toggle("hidden", !on);
   if (on) box.removeAttribute("hidden"); else box.setAttribute("hidden", "");
   if (!on) return;
+  showPartTabFor(box);
   const mode = sketch.filletPick.mode || "round";
   const chamfer = mode === "chamfer";
   const relief = mode === "relief";

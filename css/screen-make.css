@@ -2249,3 +2249,32 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     box-shadow: none;
   }
 }
+
+/* r15 7.3: Edit edge on a laptop fits the inspector without scrolling — tighter rows and 30 px fields (the same
+   controls, in the same order). */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.pro-mode[data-screen="make"] #edgePanel:not(.hidden),
+  body.advanced-mode[data-screen="make"] #edgePanel:not(.hidden) { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; margin: 4px 0; }
+  body[data-screen="make"] #edgePanel > * { margin: 0; }
+  body[data-screen="make"] #edgePanel > h3 { font-size: var(--fs-s); }
+  body[data-screen="make"] #edgePanel #edgeHint { font-size: var(--fs-xs); line-height: 1.3; }
+  body[data-screen="make"] #edgePanel .grid2 { gap: 4px 8px; }
+  body[data-screen="make"] #edgePanel label { font-size: var(--fs-xs); gap: 2px; }
+  body[data-screen="make"] #edgePanel input, body[data-screen="make"] #edgePanel select { height: 30px; min-height: 30px; padding-top: 0; padding-bottom: 0; }
+  body[data-screen="make"] #edgePanel button { min-height: 30px; height: 30px; padding: 0 8px; font-size: var(--fs-xs); }
+  body[data-screen="make"] #edgePanel .row { margin: 0; gap: 6px; }
+}
+/* Done / Cancel sit beside the Edit edge title (all screens), so the finish is always in view */
+#edgePanel .edgehead { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+#edgePanel .edgehead h3 { margin: 0; }
+#edgePanel .edgehead .row { margin: 0; gap: 6px; }
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="make"] #edgePanel .edgehead { margin: 0; }
+  body[data-screen="make"] #edgePanel label > .row { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; }
+  body[data-screen="make"] #edgePanel label > .row > input { flex: 1 1 auto; min-width: 0; width: auto; }
+  body[data-screen="make"] #edgePanel label > .row > button { flex: none; }
+}
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  /* while an edge is being edited the "1 part selected…" line says nothing new; the Edit edge panel takes its room */
+  body[data-screen="make"] #srcShape:has(> #edgePanel:not(.hidden)) > #makeSelStatus { display: none; }
+}

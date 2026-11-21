@@ -73,8 +73,14 @@
             <label class="check"><input type="checkbox" id="skGuides"> Line-up guides</label>
           </div>
           <div id="edgePanel" class="edgepanel hidden insp-part" hidden>
-            <h3>Edit edge</h3>
-            <p class="muted small" id="edgeHint">Click an edge of a drawn outline to set its length, square it up, or turn it into a curve. Drag corners, double-click an edge to add a corner, Delete removes one.</p>
+            <div class="edgehead">
+              <h3>Edit edge</h3>
+              <div class="row">
+                <button type="button" id="edgeDone" class="small go">Done</button>
+                <button type="button" id="edgeCancel" class="small">Cancel</button>
+              </div>
+            </div>
+            <p class="muted small" id="edgeHint">Click an edge to change it, or drag a corner. Double-click an edge to add a corner; Delete removes one.</p>
             <div class="grid2">
               <label>Length (mm)
                 <span class="row" style="margin-top:0">
@@ -118,10 +124,6 @@
             <div class="row wrap">
               <button type="button" id="edgeAddV" class="small">Add corner in the middle</button>
               <button type="button" id="edgeDelV" class="small warn">Delete corner</button>
-            </div>
-            <div class="row wrap">
-              <button type="button" id="edgeDone" class="small go">Done</button>
-              <button type="button" id="edgeCancel" class="small">Cancel</button>
             </div>
           </div>
           <div id="filletPanel" class="edgepanel hidden insp-part" hidden>

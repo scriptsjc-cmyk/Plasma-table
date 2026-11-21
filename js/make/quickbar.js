@@ -14,6 +14,7 @@ import { savePrefs } from "../core/prefs.js";
 import { mountScrollRow, refreshScrollRows } from "../ui/scrollrow.js";
 import { openPresetBrowser } from "./presetbrowser.js";
 import { clickVerb } from "../ui/laptop.js";
+import { setInspectorTab } from "./inspector.js";
 import { getToolIds, toolInfo, openToolbarCustom, TOOL_GROUPS } from "./toolbarcustom.js";
 
 function sizeDimForSelection() {
@@ -360,7 +361,7 @@ export function quickAction(a) {
     case "alignc": sketch.align("both"); break;
     case "distx": sketch.distribute("x"); break;
     case "disty": sketch.distribute("y"); break;
-    case "edge": { const ep = $("edgePanel"); if (ep) { ep.classList.remove("hidden"); ep.hidden = false; ep.scrollIntoView({ block: "nearest" }); } toast(clickVerb() + " an edge on the outline, then change its length, angle or curve."); break; }
+    case "edge": { const ep = $("edgePanel"); setInspectorTab("part"); if (ep) { ep.classList.remove("hidden"); ep.hidden = false; const pane = ep.closest("#srcShape"); if (!pane || getComputedStyle(pane).overflowY !== "hidden") ep.scrollIntoView({ block: "nearest" }); } toast(clickVerb() + " an edge on the outline, then change its length, angle or curve."); break; }
     case "dims": { const d = sizeDimForSelection(); if (d) openDimEdit(d); else toast(clickVerb() + " a blue size on the drawing, then type the new number."); break; }
     case "fillet": {
       const it = sketch.selected();
