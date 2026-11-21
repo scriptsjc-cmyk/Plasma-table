@@ -1099,7 +1099,9 @@ export function dimLabels(model, cam, w, h, pad = Math.max(16, Math.round(Math.m
     let ox = m[0] - c[0], oy = m[1] - c[1];
     const L = Math.hypot(ox, oy) || 1;
     ox /= L; oy /= L;
-    return { text: mmText(e.v), x: m[0] + ox * 16, y: m[1] + oy * 16, a: [A[0] + ox * 7, A[1] + oy * 7], b: [B[0] + ox * 7, B[1] + oy * 7] };
+    const text = mmText(e.v), half = text.length * 3.4 + 6;      // keep the pill inside the canvas
+    const x = Math.max(half, Math.min(w - half, m[0] + ox * 16)), y = Math.max(10, Math.min(h - 10, m[1] + oy * 16));
+    return { text, x, y, a: [A[0] + ox * 7, A[1] + oy * 7], b: [B[0] + ox * 7, B[1] + oy * 7] };
   });
 }
 function drawDims(ctx, cv, model, cam, w, h, pad) {
@@ -1485,7 +1487,7 @@ export function mountFoldView(host, sh, params) {
   if (!canvas) {
     const thumb = foldThumbSvg(model, 56, 40);
     const open = phone ? (phoneFold.open ? " open" : "") : " open";
-    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="720" height="480" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><button type="button" class="fold3d-expand">Expand</button><label class="fold3d-unfold" hidden><span>Unfold</span><input type="range" min="0" max="100" step="1" value="100" aria-label="Unfold: 0 is flat, 100 is folded"></label><p class="fold3d-cap"></p></div></details>`;
+    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="720" height="480" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><button type="button" class="fold3d-expand">Expand</button><div class="fold3d-unfold" hidden><span aria-hidden="true">Unfold</span><input type="range" min="0" max="100" step="1" value="100" aria-label="Unfold: 0 is flat, 100 is folded"></div><p class="fold3d-cap"></p></div></details>`;
     canvas = host.querySelector("canvas.fold3d");
     bindOrbit(canvas);
     const box = host.querySelector("details.fold3d-box");
