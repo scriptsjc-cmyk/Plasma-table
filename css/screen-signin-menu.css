@@ -209,3 +209,26 @@ body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-wi
 @media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
   .menubtns .menubig { justify-content: flex-start; padding-top: 28px; }
 }
+
+/* r15 (7.2): signed in on a laptop, the Account box shows everything without being cut off at the bottom (an admin
+   with a linked machine lost Link a machine, Admin and Saved parts at 1366 x 640): you on the left, machines and
+   saved parts on the right. */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  /* The slim card's 60dvh cap cut the account off on a short laptop screen; use the room under the top bar. */
+  #accountDlg .acctcard.slim { max-height: calc(100dvh - var(--topbar-h, 56px) - 16px); }
+  #accountDlg #acctSigned:not(.hidden) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 20px;
+    align-content: start;
+    align-items: start;
+  }
+  #acctSigned > #acctDemoTag { grid-column: 1 / -1; grid-row: 1; }
+  #acctSigned > .acctwhorow { grid-column: 1 / -1; grid-row: 2; }
+  #acctSigned > .col { grid-column: 1; grid-row: 3 / span 5; }
+  #acctSigned > h3:nth-of-type(1) { grid-column: 2; grid-row: 3; margin-top: 0; }
+  #acctSigned > #acctMachines { grid-column: 2; grid-row: 4; }
+  #acctSigned > .row:not(.acctwhorow) { grid-column: 2; grid-row: 5; }
+  #acctSigned > h3:nth-of-type(2) { grid-column: 2; grid-row: 6; }
+  #acctSigned > #btnAcctParts { grid-column: 2; grid-row: 7; justify-self: start; }
+}
