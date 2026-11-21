@@ -45,6 +45,14 @@ function holesOn(len, wid, d, inset, count = 1) {
   }
   return hs;
 }
+// r15 1.4: one hole on a leg of a strip, centred across the width and `inset` from the leg's free end (at y = 0, or at
+// y = leg when atTop), so two legs' holes are never cut on top of each other. [x, y, d] in the leg's own coordinates.
+function legHole(len, leg, d, inset, atTop) {
+  if (!(d > 0)) return [];
+  const ins = Math.min(Math.max(d / 2 + 2, inset), leg / 2);
+  return [[len / 2, atTop ? leg - ins : ins, d]];
+}
+const legHoles3d = (hs, leg) => hs.map(([cx, cy, d]) => ({ cx, cy, r: d / 2, leg }));
 function foldHoles(len, wid, d, inset, count, leg) {
   return holesOn(len, wid, d, inset, count).map(([cx, cy, dd]) => ({ cx, cy, r: dd / 2, leg }));
 }
@@ -159,18 +167,17 @@ export const FOLD_PRESETS = [
     { noResize: true, fold: (p) => foldTrayCross(p.len, p.wid, p.ht, p.tab) }),
 
   shape("foldshelf", "Folded shelf bracket", "⌊", "folded", "folded shelf bracket return flange",
-    "Shelf bracket formed from an L with a small return flange on the shelf leg, and holes in the wall leg.",
+    "Shelf bracket formed from an L with a small return flange on the shelf leg, and a hole in the wall leg and in the shelf leg.",
     [["wall", "Wall leg", 100], ["shelf", "Shelf leg", 80], ["flange", "Front return", 16], ["len", "Width", 30], ["hole", "Hole Ø (0 = none)", 6], ["inset", "Hole from the end", 16]],
     (p) => {
       const H = p.wall + p.shelf + p.flange, c = [rectContour(p.len, H), bendLine(0, p.wall, p.len, p.wall), bendLine(0, p.wall + p.shelf, p.len, p.wall + p.shelf)];
-      for (const [x, y, d] of holesOn(p.len, p.wall, p.hole, p.inset, p.wall > 70 ? 2 : 1)) {
-        const h = holeIn(x, y, d, 0, 0, p.len, H, 1); if (h) c.push(h);
-      }
+      const hs = [...legHole(p.len, p.wall, p.hole, p.inset, false), ...legHole(p.len, p.shelf, p.hole, p.inset, true).map(([x, y, d]) => [x, p.wall + y, d])];
+      for (const [x, y, d] of hs) { const h = holeIn(x, y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       return c;
     },
     { noResize: true, fold: (p) => {
-      const A = face(p.len, p.wall, foldHoles(p.len, p.wall, p.hole, p.inset, p.wall > 70 ? 2 : 1, 0));
-      const S = face(p.len, p.shelf);
+      const A = face(p.len, p.wall, legHoles3d(legHole(p.len, p.wall, p.hole, p.inset, false), 0));
+      const S = face(p.len, p.shelf, legHoles3d(legHole(p.len, p.shelf, p.hole, p.inset, true), 1));
       attach(S, 2, 90, face(p.len, p.flange));
       attach(A, 2, 90, S);
       return assemble(A);
@@ -259,14 +266,16 @@ export const FOLD_PRESETS = [
     } }),
 
   shape("signbr", "Sign / flag bracket", "⚑", "folded", "sign flag bracket folded wall",
-    "Flag-style sign bracket: a wall plate with holes and an out-standing arm, formed as an L.",
+    "Flag-style sign bracket: a wall plate with a fixing hole and an out-standing arm with a hole to hang the sign, formed as an L.",
     [["wall", "Wall plate height", 80], ["arm", "Arm length", 70], ["wid", "Width", 30], ["hole", "Hole Ø", 6], ["inset", "Hole from the end", 14]],
     (p) => {
       const H = p.wall + p.arm, c = [rectContour(p.wid, H), bendLine(0, p.wall, p.wid, p.wall)];
-      for (const [x, y, d] of holesOn(p.wid, p.wall, p.hole, p.inset, 2)) { const h = holeIn(x, y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
+      const hs = [...legHole(p.wid, p.wall, p.hole, p.inset, false), ...legHole(p.wid, p.arm, p.hole, p.inset, true).map(([x, y, d]) => [x, p.wall + y, d])];
+      for (const [x, y, d] of hs) { const h = holeIn(x, y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
       return c;
     },
-    { noResize: true, fold: (p) => foldAngle(p.wid, p.wall, p.arm, foldHoles(p.wid, p.wall, p.hole, p.inset, 2, 0)) }),
+    { noResize: true, fold: (p) => foldAngle(p.wid, p.wall, p.arm,
+      [...legHoles3d(legHole(p.wid, p.wall, p.hole, p.inset, false), 0), ...legHoles3d(legHole(p.wid, p.arm, p.hole, p.inset, true), 1)]) }),
 
   shape("firepit", "Firepit side panel", "⬡", "folded", "firepit ring panel folded",
     "One facet of a polygonal firepit: a side with a bottom inward flange and a top outward lip, plus optional air holes.",
