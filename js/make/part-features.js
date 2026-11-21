@@ -238,10 +238,10 @@ export function patternOf(f, id) {
 
 // ---------------------------------------------------------------- hooks the sketch calls (kept here, plan 8.6)
 // a feature's own contour was dragged on the canvas: move the whole feature (its handle is its centre)
-export function moveFeatureBy(it, fid, dx, dy) {
+export function moveFeatureBy(it, fid, dx, dy, W) {
   const f = (it.feats || []).find((x) => x.id === fid); if (!f) return false;
   f.x = exact(f.x + dx); f.y = exact(f.y + dy);
-  syncLinks(it.feats, f, Number(it.p && it.p.w) || 0);
+  syncLinks(it.feats, f, W);
   return true;
 }
 // picking another version of a shape keeps every value the new version also has (3D P1-1), unless the version sets it

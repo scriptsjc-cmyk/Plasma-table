@@ -96,4 +96,10 @@ t.check("version: Corner holes keeps 200 x 150 R10 and the features", vi.type ==
 vk.applyVariant(A.variantsFor("plate").find((v) => v.id === "rect" && v.label === "Square corners"));
 t.check("version: a version that sets a value still sets it (Square corners -> R0)", vi.type === "rect" && vi.p.r === 0 && vi.p.w === 200, J(vi.p));
 
+// dragging a feature's contour on the canvas moves the whole feature, and its mirror twin follows (part width from the outline)
+const dk = A.newSketch(); dk.add("rect", true, {}); const di = dk.items[0]; Object.assign(di.p, { w: 200, h: 150, r: 0 });
+di.feats = [{ ...F.newFeature("slot", 1, 200, 150), x: 40, rot: 90 }, { ...F.newFeature("slot", 2, 200, 150), x: 160, rot: 90, link: 1 }];
+dk.moveHole(di, 1, 5, 0);
+t.check("drag: a feature moves as one and its mirror twin follows", di.feats[0].x === 45 && di.feats[1].x === 155 && !Object.keys(di.holes || {}).length, J(di.feats));
+
 process.exit(t.done() ? 1 : 0);

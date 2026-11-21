@@ -91,6 +91,10 @@ export class GeomMethods {
     Object.defineProperty(it, "_key", { value: key, writable: true, enumerable: false, configurable: true });
     return cs;
   }
+  partWidth(it) {                                       // outline width in the part's own frame (features are measured in it)
+    try { const c = this.baseContours(it)[0]; if (c) { const b = bbox([c]); return b[2] - b[0]; } } catch (e) { /* no outline */ }
+    return 0;
+  }
   boxOf(it) {
     const c = this.contoursOf(it);
     if (!c.length) return [it.x, it.y, it.x, it.y];

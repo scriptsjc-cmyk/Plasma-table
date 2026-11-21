@@ -806,7 +806,7 @@ export class EditMethods {
     let [lx, ly] = rot([dx, dy], -(it.rot || 0));
     if (it.fx) lx = -lx;
     const c = this.contoursOf(it)[i];
-    if (c && c.feat && moveFeatureBy(it, c.feat, lx, ly)) return;   // r15 Round 2: a feature moves as one, from its centre
+    if (c && c.feat && moveFeatureBy(it, c.feat, lx, ly, this.partWidth(it))) return;   // r15 Round 2: a feature moves as one, from its centre
     const h = (it.holes = it.holes || {});
     const o = h[i] || [0, 0];
     h[i] = [r1(o[0] + lx), r1(o[1] + ly)];
