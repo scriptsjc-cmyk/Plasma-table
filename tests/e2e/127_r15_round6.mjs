@@ -1,6 +1,6 @@
 // r15 Round 6: plasma cut quality. Practice table only; never USB Connect.
 import { T } from "../lib/t.mjs";
-import { startServer, launch, newPage } from "../lib/browser.mjs";
+import { startServer, launch, newPage, demoToShape } from "../lib/browser.mjs";
 
 const t = new T("127_r15_round6");
 const srv = await startServer();
@@ -148,5 +148,30 @@ try {
 } catch (e) {
   t.check("127 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
+// Found while running the Round 6 gate: the motor-direction read that runs on connect could ask "$$" while a job was cutting.
+// The ask waited in the queue behind the job and went out the moment it ended. Nothing but the job may be sent while it runs.
+{
+  const page = await newPage(br, "desktop", { base: srv.base });
+  try {
+    await demoToShape(page);
+    await ev(page, () => { const s = window.plasmaTest.sketch; s.clear(); s.add("plate", true); const it = s.items[0]; Object.assign(it.p, { w: 60, h: 40, r: 4, hole: 8, inset: 10 }); s.pick([it.id]); s.fitView(); s.commit(); s.onSelect(); });
+    await ev(page, () => { const d = window.plasmaTest.S.demo; d.__tx = []; const w = d.write.bind(d); d.write = (x) => { const s = typeof x === "string" ? x : Array.from(x).map((c) => String.fromCharCode(c)).join(""); d.__tx.push(s); return w(x); }; });
+    await ev(page, () => { window.plasmaTest.sendToCutting(); window.plasmaTest.goStep(3); });
+    await page.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3);
+    await page.click("#btnZero"); await sleep(300);
+    for (const cb of await page.locator("#checklist input").all()) await cb.check();
+    await page.waitForFunction(() => !document.getElementById("btnStart").disabled, null, { timeout: 5000 });
+    await page.click("#btnStart");
+    await page.waitForFunction(() => { const j = window.plasmaTest.S.job; return j && j.running; }, null, { timeout: 10000 });
+    await ev(page, () => { window.plasmaTest.loadMotorDir(); });   // what connect does, but mid-job
+    await page.waitForFunction(() => { const j = window.plasmaTest.S.job; return j && !j.running; }, null, { timeout: 120000 }); await sleep(1500);
+    const all = (await ev(page, () => window.plasmaTest.S.demo.__tx)).join("").split("\n").map((l) => l.replace(/[?!~\x18]/g, "").trim()).filter(Boolean);
+    const from = all.findIndex((l) => /G21/.test(l) && /G90/.test(l));
+    const bad = all.slice(Math.max(0, from)).filter((l) => /^\$/.test(l));
+    t.check("job: the motor-direction read sends nothing while a job runs (no $$ queued behind the job)", from >= 0 && bad.length === 0, J({ from, bad }), "DEMO-SAFETY");
+  } catch (e) { t.check("job: motor-direction scenario ran", false, String(e.message).split("\n")[0], "E2E-HARNESS"); }
+  await page.close();
+}
+
 await br.close(); await srv.close();
 process.exit(t.done() ? 1 : 0);
