@@ -282,6 +282,18 @@ function renderShapeFormCore() {
       <button data-sk="remove" class="danger" title="Delete">🗑 Delete</button>
     </div>${proOne}${holeHostHtml(it, sh)}`;
 }
+// r15 2.19 (Josh t543u): a bigger size typed in the Size tab zooms the view to fit again, exactly like Fit. It waits until the
+// typing pauses (so "900" doesn't zoom at 9 and 90), and a smaller size leaves the view where it is.
+let fitBox = null, refitTimer = null;
+function drawingSize() { const b = sketch.allBox(); return Number.isFinite(b[0]) ? [b[2] - b[0], b[3] - b[1]] : null; }
+function refitSoon() {
+  clearTimeout(refitTimer);
+  refitTimer = setTimeout(() => {
+    const now = drawingSize();
+    if (now && (!fitBox || now[0] > fitBox[0] + 1e-9 || now[1] > fitBox[1] + 1e-9)) sketch.fitView();
+    fitBox = now;
+  }, 400);
+}
 export function bindShapeForm() {
   if ($("fsDone")) $("fsDone").onclick = () => setShapeFs(false);
   if ($("fsSave")) $("fsSave").onclick = () => saveCurrent().catch((e) => toast(e.message, true));
@@ -289,7 +301,7 @@ export function bindShapeForm() {
   $("btnSavePartQuick").onclick = () => saveCurrent().catch((e) => toast(e.message, true));
   // step 1: Make a part
   if ($("bgShapes")) $("bgShapes").onclick = (e) => { const b = e.target.closest("[data-bshape]"); if (b) beginnerPick(b.dataset.bshape); };
-  $("shapeForm").addEventListener("focusin", (e) => { if (e.target.matches("input")) editBefore = sketch.snapshot(); });
+  $("shapeForm").addEventListener("focusin", (e) => { if (e.target.matches("input")) { editBefore = sketch.snapshot(); fitBox = drawingSize(); } });
   $("shapeForm").addEventListener("input", (e) => {
     const i = e.target, v = evalExpr(i.value) ;
     if (i.value.trim() === "" || !Number.isFinite(v)) return;
@@ -306,6 +318,7 @@ export function bindShapeForm() {
       it.p[k] = v;
     }
     sketch.save(); sketch.draw(); useShapeSoon();
+    if (i.dataset.p) refitSoon();
   });
   $("shapeForm").addEventListener("change", (e) => {
     if (e.target.id === "keepProp") { S.keepProp = e.target.checked; return; }
