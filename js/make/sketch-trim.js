@@ -18,6 +18,14 @@ function copyCs(cs) {
   }));
 }
 
+// r15 3.12: remember which outline points a curve went through (clicked or typed), so only those get handles, not every fitted arc joint
+function markCurveHandles(it, c, through) {
+  const sc = it && it.shape && it.shape.cs[0];
+  if (!sc || !Array.isArray(through)) return;
+  const idx = through.map(([x, y]) => { let bi = 0, bd = Infinity; c.pts.forEach((q, i) => { const d = Math.hypot(q[0] - x, q[1] - y); if (d < bd) { bd = d; bi = i; } }); return bi; });
+  sc.handles = [...new Set(idx)].sort((a, b) => a - b); sc.handlesN = sc.pts.length;
+}
+
 export class TrimMethods {
   worldCs(it) {
     if (!it) return [];
@@ -459,6 +467,7 @@ export class TrimMethods {
     if (!c || !c.pts || c.pts.length < 2) { this.onMessage("That curve is too small."); return false; }
     this.remember();
     const it = this.addCustomWorld([c], "Spline");
+    markCurveHandles(it, c, pts);
     this.pick([it.id]); this.tool = null; this.drawPts = [];
     this.commit(); this.onSelect(); this.draw();
     this.onMessage(closed ? "Closed curve added, fitted to editable arcs." : "Curve added, fitted to editable arcs.");
@@ -472,6 +481,7 @@ export class TrimMethods {
     if (!c || c.pts.length < 2) { this.onMessage("That list did not make a curve."); return false; }
     this.remember();
     const it = this.addCustomWorld([c], "Spline");
+    markCurveHandles(it, c, parsed.pts);
     this.pick([it.id]); this.tool = null;
     this.commit(); this.onSelect(); this.draw();
     this.onMessage("Curve added from the point list.");

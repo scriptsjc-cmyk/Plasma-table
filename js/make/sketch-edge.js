@@ -850,6 +850,11 @@ export class EdgeMethods {
       const pts = world[ci].pts, n = pts.length, closed = world[ci].closed !== false;
       const edges = closed ? n : n - 1;
       const bs = world[ci].bulges || [];
+      // r15 3.12: a drawn curve keeps the points that were clicked; only those get dots (the shape's stored order may be flipped)
+      const own = one.shape && one.shape.cs && one.shape.cs[ci];
+      const flipped = !!one.fx !== !!one.fy;
+      const clickedSet = own && Array.isArray(own.handles) && own.handlesN === n && own.pts.length === n
+        ? new Set(own.handles.map((i) => (flipped ? n - 1 - i : i))) : null;
       if (e && e.ci === ci) {
         const i = e.ei, p = pts[i], q = pts[(i + 1) % n];
         if (p && q) {
@@ -885,7 +890,7 @@ export class EdgeMethods {
         const inside = insides && insides.has(i);
         // r15 2.14: dots only at real corners, not where an arc joins smoothly (the picked edge keeps its end dots)
         const ends = e && e.ci === ci && (e.ei === i || (e.ei + 1) % n === i);
-        if (!on && !hover && !ends && !this.filletPick && !isRealCorner(pts, bs, i, closed)) continue;
+        if (!on && !hover && !ends && !this.filletPick && (clickedSet ? !clickedSet.has(i) : !isRealCorner(pts, bs, i, closed))) continue;
         const rad = hover ? 8 : (on || (this.filletPick && inside) ? 6.5 : 4.5);
         ctx.beginPath(); ctx.arc(X, Y, rad, 0, 7);
         ctx.fillStyle = hover ? C.sel : (on ? C.sel : C.canvas);
@@ -897,6 +902,7 @@ export class EdgeMethods {
         const b = Number(bs[i]) || 0;
         if (Math.abs(b) < 1e-9 && !(e && e.ci === ci && e.ei === i)) continue;
         if (Math.abs(b) < 1e-9) continue;
+        if (clickedSet && !(e && e.ci === ci && e.ei === i)) continue;      // r15 3.12: a drawn curve's arc middles only on the picked edge
         const mid = bulgeMidpoint(pts[i], pts[(i + 1) % n], b);
         const [X, Y] = S(mid[0], mid[1]);
         ctx.beginPath(); ctx.rect(X - 4, Y - 4, 8, 8);
