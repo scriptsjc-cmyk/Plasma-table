@@ -33,7 +33,7 @@ const fail = (reason) => ({ ok: false, reason, pieces: [] });
 
 export function reducingElbow(p = {}, { samples = 96 } = {}) {
   const sheet = sheetFrom(p);
-  const d = Number(p.d) || 0, d2 = Number(p.d2) || 0, n = Math.round(Number(p.n) || 0);
+  const d = Number(p.d) || 0, d2 = Number(p.d2) || 0, n = p.n == null || p.n === "" ? 4 : Math.round(Number(p.n) || 0);   // parts saved before r15 7.5-redelbow have no n
   const bend = Number(p.bend) || 0, clr = Number(p.clr) > 0 ? Number(p.clr) : 1.5 * d;
   if (!(n >= REDELBOW_LIMITS.nMin && n <= REDELBOW_LIMITS.nMax)) return fail(`A reducing elbow needs ${REDELBOW_LIMITS.nMin} to ${REDELBOW_LIMITS.nMax} pieces.`);
   if (!(bend > 0 && bend <= 180)) return fail("The bend angle must be more than 0° and at most 180°.");
