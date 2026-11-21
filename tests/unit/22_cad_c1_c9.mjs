@@ -254,7 +254,9 @@ const overlap = (a, b) => a[0] < b[2] - 0.2 && b[0] < a[2] - 0.2 && a[1] < b[3] 
   t.check("C9: concentric squareToRound is unchanged (two unique panels)", !!(c && c.A && c.B && !c.offset), "C9-S2R");
   t.check("C9: offset squareToRound returns four unique panels", !!(o && o.offset && o.A && o.A2 && o.B && o.B2), `keys=${o && Object.keys(o)}`, "C9-S2R");
   const area = (p) => Math.abs(signedArea(p.pts));
-  t.check("C9: opposite offset panels are not identical", Math.abs(area(o.A) - area(o.A2)) > 50, `A=${area(o.A).toFixed(1)} A2=${area(o.A2).toFixed(1)} B=${area(o.B).toFixed(1)} B2=${area(o.B2).toFixed(1)}`, "C9-S2R");
+  // r15 7.5: offset along x only: the east / west panels differ, the south / north ones are mirror images (equal area).
+  // (This check used to want south ≠ north, which only held while the offset panels folded back over themselves.)
+  t.check("C9: an x offset makes the east and west panels differ and keeps south and north mirror images", Math.abs(area(o.B) - area(o.B2)) > 50 && Math.abs(area(o.A) - area(o.A2)) < 1, `A=${area(o.A).toFixed(1)} A2=${area(o.A2).toFixed(1)} B=${area(o.B).toFixed(1)} B2=${area(o.B2).toFixed(1)}`, "C9-S2R");
   const sk = mk([["s2roffset", { a: 260, b: 160, d: 120, h: 160, ox: 40, oy: 0, lip: 0 }, 0, 0]]);
   const cs = sk.contours();
   t.check("C9: offset preset packs four side panels", cs.length === 4, `n=${cs.length}`, "C9-S2R");

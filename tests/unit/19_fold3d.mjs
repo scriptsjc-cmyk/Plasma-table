@@ -166,11 +166,13 @@ t.check("square-to-round default packs the body with flange frame and ring", out
 t.check("square-to-round Separate pieces cuts the four sides apart", outersFromMake("s2r", { split: 1, lip: 0, ring: 0 }).length === 4, String(outersFromMake("s2r", { split: 1, lip: 0, ring: 0 }).length));
 t.check("rectangular transition defaults to one folding blank", outersFromMake("recttrans").length === 1, String(outersFromMake("recttrans").length));
 t.check("rectangular transition Separate pieces cuts the four sides apart", outersFromMake("recttrans", { split: 1 }).length === 4, String(outersFromMake("recttrans", { split: 1 }).length));
-t.check("offset square-to-round falls back to two halves when a single unwrap overlaps", (() => {
-  const sh = A.SHAPES.find((s) => s.id === "s2roffset");
-  const n = outersFromMake("s2roffset", { lip: 0 }).length;
-  const note = typeof sh.note === "function" ? sh.note(Object.fromEntries(sh.params.map((q) => [q[0], q[2]]))) : "";
-  return n === 2 && /two halves/.test(note);
+// r15 7.5: the offset panels used to fold back over themselves, so the single unwrap "overlapped" and fell back to halves.
+// Now the default offset square-to-round is one folding blank, and a big one is still two halves for the bed.
+t.check("offset square-to-round defaults to one folding blank (its panels no longer lap over themselves)", outersFromMake("s2roffset", { lip: 0 }).length === 1, String(outersFromMake("s2roffset", { lip: 0 }).length));
+t.check("a big offset square-to-round is two halves and says so", (() => {
+  const sh = A.SHAPES.find((s) => s.id === "s2roffset"), q = { a: 800, b: 600, d: 400, h: 160, ox: 40, oy: 0, lip: 0 };
+  const p = { ...Object.fromEntries(sh.params.map((x) => [x[0], x[2]])), ...q };
+  return outersFromMake("s2roffset", q).length === 2 && /two halves/.test(typeof sh.note === "function" ? sh.note(p) : "");
 })());
 t.check("a large square-to-round is two halves and says it is for the bed", (() => {
   const sh = A.SHAPES.find((s) => s.id === "s2r");
