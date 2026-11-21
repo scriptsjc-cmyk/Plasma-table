@@ -28,6 +28,12 @@
   "kerf_mm": 1.3,
   "lead_in_mm": 3,
   "max_cuttable_mm": 20,
+  "small_holes": {
+    "on": true,
+    "under_mm": 25,
+    "speed_pct": 60,
+    "source": "Hypertherm hole-cutting guidance for air plasma: holes smaller than about 25 mm (1 in) come out rounder, with less taper, when cut at about 60 % of the chart speed. A starting point: test on scrap."
+  },
   "materials": [
     {
       "name": "Mild steel",

@@ -96,10 +96,14 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
     (kind === "cut" ? cuts : kind === "etch" ? etches : rapids).push(current);
   };
 
+  // r15 6.1: "(PORTA-SLOW 60)" before a cut = that cut at 60 % of the feed (small holes); every pierce sets its own feed
+  let slowPct = 0, curFeed = feed, cutTime = 0;
   const lines = gcodeText.split(/\r?\n/);
   for (let idx = 0; idx < lines.length; idx++) {
     const lineno = idx + 1;
     const rawLine = lines[idx];
+    const slowTag = /\(\s*PORTA-SLOW\s+(\d+(?:\.\d+)?)\s*\)/i.exec(rawLine);
+    if (slowTag) slowPct = Math.max(20, Math.min(100, Number(slowTag[1])));
     if (/PORTA-ETCH PLASMA/i.test(rawLine)) { etchMode = "plasma"; sawEtch = true; out.push(ETCH_START_PLASMA); continue; }
     if (/PORTA-ETCH SCRIBE/i.test(rawLine)) { etchMode = "scribe"; sawEtch = true; out.push(ETCH_START_SCRIBE); continue; }
     if (/PORTA-ETCH END/i.test(rawLine)) { etchMode = null; etchToolOn = false; out.push(ETCH_END); continue; }
@@ -163,7 +167,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
       else { pts = [[nx, ny]]; length = Math.hypot(nx - x, ny - y); }
       current.pts.push(...pts);
       if (kind === "cut" || kind === "etch") {
-        if (kind === "cut") cutLen += length; else etchLen += length;
+        if (kind === "cut") { cutLen += length; cutTime += length / curFeed; } else etchLen += length;
         for (const [px, py] of [[x, y], ...pts]) {
           minx = Math.min(minx, px); maxx = Math.max(maxx, px);
           miny = Math.min(miny, py); maxy = Math.max(maxy, py);
@@ -245,7 +249,9 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
           if (Math.abs(cutH - pierceH) > 1e-6) out.push(`G1 Z${fmt(cutH - pierceH)} F${fmt(probe.plunge_feed)}`);
           out.push("G90");
         }
-        out.push(`G1 F${fmt(feed)}`);
+        curFeed = slowPct ? Math.round(feed * slowPct * 10) / 1000 : feed;
+        slowPct = 0;
+        out.push(`G1 F${fmt(curFeed)}`);
       }
     }
     if (mcodes.includes(0) && !mcodes.includes(3) && !mcodes.includes(30) && !mcodes.includes(2)) out.push("M0");
@@ -271,7 +277,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
 
   const rapidFeed = machine.rapid_feed_estimate || 6000;
   const probeTime = (probe.probe_distance_mm / Math.max(probe.probe_feed, 1)) * 60 * 0.3;
-  const est = (cutLen / feed) * 60 + (etchLen / Math.max(etchFeed, 1)) * 60 + (rapidLen / rapidFeed) * 60 + pierces * (delay + probeTime + 1.0);
+  const est = cutTime * 60 + (etchLen / Math.max(etchFeed, 1)) * 60 + (rapidLen / rapidFeed) * 60 + pierces * (delay + probeTime + 1.0);
   const r2 = (v) => Math.round(v * 100) / 100;
   const simplify = (polys) => polys.filter((p) => p.pts.length > 1).map((p) => p.pts.map(([a, b]) => [r2(a), r2(b)]));
 

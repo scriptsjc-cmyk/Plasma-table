@@ -12,7 +12,29 @@ export function camOpts() {            // what the job builder gets
     tabs: c.tabs > 0 ? { count: c.tabs, width: c.tabW } : null, tabOver: c.tabOver || {},
     leadOut: c.leadOut || 0, overcut: c.over || 0,
     leadType: c.leadType || "auto", leadSide: c.leadSide || "auto",
+    smallHoles: smallHoleOpts(),
   };
+}
+// r15 6.1: small holes at a slower speed. The cut chart sets it (on by default); the switch in More cut options can turn it off.
+const SLOW_KEY = "plasma.slowHoles";
+function chartSmallHoles() { const c = H.S.chart && H.S.chart.small_holes; return c && typeof c === "object" ? c : null; }
+export function slowHolesOn() {
+  const c = chartSmallHoles(); if (!c) return false;
+  let v = null; try { v = localStorage.getItem(SLOW_KEY); } catch (e) { v = null; }
+  return v === "1" ? true : v === "0" ? false : c.on !== false;
+}
+export function smallHoleOpts() {
+  const c = chartSmallHoles();
+  if (!c || !slowHolesOn()) return null;
+  const under = Number(c.under_mm) > 0 ? Number(c.under_mm) : 25, pct = Number(c.speed_pct) > 0 ? Number(c.speed_pct) : 60;
+  return { under, pct };
+}
+function syncSlowHoles() {
+  const box = $("ovSlowHoles"), note = $("slowHolesNote"), c = chartSmallHoles();
+  if (!box) return;
+  box.checked = slowHolesOn();
+  box.disabled = !c;
+  if (note && c) note.textContent = `Holes under ${Number(c.under_mm) || 25} mm cut at ${Number(c.speed_pct) || 60} % speed: rounder, with less taper.`;
 }
 function resetCam(keepOrder) {
   const S = H.S;
@@ -33,6 +55,13 @@ export function bindCam() {
     H.loadJob();
   };
   ["camTabs", "camTabW", "camOut", "camOver"].forEach((id) => $(id).addEventListener("change", read));
+  if ($("ovSlowHoles")) {
+    syncSlowHoles();
+    $("ovSlowHoles").addEventListener("change", (e) => {
+      try { localStorage.setItem(SLOW_KEY, e.target.checked ? "1" : "0"); } catch (err) { /* ignore */ }
+      H.loadJob();
+    });
+  }
   $("camReset").onclick = () => {
     resetCam(true); const c = H.S.cam; c.tabs = 0; c.leadOut = 0; c.over = 0;
     $("camTabs").value = 0; $("camOut").value = 0; $("camOver").value = 0; H.loadJob();

@@ -23,8 +23,10 @@ import { isEtchOp, emitEtchGcode } from "./etch.js";
 //   leadType   "auto" (default, same as today) | "straight" | "arc"
 //   leadSide   "auto" (default, scrap side) | "outside" | "inside"
 //              Auto type + auto side is byte-identical to the previous G-code.
+//   smallHoles { under, pct }  r15 6.1: holes smaller than `under` mm (largest size) are tagged "(PORTA-SLOW pct)" so the
+//              job builder cuts them at pct % of the chart feed. A comment only: the moves don't change.
 // A cut's key is its position in the `contours` list you pass in, so it stays the same while the order changes.
-export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "design", order: wantOrder = null, skip = [], starts = {}, tabs = null, tabOver = {}, leadOut = 0, overcut = 0, keepOrigin = false, etch = null, leadType = "auto", leadSide = "auto" } = {}) {
+export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "design", order: wantOrder = null, skip = [], starts = {}, tabs = null, tabOver = {}, leadOut = 0, overcut = 0, keepOrigin = false, etch = null, leadType = "auto", leadSide = "auto", smallHoles = null } = {}) {
   const leadOpt = {
     type: (leadType === "straight" || leadType === "arc") ? leadType : "auto",
     side: (leadSide === "inside" || leadSide === "outside") ? leadSide : "auto",
@@ -127,13 +129,21 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
   // tabs, overcut, lead-out: split / extend each cut into "runs" (one torch-on to torch-off each). Plain cuts are one run.
   const info = [];
   let tabCount = 0, tabWarn = false;
+  const slowUnder = smallHoles && Number(smallHoles.under) > 0 ? Number(smallHoles.under) : 0;
+  const slowPct = smallHoles ? Math.max(20, Math.min(100, Math.round(Number(smallHoles.pct) || 60))) : 100;
   for (const c of order) {
+    c.slow = 0;
+    if (slowUnder && c.hole && !c.open && c.src && slowPct < 100) {
+      const sb = c.src.circle ? null : bbox([{ pts: c.src.pts }]);
+      const size = c.src.circle ? 2 * c.src.circle.r : Math.max(sb[2] - sb[0], sb[3] - sb[1]);
+      if (size < slowUnder - 1e-9) c.slow = slowPct;
+    }
     const r = buildRuns(c, { tabs, tabOver: tabOver[c.key], leadOut, overcut, leadIn, warnings });
     c.runs = r.runs; c.tabPts = r.tabPts; c.leadOutPt = r.leadOutPt;
     tabCount += r.tabPts.length; if (r.tabPts.length) tabWarn = true;
     for (const run of c.runs) { all.push({ pts: [run.lead, run.start] }); }
     if (r.leadOutPt) all.push({ pts: [r.leadOutPt] });
-    info.push({ key: c.key, hole: !!c.hole, open: !!c.open, depth: c.depth, start: c.start, lead: c.lead, tabs: c.tabPts, leadOut: c.leadOutPt, ring: c.pathPts || c.outline || [], runs: c.runs.length });
+    info.push({ key: c.key, hole: !!c.hole, open: !!c.open, slow: c.slow || 0, depth: c.depth, start: c.start, lead: c.lead, tabs: c.tabPts, leadOut: c.leadOutPt, ring: c.pathPts || c.outline || [], runs: c.runs.length });
   }
   if (tabWarn) warnings.push("Hold-down tabs: after each tab the arc re-fires on the cut line, so each tab adds a pierce. Trim the tabs off the finished part.");
   if (etchCs.length) all.push(...etchCs);
@@ -150,6 +160,7 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
   for (const c of order) {
     for (const run of c.runs) {
       const L = T(run.lead), S = T(run.start);
+      if (c.slow) lines.push(`(PORTA-SLOW ${c.slow})`);
       lines.push(`G0 X${fmt(L[0])} Y${fmt(L[1])}`, "M3");
       if (Math.hypot(L[0] - S[0], L[1] - S[1]) > 1e-6) {
         if (run.leadArc && run.leadArc.ij) {

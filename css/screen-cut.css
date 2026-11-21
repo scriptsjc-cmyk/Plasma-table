@@ -3097,14 +3097,14 @@ body.laptop-ui .jogwrap .j .ico, body.laptop-ui .jogwrap .do-home .ico { width: 
 }
 
 /* r15 4.3: Practice run is the app's switch (still the real #dryRun checkbox, role="switch", so the job and the tests read it) */
-#dryRun[role="switch"] {
+#dryRun[role="switch"], #ovSlowHoles[role="switch"] {
   appearance: none; -webkit-appearance: none; flex: none; width: 44px; height: 26px; min-width: 44px; min-height: 26px; margin: 0;
   border: 0; border-radius: 999px; cursor: pointer; background: radial-gradient(circle at 13px 13px, var(--c-white) 10px, transparent 11px) no-repeat;
   background-color: var(--line-strong); background-position: 0 0; box-shadow: inset 0 0 0 1px var(--shade-25);
   transition: background-color var(--motion) var(--ease), background-position var(--motion) var(--ease);
 }
-#dryRun[role="switch"]:checked { background-color: var(--go); background-position: 18px 0; }
-#dryRun[role="switch"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#dryRun[role="switch"]:checked, #ovSlowHoles[role="switch"]:checked { background-color: var(--go); background-position: 18px 0; }
+#dryRun[role="switch"]:focus-visible, #ovSlowHoles[role="switch"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 body.running-job #dryRun[role="switch"], body.job-live #dryRun[role="switch"] { transition: none; }
 
 /* r15 4.5: on a laptop Practice run, Cut speed and More cut options are a card in the left column, under the part choices.
@@ -3252,3 +3252,7 @@ body.running-job #dryRun[role="switch"], body.job-live #dryRun[role="switch"] { 
   body[data-screen="cut"][data-step="4"] #cutView #doneActions > button.xl,
   body[data-screen="cut"][data-step="4"] #cutView #doneActions > button.wide { flex: 1 1 auto; min-width: max-content; white-space: nowrap; }
 }
+
+/* r15 6.1: Slow down for small holes (More cut options) */
+.slowholes { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; }
+.slowholes-note { margin: 0 0 6px; }
