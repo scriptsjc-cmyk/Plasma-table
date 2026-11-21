@@ -4,6 +4,7 @@
 import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM, FAN_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, s2rPanels, wantsSplit, flangeFrame } from "./helpers.js";
 import { rectangularTransition, addFlangeLip, developConnected } from "../duct.js";
 import { assembleFlat, foldPattern } from "../flat3d.js";
+import { markFolds } from "../folddirs.js";
 import {
   foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedCross,
   foldTrayCross, foldS2r, foldHopper, addTopFlanges, foldFrustum, face, attach, assemble,
@@ -547,21 +548,20 @@ export const FOLD_PRESETS = [
 ];
 
 // r15 5.3: these are folded straight from their flat pattern (fold3d's flat builder), so every hole that is cut shows
-// on the panel it is cut in. [id, fold lines in pattern order ({ dir, deg }), the panel that lies flat].
-const UPF = {}, DNF = { dir: "down" };
+// on the panel it is cut in. [id, the panel that lies flat]; which way each line folds comes from folddirs.js.
 const FROM_FLAT = [
-  ["foldzbr", [UPF, DNF], (p) => [p.len / 2, p.a / 2]],
-  ["foldubr", [UPF, UPF], (p) => [p.len / 2, p.leg + p.web / 2]],
-  ["firepit", [UPF, DNF], (p) => [p.w / 2, p.base + p.h / 2]],
-  ["bbqside", [UPF, DNF], (p) => [p.w / 2, p.base + p.h / 2]],
-  ["cabletray", [UPF, UPF, UPF, UPF], (p) => [p.len / 2, p.flange + p.leg + p.web / 2]],
-  ["cornerguard", [UPF], (p) => [p.len / 2, p.a / 2]],
+  ["foldzbr", (p) => [p.len / 2, p.a / 2]],
+  ["foldubr", (p) => [p.len / 2, p.leg + p.web / 2]],
+  ["firepit", (p) => [p.w / 2, p.base + p.h / 2]],
+  ["bbqside", (p) => [p.w / 2, p.base + p.h / 2]],
+  ["cabletray", (p) => [p.len / 2, p.flange + p.leg + p.web / 2]],
+  ["cornerguard", (p) => [p.len / 2, p.a / 2]],
 ];
-for (const [id, specs, root] of FROM_FLAT) {
+for (const [id, root] of FROM_FLAT) {
   const sh = FOLD_PRESETS.find((s) => s.id === id);
   if (!sh) continue;
   const make = sh.make;                                   // as drawn, before any bend allowance is taken off
-  sh.fold = (p) => foldPattern(make(p), specs, { root: root(p) });
+  sh.fold = (p) => foldPattern(markFolds(id, make(p)), [], { root: root(p) });   // directions from folddirs (r15 5.5)
 }
 
 const FOLD_HIDDEN = new Set([

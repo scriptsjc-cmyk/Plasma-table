@@ -2,6 +2,7 @@
 import { bbox, expandContour, offsetLoop } from "../core/geom.js";
 import { filletPreviewGeom, linearArrayShifts } from "./cadpreview.js";
 import { def, r1, themeColor } from "./sketch-util.js";
+import { foldLabel, MAX_FOLD_MARKS } from "./folddirs.js";
 import { drawFeatureHandles } from "./part-features.js";
 import { clickVerb, clickVerbLower } from "../ui/laptop.js";
 import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
@@ -163,6 +164,8 @@ export class ViewMethods {
     const isEtch = (op) => op === "score" || op === "mark";
     const trace = (c, close) => { c.pts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); if (close !== false && c.closed !== false) ctx.closePath(); };
     const hiddenOps = this.hiddenLayers;
+    const foldMarks = [];
+    this.foldLabels = [];                                  // r15 5.5: the up / down marks drawn on fold lines (read by tests)
     for (const it of this.order()) {
       const cs = this.contoursOf(it); if (!cs.length || this.layerHidden(it)) continue;
       const hole = this.isHole(it), on = this.isPicked(it);
@@ -203,6 +206,10 @@ export class ViewMethods {
         etchStroke(etchCs.filter((c) => (c.op || "score") === "score"), "score");
         etchStroke(etchCs.filter((c) => c.op === "mark"), "mark");
       }
+      if (onMake && !itemEtch && !(hiddenOps && hiddenOps.has("score"))) {
+        const folds = cs.filter((c) => c.role === "bend" && c.pts && c.pts.length === 2);
+        if (folds.length && folds.length <= MAX_FOLD_MARKS) for (const c of folds) foldMarks.push({ c, it });
+      }
       if (it.lock && on) {
         const bb = this.boxOf(it), [lx, ly] = S(bb[0], bb[3]);
         ctx.fillStyle = C.lock; ctx.font = "14px Barlow, system-ui"; ctx.fillText("🔒", lx + 4, ly + 16);
@@ -210,6 +217,26 @@ export class ViewMethods {
       if (on && this.sel.hole != null && cs[this.sel.hole]) {
         ctx.beginPath(); trace(cs[this.sel.hole], true); ctx.strokeStyle = C.lock; ctx.lineWidth = 2.5; ctx.stroke();
       }
+    }
+
+    // r15 5.5: say which way each fold goes, beside the middle of the line (only where the line is long enough on screen)
+    if (foldMarks.length) {
+      ctx.save();
+      const scoreText = themeColor("--cad-score-text", "#8A5508");   // the fold line's amber, dark enough to read (AA)
+      ctx.font = "600 11px Barlow, system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+      for (const { c, it } of foldMarks) {
+        const [ax, ay] = S(c.pts[0][0], c.pts[0][1]), [bx, by] = S(c.pts[1][0], c.pts[1][1]);
+        const L = Math.hypot(bx - ax, by - ay);
+        const text = foldLabel(c);
+        if (L < ctx.measureText(text).width + 24) continue;
+        let nx = -(by - ay) / L, ny = (bx - ax) / L;
+        if (ny > 0 || (Math.abs(ny) < 1e-6 && nx < 0)) { nx = -nx; ny = -ny; }      // above the line (or to its right)
+        const x = (ax + bx) / 2 + nx * 9, y = (ay + by) / 2 + ny * 9;
+        ctx.strokeStyle = C.canvas; ctx.lineWidth = 3.5; ctx.strokeText(text, x, y);
+        ctx.fillStyle = scoreText; ctx.fillText(text, x, y);
+        this.foldLabels.push({ text, x, y, id: it.id });
+      }
+      ctx.restore();
     }
 
     if (LY) LY.drawTop(this, ctx, S, C, w, h);
