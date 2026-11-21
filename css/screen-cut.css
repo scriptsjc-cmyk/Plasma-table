@@ -3048,6 +3048,13 @@ body.laptop-ui .jogwrap .j .ico, body.laptop-ui .jogwrap .do-home .ico { width: 
   body[data-screen="cut"][data-step="1"] .cutmore-row > details[open] { flex-basis: 100%; }
 }
 
+/* r15 (7.2): after a stop at 1366 x 640 "Cut a different part" was squeezed into three lines and ran out of the bottom
+   of the panel. Each button keeps its label on one line and the row wraps instead (there is room above). */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="4"] #cutView #doneActions > .xl,
+  body[data-screen="cut"][data-step="4"] #cutView #doneActions > .wide { flex: 1 1 auto; white-space: nowrap; }
+}
+
 /* r15 (7.2): at 1280 x 600 the step-1 column was still one row too tall and Next covered "More cut options". On
    screens this short both summaries take a smaller font so they share one row. */
 @media (min-width: 1280px) and (max-height: 700px) and (hover: hover) and (pointer: fine) {
