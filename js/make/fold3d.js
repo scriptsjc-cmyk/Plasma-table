@@ -404,7 +404,7 @@ export function foldSaddleHole(d, len, branch, segs = 48) {
   const br = fishmouthBranch(branch, V(R + reach + 40, yc, 0), V(-1, 0, 0), V(0, 0, 0), V(0, 1, 0), d, reach, segs, { ghost: true });
   const out = faces.concat(br.faces);
   sitOnTable(out);
-  return { faces: out, panels: [{ w: Math.PI * d, h: L }] };
+  return { faces: out, panels: [{ w: Math.PI * d, h: L }], openings: 1 };   // the hole is the facets left out
 }
 
 // Pipe with a bevelled / coped end sitting on a ghosted plate.
@@ -449,7 +449,7 @@ export function foldTee(branchD, headerD, headerLen, skirt, segs = 48) {
   const br = fishmouthBranch(branchD, V(R + reach + 40, yc, 0), V(-1, 0, 0), V(0, 0, 0), V(0, 1, 0), headerD, reach, segs);
   const faces = header.concat(br.faces);
   sitOnTable(faces);
-  return { faces, panels: [{ w: Math.PI * headerD, h: L }, { w: Math.PI * branchD, h: (br.sTop - br.trough) || (skirt + R) }] };
+  return { faces, panels: [{ w: Math.PI * headerD, h: L }, { w: Math.PI * branchD, h: (br.sTop - br.trough) || (skirt + R) }], openings: 1 };
 }
 
 
@@ -867,7 +867,8 @@ function existingLip(id, p, end) {
   }
   if (id === "fanduct") return end.key === "fl1" ? lip : 0;
   if (id === "takeoff" || id === "ductcap") return end.key === "fl1" ? lip : 0;
-  if (id === "conecentric" || id === "coneadapter" || id === "cyclonehop") return lip;
+  if (id === "cyclonehop") return end.key === "fl1" ? lip : 0;      // r15 5.3: only the top (big-end) ring is cut
+  if (id === "conecentric" || id === "coneadapter") return lip;
   return 0;
 }
 function endFrames(id, p) {
@@ -1006,7 +1007,7 @@ export function addPipeFlanges3d(sh, model, p) {
     faces.push(built.face);
     panels.push(built.panel);
   });
-  return { faces, panels };
+  return { ...model, faces, panels };
 }
 
 export function isFoldPart(sh) {

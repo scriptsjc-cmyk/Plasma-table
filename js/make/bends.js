@@ -178,6 +178,7 @@ export function attachBendAllowance(sh, { isFold } = {}) {
   const make = sh.make, note = sh.note;
   sh.params = [...sh.params, ...BEND_PARAMS];
   const deg = Number(sh.bendDeg) || 90;            // a preset whose bends aren't 90° says so (the ridge cap's are 45°)
+  sh.makeFlat = make;                              // the as-drawn pattern (nothing taken off), e.g. for the 3D
   sh.make = (p) => applyBendDeduction(make(p), bendFor(p, deg).bd);
   sh.note = (p) => [typeof note === "function" ? note(p) : note, bendNote(p, deg)].filter(Boolean).join(" ");
   sh.bendAllowance = true;

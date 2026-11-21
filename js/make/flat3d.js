@@ -218,3 +218,10 @@ export function rollSector(Ro, Ri, ang, centre = [0, 0, 0], segs = 72) {
   }
   return faces;
 }
+
+// One folded piece straight from its pattern: specs[i] ({ deg, dir }) sets the i-th fold line (default 90° up).
+export function foldPattern(contours, specs = [], opts = {}) {
+  let i = 0;
+  const cs = (contours || []).map((c) => (isBend(c) ? { ...c, ...(specs[i++] || {}) } : c));
+  return assembleFlat([{ contours: cs, root: opts.root, bends: opts.bends }]);
+}

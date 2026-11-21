@@ -3,7 +3,7 @@
 // developed length is the sum of the face sizes (no extra k-factor deducted).
 import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM, FAN_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, s2rPanels, wantsSplit, flangeFrame } from "./helpers.js";
 import { rectangularTransition, addFlangeLip, developConnected } from "../duct.js";
-import { assembleFlat } from "../flat3d.js";
+import { assembleFlat, foldPattern } from "../flat3d.js";
 import {
   foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedCross,
   foldTrayCross, foldS2r, foldHopper, addTopFlanges, foldFrustum, face, attach, assemble,
@@ -130,7 +130,7 @@ export const FOLD_PRESETS = [
       for (const [x, y, d] of holesOn(p.len, p.b, p.hole, p.inset, 1)) { const h = holeIn(x, p.a + p.web + y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       return c;
     },
-    { noResize: true, fold: (p) => foldZ(p.len, p.a, p.web, p.b) }),
+    { noResize: true }),
 
   shape("foldubr", "Folded U-bracket", "⋃", "folded", "folded u bracket channel mount",
     "Formed U-bracket: a web and two legs in one strip, with a hole in each leg.",
@@ -141,7 +141,7 @@ export const FOLD_PRESETS = [
       for (const [x, y, d] of holesOn(p.len, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, p.leg + p.web + y, d, 0, 0, p.len, H, 1); if (h) c.push(h); }
       return c;
     },
-    { noResize: true, fold: (p) => foldU(p.len, p.web, p.leg, foldHoles(p.len, p.web, p.hole, p.inset, 1, 0)) }),
+    { noResize: true }),
 
   shape("anglegus", "Angle with gusset", "∟", "folded", "angle gusset formed stiffener",
     "Formed angle (one developed strip) packed with a triangular gusset to weld into the corner.",
@@ -308,12 +308,7 @@ export const FOLD_PRESETS = [
       }
       return c;
     },
-    { noResize: true, fold: (p) => {
-      const S = face(p.w, p.h);
-      attach(S, 0, 90, face(p.w, p.base));
-      attach(S, 2, -90, face(p.w, p.lip));
-      return assemble(S);
-    } }),
+    { noResize: true }),
 
   shape("bbqside", "BBQ / firebowl panel", "▬", "folded", "bbq firebowl panel folded",
     "BBQ or firebowl side: a slightly taller panel with a bottom flange (to bolt to a ring) and a rolled top lip.",
@@ -327,12 +322,7 @@ export const FOLD_PRESETS = [
       }
       return c;
     },
-    { noResize: true, fold: (p) => {
-      const S = face(p.w, p.h);
-      attach(S, 0, 90, face(p.w, p.base));
-      attach(S, 2, -90, face(p.w, p.lip));
-      return assemble(S);
-    } }),
+    { noResize: true }),
 
   shape("cabletray", "Cable tray", "⋃", "folded", "cable tray perforated u flanges",
     "Cable tray: a U with return flanges, one developed strip. Optional holes down the web.",
@@ -348,7 +338,7 @@ export const FOLD_PRESETS = [
       }
       return c;
     },
-    { noResize: true, fold: (p) => foldC(p.len, p.web, p.leg, p.flange) }),
+    { noResize: true }),
 
   shape("dripedge", "Drip edge", "⌐", "folded", "drip edge flashing folded roof",
     "Roof drip edge: a fascia leg and a roof leg with a small drip kick, one strip.",
@@ -391,7 +381,7 @@ export const FOLD_PRESETS = [
       }
       return c;
     },
-    { noResize: true, fold: (p) => foldAngle(p.len, p.a, p.a) }),
+    { noResize: true }),
 
   shape("machineguard", "Machine guard (3-sided)", "⊓", "folded", "machine guard three sided folded",
     "Three-sided machine guard: a front and two sides in one U-shaped unfold, with optional viewing window.",
@@ -555,6 +545,24 @@ export const FOLD_PRESETS = [
       return assemble(S);
     } }),
 ];
+
+// r15 5.3: these are folded straight from their flat pattern (fold3d's flat builder), so every hole that is cut shows
+// on the panel it is cut in. [id, fold lines in pattern order ({ dir, deg }), the panel that lies flat].
+const UPF = {}, DNF = { dir: "down" };
+const FROM_FLAT = [
+  ["foldzbr", [UPF, DNF], (p) => [p.len / 2, p.a / 2]],
+  ["foldubr", [UPF, UPF], (p) => [p.len / 2, p.leg + p.web / 2]],
+  ["firepit", [UPF, DNF], (p) => [p.w / 2, p.base + p.h / 2]],
+  ["bbqside", [UPF, DNF], (p) => [p.w / 2, p.base + p.h / 2]],
+  ["cabletray", [UPF, UPF, UPF, UPF], (p) => [p.len / 2, p.flange + p.leg + p.web / 2]],
+  ["cornerguard", [UPF], (p) => [p.len / 2, p.a / 2]],
+];
+for (const [id, specs, root] of FROM_FLAT) {
+  const sh = FOLD_PRESETS.find((s) => s.id === id);
+  if (!sh) continue;
+  const make = sh.make;                                   // as drawn, before any bend allowance is taken off
+  sh.fold = (p) => foldPattern(make(p), specs, { root: root(p) });
+}
 
 const FOLD_HIDDEN = new Set([
   "hingebr", "signbr", "lightbr", "cornerguard", "foldubr",
