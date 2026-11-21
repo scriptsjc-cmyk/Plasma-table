@@ -102,4 +102,12 @@ di.feats = [{ ...F.newFeature("slot", 1, 200, 150), x: 40, rot: 90 }, { ...F.new
 dk.moveHole(di, 1, 5, 0);
 t.check("drag: a feature moves as one and its mirror twin follows", di.feats[0].x === 45 && di.feats[1].x === 155 && !Object.keys(di.holes || {}).length, J(di.feats));
 
+// feature handles sit on the feature centre, also on a turned / mirrored part
+for (const [rotd, fx] of [[0, false], [90, false], [30, true]]) {
+  const hk = A.newSketch(); hk.add("rect", true, {}); const hi = hk.items[0]; Object.assign(hi.p, { w: 200, h: 150, r: 10 }); hi.x = 25; hi.y = 40; hi.rot = rotd; hi.fx = fx;
+  hi.feats = [{ ...F.newFeature("hole", 1, 200, 150), x: 40, y: 30, d: 12 }];
+  const w = hk.partToWorld(hi, [[40, 30]])[0], c = hk.contoursOf(hi).find((q) => q.feat === 1), m = mid(c.pts);
+  t.check(`handle: feature centre maps onto the cut hole (rot ${rotd}${fx ? ", mirrored" : ""})`, Math.hypot(w[0] - m[0], w[1] - m[1]) < 1e-6, J({ w, m }));
+}
+
 process.exit(t.done() ? 1 : 0);

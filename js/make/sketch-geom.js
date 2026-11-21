@@ -91,6 +91,15 @@ export class GeomMethods {
     Object.defineProperty(it, "_key", { value: key, writable: true, enumerable: false, configurable: true });
     return cs;
   }
+  partToWorld(it, pts) {                                 // part-frame points (bottom-left of the outline = 0,0) -> world, same transform as contoursOf
+    let base; try { base = this.baseContours(it)[0]; } catch (e) { base = null; }
+    const world = this.contoursOf(it)[0];
+    if (!base || !world) return [];
+    const o = bbox([base]);
+    const R = ([x, y]) => { if (it.fx) x = -x; if (it.fy) y = -y; return it.rot ? rot([x, y], it.rot) : [x, y]; };
+    const rb = bbox([{ pts: base.pts.map(R) }]), wb = bbox([world]);
+    return pts.map(([x, y]) => { const [a, b] = R([x + o[0], y + o[1]]); return [a + wb[0] - rb[0], b + wb[1] - rb[1]]; });
+  }
   partWidth(it) {                                       // outline width in the part's own frame (features are measured in it)
     try { const c = this.baseContours(it)[0]; if (c) { const b = bbox([c]); return b[2] - b[0]; } } catch (e) { /* no outline */ }
     return 0;

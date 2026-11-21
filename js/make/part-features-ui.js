@@ -106,6 +106,7 @@ export function renderFeatureList() {
     }
     return;
   }
+  if (sketch.featOpen !== openId) { sketch.featOpen = openId; sketch.draw(); }   // the open row's centre handle is filled
   list.dataset.sig = sig;
   list.innerHTML = builtin + feats.map((f) => rowHtml(f, fr, issues)).join("");
 }

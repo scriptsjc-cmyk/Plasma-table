@@ -2,6 +2,7 @@
 import { bbox, expandContour, offsetLoop } from "../core/geom.js";
 import { filletPreviewGeom, linearArrayShifts } from "./cadpreview.js";
 import { def, r1, themeColor } from "./sketch-util.js";
+import { drawFeatureHandles } from "./part-features.js";
 import { clickVerb, clickVerbLower } from "../ui/laptop.js";
 import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
 import { applyBedScreen, bedViewRotated, visibleWorld } from "../cut/bedview.js";
@@ -270,6 +271,7 @@ export class ViewMethods {
         const yr = this.tag(ctx, `Y ${r1(b[1])}`, x0 + 80, y1 + 20, C.partLine);
         this.dimHits.push({ ...yr, kind: "y", it: one, label: "Bottom edge Y (mm)" });
       }
+      if (one && !this.layout && one.feats) drawFeatureHandles(this, ctx, S, C, one);   // r15 2.14: handles at feature centres
       // where's the hole? dimension lines from the part's corner (Make a part only: the sheet layout never edits a part)
       if (one && !this.layout) {
         const cs = this.contoursOf(one);

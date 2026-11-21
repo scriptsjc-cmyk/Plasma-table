@@ -250,3 +250,20 @@ export function keepMatching(newP, oldP, specP = {}) {
   for (const k of Object.keys(newP)) if (!(k in specP) && oldP && Number.isFinite(Number(oldP[k])) && k in oldP) newP[k] = Number(oldP[k]);
   return newP;
 }
+
+// handles: a small cross at each shown feature's centre while its part is picked (the open row's is filled).
+// Dragging inside a feature moves it (sketch moveHole -> moveFeatureBy). Called from sketch-view.
+export function drawFeatureHandles(sk, ctx, S, C, it) {
+  const feats = (it.feats || []).filter((f) => !f.hide && f.k !== "corner");
+  if (!feats.length) return;
+  const at = sk.partToWorld(it, feats.map((f) => [f.x, f.y]));
+  feats.forEach((f, i) => {
+    if (!at[i]) return;
+    const [X, Y] = S(at[i][0], at[i][1]), open = sk.featOpen === f.id;
+    ctx.save();
+    ctx.strokeStyle = C.sel; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(X - 6, Y); ctx.lineTo(X + 6, Y); ctx.moveTo(X, Y - 6); ctx.lineTo(X, Y + 6); ctx.stroke();
+    ctx.beginPath(); ctx.arc(X, Y, open ? 5 : 3.5, 0, 7); ctx.fillStyle = open ? C.sel : C.canvas; ctx.fill(); ctx.stroke();
+    ctx.restore();
+  });
+}
