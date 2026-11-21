@@ -280,4 +280,9 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
   body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .lamps.grid .lamp::before { left: 7px; top: 5px; }
   body.laptop-ui #setupView #demoInputs { margin-top: 4px; }
   body.laptop-ui #setupView #demoInputs button { min-height: 34px; padding-top: 4px; padding-bottom: 4px; }
+  /* r15: the two-row-STOP header is 16 px taller on Machine setup; these keep the Tests card's last note whole */
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] h2 { margin: 0 0 2px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .card > p { margin: 2px 0; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .card + .card { margin-top: 6px; }
+  body.laptop-ui #setupView .setup-pane[data-setup-pane="torch"] .lamp { line-height: 1.15; }
 }
