@@ -593,6 +593,9 @@ export class InputMethods {
       const overlay = (id) => { const el = document.getElementById(id); return el && !el.classList.contains("hidden"); };
       // the type-in size box owns the keys from the moment it opens (its input only takes focus on the next frame, so focus alone isn't enough)
       if (overlay("dimEdit") || overlay("numPad") || overlay("cadDialog") || overlay("shapeLib") || overlay("verPop") || overlay("presetBrowser") || document.querySelector(".acctdlg:not(.hidden)")) return;
+      // r15 7.3: any other open modal dialog (Add text, Trace a picture, …) owns the keys too — Escape closes it rather
+      // than dropping the pick on the drawing behind it
+      if ([...document.querySelectorAll('[aria-modal="true"]')].some((el) => !el.classList.contains("hidden") && !el.hidden && el.getClientRects().length > 0)) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement && document.activeElement.tagName)) return;
       if (document.getElementById("drawHud") && !document.getElementById("drawHud").classList.contains("hidden") && document.getElementById("drawHud").contains(document.activeElement)) return;
       if (document.activeElement.getAttribute("role") === "separator") return;      // the focused picture divider owns its arrow keys
