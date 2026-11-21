@@ -2,6 +2,7 @@
 import { getPrefs, savePrefs } from "../core/prefs.js";
 import { $ } from "../core/dom.js";
 import { screen } from "./flow.js";
+import { renderQuickBar } from "../core/hooks.js";
 
 const LAPTOP_MQ = "(min-width: 900px) and (pointer: fine)";
 
@@ -50,7 +51,10 @@ function tuckSelectSnap(onAdv) {
   const tools = document.querySelector(".sktools");
   const opts = document.querySelector(".skopts");
   if (selWrap) selWrap.classList.toggle("hidden", !onAdv);
+  const snapWas = !!snapWrap && !snapWrap.classList.contains("hidden");
   if (snapWrap) snapWrap.classList.toggle("hidden", !onAdv);
+  // r15 4.20: the rail leaves Snap out only while the header's Snap ▾ shows, so draw the rail again when that changes
+  if (snapWrap && snapWas !== onAdv) queueMicrotask(() => { try { renderQuickBar(); } catch (e) { /* not ready yet */ } });
   if (onAdv && selPop && snapPop) {
     if (all) safeInsert(selPop, all, null);
     if (clr) safeInsert(selPop, clr, null);
