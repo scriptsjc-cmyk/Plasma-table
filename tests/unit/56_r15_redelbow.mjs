@@ -121,4 +121,9 @@ for (const [bad, why] of [[{ d: 120, d2: 80, bend: 90, clr: 40, n: 4 }, "CLR sma
   const a0 = reducingElbow({ d: 120, d2: 80, bend: 90, clr: 180, n: 4, t: 0, seam: 0 }), a1 = reducingElbow({ d: 120, d2: 80, bend: 90, clr: 180, n: 4, t: 0, seam: 10 });
   ck("a 10 mm seam allowance makes every piece bigger", a1.pieces.every((pc, k) => area2(pc.flat) > area2(a0.pieces[k].flat) + 100));
 }
+// a part saved before the redesign (it had "h", no "n") still opens as a 4-gore elbow
+{
+  const e = reducingElbow({ d: 120, d2: 80, h: 80, bend: 90, clr: 180, t: 0, seam: 0 });
+  ck("an older saved reducing elbow (no piece count) makes the default 4 gores", e.ok && e.pieces.length === 4, e.reason);
+}
 process.exit(t.done() ? 1 : 0);
