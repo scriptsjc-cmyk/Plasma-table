@@ -424,6 +424,17 @@ try {
     t.check(`no page error (${prof} machine setup)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 4.20 straight after switching to Advanced (first paint), Snap is not on the rail
+  for (const prof of ["d1280x600", "d1440"]) {
+    const page = await newPage(br, prof, { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    await ev(page, () => { const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { persist: false, autoFs: false }); });
+    await sleep(600);
+    const r = await ev(page, () => ({ head: !!document.getElementById("btnSnapMenu") && document.getElementById("btnSnapMenu").getClientRects().length > 0,
+      rail: [...document.querySelectorAll('#quickBar > [data-qb="snap"]')].some((b) => b.getClientRects().length) }));
+    t.check(`4.20 ${prof}: on first switching to Advanced, Snap is in the header only (not on the rail too)`, r.head && !r.rail, J(r));
+    await page.ctx.close();
+  }
   // ---------------------------------------------------------------- 4.23 also when Machine setup is opened from the Cut screen's Setup step
   // (the Cut screen's own jog-card rules must not reach the Machine setup strip: the lamps vanished and the pad was re-laid)
   for (const prof of ["d1366", "d1280x600"]) {
