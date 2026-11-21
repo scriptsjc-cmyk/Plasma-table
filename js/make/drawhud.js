@@ -165,8 +165,27 @@ export function paintDrawHud() {
     closeDrawHud();
     return;
   }
+  dockHud();
   bindHudInputs();
 }
+
+// r15 3.2: on a laptop the box docks over the top of the side panel, never on the drawing (it used to sit over the bottom of
+// the drawing and silently eat clicks there). Phones keep it at the bottom of the screen.
+function dockHud() {
+  const el = $("drawHud"), side = $("srcShape");
+  if (!el) return;
+  const laptop = !!(window.matchMedia && window.matchMedia("(min-width: 900px) and (pointer: fine)").matches) && !document.body.classList.contains("phone-ui");
+  const r = side && side.getClientRects().length ? side.getBoundingClientRect() : null;
+  const cv = sketch && sketch.cv ? sketch.cv.getBoundingClientRect() : null;
+  if (laptop && r && r.width >= 260 && (!cv || r.left >= cv.right - 1)) {
+    el.classList.add("docked");
+    el.style.left = Math.round(r.left) + "px"; el.style.top = Math.round(r.top) + "px"; el.style.width = Math.round(r.width) + "px";
+  } else {
+    el.classList.remove("docked");
+    el.style.left = el.style.top = el.style.width = "";
+  }
+}
+if (typeof window !== "undefined") window.addEventListener("resize", () => { if (hudOpen()) dockHud(); });
 
 function bindHudInputs() {
   for (const id of fields) {

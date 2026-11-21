@@ -2384,3 +2384,7 @@ body.running-job #featSheet, body.job-live #featSheet { display: none; }
   body:is(.pro-mode, .advanced-mode)[data-screen="make"] #srcShape[data-insp="arrange"] > .grid3.insp-arrange input { min-height: 28px; height: 28px; padding-top: 2px; padding-bottom: 2px; }
   body:is(.pro-mode, .advanced-mode)[data-screen="make"] #srcShape[data-insp="arrange"] #shapeForm > .grid2.insp-arrange input { height: 28px; padding-top: 2px; padding-bottom: 2px; }
 }
+
+/* r15 3.2: the type-while-drawing box docked over the top of the side panel on a laptop (left / top / width set by drawhud.js) */
+.drawhud.docked { bottom: auto; transform: none; max-width: none; box-sizing: border-box; padding: 8px 10px; gap: 6px 8px; }
+.drawhud.docked input { width: 72px; }
