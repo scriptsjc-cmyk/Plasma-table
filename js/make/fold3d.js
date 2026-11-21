@@ -771,7 +771,10 @@ export function foldHopper(a, b, a2, b2, h, ox = 0, oy = 0) {
   }
   return { faces, panels: faces.map((f) => ({ w: f.w, h: f.h })) };
 }
-export function addTopFlanges(model, a2, b2, h, lip) {
+// ends (optional, r15 7.5): per top edge (front −Z, right +X, back +Z, left −X) [s0, s1], where the strip's outer edge
+// starts and ends along the edge, measured from its two corners (negative = past the corner), as the cut lip has them.
+// Without it the four strips are mitred into one closed frame.
+export function addTopFlanges(model, a2, b2, h, lip, ends) {
   if (!(lip > 0)) return model;
   const faces = model.faces.slice();
   const t = [[-a2 / 2, h, -b2 / 2], [a2 / 2, h, -b2 / 2], [a2 / 2, h, b2 / 2], [-a2 / 2, h, b2 / 2]];
@@ -780,7 +783,9 @@ export function addTopFlanges(model, a2, b2, h, lip) {
   // open corners and looked like two flanges drawn over each other)
   for (let i = 0; i < 4; i++) {
     const p0 = t[i], p1 = t[(i + 1) % 4], o = out[i], prev = out[(i + 3) % 4], next = out[(i + 1) % 4];
-    const q0 = add(p0, scl(add(o, prev), lip)), q1 = add(p1, scl(add(o, next), lip));
+    const e = ends && ends[i], U = norm(sub(p1, p0));
+    const q0 = e ? add(add(p0, scl(o, lip)), scl(U, e[0])) : add(p0, scl(add(o, prev), lip));
+    const q1 = e ? add(add(p1, scl(o, lip)), scl(U, e[1])) : add(p1, scl(add(o, next), lip));
     const pts = [p0, p1, q1, q0];
     const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
     faces.push({ pts, n, holes: [], w: mag(sub(p1, p0)), h: lip });

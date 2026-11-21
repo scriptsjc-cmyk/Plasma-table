@@ -34,6 +34,51 @@ function hopflangeBlank(p) {
   return transitionBlank(panels, p, [], (part) => addFlangeLip(part, lip));
 }
 
+// r15 7.5: the 3D top flange of the hopper is the cut lip: read each lip strip off the cut (its top fold line, a2 or b2
+// long, and the outline corners one lip out from it) and lay the strips on the 3D top edges in the order they are cut.
+// (The 3D used to draw a closed mitred frame; the cut lip is trimmed at the corners, so the 3D showed metal not cut.)
+function hopflangeEnds(p) {
+  const lip = Number(p.lip) || 0, cs = hopflangeBlank(p).contours, outl = cs.filter((c) => c.closed !== false && c.role !== "bend");
+  const near = (x, y) => Math.abs(x - y) < 1e-3, same = (u, v) => near(u[0], v[0]) && near(u[1], v[1]);
+  const strips = [];
+  for (const c of cs) {
+    if (c.role !== "bend" || c.pts.length !== 2) continue;
+    const [a, b] = c.pts, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (!near(L, p.a2) && !near(L, p.b2)) continue;
+    const u = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], along = [];
+    for (const o of outl) for (const v of o.pts) {
+      const dx = v[0] - a[0], dy = v[1] - a[1], s = dx * u[0] + dy * u[1];
+      if (near(Math.abs(dx * -u[1] + dy * u[0]), lip) && s > -3 * lip && s < L + 3 * lip) along.push(s);
+    }
+    if (along.length < 2) return null;
+    strips.push({ a, b, L, s0: Math.min(...along), s1: Math.max(...along) - L });
+  }
+  if (strips.length !== 4) return null;
+  // chain strips that share a corner in the flat, turning each to run the same way
+  const flip = (x) => ({ a: x.b, b: x.a, L: x.L, s0: -x.s1, s1: -x.s0 });
+  const left = strips.slice(), chains = [];
+  while (left.length) {
+    let ch = [left.shift()], grew = true;
+    while (grew) {
+      grew = false;
+      for (let i = 0; i < left.length; i++) {
+        const x = left[i], end = ch[ch.length - 1].b, start = ch[0].a;
+        if (same(x.a, end)) ch.push(x); else if (same(x.b, end)) ch.push(flip(x));
+        else if (same(x.b, start)) ch.unshift(x); else if (same(x.a, start)) ch.unshift(flip(x)); else continue;
+        left.splice(i, 1); grew = true; break;
+      }
+    }
+    chains.push(ch);
+  }
+  const run = chains.flat(), lenOf = (i) => (i % 2 ? p.b2 : p.a2);
+  const k0 = near(run[0].L, lenOf(0)) ? 0 : 1, ends = [];
+  for (let j = 0; j < 4; j++) { if (!near(run[j].L, lenOf(k0 + j))) return null; ends[(k0 + j) % 4] = [run[j].s0, run[j].s1]; }
+  return ends;
+}
+function hopflangeFold(p) {
+  return addTopFlanges(foldHopper(p.a, p.b, p.a2, p.b2, p.h), p.a2, p.b2, p.h, p.lip, Number(p.lip) > 0.5 ? hopflangeEnds(p) : null);
+}
+
 function holesOn(len, wid, d, inset, count = 1) {
   const hs = [];
   if (!(d > 0)) return hs;
@@ -260,7 +305,7 @@ export const FOLD_PRESETS = [
     "Rectangular hopper with a folded flange around the top opening, developed as one folding blank. Tick Separate pieces to cut the sides apart.",
     [["a", "Base width", 200], ["b", "Base depth", 150], ["a2", "Top width", 80], ["b2", "Top depth", 60], ["h", "Height", 140], ["lip", "Top flange", 18], SPLIT_PARAM],
     (p) => hopflangeBlank(p).contours,
-    { sheet: true, noResize: true, fold: (p) => addTopFlanges(foldHopper(p.a, p.b, p.a2, p.b2, p.h), p.a2, p.b2, p.h, p.lip), note: (p) => hopflangeBlank(p).reason }),
+    { sheet: true, noResize: true, fold: hopflangeFold, note: (p) => hopflangeBlank(p).reason }),
 
   shape("gusflange", "Gusset with flanges", "◣", "folded", "gusset folded flanges stiffener",
     "Right-angle gusset with a folded flange along each leg, developed as one piece.",
