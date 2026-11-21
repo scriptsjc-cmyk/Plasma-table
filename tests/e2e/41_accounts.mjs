@@ -22,9 +22,14 @@ async function dismissMigrate(page) {
   }
 }
 
-async function signup(page, { email, mode, name }) {
-  if (!(await page.locator("#acctPill").isVisible())) await page.click("#btnTopMenu");   // r4: on a phone the account pill sits behind the menu button
+// r15 Round 8: since 46e9604 the laptop header keeps Account in the ☰ menu (as phones do), so open it first when the pill is tucked away.
+async function openAcct(page) {
+  if (!(await page.locator("#acctPill").isVisible())) await page.click("#btnTopMenu");
   await page.click("#acctPill");
+}
+
+async function signup(page, { email, mode, name }) {
+  await openAcct(page);   // r4: on a phone (and since 46e9604 a laptop) the account pill sits behind the menu button
   await page.waitForSelector("#accountDlg:not(.hidden)");
   await page.click("#goSignUp");
   await page.waitForSelector('[data-pane="up"]:not(.hidden)');
@@ -57,11 +62,39 @@ try {
     await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("cut"); T.goStep(3); T.refreshGate(); });
     await sleep(300);
     const lockUi = await p.evaluate(() => ({ notes: [...document.querySelectorAll(".locknote")].filter((e) => e.offsetParent && /cut for real/.test(e.textContent)).length, why: document.getElementById("startWhy").textContent, startOff: document.getElementById("btnStart").disabled, linkGo: document.getElementById("btnLinkMachine").classList.contains("go") && !!document.getElementById("btnLinkMachine").offsetParent, connectGreen: getComputedStyle(document.getElementById("btnConnect")).backgroundColor }));
-    t.check("item 11: one lock note on the bed screen (not repeated by Start)", lockUi.notes === 1, JSON.stringify(lockUi));
-    t.check("item 11: Start is off and says why right under it (link a machine)", lockUi.startOff && /link a machine/i.test(lockUi.why), JSON.stringify(lockUi));
-    t.check("item 11: 'Link a machine' is the green primary button; Connect steps back", lockUi.linkGo && lockUi.connectGreen !== "rgb(15, 123, 58)", JSON.stringify(lockUi));
+    // r15 Round 8: since 55c3d71 this page is a real laptop (hover + fine pointer), so it gets the r13 laptop bed layout: Start's
+    // reasons are the "Before you cut" list and Link a machine sits in the header connection menu. The touch layout's own item 11
+    // checks run on an iPad below.
+    const laptop = await p.evaluate(() => matchMedia("(min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine)").matches);
+    if (laptop) {
+      const lap = await p.evaluate(() => {
+        const vis = (e) => !!(e && e.offsetParent);
+        const says = [...document.querySelectorAll("body *")].filter((e) => vis(e) && [...e.childNodes].some((n) => n.nodeType === 3 && /link (a|your) machine|cut for real/i.test(n.textContent))).map((e) => e.textContent.trim());
+        const first = document.querySelector("#beforeCut li .beforecut-text");
+        const btn = first && first.querySelector("button.beforecut-link");
+        return { says, first: first && first.textContent.trim(), firstIsButton: !!btn && vis(btn), startOff: document.getElementById("btnStart").disabled };
+      });
+      t.check("item 11 (laptop): Start is off and the Before you cut list starts with Link a machine, as a button", lap.startOff && /link a machine/i.test(lap.first || "") && lap.firstIsButton, JSON.stringify(lap));
+      t.check("item 11 (laptop): linking is asked for once on the bed screen (not repeated)", lap.says.length === 1, JSON.stringify(lap.says));
+      await p.click("#connPill");
+      const menu = await p.evaluate(() => { const l = document.getElementById("btnLinkMachine"); return { inMenu: !!l.closest("#connMenu"), vis: !!l.offsetParent, go: l.classList.contains("go"), connectBg: getComputedStyle(document.getElementById("btnConnect")).backgroundColor }; });
+      t.check("item 11 (laptop): in the connection menu, 'Link a machine' is the green primary button; Connect steps back", menu.inMenu && menu.vis && menu.go && menu.connectBg !== "rgb(15, 123, 58)", JSON.stringify(menu));
+      await p.keyboard.press("Escape");
+      let opened = false;
+      if (lap.firstIsButton) {
+        await p.click("#beforeCut li:first-child .beforecut-link");
+        opened = await p.waitForSelector("#gateDlg:not(.hidden)", { timeout: 5000 }).then(() => true, () => false);
+      }
+      t.check("item 11 (laptop): the list's Link a machine opens the link-machine message", opened && /link (your |a )?machine/i.test(await p.locator("#gateWhy").textContent()));
+      if (opened) await p.click("#gateDlg .acct-close");
+    } else {
+      t.check("item 11: one lock note on the bed screen (not repeated by Start)", lockUi.notes === 1, JSON.stringify(lockUi));
+      t.check("item 11: Start is off and says why right under it (link a machine)", lockUi.startOff && /link a machine/i.test(lockUi.why), JSON.stringify(lockUi));
+      t.check("item 11: 'Link a machine' is the green primary button; Connect steps back", lockUi.linkGo && lockUi.connectGreen !== "rgb(15, 123, 58)", JSON.stringify(lockUi));
+    }
     t.check("item 11: with no machine there is no 'Home the machine' prompt", !/Home the machine/.test(await p.evaluate(() => document.body.innerText)));
     await snap(p, "locked-run");
+    if (laptop) await p.click("#connPill");
     await p.click("#btnLinkMachine");
     await p.waitForSelector("#gateDlg:not(.hidden)", { timeout: 5000 });
     t.check("tapping the locked Run prompt opens the link-machine message", /link (your |a )?machine/i.test(await p.locator("#gateWhy").textContent()));
@@ -79,6 +112,19 @@ try {
     await p.close(); await p.ctx.close();
   }
 
+  // ---------- item 11 in the touch layout (an iPad: no hover, so the bed screen's own connect card and Start reasons)
+  {
+    const p = await newPage(K.browser, "ipad", { base: srv.base });
+    await p.evaluate(() => { const T = window.plasmaTest; T.showScreen("make"); T.sketch.clear(); T.sketch.add("rect"); T.sendToCutting(); T.goStep(3); T.refreshGate(); });
+    await p.waitForFunction(() => window.plasmaTest.screen() === "cut" && window.plasmaTest.S.cur === 3);
+    await sleep(300);
+    const lockUi = await p.evaluate(() => ({ notes: [...document.querySelectorAll(".locknote")].filter((e) => e.offsetParent && /cut for real/.test(e.textContent)).length, why: document.getElementById("startWhy").textContent, startOff: document.getElementById("btnStart").disabled, linkGo: document.getElementById("btnLinkMachine").classList.contains("go") && !!document.getElementById("btnLinkMachine").offsetParent, connectGreen: getComputedStyle(document.getElementById("btnConnect")).backgroundColor }));
+    t.check("item 11 (touch): one lock note on the bed screen (not repeated by Start)", lockUi.notes === 1, JSON.stringify(lockUi));
+    t.check("item 11 (touch): Start is off and says why right under it (link a machine)", lockUi.startOff && /link a machine/i.test(lockUi.why), JSON.stringify(lockUi));
+    t.check("item 11 (touch): 'Link a machine' is the green primary button; Connect steps back", lockUi.linkGo && lockUi.connectGreen !== "rgb(15, 123, 58)", JSON.stringify(lockUi));
+    t.check("item 11 (touch): with no machine there is no 'Home the machine' prompt", !/Home the machine/.test(await p.evaluate(() => document.body.innerText)));
+    await p.close(); await p.ctx.close();
+  }
   // ---------- sign up Beginner, mode switch, save / load part, claim, admin
   {
     const p = await newPage(K.browser, "desktop", { base: srv.base });
@@ -103,7 +149,7 @@ try {
       if (s && !s.items.length) { s.add("rect", true); s.pick([s.items[0].id]); s.commit(); }
     });
     await sleep(300);
-    await p.click("#acctPill");
+    await openAcct(p);
     await p.waitForSelector('[data-pane="home"]:not(.hidden)');
     // round 5 item 13: Account is profile, machine link and sign out (at the top); the saved parts have their own screen
     t.check("Account: Sign out sits at the top, before the machine list", await p.evaluate(() => document.getElementById("btnSignOut").getBoundingClientRect().top < document.getElementById("acctMachines").getBoundingClientRect().top));
@@ -119,7 +165,7 @@ try {
     await p.click("#menuParts"); await p.waitForSelector("#partsDlg:not(.hidden)", { timeout: 4000 }).catch(() => {});
     t.check("the main menu's Your parts opens the same list", await p.evaluate(() => !document.getElementById("partsDlg").classList.contains("hidden") && document.querySelectorAll("#partsList .partrow").length >= 1));
     await p.click("#partsDlg .acct-close");
-    await p.click("#acctPill"); await p.waitForSelector('[data-pane="home"]:not(.hidden)');
+    await openAcct(p); await p.waitForSelector('[data-pane="home"]:not(.hidden)');
     // claim
     await p.click("#btnOpenClaim");
     await p.waitForSelector("#claimDlg:not(.hidden)");
@@ -129,12 +175,12 @@ try {
     await p.waitForFunction(() => window.plasmaTest.account.hasLinkedMachine(), null, { timeout: 8000 });
     t.check("claiming DEMO-0000 unlocks the machine gate", await p.evaluate(() => window.plasmaTest.account.hasLinkedMachine() === true));
     // gate no longer on Connect
-    await p.click("#acctPill"); // may still be on home
+    await openAcct(p); // may still be on home
     await p.click("#accountDlg .acct-close").catch(() => {}); await dismissMigrate(p);
     // admin
     const granted = await p.evaluate(async () => { await window.plasmaTest.account.grantDemoAdmin(); return window.plasmaTest.account.isAdmin(); });
     t.check("demo admin grant works", granted === true);
-    await p.click("#acctPill");
+    await openAcct(p);
     await p.waitForSelector("#acctAdminBtn:not(.hidden)");
     await p.click("#acctAdminBtn");
     await p.waitForSelector("#adminDlg:not(.hidden)");
@@ -228,7 +274,7 @@ try {
     await p.waitForFunction(() => window.plasmaTest.account.isSignedIn(), null, { timeout: 10000 });
     await p.evaluate(() => window.plasmaTest.showScreen("make"));
     if (!(await p.locator("#acctPill").isVisible())) await p.click("#btnTopMenu");
-    await p.click("#acctPill"); await p.click("#accountDlg .acct-close");
+    await openAcct(p); await p.click("#accountDlg .acct-close");
     await p.waitForSelector("#migrateDlg:not(.hidden)", { timeout: 3000 });
     t.check("after sign-in the 'Parts on this device' prompt is offered", await prompt() === 1);
     // a second sign-in landing while the prompt is open used to make Not now re-open it
@@ -237,7 +283,7 @@ try {
     await p.click("#migrateNo");
     await sleep(300);
     t.check("Not now dismisses the prompt", await prompt() === 0);
-    await p.click("#acctPill"); await p.click("#accountDlg .acct-close");
+    await openAcct(p); await p.click("#accountDlg .acct-close");
     await sleep(300);
     t.check("and it is not offered again this session", await prompt() === 0);
     await p.close(); await p.ctx.close();
