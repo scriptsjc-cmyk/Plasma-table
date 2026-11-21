@@ -1,7 +1,7 @@
 // New folded / formed workshop presets. Each has a developed flat pattern (what you cut)
 // and a fold() model for the 3D view. Bend sizes follow the existing enclosure presets:
 // developed length is the sum of the face sizes (no extra k-factor deducted).
-import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM, FAN_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, s2rPanels, wantsSplit } from "./helpers.js";
+import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM, FAN_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, s2rPanels, wantsSplit, flangeFrame } from "./helpers.js";
 import { rectangularTransition, addFlangeLip, developConnected } from "../duct.js";
 import {
   foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedCross,
@@ -17,7 +17,8 @@ const panel = (w, h, holes = []) => {
 function fanductBlank(p) {
   const sides = s2rPanels(p.a, p.a, p.d, p.h);
   if (!sides) return { contours: [], halves: false, reason: "" };
-  const extra = p.lip > 0.5 ? [panel(p.a + 2 * p.lip, p.a + 2 * p.lip)] : [];
+  const frame = flangeFrame(p.a, p.a, p.lip);            // r15 1.5: the square flange has the duct opening in it, as on the square-to-round
+  const extra = frame ? [frame] : [];
   return transitionBlank(sides, p, extra);
 }
 function hopflangeBlank(p) {
