@@ -1,7 +1,7 @@
 // Fold models and a small offline 3D viewer for formed / bent preset parts.
 // The flat pattern from shape.make() is still what gets cut. This only visualises the folded result.
 // No external library: painter's-algorithm polygons on canvas (and the same projection as SVG thumbs).
-import { segmentsFor } from "./duct.js";
+import { segmentsFor, pipeSaddle } from "./duct.js";
 import { pipeEnds, flangeOn, flangeDims } from "./pipeflanges.js";
 import { FOLD } from "./flat3d.js";
 import { jobThickness } from "./bends.js";
@@ -307,6 +307,31 @@ export function foldFrustum(d1, d2, h, segs = 72) {
     faces.push({ pts, n, holes: [], w, h: slant, smooth: true });
   }
   return { faces, panels: [{ w: Math.PI * ((d1 + d2) / 2), h: slant }] };
+}
+// r15 7.5: the round duct take-off from its cut pieces: the saddle collar (the cut saddle wrapped round the branch, its
+// shaped edge down on the main duct, longest at the sides across the duct), the tube blank on top of it, and the
+// flange ring (added with the pipe ends). The main duct is drawn as a ghost so its Ø shows. (It was the tube alone.)
+export function takeoffCollarH(p) { const s = pipeSaddle(p.d, Math.max(p.d2, p.d), 20); return s ? s.h : 0; }
+export function foldTakeoff(p) {
+  const d = p.d, D = Math.max(p.d2, d), r = d / 2, R = D / 2, s = pipeSaddle(d, D, 20, 48);
+  const faces = [];
+  const H = s ? s.h : 0;
+  if (s) {
+    const n = 48, curve = s.pts.slice(0, n + 1);
+    const at = (i, y) => { const th = -Math.PI + (2 * Math.PI * i) / n; return V(r * Math.sin(th), y, r * Math.cos(th)); };
+    for (let i = 0; i < n; i++) {
+      const pts = [at(i, curve[i][1]), at(i + 1, curve[i + 1][1]), at(i + 1, H), at(i, H)];
+      let nn = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+      const mid = (2 * i + 1) * Math.PI / n - Math.PI, out = V(Math.sin(mid), 0, Math.cos(mid));
+      if (dot(nn, out) < 0) { pts.reverse(); nn = scl(nn, -1); }
+      faces.push({ pts, n: nn, holes: [], w: (Math.PI * d) / n, h: H, smooth: true });
+    }
+  }
+  for (const f of foldTube(d, p.len).faces) faces.push({ ...f, pts: f.pts.map((q) => V(q[0], q[1] + H, q[2])) });
+  // the main duct the take-off sits on (not cut here): axis along x, touching the collar's lowest points
+  const yAxis = -Math.sqrt(Math.max(0, R * R - r * r)), L = Math.max(2.5 * d, D);
+  faces.push(...tubeFaces(D, V(-L / 2, yAxis, 0), V(1, 0, 0), L, 48, { ghost: true }));
+  return { faces, panels: [{ w: Math.PI * d, h: H }, { w: Math.PI * d, h: p.len }] };
 }
 export function foldTube(d, h, segs = 72) {
   return foldFrustum(d, d, h, segs);
@@ -854,7 +879,7 @@ export const FOLD_MODELS = {
   fishmouth: (p) => foldFishmouth(p.d, p.d2 || p.d, p.skirt || 30),
   fishflat: (p) => foldPipeOnFlat(p.d, p.rise || 25, p.skirt || 30),
   saddlehole: (p) => foldSaddleHole(p.d, p.len, p.branch),
-  takeoff: (p) => foldTube(p.d, p.len),
+  takeoff: (p) => foldTakeoff(p),
   britches: (p) => foldBritches(p.d, p.d2, p.len),
   teetemp: (p) => foldTee(p.d, p.d2, p.len, p.skirt || 25),
   ybranch: (p) => foldYBranch(p.d, p.d2, p.len, p.rise || 20),
@@ -923,8 +948,8 @@ function endFrames(id, p) {
     case "r2s":
     case "fanduct":
       return pairY(h, p.ox || 0, p.oy || 0);
-    case "takeoff":
-      return [{ origin: V(0, p.len || 0, 0), xA: x, yA: z, outward: up }];
+    case "takeoff":   // r15 7.5: the flange sits on the tube's top, above the saddle collar
+      return [{ origin: V(0, takeoffCollarH(p) + (p.len || 0), 0), xA: x, yA: z, outward: up }];
     case "ductcap":
     case "rectcap":
       return [{ origin: V(0, 0, 0), xA: x, yA: z, outward: dn }];
