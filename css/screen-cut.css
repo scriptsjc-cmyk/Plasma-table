@@ -972,12 +972,14 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="3"] #cutView #btnTrace { min-height: 44px; padding: 4px 10px; font-size: var(--fs-s); }
   body[data-screen="cut"][data-step="4"] .runctl #btnPause { flex: 0 1 240px; min-height: 56px; }   /* 240 x 56 stays smaller than the fixed 168 x 88 STOP */
 }
-/* r15 1.2: short laptop screens (1280 x 600): slightly tighter rows and speed buttons, so the whole run panel and its
-   safety sentence fit without being cut off */
+/* r15 1.2: short laptop screens (1280 x 600): slightly tighter rows and speed buttons (still 36 px tall), so the whole
+   run panel and its safety sentence fit without being cut off, with the wider fallback font too */
 @media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
   body[data-screen="cut"] #running:not(.hidden) { row-gap: 4px; }
   body[data-screen="cut"] #running > #liveSpeedBox p { margin-top: 2px; }
-  body[data-screen="cut"] #running > #liveSpeedBox .row button { min-height: 40px; }
+  body[data-screen="cut"] #running > #liveSpeedBox .row { margin-top: 6px; }
+  body[data-screen="cut"] #running > #liveSpeedBox #delayRow { margin-top: 6px; }
+  body[data-screen="cut"] #running > #liveSpeedBox .row button { min-height: 36px; padding-top: 6px; padding-bottom: 6px; }
 }
 
 
