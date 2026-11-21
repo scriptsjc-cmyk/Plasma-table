@@ -703,21 +703,6 @@ export function addTopFlanges(model, a2, b2, h, lip) {
   sitOnTable(faces);
   return { faces, panels: faces.map((f) => ({ w: f.w, h: f.h })) };
 }
-export function foldDustpan(back, front, d, h) {
-  const bot = face(front, d); // will look a bit rectangular; sides attach to depth edges
-  // better as an explicit quad bottom
-  const faces = [];
-  const inset = (front - back) / 2;
-  const bpts = [V(0, 0, 0), V(front, 0, 0), V(front - inset, 0, d), V(inset, 0, d)];
-  faces.push({ pts: bpts, n: V(0, 1, 0), holes: [], w: front, h: d });
-  const sideW = Math.hypot(d, inset);
-  // back wall
-  faces.push({ pts: [V(inset, 0, d), V(front - inset, 0, d), V(front - inset, h, d), V(inset, h, d)], n: V(0, 0, 1), holes: [], w: back, h });
-  // sides (tapered)
-  faces.push({ pts: [V(0, 0, 0), V(inset, 0, d), V(inset, h, d), V(0, h, 0)], n: norm(V(-d, 0, inset)), holes: [], w: sideW, h });
-  faces.push({ pts: [V(front, 0, 0), V(front, h, 0), V(front - inset, h, d), V(front - inset, 0, d)], n: norm(V(d, 0, inset)), holes: [], w: sideW, h });
-  return { faces, panels: [{ w: front, h: d }, { w: sideW, h }, { w: sideW, h }, { w: back, h }] };
-}
 export function foldScoop(w, d, h, r) {
   const faces = [];
   const rr = Math.max(0, Math.min(r, w / 2, d));
@@ -841,15 +826,8 @@ export const FOLD_MODELS = {
   elbow45: (p) => foldElbow(p.d, p.bend, p.n || 3, 48, p.clr),
   redelbow: (p) => foldElbow(p.d, p.bend, 3, 32, p.clr, p.d2),
   rectelbow: (p) => foldRectElbow(p.w, p.h, p.r, p.bend),
-  dustpan: (p) => foldDustpan(p.w, p.front, p.d, p.h),
   scoop: (p) => foldScoop(p.w, p.d, p.h, p.r),
-  panflash: (p) => foldZ(p.w, p.up, p.d, 0.1) && foldAngle(p.w, p.d, p.up),
   valleyflash: (p) => foldAngle(p.len, p.leg, p.leg),
-  skylightcurb: (p) => foldOpenBox(p.w + 2 * p.apron, p.d + 2 * p.apron, p.up),
-  chimsquare: (p) => foldOpenBox(p.base, p.base, p.collar),
-  chimround: (p) => foldFrustum(p.base * 0.6, p.d, p.collar),
-  cricketflash: (p) => foldAngle(p.w, p.h, p.rise),
-  roofjack: (p) => foldFrustum(p.d + 2 * p.collar, p.d, p.collar),
   fishmouth: (p) => foldFishmouth(p.d, p.d2 || p.d, p.skirt || 30),
   fishflat: (p) => foldPipeOnFlat(p.d, p.rise || 25, p.skirt || 30),
   saddlehole: (p) => foldSaddleHole(p.d, p.len, p.branch),

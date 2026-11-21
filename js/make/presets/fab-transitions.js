@@ -6,6 +6,118 @@ import {
 } from "./helpers.js";
 import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment } from "../duct.js";
 import { SHEET_PARAMS, sheetFrom, elbowTable } from "../sheetopts.js";
+import { assembleFlat, atOrigin, rollSector } from "../flat3d.js";
+
+// ---- r15 5.2: the flashings' pieces are built once and used both for the cut (packed) and for the 3D (placed), so
+// the 3D is made from exactly the pieces that get cut.
+const XA = [1, 0, 0], UP = [0, 1, 0], ZA = [0, 0, 1];
+const neg = (v) => [-v[0], -v[1], -v[2]];
+function chimroundPieces(p) {
+  const rise = Math.max(0, p.pitch), w = p.base, h = p.base + rise;
+  const base = [roundedRect(0, 0, w, h, 8)];
+  const hole = holeIn(w / 2, h / 2, p.d, 0, 0, w, h, 8);
+  if (hole) base.push(hole);
+  const big = p.d + 8, ch = Math.max(20, p.collar), col = coneSector(big, p.d, ch);
+  return { pieces: col ? [base, [col]] : [base], base, hc: [w / 2, h / 2], cone: col ? [big, p.d, ch] : null };
+}
+function roofjackPieces(p) {
+  const rise = p.h * (p.pitch / 100) * 0.2;
+  const base = [poly([[0, 0], [p.w, 0], [p.w, p.h], [0, p.h + rise]])];
+  const hole = holeIn(p.w / 2, p.h / 2, p.d, 0, 0, p.w, p.h + rise, 6);
+  if (hole) base.push(hole);
+  const big = p.d + 6, ch = Math.max(18, p.collar), col = coneSector(big, p.d, ch);
+  return { pieces: col ? [base, [col]] : [base], base, hc: [p.w / 2, p.h / 2], cone: col ? [big, p.d, ch] : null };
+}
+// base flat on the roof, the collar cone rolled from its sector and standing on the pipe hole
+function baseAndCollar(k) {
+  const items = [{ contours: k.base }];
+  if (k.cone) {
+    const cd = coneDevelopment(...k.cone);
+    if (cd) items.push({ faces: rollSector(cd.Ro, cd.Ri, cd.ang, [k.hc[0], 0, -k.hc[1]]) });
+  }
+  return assembleFlat(items);
+}
+function chimsquarePieces(p) {
+  const w = p.base, opening = clamp(p.s, 20, w - 20), ox = (w - opening) / 2;
+  const base = [roundedRect(0, 0, w, w, 8), roundedRect(ox, ox, opening, opening, 0)];
+  const side = [rectContour(opening, Math.max(16, p.collar))];
+  return { pieces: [base, side, side, side, side], base, side, ox, opening };
+}
+function chimsquare3d(p) {
+  const k = chimsquarePieces(p), o = k.ox, s = k.opening;
+  return assembleFlat([
+    { contours: k.base },
+    { contours: k.side, pose: { o: [o, 0, -o], ax: XA, ay: UP } },
+    { contours: k.side, pose: { o: [o, 0, -o - s], ax: XA, ay: UP } },
+    { contours: k.side, pose: { o: [o, 0, -o], ax: neg(ZA), ay: UP } },
+    { contours: k.side, pose: { o: [o + s, 0, -o], ax: neg(ZA), ay: UP } },
+  ]);
+}
+function cricketPieces(p) {
+  const rise = clamp(p.rise, 8, p.h - 8);
+  const tri = () => [poly([[0, 0], [p.w / 2, 0], [p.w / 2, p.h], [0, rise]])];
+  return [tri(), tri()];
+}
+// The two plates hinge on the ridge (their x = w/2 edge, length h): high (rise) at the chimney, down to the roof,
+// each tipped so its long valley edge lies on the roof.
+function cricket3d(p) {
+  const rise = clamp(p.rise, 8, p.h - 8), h = p.h, w = p.w;
+  const Lz = Math.sqrt(Math.max(1, h * h - rise * rise));
+  const r = [0, -rise / h, Lz / h], m = [0, -Lz / h, -rise / h];
+  const sp = Math.min(1, (2 * rise * (h - rise)) / (w * Lz)), cp = Math.sqrt(1 - sp * sp);
+  const B = [0, rise, 0], items = [];
+  for (const sx of [1, -1]) {
+    const pv = [sx * cp + sp * m[0], sp * m[1], sp * m[2]];
+    items.push({ contours: atOrigin(cricketPieces(p)[0]), pose: { o: [B[0] + (w / 2) * pv[0], B[1] + (w / 2) * pv[1], B[2] + (w / 2) * pv[2]], ax: neg(pv), ay: r } });
+  }
+  return assembleFlat(items);
+}
+function panflashPieces(p) {
+  return [[rectContour(p.w, p.d)], [rectContour(p.w, p.up)], [rectContour(p.d, p.up)], [rectContour(p.d, p.up)]];
+}
+function panflash3d(p) {
+  const [pan, back, side] = panflashPieces(p);
+  return assembleFlat([
+    { contours: pan },
+    { contours: back, pose: { o: [0, 0, -p.d], ax: XA, ay: UP } },
+    { contours: side, pose: { o: [0, 0, 0], ax: neg(ZA), ay: UP } },
+    { contours: side, pose: { o: [p.w, 0, 0], ax: neg(ZA), ay: UP } },
+  ]);
+}
+function skylightPieces(p) {
+  const pan = (len) => [rectContour(len + 2 * p.apron, p.up + p.apron)];
+  return [pan(p.w), pan(p.w), pan(p.d), pan(p.d)];
+}
+// Each pan is an apron on the roof and an upstand against the curb: folded 90° at the apron width (the pans are cut
+// without a fold line, so the fold is placed where the apron ends).
+function skylight3d(p) {
+  const a = p.apron, w = p.w, d = p.d, pcs = skylightPieces(p);
+  const fold = (len) => [{ pts: [[0, a], [len + 2 * a, a]], closed: false, role: "bend" }];
+  const X = XA, Z = ZA, root = [1, a / 2];           // the apron lies on the roof, whichever is wider
+  const items = [
+    { contours: pcs[0], bends: fold(w), root, pose: { o: [-w / 2 - a, 0, d / 2 + a], ax: X, ay: neg(Z) } },
+    { contours: pcs[1], bends: fold(w), root, pose: { o: [w / 2 + a, 0, -d / 2 - a], ax: neg(X), ay: Z } },
+    { contours: pcs[2], bends: fold(d), root, pose: { o: [w / 2 + a, 0, d / 2 + a], ax: neg(Z), ay: neg(X) } },
+    { contours: pcs[3], bends: fold(d), root, pose: { o: [-w / 2 - a, 0, -d / 2 - a], ax: Z, ay: X } },
+  ];
+  return assembleFlat(items);
+}
+function dustpanPieces(p) {
+  // r15 5.2: the bottom's back edge is the back's width (it was drawn 1.5 × too long, so the back never fitted)
+  const bot = [poly([[0, 0], [p.front, 0], [(p.front + p.w) / 2, p.d], [(p.front - p.w) / 2, p.d]])];
+  const sideW = Math.hypot(p.d, (p.front - p.w) / 2);
+  return [bot, [rectContour(sideW, p.h)], [rectContour(sideW, p.h)], [rectContour(p.w, p.h)]];
+}
+function dustpan3d(p) {
+  const [bot, side, , back] = dustpanPieces(p), i = (p.front - p.w) / 2;
+  const L = [i, 0, -p.d], R = [-i, 0, -p.d], u = (v) => { const n = Math.hypot(...v) || 1; return v.map((x) => x / n); };
+  return assembleFlat([
+    { contours: atOrigin(bot) },
+    { contours: back, pose: { o: [i, 0, -p.d], ax: XA, ay: UP } },
+    { contours: side, pose: { o: [0, 0, 0], ax: u(L), ay: UP } },
+    { contours: side, pose: { o: [p.front, 0, 0], ax: u(R), ay: UP } },
+  ]);
+}
 
 function shiftContour(pts) {
   const p = shiftToOrigin(pts);
@@ -220,64 +332,28 @@ export const FAB_PRESETS = [
   shape("chimround", "Chimney flashing (round)", "◇", "sheetmetal", "chimney flashing round pipe roof",
     "Round-pipe chimney flashing: a diamond (or rectangular) base with a hole, plus a collar cone.",
     [["base", "Base size", 260], ["d", "Pipe Ø", 80], ["collar", "Collar height", 40], ["pitch", "Roof pitch rise (mm per 100 mm run)", 30]],
-    (p) => {
-      const rise = Math.max(0, p.pitch);
-      // diamond-ish rectangle stretched by pitch
-      const w = p.base, h = p.base + rise;
-      const base = [roundedRect(0, 0, w, h, 8)];
-      const hole = holeIn(w / 2, h / 2, p.d, 0, 0, w, h, 8);
-      if (hole) base.push(hole);
-      const col = coneSector(p.d + 8, p.d, Math.max(20, p.collar));
-      const pieces = [base];
-      if (col) pieces.push([col]);
-      return packPieces(pieces).contours;
-    },
-    { sheet: true, noResize: true }),
+    (p) => packPieces(chimroundPieces(p).pieces).contours,
+    { sheet: true, noResize: true, fold: (p) => baseAndCollar(chimroundPieces(p)) }),
   shape("chimsquare", "Chimney flashing (square)", "◇", "sheetmetal", "chimney flashing square stack",
     "Square-stack chimney flashing: a diamond base with a square opening, plus four collar sides.",
     [["base", "Base size", 280], ["s", "Stack size", 100], ["collar", "Collar height", 40]],
-    (p) => {
-      const w = p.base, opening = clamp(p.s, 20, w - 20);
-      const ox = (w - opening) / 2;
-      const base = [roundedRect(0, 0, w, w, 8), roundedRect(ox, ox, opening, opening, 0)];
-      const side = [rectContour(opening, Math.max(16, p.collar))];
-      return packPieces([base, side, side, side, side]).contours;
-    },
-    { sheet: true, noResize: true }),
+    (p) => packPieces(chimsquarePieces(p).pieces).contours,
+    { sheet: true, noResize: true, fold: (p) => chimsquare3d(p) }),
   shape("cricketflash", "Chimney cricket flashing", "△", "sheetmetal", "cricket saddle flashing chimney",
     "Cricket / saddle flashing: two triangular plates that shed water behind a chimney.",
     [["w", "Overall width", 260], ["h", "Height (up the roof)", 160], ["rise", "Ridge rise", 40]],
-    (p) => {
-      const rise = clamp(p.rise, 8, p.h - 8);
-      const tri = [poly([[0, 0], [p.w / 2, 0], [p.w / 2, p.h], [0, rise]])];
-      const tri2 = [poly([[0, 0], [p.w / 2, 0], [p.w / 2, p.h], [0, rise]])];
-      return packPieces([tri, tri2]).contours;
-    },
-    { sheet: true, noResize: true }),
+    (p) => packPieces(cricketPieces(p)).contours,
+    { sheet: true, noResize: true, fold: (p) => cricket3d(p) }),
   shape("roofjack", "Roof jack / pipe boot", "▲", "sheetmetal", "roof jack pipe boot flashing",
     "Roof jack (pipe boot): a pitched base with a hole and a short cone collar.",
     [["w", "Base width", 220], ["h", "Base length up the roof", 240], ["d", "Pipe Ø", 70], ["collar", "Collar height", 35], ["pitch", "Rise (mm per 100 mm run)", 35]],
-    (p) => {
-      const rise = p.h * (p.pitch / 100) * 0.2;
-      const base = [poly([[0, 0], [p.w, 0], [p.w, p.h], [0, p.h + rise]])];
-      const hole = holeIn(p.w / 2, p.h / 2, p.d, 0, 0, p.w, p.h + rise, 6);
-      if (hole) base.push(hole);
-      const col = coneSector(p.d + 6, p.d, Math.max(18, p.collar));
-      const pieces = [base];
-      if (col) pieces.push([col]);
-      return packPieces(pieces).contours;
-    },
-    { sheet: true, noResize: true }),
+    (p) => packPieces(roofjackPieces(p).pieces).contours,
+    { sheet: true, noResize: true, fold: (p) => baseAndCollar(roofjackPieces(p)) }),
   shape("panflash", "Pan flashing", "▭", "sheetmetal", "pan flashing window door",
     "Pan flashing: a flat pan with three short upstands (front open).",
     [["w", "Width", 260], ["d", "Depth", 80], ["up", "Upstand height", 20]],
-    (p) => packPieces([
-      [rectContour(p.w, p.d)],
-      [rectContour(p.w, p.up)],
-      [rectContour(p.d, p.up)],
-      [rectContour(p.d, p.up)],
-    ]).contours,
-    { sheet: true, noResize: true }),
+    (p) => packPieces(panflashPieces(p)).contours,
+    { sheet: true, noResize: true, fold: (p) => panflash3d(p) }),
   shape("valleyflash", "Valley flashing", "∧", "sheetmetal", "valley flashing roof",
     "Valley flashing: a long V (two legs) developed as one bent strip, shown as a rectangle of the correct width, plus a centre crease mark isn't cut.",
     [["len", "Length", 400], ["leg", "Each leg width", 80]],
@@ -286,20 +362,13 @@ export const FAB_PRESETS = [
   shape("skylightcurb", "Skylight curb flashing", "▭", "sheetmetal", "skylight curb flashing",
     "Skylight curb flashing: four side pans packed on the sheet.",
     [["w", "Curb width", 300], ["d", "Curb depth", 200], ["up", "Upstand", 30], ["apron", "Apron width", 50]],
-    (p) => {
-      const pan = (len) => [rectContour(len + 2 * p.apron, p.up + p.apron)];
-      return packPieces([pan(p.w), pan(p.w), pan(p.d), pan(p.d)]).contours;
-    },
-    { sheet: true, noResize: true }),
+    (p) => packPieces(skylightPieces(p)).contours,
+    { sheet: true, noResize: true, fold: (p) => skylight3d(p) }),
   shape("dustpan", "Dustpan (flat pattern)", "⌂", "sheetmetal", "dustpan scoop flat",
     "Dustpan: a bottom, two tapered sides and a back, packed on the sheet.",
     [["w", "Back width", 200], ["front", "Front width", 260], ["d", "Depth", 140], ["h", "Side height", 30]],
-    (p) => {
-      const bot = [poly([[0, 0], [p.front, 0], [(p.front + p.w) / 2 + p.w / 2, p.d], [(p.front - p.w) / 2, p.d]])];
-      const sideW = Math.hypot(p.d, (p.front - p.w) / 2);
-      return packPieces([bot, [rectContour(sideW, p.h)], [rectContour(sideW, p.h)], [rectContour(p.w, p.h)]]).contours;
-    },
-    { sheet: true, noResize: true }),
+    (p) => packPieces(dustpanPieces(p)).contours,
+    { sheet: true, noResize: true, fold: (p) => dustpan3d(p) }),
   shape("scoop", "Scoop (flat pattern)", "🥄", "sheetmetal", "scoop shovel flat",
     "Scoop / shovel: a rounded-front bottom and two sides plus a back.",
     [["w", "Width", 160], ["d", "Depth", 180], ["h", "Side height", 35], ["r", "Front radius", 40]],

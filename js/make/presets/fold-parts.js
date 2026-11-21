@@ -3,9 +3,10 @@
 // developed length is the sum of the face sizes (no extra k-factor deducted).
 import { roundedRect, holeIn, rectContour, packPieces, clamp, shape, poly, contour, strip, bendLine, boxBlank, SPLIT_PARAM, FAN_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, s2rPanels, wantsSplit, flangeFrame } from "./helpers.js";
 import { rectangularTransition, addFlangeLip, developConnected } from "../duct.js";
+import { assembleFlat } from "../flat3d.js";
 import {
   foldAngle, foldU, foldC, foldHat, foldZ, foldOpenBox, foldLiddedCross,
-  foldTrayCross, foldS2r, foldHopper, addTopFlanges, foldFrustum, foldUSaddle, face, attach, assemble,
+  foldTrayCross, foldS2r, foldHopper, addTopFlanges, foldFrustum, face, attach, assemble,
 } from "../fold3d.js";
 
 const panel = (w, h, holes = []) => {
@@ -80,6 +81,28 @@ function crossTray(l, w, h, tab = 0) {
     [0, h + w], [0, h], [x0 - t, h],
   ];
   return [poly(pts), bendLine(x0, h, x1, h), bendLine(x0, h + w, x1, h + w), bendLine(x0, h, x0, h + w), bendLine(x1, h, x1, h + w)];
+}
+
+// U-saddle pipe clamp: leg, a half wrap (π·d/2) and leg, with a fold line at each end of the wrap and a hole per leg.
+function pipeUStrapFlat(p) {
+  const web = Math.PI * p.d / 2;          // half-wrap developed
+  const H = p.leg + web + p.leg, c = [rectContour(p.wid, H), bendLine(0, p.leg, p.wid, p.leg), bendLine(0, p.leg + web, p.wid, p.leg + web)];
+  for (const [x, y, d] of holesOn(p.wid, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
+  for (const [x, y, d] of holesOn(p.wid, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, p.leg + web + y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
+  return c;
+}
+// r15 5.2: folded from the flat pattern: the wrap is rolled as N narrow strips (180°/N each, the other way) and each
+// fold line turns the leg 90° off the wrap's end, so both feet lie flat either side of the pipe and bolt through.
+function pipeUStrap3d(p, N = 12) {
+  const web = Math.PI * p.d / 2, cs = pipeUStrapFlat(p).map((c) => (c.role === "bend" ? { ...c, deg: 90 - 90 / N } : c));
+  const bends = [];
+  for (let i = 1; i < N; i++) { const y = p.leg + (web * i) / N; bends.push({ pts: [[0, y], [p.wid, y]], closed: false, role: "bend", deg: 180 / N, dir: "down" }); }
+  const m = assembleFlat([{ contours: cs, bends, root: [p.wid / 2, p.leg / 2] }]);
+  let z0 = Infinity, z1 = -Infinity;
+  for (const f of m.faces) for (const q of f.pts) { z0 = Math.min(z0, q[2]); z1 = Math.max(z1, q[2]); }
+  const dz = -(z0 + z1) / 2;
+  for (const f of m.faces) { for (const q of f.pts) q[2] += dz; for (const r of f.holes) for (const q of r) q[2] += dz; }
+  return m;
 }
 
 export const FOLD_PRESETS = [
@@ -217,14 +240,8 @@ export const FOLD_PRESETS = [
   shape("pipeustrap", "Pipe clamp (U-saddle)", "⋃", "folded", "pipe clamp u saddle strap folded",
     "U-saddle pipe clamp: a formed U to wrap a pipe, with a mounting hole in each leg.",
     [["d", "Pipe Ø", 50], ["leg", "Leg length", 40], ["wid", "Strap width", 24], ["hole", "Hole Ø", 8], ["inset", "Hole from the end", 12]],
-    (p) => {
-      const web = Math.PI * p.d / 2;          // half-wrap developed
-      const H = p.leg + web + p.leg, c = [rectContour(p.wid, H), bendLine(0, p.leg, p.wid, p.leg), bendLine(0, p.leg + web, p.wid, p.leg + web)];
-      for (const [x, y, d] of holesOn(p.wid, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
-      for (const [x, y, d] of holesOn(p.wid, p.leg, p.hole, p.inset, 1)) { const h = holeIn(x, p.leg + web + y, d, 0, 0, p.wid, H, 1); if (h) c.push(h); }
-      return c;
-    },
-    { noResize: true, fold: (p) => foldUSaddle(p.wid, p.d, p.leg) }),
+    (p) => pipeUStrapFlat(p),
+    { noResize: true, fold: (p) => pipeUStrap3d(p) }),
 
   shape("usaddle", "U-saddle strap", "⋃", "folded", "u saddle pipe strap folded flanges",
     "Wider U-saddle with outward mounting flanges on both legs.",
