@@ -226,7 +226,7 @@ export const FAB_PRESETS = [
       const s = pipeSaddle(p.d, Math.max(p.d2, p.d), p.skirt);
       return s ? [shiftContour(s.pts)].filter(Boolean) : [];
     },
-    { noResize: true }),
+    { template: true, noResize: true }),
   shape("fishflat", "Pipe-on-flat saddle", "∿", "sheetmetal", "pipe on flat plate cope",
     "Template for a pipe cut to sit on a flat plate (a bevelled / coped end).",
     [["d", "Pipe Ø", 90], ["rise", "Bevel rise", 25], ["skirt", "Skirt length", 30]],
@@ -234,7 +234,7 @@ export const FAB_PRESETS = [
       const s = pipeOnFlat(p.d, p.rise, p.skirt);
       return s ? [shiftContour(s.pts)].filter(Boolean) : [];
     },
-    { noResize: true }),
+    { template: true, noResize: true }),
   shape("saddlehole", "Saddle hole in a wrap", "◌", "sheetmetal", "saddle hole header wrap",
     "A rectangular wrap for the header pipe with the saddle hole cut out (the hole the branch sits in).",
     [["d", "Header pipe Ø", 120], ["len", "Wrap length along the pipe", 160], ["branch", "Branch pipe Ø", 70]],
@@ -411,7 +411,7 @@ export const FAB_PRESETS = [
       pieces.push([rectContour(Math.PI * p.d2, p.len)]);
       return packPieces(pieces).contours;
     },
-    { sheet: true, noResize: true }),
+    { template: true, sheet: true, noResize: true }),
   shape("teetemp", "Tee intersection template", "⊤", "sheetmetal", "tee intersection pipe template",
     "Tee intersection: a saddle for the branch and a header wrap with the branch hole.",
     [["d", "Branch Ø", 80], ["d2", "Header Ø", 100], ["len", "Header wrap length", 160], ["skirt", "Branch skirt", 25]],
@@ -425,7 +425,7 @@ export const FAB_PRESETS = [
       pieces.push(wrap);
       return packPieces(pieces).contours;
     },
-    { sheet: true, noResize: true }),
+    { template: true, sheet: true, noResize: true }),
   shape("ductcap", "Duct end cap with flange", "◎", "sheetmetal", "duct cap end cap flange",
     "Round duct end cap: a disc with an optional flange ring.",
     [["d", "Duct Ø", 150], ["lip", "Flange lip width (0 = disc only)", 20], ["hole", "Centre hole Ø (0 = closed cap)", 0]],
@@ -463,7 +463,7 @@ export const FAB_PRESETS = [
       pieces.push([rectContour(Math.PI * p.d2, p.len)]);
       return packPieces(pieces).contours;
     },
-    { sheet: true, noResize: true }),
+    { template: true, sheet: true, noResize: true }),
   shape("coneadapter", "Cone adapter with both flanges", "◠", "sheetmetal", "cone adapter flanges both ends",
     "Cone / reducer packed with a flange ring at each end.",
     [["d", "Big end Ø", 200], ["d2", "Small end Ø", 100], ["h", "Straight height", 120], ["lip", "Flange lip width", 22]],

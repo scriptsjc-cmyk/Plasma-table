@@ -56,6 +56,31 @@ try {
     t.check("no page error (5.1)", !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 5.2–5.4 the folded view
+  {
+    const page = await newPage(br, "d1440", { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    const view = (id) => ev(page, async (id) => {
+      const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { persist: false, autoFs: false });
+      const s = T.sketch; s.clear(); s.add(id, true); s.commit(); s.pick([s.items[0].id]); s.onSelect(); T.renderShapeForm && T.renderShapeForm();
+      await new Promise((r) => setTimeout(r, 450));
+      const cv = document.querySelector("#fold3dHost canvas.fold3d"), cap = document.querySelector("#fold3dHost .fold3d-cap");
+      let blue = 0, steel = 0;
+      if (cv && cv.width) {
+        const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data;
+        for (let i = 0; i < d.length; i += 16) { const r = d[i], g = d[i + 1], b = d[i + 2]; if (b > r + 70 && b > 90) blue++; else if (Math.abs(r - b) < 24 && r < 150) steel++; }
+      }
+      return { ok: !!(cv && cv.getClientRects().length), cap: cap ? cap.textContent : "", blue, steel };
+    }, id);
+    const pan = await view("panflash");
+    t.check("5.2 pan flashing has a folded view built from its pieces", pan.ok && pan.steel > 200 && pan.blue < 20 && /flat pattern you cut/.test(pan.cap), J(pan));
+    const fm = await view("fishmouth");
+    t.check("5.4 a pipe template says it is a template, blue on a grey pipe", fm.ok && /Template/.test(fm.cap) && /Blue: the template you cut/.test(fm.cap) && fm.blue > 200 && fm.steel > 200, J(fm));
+    const ub = await view("foldubr");
+    t.check("5.4 a plain folded part has no blue and the plain caption", ub.ok && ub.blue < 20 && /Folded view/.test(ub.cap), J(ub));
+    t.check("no page error (5.2–5.4)", !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("126 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }

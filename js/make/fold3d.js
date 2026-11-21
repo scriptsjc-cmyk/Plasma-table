@@ -259,7 +259,7 @@ export function thicken(model, t) {
       const midFaces = midE ? midE.faces : [f];
       if (midFaces.length === 2 && !isSharpPair(midFaces[0], midFaces[1])) continue;
       const a = back[i], b = back[j], c = front[j], d = front[i];
-      faces.push({ pts: [a, b, c, d], n: norm(cross(sub(b, a), sub(d, a))), holes: [], w: 0, h: 0, edge: true });
+      faces.push({ pts: [a, b, c, d], n: norm(cross(sub(b, a), sub(d, a))), holes: [], w: 0, h: 0, edge: true, ...(f.accent ? { accent: true } : {}) });
     }
     for (const ring of f.holes || []) {
       const rh = offN(ring, half), rb = offN(ring, -half), nh = ring.length;
@@ -369,6 +369,21 @@ function plateFaces(cx, cz, w, d, y = 0, ghost = true) {
   return [{ pts, n: V(0, 1, 0), holes: [], w, h: d, ghost: !!ghost }];
 }
 
+// r15 5.4: a pipe template's 3D: the piece you cut (accent) on the pipe it wraps (grey, steel).
+function asTemplate(faces) { for (const f of faces) if (!f.ghost) f.accent = true; return faces; }
+const pipeRun = (d) => Math.max(40, 0.8 * d);
+// the branch pipe carrying on past the template's straight (skirt) edge
+function branchRun(d, orig, axis, sTop, segs) {
+  const { a, xA, yA } = basisOf(axis), r = d / 2, s1 = sTop - pipeRun(d), faces = [];
+  const p = (ss, th) => add(add(orig, scl(a, ss)), add(scl(xA, r * Math.cos(th)), scl(yA, r * Math.sin(th))));
+  for (let i = 0; i < segs; i++) {                        // same facets as the branch, so the two meet edge to edge
+    const t0 = (i * 2 * Math.PI) / segs, t1 = ((i + 1) * 2 * Math.PI) / segs;
+    const pts = [p(sTop, t0), p(s1, t0), p(s1, t1), p(sTop, t1)];
+    faces.push({ pts, n: norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0]))), holes: [], w: (2 * Math.PI * r) / segs, h: sTop - s1, smooth: true });
+  }
+  return faces;
+}
+
 // Branch pipe with a 90° fishmouth onto a ghosted header.
 export function foldFishmouth(d, d2, skirt, segs = 48) {
   const R = Math.max(d2, d) / 2;
@@ -378,7 +393,7 @@ export function foldFishmouth(d, d2, skirt, segs = 48) {
   // Approach the header from above along -Y so the first hit is the top saddle.
   const origin = V(0, R * 2 + 120, 0);
   const br = fishmouthBranch(d, origin, V(0, -1, 0), headerOrig, V(0, 0, 1), R * 2, skirt, segs);
-  const faces = header.concat(br.faces);
+  const faces = header.concat(asTemplate(br.faces), branchRun(d, origin, V(0, -1, 0), br.sTop, segs));
   sitOnTable(faces);
   return { faces, panels: [{ w: Math.PI * d, h: Math.abs((br.sTop || 0) - (br.trough || 0)) || (skirt + R) }] };
 }
@@ -425,7 +440,13 @@ export function foldPipeOnFlat(d, rise, skirt, segs = 48) {
       V(r * Math.cos(t0), yTop, r * Math.sin(t0)),
     ];
     const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
-    faces.push({ pts, n, holes: [], w: (2 * Math.PI * r) / segs, h: yTop, smooth: true });
+    faces.push({ pts, n, holes: [], w: (2 * Math.PI * r) / segs, h: yTop, smooth: true, accent: true });
+  }
+  const yRun = yTop + pipeRun(d);                       // the pipe carrying on above the template (same facets, so they meet)
+  for (let i = 0; i < segs; i++) {
+    const t0 = (i * 2 * Math.PI) / segs, t1 = ((i + 1) * 2 * Math.PI) / segs;
+    const pts = [V(r * Math.cos(t0), yTop, r * Math.sin(t0)), V(r * Math.cos(t1), yTop, r * Math.sin(t1)), V(r * Math.cos(t1), yRun, r * Math.sin(t1)), V(r * Math.cos(t0), yRun, r * Math.sin(t0))];
+    faces.push({ pts, n: norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0]))), holes: [], w: (2 * Math.PI * r) / segs, h: yRun - yTop, smooth: true });
   }
   sitOnTable(faces);
   return { faces, panels: [{ w: Math.PI * d, h: yTop }] };
@@ -446,8 +467,11 @@ export function foldTee(branchD, headerD, headerLen, skirt, segs = 48) {
     return !inside(scl(mid, 1 / f.pts.length));
   });
   const reach = Math.max(Number(skirt) || 0, r + 30, 40);
-  const br = fishmouthBranch(branchD, V(R + reach + 40, yc, 0), V(-1, 0, 0), V(0, 0, 0), V(0, 1, 0), headerD, reach, segs);
-  const faces = header.concat(br.faces);
+  const bo = V(R + reach + 40, yc, 0);
+  const br = fishmouthBranch(branchD, bo, V(-1, 0, 0), V(0, 0, 0), V(0, 1, 0), headerD, reach, segs);
+  const run = pipeRun(headerD);
+  const faces = asTemplate(header).concat(asTemplate(br.faces), branchRun(branchD, bo, V(-1, 0, 0), br.sTop, segs),
+    tubeFaces(headerD, V(0, -run, 0), V(0, 1, 0), run, segs), tubeFaces(headerD, V(0, L, 0), V(0, 1, 0), run, segs));
   sitOnTable(faces);
   return { faces, panels: [{ w: Math.PI * headerD, h: L }, { w: Math.PI * branchD, h: (br.sTop - br.trough) || (skirt + R) }], openings: 1 };
 }
@@ -486,8 +510,10 @@ export function foldYBranch(branchD, headerD, len, rise, segs = 48) {
     const br = fishmouthBranch(branchD, orig, axis, V(0, 0, 0), V(0, 1, 0), headerD, skirt, segs);
     return { ...br, orig, axis };
   };
-  const a = mk(1), b = mk(-1);
-  const faces = punchBranchHoles(header, [a, b], r).concat(a.faces, b.faces);
+  const a = mk(1), b = mk(-1), run = pipeRun(headerD);
+  const faces = asTemplate(punchBranchHoles(header, [a, b], r).concat(a.faces, b.faces)).concat(
+    tubeFaces(headerD, V(0, -run, 0), V(0, 1, 0), run, segs),
+    branchRun(branchD, a.orig, a.axis, a.sTop, segs), branchRun(branchD, b.orig, b.axis, b.sTop, segs));
   sitOnTable(faces);
   return { faces, panels: [{ w: Math.PI * headerD, h: L }, { w: Math.PI * branchD, h: skirt + R }, { w: Math.PI * branchD, h: skirt + R }] };
 }
@@ -507,8 +533,10 @@ export function foldBritches(branchD, headerD, len, segs = 48) {
     const br = fishmouthBranch(branchD, orig, axis, V(0, 0, 0), V(0, 1, 0), headerD, skirt, segs);
     return { ...br, orig, axis };
   };
-  const a = mk(1), b = mk(-1);
-  const faces = punchBranchHoles(header, [a, b], r).concat(a.faces, b.faces);
+  const a = mk(1), b = mk(-1), run = pipeRun(headerD);
+  const faces = asTemplate(punchBranchHoles(header, [a, b], r).concat(a.faces, b.faces)).concat(
+    tubeFaces(headerD, V(0, -run, 0), V(0, 1, 0), run, segs),
+    branchRun(branchD, a.orig, a.axis, a.sTop, segs), branchRun(branchD, b.orig, b.axis, b.sTop, segs));
   sitOnTable(faces);
   return { faces, panels: [{ w: Math.PI * headerD, h: L }, { w: Math.PI * branchD, h: skirt + R }, { w: Math.PI * branchD, h: skirt + R }] };
 }
@@ -1079,6 +1107,11 @@ function shadeN(n) {
   return Math.max(0.2, Math.min(1.18, 0.24 + 0.66 * key + 0.22 * fill + 0.26 * spec));
 }
 
+const ACCENT_RGB = [38, 122, 196];              // the app's accent (CAD blue), a touch lighter so it still shades
+function accentRgb(c) {
+  const k = Math.max(0.3, Math.min(1.15, c));
+  return `rgb(${Math.round(ACCENT_RGB[0] * k)},${Math.round(ACCENT_RGB[1] * k)},${Math.round(ACCENT_RGB[2] * k)})`;
+}
 function steelRgb(c) {
   const k = Math.max(0.18, Math.min(1.15, c));
   return `rgb(${Math.round(STEEL[0] * k)},${Math.round(STEEL[1] * k)},${Math.round(STEEL[2] * k)})`;
@@ -1165,8 +1198,9 @@ function projectFaces(faces, cam, w, h, pad = 10) {
   return out;
 }
 
-function fillShaded(ctx, path, holes, lits, back) {
+function fillShaded(ctx, path, holes, lits, back, src) {
   if (path.length < 3) return;
+  const rgb = src && src.accent ? accentRgb : steelRgb;
   ctx.beginPath();
   path.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])));
   ctx.closePath();
@@ -1184,11 +1218,11 @@ function fillShaded(ctx, path, holes, lits, back) {
   const spread = cols[hi] - cols[lo];
   if (!back && spread > 0.04 && path[lo] && path[hi]) {
     const g = ctx.createLinearGradient(path[lo][0], path[lo][1], path[hi][0], path[hi][1]);
-    g.addColorStop(0, steelRgb(cols[lo]));
-    g.addColorStop(1, steelRgb(cols[hi]));
+    g.addColorStop(0, rgb(cols[lo]));
+    g.addColorStop(1, rgb(cols[hi]));
     ctx.fillStyle = g;
   } else {
-    ctx.fillStyle = steelRgb(back ? Math.min(0.5, (cols[0] || 0.5) * 0.72) : (cols.reduce((a, v) => a + v, 0) / cols.length));
+    ctx.fillStyle = rgb(back ? Math.min(0.5, (cols[0] || 0.5) * 0.72) : (cols.reduce((a, v) => a + v, 0) / cols.length));
   }
   ctx.fill("evenodd");
 }
@@ -1269,12 +1303,12 @@ export function drawFoldCanvas(cv, model, cam = DEFAULT_CAM) {
   if (ghostFaces.length) {
     ctx.save();
     ctx.globalAlpha = 0.32;
-    for (const p of projectFaces(ghostFaces, cam, w, h, pad)) fillShaded(ctx, p.path, p.holes, p.lits, p.back);
+    for (const p of projectFaces(ghostFaces, cam, w, h, pad)) fillShaded(ctx, p.path, p.holes, p.lits, p.back, p.src);
     ctx.restore();
     drawSharpEdges(ctx, ghostFaces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280), true);
   }
   const polys = projectFaces(solidFaces.length ? solidFaces : model.faces, cam, w, h, pad);
-  for (const p of polys) fillShaded(ctx, p.path, p.holes, p.lits, p.back);
+  for (const p of polys) fillShaded(ctx, p.path, p.holes, p.lits, p.back, p.src);
   drawSharpEdges(ctx, solidFaces.length ? solidFaces : model.faces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280));
 }
 
@@ -1286,7 +1320,7 @@ export function foldThumbSvg(model, w = 96, h = 72, cam = DEFAULT_CAM) {
   let body = "";
   for (const p of polys) {
     const ring = (pts) => pts.map((q, i) => `${i ? "L" : "M"}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(" ") + "Z";
-    const fill = steelRgb(p.back ? 0.5 : p.lit);
+    const fill = (p.src && p.src.accent ? accentRgb : steelRgb)(p.back ? 0.5 : p.lit);
     const op = p.src && p.src.ghost ? ' fill-opacity="0.32"' : "";
     body += `<path d="${ring(p.path)}${p.holes.map(ring).join("")}" fill="${fill}" fill-rule="evenodd"${op}/>`;
   }
@@ -1374,7 +1408,7 @@ export function mountFoldView(host, sh, params) {
   if (!canvas) {
     const thumb = foldThumbSvg(model, 56, 40);
     const open = phone ? (phoneFold.open ? " open" : "") : " open";
-    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="720" height="480" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><button type="button" class="fold3d-expand">Expand</button><p class="fold3d-cap">Folded view — drag to turn. The drawing is the flat pattern you cut.</p></div></details>`;
+    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="720" height="480" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><button type="button" class="fold3d-expand">Expand</button><p class="fold3d-cap"></p></div></details>`;
     canvas = host.querySelector("canvas.fold3d");
     bindOrbit(canvas);
     const box = host.querySelector("details.fold3d-box");
@@ -1400,6 +1434,11 @@ export function mountFoldView(host, sh, params) {
   }
   drawFoldCanvas(canvas, model, orbit);
   host._model = model;
+  // r15 5.4: a pipe template says what the colours are
+  const cap = host.querySelector(".fold3d-cap");
+  if (cap) cap.textContent = sh && sh.template
+    ? "Template — wrap it round the pipe to mark the cut. Blue: the template you cut; grey: the pipe. Drag to turn."
+    : "Folded view — drag to turn. The drawing is the flat pattern you cut.";
   host._sh = sh;
   host._params = params;
   const lb = typeof document !== "undefined" && document.getElementById("fold3dLightbox");
