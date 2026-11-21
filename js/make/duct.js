@@ -394,21 +394,33 @@ function lineHit(a, b, c, d) {
   return [a[0] + t * x1, a[1] + t * y1];
 }
 
-function offsetOpenOutward(chain, lip, cx, cy) {
+function insidePoly(pts, x, y) {
+  let ins = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const [xi, yi] = pts[i], [xj, yj] = pts[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) ins = !ins;
+  }
+  return ins;
+}
+// The lip is offset away from the part: each top edge's normal points off the outline (tested just beside the edge), so a
+// fan-shaped blank (whose middle is beyond its top edges) gets its lip outside, not cut into its own panels (r15 1.7).
+// seam0 / seam1 (optional): the outline points just before chain[0] and just after its last point. The lip's two ends then
+// continue those seam edges in a straight line, instead of stepping out square and leaving a notch at the seam.
+function offsetOpenOutward(chain, lip, outline, seam0 = null, seam1 = null) {
   if (chain.length < 2 || !(lip > 0)) return null;
   const nrm = (a, b) => {
     const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
     let nx = -dy / L, ny = dx / L;
-    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
-    if (nx * (cx - mx) + ny * (cy - my) > 0) { nx = -nx; ny = -ny; }
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, e = Math.min(0.5, lip / 4);
+    if (insidePoly(outline, mx + nx * e, my + ny * e)) { nx = -nx; ny = -ny; }
     return [nx, ny];
   };
   const ns = [];
   for (let i = 0; i < chain.length - 1; i++) ns.push(nrm(chain[i], chain[i + 1]));
   const out = [];
   for (let i = 0; i < chain.length; i++) {
-    if (i === 0) out.push([chain[0][0] + ns[0][0] * lip, chain[0][1] + ns[0][1] * lip]);
-    else if (i === chain.length - 1) out.push([chain[i][0] + ns[i - 1][0] * lip, chain[i][1] + ns[i - 1][1] * lip]);
+    if (i === 0) out.push(seamEnd(seam0, chain[0], chain[1], ns[0], lip));
+    else if (i === chain.length - 1) out.push(seamEnd(seam1, chain[i], chain[i - 1], ns[i - 1], lip));
     else {
       const n0 = ns[i - 1], n1 = ns[i];
       const a = chain[i - 1], b = chain[i], c = chain[i + 1];
@@ -418,6 +430,15 @@ function offsetOpenOutward(chain, lip, cx, cy) {
     }
   }
   return out;
+}
+
+// Where a lip's end meets the seam line: the lip's outer edge (end -> other, moved out by n * lip) crossed with the seam edge
+// (seam -> end) carried on. Falls back to the square end when there is no seam point or the lines barely cross.
+function seamEnd(seam, end, other, n, lip) {
+  const square = [end[0] + n[0] * lip, end[1] + n[1] * lip];
+  if (!seam) return square;
+  const hit = lineHit(seam, end, square, [other[0] + n[0] * lip, other[1] + n[1] * lip]);
+  return hit && Math.hypot(hit[0] - end[0], hit[1] - end[1]) <= 3 * lip ? hit : square;
 }
 
 function replaceChain(pts, chain, next) {
@@ -459,10 +480,10 @@ export function addFlangeLip(part, lip) {
     chain.push(seg[1]);
   }
   if (chain.length < 2) return part;
-  let cx = 0, cy = 0;
-  for (const q of part.pts) { cx += q[0]; cy += q[1]; }
-  cx /= part.pts.length; cy /= part.pts.length;
-  const outer = offsetOpenOutward(chain, lip, cx, cy);
+  const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 1e-3, n = part.pts.length;
+  const i0 = part.pts.findIndex((q) => near(q, chain[0])), i1 = part.pts.findIndex((q) => near(q, chain[chain.length - 1]));
+  const seam0 = i0 >= 0 ? part.pts[(i0 - 1 + n) % n] : null, seam1 = i1 >= 0 ? part.pts[(i1 + 1) % n] : null;
+  const outer = offsetOpenOutward(chain, lip, part.pts, seam0, seam1);
   if (!outer || outer.length < 2) return part;
   const next = [chain[0], ...outer, chain[chain.length - 1]];
   const pts = replaceChain(part.pts, chain, next);

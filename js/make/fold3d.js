@@ -691,9 +691,11 @@ export function addTopFlanges(model, a2, b2, h, lip) {
   const faces = model.faces.slice();
   const t = [[-a2 / 2, h, -b2 / 2], [a2 / 2, h, -b2 / 2], [a2 / 2, h, b2 / 2], [-a2 / 2, h, b2 / 2]];
   const out = [V(0, 0, -1), V(1, 0, 0), V(0, 0, 1), V(-1, 0, 0)];
+  // r15 1.7: each strip is mitred at both ends, so the four meet in one closed frame (strips that stopped square left
+  // open corners and looked like two flanges drawn over each other)
   for (let i = 0; i < 4; i++) {
-    const p0 = t[i], p1 = t[(i + 1) % 4], o = out[i];
-    const q0 = add(p0, scl(o, lip)), q1 = add(p1, scl(o, lip));
+    const p0 = t[i], p1 = t[(i + 1) % 4], o = out[i], prev = out[(i + 3) % 4], next = out[(i + 1) % 4];
+    const q0 = add(p0, scl(add(o, prev), lip)), q1 = add(p1, scl(add(o, next), lip));
     const pts = [p0, p1, q1, q0];
     const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
     faces.push({ pts, n, holes: [], w: mag(sub(p1, p0)), h: lip });
