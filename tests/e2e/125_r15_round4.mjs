@@ -2,7 +2,7 @@
 // Checker N1: on a phone a help line must not say the same thing twice (short label + full tip both visible).
 // Checker N2: the "Turn your phone sideways" pill never sits over the Features bottom sheet.
 import { T } from "../lib/t.mjs";
-import { startServer, launch, newPage } from "../lib/browser.mjs";
+import { startServer, launch, newPage, demoToShape } from "../lib/browser.mjs";
 
 const t = new T("125_r15_round4");
 const srv = await startServer();
@@ -231,6 +231,79 @@ try {
     const off = tg.beam && tg.pill && !(tg.pill.l < tg.beam.r && tg.beam.l < tg.pill.r && tg.pill.t < tg.beam.b && tg.beam.t < tg.pill.b);
     t.check(`4.10 ${prof}: the "Touch off, then cut starts here" tag is not on the X beam`, !!off, J(tg));
     t.check(`no page error (${prof} setup)`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
+  // ---------------------------------------------------------------- 4.25 one status pill in the header (laptop), and 4.11–4.14 Cutting / Stopped
+  const headerStatus = (page) => ev(page, () => {
+    const ids = ["connPill", "practiceChip", "stateBadge", "torchPill"];
+    const vis = (e) => !!e && !e.hidden && e.getClientRects().length > 0 && e.getBoundingClientRect().width > 2 && getComputedStyle(e).visibility !== "hidden";
+    const parts = ids.map((id) => document.getElementById(id)).filter(vis).map((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+      return { id: e.id, l: r.left, r: r.right, t: r.top, b: r.bottom, text: e.innerText.replace(/\s+/g, " ").trim(), rl: parseFloat(c.borderTopLeftRadius), rr: parseFloat(c.borderTopRightRadius) }; }).sort((a, b) => a.l - b.l);
+    const touching = parts.every((p, i) => i === 0 || (Math.abs(p.l - parts[i - 1].r) <= 1.5 && Math.abs(p.t - parts[i - 1].t) <= 2));
+    const inner = parts.every((p, i) => (i === 0 || p.rl <= 1) && (i === parts.length - 1 || p.rr <= 1));
+    return { parts: parts.map((p) => p.id + ":" + p.text), touching, inner, text: parts.map((p) => p.text).join(" "), torchUpper: parts.some((p) => /TORCH OFF/.test(p.text)) };
+  });
+  for (const prof of ["d1280x600", "d1366x640", "d1536x730"]) {
+    const page = await newPage(br, prof, { base: srv.base, consoleErrors: false });
+    await page.waitForFunction(() => window.plasmaTest);
+    await demoToShape(page, { stay: "cut" });
+    await page.waitForFunction(() => window.plasmaTest.getM().state() === "Idle", null, { timeout: 10000 }).catch(() => {});
+    await sleep(400);
+    for (const where of ["setup", "part", "make"]) {
+      if (where === "part") { await ev(page, () => window.plasmaTest.goStep(1)); await sleep(400); }
+      if (where === "make") { await ev(page, () => window.plasmaTest.showScreen("make", { force: true })); await sleep(400); }
+      const hs = await headerStatus(page);
+      t.check(`4.25 ${prof} ${where}: the header status is one pill ("● Practice · Ready"), no separate TORCH OFF`, (where === "make" && hs.parts.length === 0) || (hs.touching && hs.inner && /Practice/.test(hs.text) && /Ready/.test(hs.text) && !hs.torchUpper), J(hs));   // Make shows no machine status (by design)
+    }
+    await ev(page, () => { window.plasmaTest.showScreen("cut", { force: true }); window.plasmaTest.goStep(3); }); await sleep(500);
+    // a practice job
+    await ev(page, () => document.getElementById("btnZero").click()); await sleep(300);
+    await ev(page, () => document.querySelectorAll("#checklist input").forEach((c) => { if (!c.checked) c.click(); }));
+    await page.waitForFunction(() => !document.getElementById("btnStart").disabled, null, { timeout: 5000 }).catch(() => {});
+    await page.click("#btnStart");
+    const started = await page.waitForFunction(() => window.plasmaTest.S.cur === 4 && window.plasmaTest.S.job && window.plasmaTest.S.job.running, null, { timeout: 10000 }).then(() => true).catch(() => false);
+    t.check(`4.11 ${prof}: (setup) a practice job runs`, started);
+    await sleep(900);
+    const rd = () => ev(page, () => { const w = (q) => { const e = document.querySelector(q); return e && e.getClientRects().length ? { w: Math.round(e.getBoundingClientRect().width * 10) / 10, tab: getComputedStyle(e).fontVariantNumeric, txt: e.textContent } : null; };
+      return { pct: w("#pct"), left: w("#timeLeft"), pos: [...document.querySelectorAll("#running .runpos b")].map((b) => ({ w: Math.round(b.getBoundingClientRect().width * 10) / 10, tab: getComputedStyle(b).fontVariantNumeric, txt: b.textContent })) }; });
+    const r1 = await rd(); await sleep(1600); const r2 = await rd();
+    // 4.11 one "Torch off" status, in sentence case, not a button-like box
+    const tb = await ev(page, () => { const e = document.getElementById("torchBig"), c = getComputedStyle(e), r = e.getBoundingClientRect();
+      return { text: e.innerText.trim(), border: parseFloat(c.borderTopWidth), bg: c.backgroundColor, h: r.height, vis: r.width > 0 && e.getClientRects().length > 0 }; });
+    const hsRun = await headerStatus(page);
+    t.check(`4.11 ${prof} cutting: the torch status reads "Torch off" (sentence case) and is not a button-like box`, tb.vis && tb.text === "Torch off" && tb.border === 0 && /rgba\(0, 0, 0, 0\)|transparent/.test(tb.bg), J(tb));
+    t.check(`4.11 ${prof} cutting: no second TORCH OFF in the header`, !hsRun.torchUpper, J(hsRun));
+    // the torch-on warning is still loud in both places
+    await ev(page, () => { window.plasmaTest.S.demo.torch = true; }); await sleep(700);
+    const on = await ev(page, () => { const e = document.getElementById("torchBig"), p = document.getElementById("torchPill"), c = getComputedStyle(e);
+      return { big: e.innerText.trim(), bigBorder: parseFloat(c.borderTopWidth), pill: p.innerText.trim(), pillVis: !p.hidden && p.getClientRects().length > 0 && p.getBoundingClientRect().width > 40 }; });
+    t.check(`4.11 ${prof} cutting, torch lit: TORCH ON is loud in the panel and shows in the header`, on.big === "TORCH ON" && on.bigBorder >= 2 && on.pill === "TORCH ON" && on.pillVis, J(on));
+    await ev(page, () => { window.plasmaTest.S.demo.torch = false; }); await sleep(500);
+    // 4.12 fixed-width, tabular readouts
+    const same = (a, b) => !!a && !!b && Math.abs(a.w - b.w) <= 0.6;
+    t.check(`4.12 ${prof} cutting: % done, time left and X / Y / Z use tabular numbers`, [r1.pct, r1.left, ...r1.pos].every((x) => x && /tabular-nums/.test(x.tab)), J(r1));
+    t.check(`4.12 ${prof} cutting: the readouts keep their width as the numbers change`, same(r1.pct, r2.pct) && same(r1.left, r2.left) && r1.pos.length === 3 && r1.pos.every((p, i) => same(p, r2.pos[i])), J({ r1, r2 }));
+    // 4.13 the demo hint is for Setup only
+    const hint = () => ev(page, () => ["fit", "fitChip"].map((id) => { const e = document.getElementById(id); return e && e.getClientRects().length && /Demo:/.test(e.textContent) ? id : null; }).filter(Boolean));
+    const hRun = await hint();
+    t.check(`4.13 ${prof} cutting: no "Demo: tap here…" hint`, hRun.length === 0, J(hRun));
+    // 4.14 Stopped: the actions come straight after the message, one line each
+    await page.click("#btnStop"); await sleep(1500);
+    const hStop = await hint();
+    t.check(`4.13 ${prof} stopped: no "Demo: tap here…" hint`, hStop.length === 0, J(hStop));
+    const sp = await ev(page, () => {
+      const vis = (e) => !!e && e.getClientRects().length > 0 && e.getBoundingClientRect().height > 0;
+      const btns = [...document.querySelectorAll("#doneActions button")].filter(vis);
+      const lines = btns.map((b) => { const c = getComputedStyle(b), lh = parseFloat(c.lineHeight) || parseFloat(c.fontSize) * 1.25, rg = document.createRange(); rg.selectNodeContents(b);
+        const tops = [...rg.getClientRects()].filter((r) => r.width > 1).map((r) => r.top + r.height / 2).sort((a, b) => a - b);
+        const lines = tops.reduce((n, y, i) => n + (i && y - tops[i - 1] > lh * 0.6 ? 1 : 0), tops.length ? 1 : 0); return { t: b.innerText.trim(), lines, h: Math.round(b.getBoundingClientRect().height), lh }; });
+      const msg = [...document.querySelectorAll("#done > h2, #done > p, #done > div:not(#doneActions)")].filter(vis);
+      const msgB = Math.max(...msg.map((e) => e.getBoundingClientRect().bottom)), actT = Math.min(...btns.map((b) => b.getBoundingClientRect().top));
+      return { lines, gap: Math.round(actT - msgB), n: btns.length };
+    });
+    t.check(`4.14 ${prof} stopped: every action button is on one line`, sp.n >= 2 && sp.lines.every((l) => l.lines === 1), J(sp));
+    t.check(`4.14 ${prof} stopped: no big empty gap between the message and the actions (48 px or less)`, sp.gap >= 0 && sp.gap <= 48, J(sp));
+    t.check(`no page error (${prof} cutting)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
 } catch (e) {
