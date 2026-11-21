@@ -125,6 +125,26 @@ try {
     t.check("no page error (6.5)", !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 6.2 + 6.4 in the app's job: spiral hole leads, holes before the outline
+  {
+    const page = await newPage(br, "d1440", { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    const r = await ev(page, async () => {
+      const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { persist: false, autoFs: false });
+      T.S.material = "Mild steel"; T.S.thickness = 3;
+      const s = T.sketch; s.clear(); s.add("flange", true); s.commit(); s.pick([s.items[0].id]); s.onSelect();
+      T.useShape(); await new Promise((r) => setTimeout(r, 300));
+      const P = T.S.prepared; if (!P) return null;
+      // arcs between a pierce and its torch-off: a spiral hole has 3 (two lead arcs + the circle), a plain one 1
+      const arcsAfter = (c) => { let n = 0; for (let i = c.line; i < P.lines.length && P.lines[i] !== "M5"; i++) if (/^G[23] /.test(P.lines[i])) n++; return n; };
+      const spirals = P.cutIndex.filter((c) => arcsAfter(c) >= 3).length;
+      return { cuts: P.cutInfo.length, holes: P.cutInfo.filter((c) => c.hole).length, lastIsOutline: !P.cutInfo[P.cutInfo.length - 1].hole, spirals, preview: P.preview.cuts.length };
+    });
+    t.check("6.2 a flange's round holes are cut with a spiral lead-in in the job", !!r && r.holes >= 5 && r.spirals >= r.holes, J(r));
+    t.check("6.4 holes first, the outline last", !!r && r.lastIsOutline, J(r));
+    t.check("no page error (6.2 / 6.4)", !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("127 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
