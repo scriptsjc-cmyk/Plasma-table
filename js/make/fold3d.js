@@ -1,7 +1,7 @@
 // Fold models and a small offline 3D viewer for formed / bent preset parts.
 // The flat pattern from shape.make() is still what gets cut. This only visualises the folded result.
 // No external library: painter's-algorithm polygons on canvas (and the same projection as SVG thumbs).
-import { segmentsFor, pipeSaddle } from "./duct.js";
+import { segmentsFor, pipeSaddle, coneDevelopment } from "./duct.js";
 import { pipeEnds, flangeOn, flangeDims } from "./pipeflanges.js";
 import { FOLD } from "./flat3d.js";
 import { jobThickness } from "./bends.js";
@@ -693,6 +693,32 @@ export function foldElbow(d, bendDeg, pieces, segs = 32, clr, d2) {
   // Leave mid-surface unshifted so endFrames (flanges) stay on the openings; thicken() sits the view.
   return { faces, panels: [{ w: Math.PI * (R0 + R1), h: totalL }] };
 }
+// r15 7.5: the reducing elbow from its cut pieces: the big end gore (one square end, one mitred end, α = bend / 4), the
+// square-ended cone, and the small end gore. Square end to square end is the only way they join, so the 3D is that run
+// along +Y with the two mitres on the outer ends (extrados on +X). (It used to bend a tapering 3-gore elbow that is not cut.)
+export function redElbowDims(p) {
+  const ta = Math.tan((((Number(p.bend) || 90) * Math.PI) / 180) / 4);
+  const clr = Number(p.clr) > 0 ? Number(p.clr) : 1.5 * p.d, R = p.d / 2, r = (p.d2 || p.d) / 2;
+  const cd = coneDevelopment(p.d, p.d2 || p.d, p.h);
+  const hc = cd && cd.Ro > cd.Ri + 1 && cd.Ro <= 2500 ? p.h : 0;          // the cut has no cone otherwise
+  return { ta, R, r, hc, L1: Math.max(clr, R + 1) * ta, L2: Math.max(clr, r + 1) * ta };
+}
+export function foldRedElbow(p, segs = 48) {
+  const { ta, R, r, hc, L1, L2 } = redElbowDims(p), faces = [];
+  const band = (ra, rb, ya, yb, gore) => {
+    for (let i = 0; i < segs; i++) {
+      const a0 = (i * 2 * Math.PI) / segs, a1 = ((i + 1) * 2 * Math.PI) / segs;
+      const at = (rad, a, y) => V(rad * Math.cos(a), y(a, rad), rad * Math.sin(a));
+      const pts = [at(ra, a0, ya), at(ra, a1, ya), at(rb, a1, yb), at(rb, a0, yb)];
+      const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+      faces.push({ pts, n, holes: [], w: (Math.PI * (ra + rb)) / segs, h: Math.abs(pts[3][1] - pts[0][1]), smooth: true, gore });
+    }
+  };
+  band(R, R, (a, rad) => -(L1 + rad * ta * Math.cos(a)), () => 0, 0);
+  if (hc > 0) band(R, r, () => 0, () => hc, 1);
+  band(r, r, () => hc, (a, rad) => hc + L2 + rad * ta * Math.cos(a), 2);
+  return { faces, panels: [{ w: Math.PI * 2 * R, h: L1 }, ...(hc > 0 ? [{ w: Math.PI * (R + r), h: Math.hypot(hc, R - r) }] : []), { w: Math.PI * 2 * r, h: L2 }] };
+}
 // r15 7.5: built from the cut pieces: two cheeks (sectors from the throat radius out by the duct height, 16 steps like the
 // cut) set the cheek spacing w apart, and the throat and back wrappers rolled between them. (It used to bend a w-deep,
 // h-high section, sizes swapped, with straight stubs on both ends that are not cut.)
@@ -882,7 +908,7 @@ export const FOLD_MODELS = {
   elbow4: (p) => foldElbow(p.d, p.bend, p.n || 4, 48, p.clr),
   elbow5: (p) => foldElbow(p.d, p.bend, p.n || 5, 48, p.clr),
   elbow45: (p) => foldElbow(p.d, p.bend, p.n || 3, 48, p.clr),
-  redelbow: (p) => foldElbow(p.d, p.bend, 3, 32, p.clr, p.d2),
+  redelbow: (p) => foldRedElbow(p),
   rectelbow: (p) => foldRectElbow(p.w, p.h, p.r, p.bend),
   scoop: (p) => foldScoop(p.w, p.d, p.h, p.r),
   valleyflash: (p) => foldAngle(p.len, p.leg, p.leg),
@@ -967,8 +993,14 @@ function endFrames(id, p) {
     case "elbow3":
     case "elbow4":
     case "elbow5":
-    case "elbow45":
-    case "redelbow": {
+    case "redelbow": {   // r15 7.5: the two mitred ends of the gore – cone – gore run (see foldRedElbow)
+      const { ta, hc, L1, L2 } = redElbowDims(p), k = Math.hypot(1, ta);
+      return [
+        { origin: V(0, -L1, 0), xA: V(1 / k, -ta / k, 0), yA: V(0, 0, 1), outward: V(-ta / k, -1 / k, 0) },
+        { origin: V(0, hc + L2, 0), xA: V(1 / k, ta / k, 0), yA: V(0, 0, 1), outward: V(-ta / k, 1 / k, 0) },
+      ];
+    }
+    case "elbow45": {
       const bend = ((p.bend || 90) * Math.PI) / 180;
       const rad = (Number(p.clr) > 0 ? Number(p.clr) : 1.5 * p.d);
       const o2 = V(rad * Math.sin(bend), rad * (1 - Math.cos(bend)), 0);
