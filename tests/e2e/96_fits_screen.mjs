@@ -143,9 +143,7 @@ for (const [size, prof] of SIZES.filter(([sz]) => !ONLY.length || ONLY.includes(
     const holes = await ev(page, () => { const host = document.getElementById("srcShape"); if (!host) return "(no inspector)";
       const tabs = host.querySelector(".insp-tabs"); let txt = host.innerText; if (tabs) txt = txt.replace(tabs.innerText, "");
       return host.dataset.insp + ": " + txt.trim().replace(/\s+/g, " ").slice(0, 160); });
-    // TODO(r15 Round 2, R15-HOLES): the Holes list is built in Round 2. Until then this runs but is reported as KNOWN, so 113
-    // can gate everything else; when Round 2 lands it prints "now PASSES" and this goes back to t.check (same condition).
-    t.known(`${size} make-advanced-plate: the Holes tab lists the plate's holes`, /^holes: /.test(holes) && /hole/i.test(holes) && /\d/.test(holes) && !/no holes/i.test(holes), "R15-HOLES", holes);
+    t.check(`${size} make-advanced-plate: the Holes tab lists the plate's holes`, /^holes: /.test(holes) && /hole/i.test(holes) && /\d/.test(holes) && !/no holes/i.test(holes), holes);
     await check(page, size, "make-holes-tab", stopSamples);
     await ev(page, () => { const b = document.querySelector('[data-qb="more"]'); if (b) b.click(); });
     await sleep(250);
