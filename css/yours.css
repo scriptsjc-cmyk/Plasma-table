@@ -558,3 +558,8 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-search > button,
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-search input { height: 28px; min-height: 28px; }
 }
+/* r15 4.18/4.20: on a very short laptop screen (≈600 px) the panel's rows really are 28 px (the rail's !important
+   --tool-h height had been winning over the 28 px above), so every tool still fits over the drawing */
+@media (min-width: 900px) and (max-height: 640px) and (hover: hover) and (pointer: fine) {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list button { --tool-h: 28px; }
+}

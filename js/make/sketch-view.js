@@ -266,9 +266,17 @@ export class ViewMethods {
         this.dimHits.push({ ...hr, kind: "h", it: one, label: "Height (mm)" });
       }
       if (one && this.opts.pro && !this.layout) {
-        const xr = this.tag(ctx, `X ${r1(b[0])}`, x0, y1 + 20, C.partLine);
+        // r15 4.17: the X / Y chips sit under the part; when the part fills the view to the bottom they go just inside
+        // its bottom-left corner instead, never on the outline
+        const [, ch] = this.size(), below = y1 + 22 + 14 + 34 <= ch;
+        const cy = below ? y1 + 22 : y1 - 22, cx = below ? x0 : x0 + 30;
+        ctx.font = "600 14px Barlow, system-ui";
+        const xt = `X ${r1(b[0])}`, xw = Math.max(44, ctx.measureText(xt).width + 16);
+        const xr = this.tag(ctx, xt, below ? cx : x0 + 8 + xw / 2, cy, C.partLine);
         this.dimHits.push({ ...xr, kind: "x", it: one, label: "Left edge X (mm)" });
-        const yr = this.tag(ctx, `Y ${r1(b[1])}`, x0 + 80, y1 + 20, C.partLine);
+        ctx.font = "600 14px Barlow, system-ui";
+        const yt = `Y ${r1(b[1])}`, yw = Math.max(44, ctx.measureText(yt).width + 16);
+        const yr = this.tag(ctx, yt, xr.x + xr.w + 8 + yw / 2, cy, C.partLine);
         this.dimHits.push({ ...yr, kind: "y", it: one, label: "Bottom edge Y (mm)" });
       }
       if (one && !this.layout && one.feats) drawFeatureHandles(this, ctx, S, C, one);   // r15 2.14: handles at feature centres

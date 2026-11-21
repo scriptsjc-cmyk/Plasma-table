@@ -2392,3 +2392,29 @@ body.running-job #featSheet, body.job-live #featSheet { display: none; }
 
 /* r15 (checker N2): the "Turn your phone sideways" pill never sits over the Features bottom sheet while it is open */
 body:has(#featSheet:not([hidden])) #sidewaysHint { display: none; }
+
+/* ---- r15 4.15–4.21: Make a part, visual polish ---- */
+/* 4.15 versions of this shape: two columns, the whole name (two lines if it must) */
+body.pro-mode[data-screen="make"] #srcShape .varrow,
+body.advanced-mode[data-screen="make"] #srcShape .varrow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+body.pro-mode[data-screen="make"] #srcShape .varrow button,
+body.advanced-mode[data-screen="make"] #srcShape .varrow button { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+/* 4.19 Simple: Remove is a quiet text button under the main ones (the header's Delete is the main one) */
+body.beginner[data-screen="make"] #srcShape .skbtns.bigbtns button[data-sk="remove"],
+.shapeform button.quiet[data-sk="remove"], button[data-sk="remove"].quiet {
+  background: transparent; border-color: transparent; box-shadow: none; color: var(--muted); font-size: var(--fs-s);
+  width: auto; justify-self: start; padding: 0 8px; min-height: 32px;
+}
+body.beginner[data-screen="make"] #srcShape .skbtns.bigbtns button[data-sk="remove"]:hover:not(:disabled) { background: var(--accent-weak); color: var(--text); }
+/* 4.20 the header's Select / Snap menus are ordinary weight (they are menus, not the main action) */
+body[data-screen="make"] #btnSelectMenu, body[data-screen="make"] #btnSnapMenu { font-weight: 500; }
+/* 4.21 preset names: the whole name, on up to two lines */
+.presetbrowser .pb-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; }
+/* 4.18 the Arc ▾ list beside the rail */
+.qb-arcpop { z-index: var(--z-popover); display: flex; flex-direction: column; gap: 4px; padding: 6px; min-width: 170px;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 10px 28px color-mix(in srgb, var(--c-black) 18%, transparent); }
+.qb-arcpop.hidden { display: none; }
+.qb-arcpop button { display: flex; align-items: center; gap: 8px; justify-content: flex-start; min-height: 36px; padding: 4px 10px; font-size: var(--fs-s); text-align: left; }
+.qb-arcpop button i { font-style: normal; width: 20px; text-align: center; }
+.qb-arcpop button kbd { margin-left: auto; }
+#quickBar .qb-arc-btn i small { font-size: var(--fs-xs); margin-left: 1px; vertical-align: top; }

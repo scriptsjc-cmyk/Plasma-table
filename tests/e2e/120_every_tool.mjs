@@ -150,10 +150,17 @@ async function reset(page) {
   await sleep(150);
 }
 
-// Open a tool by a real click: on the rail or header, else in the "⋯ More" panel.
+// Open a tool by a real click: on the rail or header (or the rail's Arc ▾ list), else in the "⋯ More" panel.
 async function clickTool(page, id) {
   const visible = () => page.locator(`[data-qb="${id}"]:visible`).first();
   let where = "rail";
+  // r15 4.18: 3-point arc, Tangent arc and Spline sit under the rail's one "Arc ▾" button
+  const arcBtn = page.locator('#quickBar [data-qb="arcmenu"]:visible').first();
+  if (!(await visible().count()) && (await arcBtn.count()) && (await page.locator(`#qbArcPop [data-qb="${id}"]`).count())) {
+    await arcBtn.click({ timeout: 2000 }).catch(() => {});
+    await sleep(150);
+    where = "Arc ▾";
+  }
   if (!(await visible().count())) {
     const more = page.locator('[data-qb="more"]:visible').first();
     if (!(await more.count())) return { ok: false, why: "no ⋯ More button" };

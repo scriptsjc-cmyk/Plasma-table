@@ -32,12 +32,47 @@ const TOOL_SYNONYMS = {
   arc3: "3-point arc three point arc",
   arctan: "tangent arc",
   spline: "curve spline path",
+  sliver: "merge slivers sliver gaps",          // r15 4.22: the old names still find the tools
+  drivedim: "hole distance dimension drive",
 };
 const RAIL_GROUP = {
   presets: "Draw", rect: "Draw", disc: "Draw", draw: "Draw", arc3: "Draw", arctan: "Draw", spline: "Draw", etch: "Draw", measure: "Draw", snap: "Draw",
   join: "Edit", subtract: "Edit", offset: "Edit", fillet: "Edit", trim: "Edit",
 };
 export const PRIMARY_TOOL_IDS = ["undo", "redo", "snap", "presets", "rect", "disc", "draw", "arc3", "arctan", "spline", "etch", "measure", "join", "subtract", "offset", "fillet", "trim", "fit", "dup", "del"];
+
+// r15 4.18: 3-point arc, Tangent arc and Spline look alike, so the rail has one "Arc ▾" button that opens them
+const ARC_TOOLS = ["arc3", "arctan", "spline"];
+let arcOpen = false;
+function arcPopEl() {
+  let pop = document.getElementById("qbArcPop");
+  if (!pop) {
+    pop = document.createElement("div"); pop.id = "qbArcPop"; pop.className = "qb-arcpop hidden"; pop.setAttribute("role", "menu"); pop.setAttribute("aria-label", "Arcs and curves");
+    document.body.appendChild(pop);
+    pop.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-qb]"); if (!b) return;
+      e.stopPropagation();
+      toggleArc(false);
+      if (!b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(b.dataset.qb);
+    });
+    document.addEventListener("click", (e) => { if (!arcOpen) return; const btn = document.querySelector('#quickBar [data-qb="arcmenu"]'); if (pop.contains(e.target) || (btn && btn.contains(e.target))) return; toggleArc(false); });
+    document.addEventListener("keydown", (e) => { if (arcOpen && e.key === "Escape") toggleArc(false); });
+  }
+  return pop;
+}
+export function toggleArc(force) {
+  arcOpen = force == null ? !arcOpen : !!force;
+  const pop = arcPopEl(), btn = document.querySelector('#quickBar [data-qb="arcmenu"]');
+  pop.classList.toggle("hidden", !arcOpen);
+  if (btn) { btn.setAttribute("aria-expanded", arcOpen ? "true" : "false"); btn.classList.toggle("open", arcOpen); }
+  if (arcOpen && btn) {
+    const r = btn.getBoundingClientRect();
+    Object.assign(pop.style, { position: "fixed", left: Math.round(r.right + 6) + "px", top: Math.round(r.top) + "px" });
+    const pr = pop.getBoundingClientRect();
+    if (pr.bottom > innerHeight - 8) pop.style.top = Math.max(8, Math.round(innerHeight - 8 - pr.height)) + "px";
+  }
+  return arcOpen;
+}
 
 export function moreToolsOpen() { return moreOpen; }
 export function toggleMore(force) {
@@ -189,10 +224,10 @@ export function renderQuickBar() {
     const title = hint ? `${long} (${hint})` : long;
     const kbd = hint ? ` <kbd>${esc(hint)}</kbd>` : "";
     const why = dis[id] ? ` – ${whyOff(id)}` : "";
-    return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" ? " danger" : ""}" ${dis[id] ? 'aria-disabled="true"' : ""} data-why="${esc(dis[id] ? whyOff(id) : "")}" data-label="${esc(label)}" title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
+    return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" && !dis[id] ? " danger" : ""}" ${dis[id] ? 'aria-disabled="true"' : ""} data-why="${esc(dis[id] ? whyOff(id) : "")}" data-label="${esc(label)}" title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
   };
   paintPinnedTools(B, wrap, qb);
-  if (!on) { qb.innerHTML = ""; refreshScrollRows(); return; }
+  if (!on) { qb.innerHTML = ""; if (arcOpen) toggleArc(false); refreshScrollRows(); return; }
   const q = paletteQ;
   const searchHtml = `<div class="qb-search"><button type="button" id="qbSearchBtn" class="qb-search-btn" aria-label="Search tools" title="Search tools (Ctrl+K or /)">🔍</button><input id="qbSearch" type="search" placeholder="Search tools" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`;
   const parts = [searchHtml];
@@ -216,15 +251,33 @@ export function renderQuickBar() {
     const primary = chosen.filter((id) => PRIMARY_TOOL_IDS.includes(id));
     // r15 (3.3): More lists every tool that is not on the rail (Ungroup, Align right, Distribute, Hole distance… were
     // in no place you could click unless you customised the toolbar first)
-    const onRail = new Set(primary);
+    const arcs = primary.filter((id) => ARC_TOOLS.includes(id));
+    const grouped = arcs.length >= 2;                     // r15 4.18: two or more of them -> one Arc ▾ button
+    // r15 4.20: where the header has its Snap ▾ menu, Snap is set there only (not a rail button too); it stays in ⋯ More and the search
+    const sm = document.getElementById("btnSnapMenu"), headerSnap = !!(sm && sm.getClientRects().length);
+    // the arcs are reached from the rail's Arc ▾, so ⋯ More doesn't list them again (it must still fit over the drawing)
+    const onRail = new Set(primary.filter((id) => !(headerSnap && id === "snap")));
     // Draw · Edit · Arrange, split by thin dividers (r13 #11)
-    let lastRail = null;
+    let lastRail = null, arcDone = false;
     for (const id of primary) {
+      if (headerSnap && id === "snap") continue;
+      if (grouped && arcs.includes(id)) {
+        if (arcDone) continue;
+        arcDone = true;
+        const live = arcs.find((a) => sketch.tool === a);
+        if (lastRail && lastRail !== "Draw") parts.push(`<span class="qb-div" role="separator" aria-hidden="true"></span>`);
+        lastRail = "Draw";
+        const ic = (toolInfo(live || arcs[0]) || {}).icon || "⌓";
+        parts.push(`<button type="button" data-qb="arcmenu" class="qb-arc-btn${live ? " on" : ""}" aria-haspopup="menu" aria-expanded="${arcOpen ? "true" : "false"}" aria-controls="qbArcPop" title="Arcs and curves: ${esc(arcs.map((a) => infoOf(a).label).join(", "))}" aria-label="Arcs and curves"><i>${ic}<small aria-hidden="true">▾</small></i><span>Arc ▾</span></button>`);
+        continue;
+      }
       const g = RAIL_GROUP[id] || "Arrange";
       if (lastRail && g !== lastRail) parts.push(`<span class="qb-div" role="separator" aria-hidden="true"></span>`);
       lastRail = g;
       addId(id);
     }
+    arcPopEl().innerHTML = grouped ? arcs.map((a) => { const n = infoOf(a); return B(a, n.icon, n.label); }).join("") : "";
+    if (!grouped && arcOpen) toggleArc(false);
     parts.push(`<button type="button" data-qb="more" class="qb-more-btn${moreOpen ? " on" : ""}" aria-expanded="${moreOpen ? "true" : "false"}" aria-controls="qbMorePop" title="More tools" aria-label="More tools"><i>⋯</i><span>More</span></button>`);
     // one block per tool group, so a short group never splits across the panel's columns (a long one may)
     const extra = [];
@@ -288,6 +341,7 @@ export function quickAction(a) {
   switch (a) {
     case "presets": openPresetBrowser(); break;
     case "more": toggleMore(); return;
+    case "arcmenu": toggleArc(); return;
     case "customise": openToolbarCustom(); toggleMore(false); break;
     // r15 3.6: the Rectangle / Circle buttons draw, like the R / C keys (click-click or drag); a double-click drops a standard one
     case "rect": case "disc": {
@@ -480,10 +534,11 @@ export function bindQuickBar() {
     const b = e.target.closest("[data-qb]");
     if (!b) return;
     const id = b.dataset.qb;
-    if (id === "more") e.stopPropagation();
+    if (id === "more" || id === "arcmenu") e.stopPropagation();
     if (Date.now() < (S.uiBlockUntil || 0) && id !== "undo" && id !== "redo") return;
     if (!b.disabled && b.getAttribute("aria-disabled") !== "true") quickAction(id);
     if (id !== "more") { paletteQ = ""; toggleMore(false); }
+    if (id !== "arcmenu" && arcOpen) toggleArc(false);
   });
   document.addEventListener("click", (e) => {
     if (!moreOpen) return;
