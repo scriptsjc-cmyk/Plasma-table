@@ -3,6 +3,7 @@ import { bbox, classifyContainment, classifyLoops, expandContour, pointInPoly } 
 import { contoursToEditable } from "./editable.js";
 import { def, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { makeShape } from "./shapes.js";
+import { flattenFeatures } from "./part-features.js";
 
 export class GeomMethods {
   baseContours(it) {
@@ -71,7 +72,7 @@ export class GeomMethods {
     return 1;
   }
   contoursOf(it) {
-    const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0]);
+    const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0, it.feats || 0]);
     if (it._key === key) return it._cs;
     let cs;
     try { cs = this.baseContours(it); } catch (e) { cs = []; }
@@ -79,6 +80,7 @@ export class GeomMethods {
     if (cs.length) {
       const hs = this.holeStart(it);
       cs = cs.map((c, i) => (i >= hs && it.holes && it.holes[i] ? mapC(c, ([x, y]) => [x + it.holes[i][0], y + it.holes[i][1]]) : c));
+      if (it.feats && it.feats.length && !wholeSet(it.type)) { const o = bbox([cs[0]]); cs = cs.concat(flattenFeatures(it.feats, o[0], o[1])); }   // r15 Round 2: features flatten to plain contours
       if (it.fx) cs = cs.map((c) => { const m = mapC(c, ([x, y]) => [-x, y]); m.pts.reverse(); return m; });
       if (it.fy) cs = cs.map((c) => { const m = mapC(c, ([x, y]) => [x, -y]); m.pts.reverse(); return m; });
       if (it.rot) cs = cs.map((c) => mapC(c, (p) => rot(p, it.rot)));

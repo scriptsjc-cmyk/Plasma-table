@@ -15,6 +15,7 @@ import { InputMethods } from "./sketch-input.js";
 import { TrimMethods } from "./sketch-trim.js";
 import { Stage6Methods } from "./sketch-stage6.js";
 import { installLayoutLock } from "./sketch-lock.js";
+import { sanitizeFeature } from "./part-features.js";
 import { clickVerb } from "../ui/laptop.js";
 export { LAYOUT_LOCK_MSG } from "./sketch-lock.js";
 
@@ -80,6 +81,7 @@ export class Sketch {
     if (it.hide) out.hide = true;
     if (it.name) out.name = String(it.name).slice(0, 80);
     if (it.op === "score" || it.op === "mark") out.op = it.op;
+    if (Array.isArray(it.feats) && it.feats.length) { const fs = it.feats.map(sanitizeFeature).filter(Boolean); if (fs.length) out.feats = fs; }
     if (it.type === "custom") {
       const cs = it.shape && Array.isArray(it.shape.cs) ? it.shape.cs : null;
       if (!cs || !cs.length) return null;

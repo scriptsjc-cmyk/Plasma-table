@@ -5,6 +5,7 @@ import { fitContour } from "../core/arcs.js";
 import { nestUnitsSync, turnAngles, ringsBox } from "../cut/nest.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
+import { moveFeatureBy } from "./part-features.js";
 
 export class EditMethods {
   // Turn 90 keeps each shape's bottom-left and, when width/height exist, swaps them
@@ -803,6 +804,8 @@ export class EditMethods {
   moveHole(it, i, dx, dy) {          // dx, dy on screen -> the shape's own frame
     let [lx, ly] = rot([dx, dy], -(it.rot || 0));
     if (it.fx) lx = -lx;
+    const c = this.contoursOf(it)[i];
+    if (c && c.feat && moveFeatureBy(it, c.feat, lx, ly)) return;   // r15 Round 2: a feature moves as one, from its centre
     const h = (it.holes = it.holes || {});
     const o = h[i] || [0, 0];
     h[i] = [r1(o[0] + lx), r1(o[1] + ly)];
