@@ -438,27 +438,37 @@ export function foldFishmouth(d, d2, skirt, segs = 48) {
 }
 
 // Header wrap with a saddle hole and a ghosted branch sitting in it.
-export function foldSaddleHole(d, len, branch, segs = 48) {
-  const R = Math.max(4, d / 2), r = Math.max(4, branch / 2);
-  const L = Math.max(len, 2 * r + 20);
-  const yc = L / 2;
-  // Header along +Y, centre on Y. Hole on the +X side.
-  const raw = tubeFaces(d, V(0, 0, 0), V(0, 1, 0), L, segs);
-  const inside = (p) => {
-    const dy = p[1] - yc, dz = p[2];
-    return (dy * dy + dz * dz) < (r * r - 0.8) && p[0] > 0;
+// r15 7.5: the wrap exactly as cut (πd × len, the round hole of the branch Ø in its middle) rolled onto the header. Away
+// from the hole one facet per step round; round the hole small cells, kept when their middle is outside the cut circle,
+// so the hole is the cut hole's size. The hole is declared as an opening (its edge is the cells left out).
+export function foldSaddleHole(d, len, branch, segs = 96) {
+  const R = Math.max(4, d / 2), r = Math.max(2, branch / 2), w = Math.PI * d, L = Math.max(1, len);
+  const hole = 2 * r + 8 <= Math.min(w, L);                 // the cut has no hole otherwise
+  const s0 = w / 2, yc = L / 2, faces = [];
+  // flat (s along the wrap, y along the pipe) → header along +Y, the hole's middle (s = w/2) facing +X
+  const P = (sv, y) => { const th = (sv / w) * 2 * Math.PI - Math.PI; return V(R * Math.cos(th), y, R * Math.sin(th)); };
+  const quad = (sa, sb, ya, yb) => {
+    const pts = [P(sa, ya), P(sb, ya), P(sb, yb), P(sa, yb)], n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+    const out = norm(V(pts[0][0] + pts[1][0], 0, pts[0][2] + pts[1][2]));
+    faces.push(dot(n, out) >= 0 ? { pts, n, holes: [], w: sb - sa, h: yb - ya, smooth: true } : { pts: pts.slice().reverse(), n: scl(n, -1), holes: [], w: sb - sa, h: yb - ya, smooth: true });
   };
-  const faces = raw.filter((f) => {
-    const mid = f.pts.reduce((s, q) => add(s, q), V(0, 0, 0));
-    const c = scl(mid, 1 / f.pts.length);
-    return !inside(c);
-  });
-  // Ghost branch on the +X side, sitting in the hole (approach from +X, skirt away).
+  const ds = w / segs, rows = Math.max(12, Math.ceil((2 * r) / 3));
+  for (let i = 0; i < segs; i++) {
+    const sa = i * ds, sb = sa + ds;
+    if (!hole || sb <= s0 - r || sa >= s0 + r) { quad(sa, sb, 0, L); continue; }
+    const subs = 2, dy = (2 * r) / rows;
+    quad(sa, sb, 0, yc - r); quad(sa, sb, yc + r, L);
+    for (let k = 0; k < subs; k++) for (let j = 0; j < rows; j++) {
+      const a0 = sa + (k * ds) / subs, a1 = a0 + ds / subs, y0 = yc - r + j * dy, y1 = y0 + dy;
+      const cs = (a0 + a1) / 2 - s0, cy = (y0 + y1) / 2 - yc;
+      if (cs * cs + cy * cy >= r * r) quad(a0, a1, y0, y1);
+    }
+  }
+  // ghost branch on the +X side, sitting in the hole
   const reach = Math.max(40, r * 1.6);
-  const br = fishmouthBranch(branch, V(R + reach + 40, yc, 0), V(-1, 0, 0), V(0, 0, 0), V(0, 1, 0), d, reach, segs, { ghost: true });
-  const out = faces.concat(br.faces);
+  const out = faces.concat(hole ? fishmouthBranch(branch, V(R + reach + 40, yc, 0), V(-1, 0, 0), V(0, 0, 0), V(0, 1, 0), d, reach, 48, { ghost: true }).faces : []);
   sitOnTable(out);
-  return { faces: out, panels: [{ w: Math.PI * d, h: L }], openings: 1 };   // the hole is the facets left out
+  return { faces: out, panels: [{ w, h: L }], openings: hole ? 1 : 0 };
 }
 
 // Pipe with a bevelled / coped end sitting on a ghosted plate.
