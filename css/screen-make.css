@@ -2333,3 +2333,13 @@ body.advanced-mode[data-screen="make"] #srcShape[data-insp="holes"] > .featpanel
   background: var(--warn-bg); color: var(--warn-text); flex: 0 0 auto; }
 .featpanel .feat-adopt[hidden] { display: none; }
 .featpanel .feat-adopt button { min-height: 32px; }
+
+/* r15 2.16: "Put N loose holes into this part?" - a small non-blocking bar at the top of the Make canvas (placed by JS from the canvas box). Make screen only,
+   never while a job runs (the JS checks too). */
+#looseOffer { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); z-index: var(--z-float); display: flex; align-items: center;
+  gap: 8px; max-width: calc(100% - 16px); padding: 6px 8px 6px 12px; border: 1px solid var(--line-strong, var(--line)); border-radius: var(--r, 6px);
+  background: var(--card); color: var(--text); box-shadow: var(--shadow); font-size: var(--fs-s); }
+#looseOffer button { min-height: 32px; padding: 0 12px; }
+body:not([data-screen="make"]) #looseOffer,
+body.running-job #looseOffer,
+body.job-live #looseOffer { display: none; }

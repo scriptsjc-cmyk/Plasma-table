@@ -50,6 +50,7 @@ import { bindProTools, renderProTools, setShapeFs } from "./make/protools.js";
 import { applyMatchingPreset, applyPresetRow, bindMaterial, defaultSpeed, renderMaterials, row, saveSpeed, setSpeed } from "./cut/material.js";
 import { bindJog, bindJogKeys, mountJogPads } from "./machine/jog.js";
 import { bindGate, paintWhy, refreshGate } from "./ui/gate.js";
+import { drawingKey, offerLooseHoles } from "./make/part-features-ui.js";
 import { addPartsFlow, bindFiles, clearRecent, editDrawing, handleFiles, importIntoMake, openEditor, renderRecent, startOver } from "./make/files.js";
 import { bindLibrary, openMakeTool } from "./make/library.js";
 import { applyDimEdit, bindDimEdit, closeDimEdit, closeNumPad, openDimEdit, openNumPad } from "./make/dimedit.js";
@@ -350,20 +351,7 @@ async function init() {
     currentPart: () => S.currentPart,
     rememberPart: (p) => { S.currentPart = p; S.fileName = (p && p.name) || S.fileName; },
     openEditor,
-    loadDesign: (p) => {
-      if (!p || !p.data) return;
-      const items = p.data.items || p.data;
-      if (!Array.isArray(items)) return;
-      sketch.items = items.map((it) => sketch.sanitizeItem(it)).filter(Boolean);
-      sketch.nextId = Math.max(1, ...sketch.items.map((i) => i.id + 1), 1);
-      sketch.sel = { ids: [], hole: null };
-      sketch.commit();
-      S.currentPart = p;
-      S.fileName = p.name || S.fileName;
-      S.src = "shape";
-      if ($("partName")) $("partName").value = p.name || "";
-      useShape();
-    },
+    loadDesign,
   });
   if (!WebSerialTransport.supported()) {
     const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -385,10 +373,27 @@ async function init() {
   routeAuth();
   refreshPublishedPresets().then(() => { applyMatchingPreset(); renderMaterials(); }).catch(() => {});
   // Test hooks only once the app has finished starting, so a test never talks to a half-ready page.
-  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, importIntoMake, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, bedViewRotated, jogToMachine, loadMotorDir, motorDirState, noteMotorDirRestarted, parsePinReply, parseDumpPins, flipPinLow, pinHasLow, torchTestState, torchTestOff, isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM, openPresetBrowser, renderShapeForm, useShape, scoreMarkProblem, throughCutInEtch };
+  if (localTestHost && new URLSearchParams(location.search).has("test")) window.plasmaTest = { loadDesign, demoEdges, Setup, openMakeTool, getPrefs, savePrefs, applyChrome, drawingSheet, setHeaderHidden, clickVerb, clickVerbLower, previewCam, resetPreviewCam, getMakeTools: () => makeTools, openImport, refresh, editDrawing, openEditor, getM: () => M, sketch, evalExpr, openNumPad, closeNumPad, openDimEdit, closeDimEdit, applyDimEdit, runPro, S, account: Acc, openAccount, openClaim, openGate, openAdmin, saveCurrent, exportGcode, showScreen, screen, navLocked, estopOn, estopReset, estopPress, handleFiles, addPartsFlow, importIntoMake, startOver, sendToCutting, navBusy, applyAccountMode, setAppMode, isProMode, machineAllowed, goStep, refreshGate, fillEdgePanel, filterConsoleCommand, convertGcode, openSettings, closeSettings, openHowto, closeHowto, setShapeFs, currentSettings, matchPreset, applyPresetRow, bedViewRotated, jogToMachine, loadMotorDir, motorDirState, noteMotorDirRestarted, parsePinReply, parseDumpPins, flipPinLow, pinHasLow, torchTestState, torchTestOff, isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM, openPresetBrowser, renderShapeForm, useShape, scoreMarkProblem, throughCutInEtch };
   if (window.plasmaTest) Object.assign(window.plasmaTest, { renderLamps, probeFilter, noteProbeRaw, resetProbeFilter, probeDisplayOn, probeBlocks });
   if (window.plasmaTest) Object.assign(window.plasmaTest, { drawSetupBed, homeNoteText });
   if (window.plasmaTest) window.plasmaTest.CF = { ...CF, get h() { return CFH; } };      // B5 35-37 test hook (localhost ?test=1 only)
   if (window.plasmaTest) publishCadTestHooks();
 }
 init().catch((e) => toast("Couldn't start: " + e.message, true));
+
+// open a saved part on the Make screen (parts list, recent parts, save conflicts)
+function loadDesign(p) {
+  if (!p || !p.data) return;
+  const items = p.data.items || p.data;
+  if (!Array.isArray(items)) return;
+  sketch.items = items.map((it) => sketch.sanitizeItem(it)).filter(Boolean);
+  sketch.nextId = Math.max(1, ...sketch.items.map((i) => i.id + 1), 1);
+  sketch.sel = { ids: [], hole: null };
+  sketch.commit();
+  S.currentPart = p;
+  S.fileName = p.name || S.fileName;
+  S.src = "shape";
+  if ($("partName")) $("partName").value = p.name || "";
+  useShape();
+  offerLooseHoles(drawingKey(p));                  // r15 2.16: loose holes inside a part are offered once
+}

@@ -255,3 +255,64 @@ export function bindFeatureList() {
   document.addEventListener("pointerdown", (e) => { if (!e.target.closest || !e.target.closest("#featPanel")) closeMenus(); });
   renderFeatureList();
 }
+
+// ---------------------------------------------------------------- plan 2.16: offer loose holes once when a drawing is opened
+// A small non-blocking bar over the Make canvas: "Put N loose holes into this part?" [No] [Yes]. Yes is one undo step.
+// Yes or No is remembered for that drawing (this device), so it is never asked twice. Never shown while a job runs.
+const NO_KEY = "plasma.looseOffer.done";
+let offerKey = null;
+const doneKeys = () => { try { const a = JSON.parse(localStorage.getItem(NO_KEY) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
+const markDone = (k) => { if (!k) return; try { const a = doneKeys().filter((x) => x !== k); a.push(k); localStorage.setItem(NO_KEY, JSON.stringify(a.slice(-200))); } catch (e) { /* private mode */ } };
+const jobRunning = () => !!(S.job && S.job.running);
+function looseByHost() {
+  if (!sketch || sketch.layout) return [];
+  return sketch.items.filter((h) => !sketch.isHole(h)).map((h) => ({ host: h, list: adoptableHoles(sketch, h) })).filter((x) => x.list.length);
+}
+function hideOffer() { const el = $("looseOffer"); if (el) el.classList.add("hidden"); offerKey = null; }
+// key: the saved part's id, else a short hash of the drawing itself
+export function drawingKey(p) {
+  if (p && p.id) return "part:" + p.id;
+  let h = 2166136261; const s = JSON.stringify((sketch && sketch.items) || []);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return "drawing:" + (h >>> 0).toString(36);
+}
+export function offerLooseHoles(key) {
+  hideOffer();
+  const el = $("looseOffer"); if (!el || !key || jobRunning() || doneKeys().includes(key)) return false;
+  const groups = looseByHost(); const n = groups.reduce((s, g) => s + g.list.length, 0);
+  if (!n) return false;
+  $("looseText").textContent = groups.length === 1 ? `Put ${n} loose ${n === 1 ? "hole" : "holes"} into this part?` : `Put ${n} loose holes into their ${groups.length} parts?`;
+  offerKey = key;
+  el.classList.remove("hidden");
+  placeOffer();
+  return true;
+}
+function placeOffer() {                                   // top centre of the Make canvas, whatever the layout around it
+  const el = $("looseOffer"), cv = $("preview"); if (!el || !cv || el.classList.contains("hidden")) return;
+  const r = cv.getBoundingClientRect();
+  el.style.top = `${Math.round(r.top + 8)}px`; el.style.left = `${Math.round(r.left + r.width / 2)}px`;
+  el.style.maxWidth = `${Math.max(200, Math.round(r.width - 16))}px`;
+}
+function acceptOffer() {
+  const key = offerKey; hideOffer(); markDone(key);
+  if (jobRunning()) return;
+  const groups = looseByHost(); if (!groups.length) return;
+  sketch.remember();
+  let n = 0; const gone = new Set();
+  for (const { host, list } of groups) {
+    if (host.lock) continue;
+    host.feats = [...(host.feats || []), ...list.map((x) => x.feat)]; host._key = undefined;
+    for (const x of list) gone.add(x.item.id);
+    n += list.length;
+  }
+  sketch.items = sketch.items.filter((o) => !gone.has(o.id));
+  sketch.commit(); sketch.onSelect && sketch.onSelect();
+  toast(`${n} loose ${n === 1 ? "hole is" : "holes are"} now features of ${groups.length === 1 ? "the part" : "their parts"} (Undo puts them back).`);
+}
+export function bindLooseOffer() {
+  const el = $("looseOffer"); if (!el || el.dataset.bound) return;
+  el.dataset.bound = "1";
+  $("looseYes").addEventListener("click", acceptOffer);
+  $("looseNo").addEventListener("click", () => { markDone(offerKey); hideOffer(); });
+  addEventListener("resize", placeOffer);
+}
