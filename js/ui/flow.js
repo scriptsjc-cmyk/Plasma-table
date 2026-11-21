@@ -70,7 +70,9 @@ export function estopPress(source) {
     latched = true; paintEstop(); H.refresh && H.refresh();
     cancelConfirm();
     H.onEstop && H.onEstop(source);
-    if (fresh && H.toast) H.toast("Stopped. To reset, hold the red button for 1.5 s.", true);   // short: the STOP button itself now reads E-STOP ON (r7 U29)
+    // short: the STOP button itself now reads E-STOP ON (r7 U29). On the Cut step the Stopped panel says it instead (r15 1.3),
+    // so no toast lands on Continue / Set a new start point / Download.
+    if (fresh && H.toast && document.body.dataset.step !== "4") H.toast("Stopped. To reset, hold the red button for 1.5 s.", true);
   }
 }
 export function estopReset() {

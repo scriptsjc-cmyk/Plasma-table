@@ -271,6 +271,7 @@ export function refresh() {
         infoTip.classList.toggle("hidden", !probeStop);
         if (probeStop) infoTip.dataset.tip = raw;
       }
+      if ($("doneReset")) $("doneReset").classList.toggle("hidden", ok || !estopOn());   // r15 1.3: said here, not in a toast over the buttons
       const changed = S.lastFeedOv !== 100 && S.prepared && !S.prepared.dry_run;
       const v = Math.round((S.speed * S.lastFeedOv) / 100 / 10) * 10;
       $("btnSaveSpeed").textContent = `Save ${v} mm/min as my speed for ${S.material.toLowerCase()} ${S.thickness} mm`;
