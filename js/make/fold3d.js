@@ -251,13 +251,15 @@ export function thicken(model, t) {
   for (const f of model.faces) {
     if (f.ghost) { faces.push({ ...f, pts: f.pts.map((q) => q.slice()), holes: (f.holes || []).map((r) => r.map((q) => q.slice())) }); continue; }
     const nrm = norm(f.n);
-    const half = ((Number(f.thk) > 0.05 ? Number(f.thk) : t) / 2);
+    // r15 5.10: a folded face (side ±1) is thickened from its drawn surface toward the inside of its bends; others about the middle
+    const tt = Number(f.thk) > 0.05 ? Number(f.thk) : t;
+    const hi = f.side > 0 ? tt : f.side < 0 ? 0 : tt / 2, lo = tt - hi;   // front at +hi along n, back at -lo
     const vns = (f.vn && f.vn.length === f.pts.length) ? f.vn.map(norm) : f.pts.map(() => nrm);
     const offV = (pts, s) => (pts || []).map((p, i) => add(p, scl(vns[i] || nrm, s)));
     const offN = (pts, s) => (pts || []).map((p) => add(p, scl(nrm, s)));
-    const front = offV(f.pts, half), back = offV(f.pts, -half);
-    const fHoles = (f.holes || []).map((ring) => offN(ring, half));
-    const bHoles = (f.holes || []).map((ring) => offN(ring, -half).reverse());
+    const front = offV(f.pts, hi), back = offV(f.pts, -lo);
+    const fHoles = (f.holes || []).map((ring) => offN(ring, hi));
+    const bHoles = (f.holes || []).map((ring) => offN(ring, -lo).reverse());
     faces.push({ ...f, pts: front, n: nrm, holes: fHoles });
     faces.push({ ...f, pts: back.slice().reverse(), n: scl(nrm, -1), holes: bHoles, edge: true });
     const npts = f.pts.length;
@@ -271,7 +273,7 @@ export function thicken(model, t) {
       faces.push({ pts: [a, b, c, d], n: norm(cross(sub(b, a), sub(d, a))), holes: [], w: 0, h: 0, edge: true, ...(f.accent ? { accent: true } : {}) });
     }
     for (const ring of f.holes || []) {
-      const rh = offN(ring, half), rb = offN(ring, -half), nh = ring.length;
+      const rh = offN(ring, hi), rb = offN(ring, -lo), nh = ring.length;
       for (let i = 0; i < nh; i++) {
         const j = (i + 1) % nh;
         const a = rb[i], b = rb[j], c = rh[j], d = rh[i];

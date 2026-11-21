@@ -156,6 +156,12 @@ export function foldFlat(contours, opts = {}) {
       queue.push(other);
     }
   }
+  // r15 5.10 (Josh 21 Nov): the drawn outline is one face of the sheet and the sheet lies on the inside of the bends, so the
+  // outside sizes are the drawn sizes. side +1: the sheet is on the flat pattern's +z side (folds "up" close towards it);
+  // -1: the -z side. The piece's folds vote (more up than down: +1); a tie (a Z) or no folds stays about the middle (0).
+  // A model can say which side is the drawn one itself (opts.side), e.g. when some folds wrap the other way.
+  const vote = hinges.reduce((n, h) => n + (h.dir > 0 ? 1 : -1), 0);
+  const side = Number.isFinite(opts.side) ? Math.sign(opts.side) : hinges.length ? Math.sign(vote) : 0;
   const pose = opts.pose || FLAT_POSE;
   const ax = pose.ax, ay = pose.ay, nz = norm(cross(ax, ay));
   const world = (v) => add(pose.o, add(add(scl(ax, v[0]), scl(ay, v[1])), scl(nz, v[2])));
@@ -171,6 +177,7 @@ export function foldFlat(contours, opts = {}) {
       holes: pl.holes.map((r) => r.map(map)),
       w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys),
       ...(opts.thk ? { thk: opts.thk } : {}),
+      ...(side ? { side } : {}),
     });
   }
   return faces;
