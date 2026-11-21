@@ -3218,3 +3218,37 @@ body.running-job #dryRun[role="switch"], body.job-live #dryRun[role="switch"] { 
   body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home { min-height: 30px; height: 30px; }
   body[data-screen="cut"][data-step="3"] .zerobody { row-gap: 4px; }
 }
+
+/* ---- r15 4.11, 4.12, 4.14, 4.25 on a laptop ---- */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  /* 4.25 one status pill in the header: "● Practice · Ready" (a lit torch joins it as a loud TORCH ON end). TORCH OFF isn't
+     a separate pill here: the Torch lamp on Setup and the "Torch off" line while cutting say it. The ids all stay. */
+  body[data-screen="cut"] #torchPill.off:not([hidden]) { display: none; }
+  body[data-screen="cut"] #connWrap:has(~ #stateBadge:not(.hidden), ~ #practiceChip:not(.hidden)) #connPill { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  body[data-screen="cut"] #practiceChip:not(.hidden),
+  body[data-screen="cut"] #stateBadge:not(.hidden),
+  body[data-screen="cut"] #torchPill.on:not([hidden]) {
+    margin-left: -6px; border-top-left-radius: 0; border-bottom-left-radius: 0; border-left-width: 0;
+    align-self: stretch; display: inline-flex; align-items: center; min-height: 0; padding-top: 0; padding-bottom: 0;
+  }
+  body[data-screen="cut"] #stateBadge:not(.hidden)::before,
+  body[data-screen="cut"] #practiceChip:not(.hidden)::before,
+  body[data-screen="cut"] #torchPill.on:not([hidden])::before { content: "·"; margin-right: 6px; font-weight: 700; }
+  body[data-screen="cut"] #practiceChip:has(~ #stateBadge:not(.hidden)),
+  body[data-screen="cut"] #stateBadge:has(~ #torchPill.on:not([hidden])) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+  /* 4.11 while cutting the calm state is a plain "Torch off" line, not a box that looks like a button; TORCH ON keeps its loud box */
+  body[data-screen="cut"] #running .torchbig:not(.on) {
+    border: 0; background: transparent; box-shadow: none; min-height: 0; padding: 2px 0; font-weight: 650; font-size: var(--fs-s); color: var(--muted);
+  }
+
+  /* 4.12 readouts keep their width as the numbers change */
+  body[data-screen="cut"] #running .runpos b { flex: 1 1 0; min-width: 0; text-align: right; font-variant-numeric: tabular-nums; }
+  body[data-screen="cut"] #running #pct,
+  body[data-screen="cut"] #running #timeLeft { font-variant-numeric: tabular-nums; }
+
+  /* 4.14 Stopped: the next steps come straight after the message, and each keeps its words on one line (the row wraps instead) */
+  body[data-screen="cut"][data-step="4"] #doneActions { margin-top: 4px; }
+  body[data-screen="cut"][data-step="4"] #cutView #doneActions > button.xl,
+  body[data-screen="cut"][data-step="4"] #cutView #doneActions > button.wide { flex: 1 1 auto; min-width: max-content; white-space: nowrap; }
+}

@@ -141,7 +141,7 @@ t.check("C32: stripping the etch flag is treated as a through-cut", /cut through
     };
   });
   t.check("amp pause: the Cut screen shows the etch-current prompt", prompt && /etching, then press Resume/.test(ui.text), ui, "C32-PAUSE");
-  t.check("amp pause: Resume, STOP and the connection light stay usable", ui.resume && ui.resumeOn && ui.stopOn && ui.conn && /TORCH OFF/.test(ui.torch), ui, "C32-PAUSE");
+  t.check("amp pause: Resume, STOP and the connection light stay usable", ui.resume && ui.resumeOn && ui.stopOn && ui.conn && /torch off/i.test(ui.torch), ui, "C32-PAUSE");
   await page.screenshot({ path: "/workspace/out/etch-pause.png" });
 }
 

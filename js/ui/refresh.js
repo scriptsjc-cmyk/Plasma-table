@@ -148,6 +148,12 @@ export function refresh() {
       $("fit").textContent = "";
       $("fit").innerHTML = "";
       $("fit").classList.add("hidden");
+    } else if (demoHint) {
+      // r15 4.13: "Demo: tap here and the edges are set up for you" is a Setup hint; it isn't shown while cutting or after a stop
+      $("fit").textContent = "";
+      $("fit").classList.add("hidden");
+      fitChip.textContent = "";
+      fitChip.classList.add("hidden");
     } else {
       $("fit").classList.remove("hidden");
       fitChip.textContent = "";
@@ -280,7 +286,7 @@ export function refresh() {
   }
   const t = $("torchBig");
   const torchOn = !!(S.status && S.status.torch) || torchTestLit();
-  t.textContent = torchOn ? "TORCH ON" : "TORCH OFF";
+  t.textContent = torchOn ? "TORCH ON" : "Torch off";   // r15 4.11: the calm state in sentence case; a lit torch stays loud
   t.classList.toggle("on", torchOn);
 
   // movement controls are off while a job runs
