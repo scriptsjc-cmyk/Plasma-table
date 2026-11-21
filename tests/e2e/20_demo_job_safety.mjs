@@ -45,9 +45,12 @@ for (const how of ["button", "Space key"]) await session(`STOP via ${how} mid-cu
   await toStart(page); await page.click("#btnStart");
   const lit = await waitTorch(page, true, 90000); t.check(`${n}: torch fired in demo`, lit, "", "E2E-HARNESS"); if (!lit) return;
   await sleep(600); const mark = (await txLines(page)).length;
+  // r15: note the moment of the press, so a job line written in the few ms between "mark" and the press doesn't count as "after STOP".
+  await page.evaluate(() => { const S = window.plasmaTest.S; S.demo.__stopT = 0; const note = () => { if (!S.demo.__stopT) S.demo.__stopT = Date.now(); };
+    document.addEventListener("pointerdown", note, { capture: true }); document.addEventListener("keydown", note, { capture: true }); });
   if (how === "button") await page.click("#btnStop"); else await page.keyboard.press("Space");
   await sleep(1500);
-  const after = (await txLines(page)).slice(mark).join("");
+  const after = await page.evaluate((m) => { const d = window.plasmaTest.S.demo; return d.__tx.slice(m).filter((x) => !d.__stopT || x.t >= d.__stopT).map((x) => x.s).join(""); }, mark);
   t.check(`${n}: torch OFF within 1.5 s`, (await demo(page, "(d) => d.torch")) === false, "torch still on in controller", "STOP-TORCH");
   t.check(`${n}: feed-hold + reset sent`, after.includes("!") && after.includes("\x18"), JSON.stringify(after.slice(0, 40)), "STOP-TORCH");
   const jobAfter = after.replace(/[?!~\x18]/g, "").split("\n").filter((l) => l.trim() && !/^\$/.test(l.trim())); t.check(`${n}: no further job lines streamed after STOP`, jobAfter.length === 0, jobAfter.slice(0, 3).join("|"), "STOP-STREAM");
