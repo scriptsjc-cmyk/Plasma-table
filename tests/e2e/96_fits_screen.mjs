@@ -3,11 +3,14 @@
 // How to use and Settings may scroll. Practice table only.
 import { T } from "../lib/t.mjs";
 import { startServer, launch, newPage, ensurePracticeHomed } from "../lib/browser.mjs";
-import { fitProblems, installLabelRecorder, redrawCanvases, textProblems, getStopRect } from "../lib/fitcheck.mjs";
+import { fitProblems, installLabelRecorder, redrawCanvases, textProblems, getStopRect, r15Problems } from "../lib/fitcheck.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
-const t = new T("96_fits_screen");
+// r15 Round 7.2: e2e 113_r15_fits runs this same walk with the r15 checks and screens added (globalThis.R15_FITS). They move
+// into this gated suite once they pass; until then 113 is not in the deploy gate.
+const R15 = !!globalThis.R15_FITS;
+const t = new T(R15 ? "113_r15_fits" : "96_fits_screen");
 const srv = await startServer();
 const br = await launch();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -24,6 +27,7 @@ const SIZES = [
   ["1920x970", "d1920x970"],
 ];
 
+const innerW = (size) => Number(size.split("x")[0]);
 async function shot(page, size, state) {
   const pth = path.join(OUT, `${size}-${state}.png`);
   await page.screenshot({ path: pth, fullPage: false }).catch(() => {});
@@ -35,7 +39,8 @@ async function check(page, size, state, stopSamples) {
   await ev(page, redrawCanvases);
   await sleep(250);
   await shot(page, size, state);
-  const problems = [...await ev(page, fitProblems), ...await ev(page, textProblems)];
+  const problems = [...await ev(page, fitProblems), ...await ev(page, textProblems), ...(R15 ? await ev(page, r15Problems) : [])];
+  if (R15 && problems.length) for (const p of problems) console.log(`    · ${size} ${state}: ${p.replace(/\s+/g, " ")}`);
   t.check(`${size} ${state}: fits`, problems.length === 0, JSON.stringify(problems).slice(0, 800));
   if (stopSamples) {
     const rect = await ev(page, getStopRect);
@@ -82,7 +87,9 @@ async function ensureSignedIn(page) {
   await sleep(200);
 }
 
-for (const [size, prof] of SIZES) {
+// FIT_SIZES=1366x640,1536x730 runs only those sizes (for looking into a failure; the gate runs them all)
+const ONLY = (process.env.FIT_SIZES || "").split(",").filter(Boolean);
+for (const [size, prof] of SIZES.filter(([sz]) => !ONLY.length || ONLY.includes(sz))) {
   const page = await newPage(br, prof, { base: srv.base, consoleErrors: false });
   const stopSamples = [];
 
@@ -129,6 +136,26 @@ for (const [size, prof] of SIZES) {
     if (tab) tab.click();
   });
   await check(page, size, "make-advanced-plate", stopSamples);
+  if (R15) {
+    // r15 7.2: the Holes tab is never empty when a part is picked, and the More tools panel fits when open
+    await ev(page, () => { const tab = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (tab) tab.click(); });
+    await sleep(200);
+    const holes = await ev(page, () => { const host = document.getElementById("srcShape"); if (!host) return "(no inspector)";
+      const tabs = host.querySelector(".insp-tabs"); let txt = host.innerText; if (tabs) txt = txt.replace(tabs.innerText, "");
+      return host.dataset.insp + ": " + txt.trim().replace(/\s+/g, " ").slice(0, 160); });
+    t.check(`${size} make-advanced-plate: the Holes tab lists the plate's holes`, /^holes: /.test(holes) && /hole/i.test(holes) && /\d/.test(holes) && !/no holes/i.test(holes), holes);
+    await check(page, size, "make-holes-tab", stopSamples);
+    await ev(page, () => { const b = document.querySelector('[data-qb="more"]'); if (b) b.click(); });
+    await sleep(250);
+    const moreOpen = await ev(page, () => { const p = document.getElementById("qbMorePop"); return !!p && !p.classList.contains("hidden") && p.getBoundingClientRect().height > 0; });
+    t.check(`${size} make: the More tools panel opens`, moreOpen);
+    if (moreOpen) {
+      const off = await ev(page, () => { const r = document.getElementById("qbMorePop").getBoundingClientRect(); return r.top < 0 || r.left < 0 || r.bottom > innerHeight + 1 || r.right > innerWidth + 1 ? [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)] : null; });
+      t.check(`${size} make: the More tools panel is fully on screen`, !off, JSON.stringify(off));
+    }
+    await check(page, size, "make-more-open", stopSamples);
+    await ev(page, () => { const b = document.querySelector('[data-qb="more"]'); if (b && b.getAttribute("aria-expanded") === "true") b.click(); });
+  }
 
   const dialogs = [
     ["preset-parts", ["presetBrowser"], () => { window.plasmaTest.openPresetBrowser(); }],
@@ -160,6 +187,15 @@ for (const [size, prof] of SIZES) {
     await check(page, size, `dlg-${name}`);
   }
   await closeDialogs(page);
+  if (R15) {
+    // r15: the Account box signed in (admin, with a linked machine) is not cut off at the bottom
+    await ensureSignedIn(page);
+    await ev(page, async () => { try { await window.plasmaTest.account.claimMachine("DEMO-0000"); } catch (e) {} });
+    await ev(page, () => window.plasmaTest.showScreen("menu", { force: true }));
+    await openDlg(page, () => { try { window.plasmaTest.openAccount(); } catch (e) {} });
+    await check(page, size, "dlg-account-signed-in");
+    await closeDialogs(page);
+  }
 
   // Cut step 1 Part, unconnected
   await ev(page, () => {
@@ -175,10 +211,21 @@ for (const [size, prof] of SIZES) {
   });
   await page.waitForFunction(() => window.plasmaTest.screen() === "cut", null, { timeout: 10000 });
   await check(page, size, "cut-part-unconnected", stopSamples);
+  // r15: the Check-the-cut pop-up (hover) does not cover the Part or Setup panels
+  const checkPop = async (state) => {
+    if (!R15) return;
+    const b = await page.locator("#cutStatus").boundingBox();
+    if (!b) { t.check(`${size} ${state}: Check the cut is shown`, false); return; }
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); await sleep(350);
+    await check(page, size, state, stopSamples);
+    await page.mouse.move(innerW(size) - 5, 5); await sleep(350);
+  };
+  await checkPop("cut-part-checkpop");
 
   await ev(page, () => window.plasmaTest.goStep(3));
   await page.waitForFunction(() => window.plasmaTest.S.cur === 3, null, { timeout: 10000 });
   await check(page, size, "cut-setup-unconnected", stopSamples);
+  await checkPop("cut-setup-checkpop");
 
   // Practice connect — never #btnConnect
   await ev(page, () => document.getElementById("btnDemo").click());

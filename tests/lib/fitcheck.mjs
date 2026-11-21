@@ -332,3 +332,142 @@ export const getStopRect = () => {
   return { l: Math.round(r.left * 10) / 10, t: Math.round(r.top * 10) / 10, w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10 };
 };
 
+// r15 Round 7.2: what the r12/r13 checkers could not see (found by eye at 1366 x 640 after r13):
+//  - text drawn on text by only a few pixels (the Check-the-cut chip on "Choose the part"): compares the glyph boxes
+//    (the font size, not the taller line box), so a 3 px overlap counts;
+//  - the header running over the panels below it (header row 2 taller than the bar it sits in);
+//  - any text cut off by a box that clips it (a sentence under Next, a dialog's last line), not just button text;
+//  - text or a control covered by something else on top (a pop-up over a card); the drawing canvas may be covered;
+//  - a toast over any control, and safety text (#safetyHint, #runHelp, run warnings) clipped or shortened with "…".
+export const r15Problems = () => {
+  const out = [];
+  const shown = (el) => { const r = el.getBoundingClientRect(), s = getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none" && +s.opacity !== 0; };
+  const label = (el) => (el.id || (el.textContent || "").trim().slice(0, 30) || el.className || el.tagName).toString().slice(0, 40);
+  const exempt = (el) => !!(el.closest && el.closest("#howtoDlg, #settingsDlg, .sr-only, .visually-hidden, [aria-hidden=true], .info-body"));
+  const flyout = "#toast, .toast, .popover, .tip, .hovertip, .info-pop, .info-tip, [role=tooltip], #connMenu, #topMenu, .menu-pop, .qb-pop, #qbMorePop, #cutStatusPop";
+  const isFly = (el) => !!(el.closest && el.closest(flyout));
+  const canvasArea = (el) => !!(el.closest && el.closest("canvas, #preview, #sketch, .cvwrap, .canvas-wrap, .bedwrap, .canvas-chip, svg"));
+  const modal = [...document.querySelectorAll("[role=dialog], dialog, .shapelib, .presetbrowser, .acctdlg, .numpad, .impdlg")].find((el) =>
+    el.id !== "howtoDlg" && el.id !== "settingsDlg" && !el.classList.contains("hidden") && !(el.tagName === "DIALOG" && !el.open && !el.hasAttribute("open")) && shown(el));
+  const inScope = (el) => !modal || modal.contains(el);
+  const srOnly = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e);
+    if (/rect\(0px,? 0px,? 0px,? 0px\)/.test(s.clip) || s.clipPath === "inset(50%)" || (s.position === "absolute" && parseFloat(s.width) <= 1 && parseFloat(s.height) <= 1)) return true; } return false; };
+  const ov = (a, b) => [Math.min(a.right, b.right) - Math.max(a.left, b.left), Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top)];
+  // the nearest ancestor that clips (overflow not visible), and whether it is a scroll box (reported by fitProblems already)
+  // (display:contents boxes clip nothing; a box collapsed to nothing is hiding its content on purpose)
+  const clipper = (el) => { for (let e = el; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e);
+    if (s.display === "contents") continue;
+    if (s.overflowX !== "visible" || s.overflowY !== "visible") { const r = e.getBoundingClientRect();
+      return { e, r, scroll: /(auto|scroll)/.test(s.overflowY + s.overflowX), collapsed: r.width < 1 || r.height < 1 }; } } return null; };
+  const cut = (a, c) => ({ left: Math.max(a.left, c.left), right: Math.min(a.right, c.right), top: Math.max(a.top, c.top), bottom: Math.min(a.bottom, c.bottom) });
+
+  // text lines: glyph box = font size tall, centred in the line box
+  const lines = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.nodeValue.trim()) continue;
+    const el = n.parentElement;
+    if (!el || exempt(el) || !inScope(el) || !shown(el) || srOnly(el) || el.closest("script, style, option")) continue;
+    const s = getComputedStyle(el), fs = parseFloat(s.fontSize);
+    if (s.color === "rgba(0, 0, 0, 0)" || !(fs > 0)) continue;
+    const rg = document.createRange(); rg.selectNodeContents(n);
+    for (const r of rg.getClientRects()) {
+      if (r.width < 2 || r.height < 2) continue;
+      const m = (r.top + r.bottom) / 2, g = { left: r.left, right: r.right, top: m - fs * 0.5, bottom: m + fs * 0.5 };
+      // what is actually painted: the glyph box cut to every box that clips it (a "…" label is only as wide as its box)
+      const c = clipper(el); let vis = g;
+      for (let k = c; k; k = clipper(k.e.parentElement)) vis = cut(vis, k.r);
+      lines.push({ el, r, g, c, vis, shows: vis.right - vis.left > 1 && vis.bottom - vis.top > 1, fly: isFly(el), txt: n.nodeValue.trim().slice(0, 24) });
+    }
+  }
+  const topAt = (x, y) => (x >= 0 && y >= 0 && x < innerWidth && y < innerHeight) ? document.elementFromPoint(x, y) : null;
+  const mine = (el, hit) => !!hit && (hit === el || el.contains(hit) || hit.contains(el));
+
+  // 1. text on text (glyph boxes), both actually painted there
+  for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) {
+    const A = lines[i], B = lines[j];
+    if (A.el === B.el || A.el.contains(B.el) || B.el.contains(A.el) || A.fly || B.fly || !A.shows || !B.shows) continue;
+    const [ox, oy] = ov(A.vis, B.vis);
+    if (ox > 2 && oy > 2) {
+      const x = (Math.max(A.vis.left, B.vis.left) + Math.min(A.vis.right, B.vis.right)) / 2, y = (Math.max(A.vis.top, B.vis.top) + Math.min(A.vis.bottom, B.vis.bottom)) / 2;
+      const hit = topAt(x, y);
+      if (hit && (mine(A.el, hit) || mine(B.el, hit))) out.push("text-on-text: " + A.txt + " / " + B.txt);
+    }
+  }
+  // 2. text cut off by a box that clips it (scroll boxes are reported by fitProblems; "…" with a title is allowed)
+  const perBox = new Map();   // a box that cuts off many lines (a log) is named twice, then counted
+  for (const L of lines) {
+    if (L.fly) continue;
+    const c = L.c;
+    if (!c || c.scroll || c.collapsed) continue;
+    const s = getComputedStyle(c.e);
+    if (s.textOverflow === "ellipsis" && (c.e.getAttribute("title") || c.e.closest("[title]"))) continue;
+    const cr = c.r;
+    if (L.g.bottom > cr.bottom + 2 || L.g.top < cr.top - 2 || L.r.right > cr.right + 2 || L.r.left < cr.left - 2) {
+      const k = (perBox.get(c.e) || 0) + 1; perBox.set(c.e, k);
+      if (k === 3) { out.push("text-clipped: more lines cut off by " + label(c.e)); continue; }
+      if (k > 3) continue;
+      out.push("text-clipped: " + L.txt + " (by " + label(c.e) + " " + [cr.left, cr.top, cr.right, cr.bottom].map(Math.round) + " ov " + getComputedStyle(c.e).overflow + "; text " + [L.r.left, L.g.top, L.r.right, L.g.bottom].map(Math.round) + ")");
+    }
+  }
+  // 3. text or a control with something else painted on top of it (a pop-up over a card, a panel over a sentence)
+  const coveredBy = (el, r) => {
+    for (const [fx, fy] of [[0.5, 0.5], [0.15, 0.5], [0.85, 0.5]]) {
+      const hit = topAt(r.left + (r.right - r.left) * fx, r.top + (r.bottom - r.top) * fy);
+      if (hit && !mine(el, hit) && !canvasArea(el)) return hit;
+    }
+    return null;
+  };
+  for (const L of lines) {
+    if (L.fly || !L.shows || canvasArea(L.el) || L.el.closest("#btnStop")) continue;
+    const hit = coveredBy(L.el, L.vis);
+    if (hit && hit.id !== "btnStop") out.push("text-covered: " + L.txt + " (by " + label(hit) + ")");
+  }
+  for (const el of document.querySelectorAll("button, input, select, textarea")) {
+    if (!shown(el) || exempt(el) || !inScope(el) || isFly(el) || canvasArea(el) || el.id === "btnStop") continue;
+    const r = el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight) continue;
+    const hit = coveredBy(el, { left: r.left + 3, right: r.right - 3, top: r.top + 3, bottom: r.bottom - 3 });
+    if (hit && hit.id !== "btnStop" && !hit.closest("label")) out.push("control-covered: " + label(el) + " (by " + label(hit) + ")");
+  }
+  // 4. the header never runs over what is below it: nothing in the header that reaches below the bar may overlap text,
+  //    a control or a card outside the header (STOP hanging over empty margin is fine; over a card or its text is not)
+  const bar = document.querySelector("header.topbar");
+  if (bar && shown(bar)) {
+    const b = bar.getBoundingClientRect();
+    const below = [];
+    for (const L of lines) if (!bar.contains(L.el) && L.shows) below.push([L.vis, L.txt]);
+    for (const el of document.querySelectorAll("button, input, select, textarea, .card, section, aside, .panel, [class*=-col], [class*=card]")) {
+      if (bar.contains(el) || !shown(el) || isFly(el) || el.contains(bar) || el.matches(".view, .screen")) continue;
+      const r = el.getBoundingClientRect();
+      if (r.height > innerHeight * 0.95 || r.top < b.bottom - 1) continue;
+      below.push([r, label(el)]);
+    }
+    let n = 0;
+    for (const el of bar.querySelectorAll("*")) {
+      if (!shown(el) || isFly(el) || srOnly(el) || getComputedStyle(el).position === "fixed") continue;
+      const r = el.getBoundingClientRect();
+      if (r.bottom <= b.bottom + 1) continue;
+      const hit = below.find(([o]) => { const [ox, oy] = ov(r, o); return ox > 1 && oy > 1; });
+      if (hit && n++ < 3) out.push("header-overlaps: " + label(el) + " (to y " + Math.round(r.bottom) + ", bar ends " + Math.round(b.bottom) + ") over " + hit[1]);
+    }
+  }
+  // 5. a toast over any control
+  const toast = document.getElementById("toast");
+  if (toast && shown(toast) && !toast.classList.contains("hidden")) {
+    const tr = toast.getBoundingClientRect();
+    for (const el of document.querySelectorAll("button, input, select, textarea")) {
+      if (!shown(el) || el === toast || toast.contains(el) || !inScope(el)) continue;
+      const [ox, oy] = ov(tr, el.getBoundingClientRect());
+      if (ox > 2 && oy > 2) { out.push("toast covers control: " + label(el)); break; }
+    }
+  }
+  // 6. safety text: never clipped, never shortened with "…"
+  for (const el of document.querySelectorAll("#safetyHint, #runHelp, .runwarn, .safety-note, [data-safety]")) {
+    if (!shown(el) || !el.textContent.trim()) continue;
+    const s = getComputedStyle(el);
+    if (s.textOverflow === "ellipsis" || (s.webkitLineClamp && s.webkitLineClamp !== "none") || el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1) out.push("safety-text-cut: " + label(el));
+  }
+  return [...new Set(out)];
+};
