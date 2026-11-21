@@ -106,6 +106,14 @@ for (const prof of ["d1440", "d1366"]) {
       cutCheck3: !!document.getElementById("cutCheck3"),
       showMach: show,
       left: show ? Math.round(b.left - pane.left) : null,
+      right: show ? Math.round(pane.right - b.right) : null,
+      // r15 (Josh): the toggle may sit in either top corner, but never on a hint chip or any other control
+      hits: show ? [...document.querySelectorAll(".canvas-chip, #startChips > *, button, input, select, textarea, a[href], label, [role=button]")].filter((e) => {
+        if (sm.contains(e) || e.contains(sm)) return false;
+        const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+        if (c.display === "none" || c.visibility === "hidden" || r.width < 1 || r.height < 1) return false;
+        return Math.min(r.right, b.right) - Math.max(r.left, b.left) > 1 && Math.min(r.bottom, b.bottom) - Math.max(r.top, b.top) > 1;
+      }).map((e) => e.id || e.className || e.tagName) : null,
       top: show ? Math.round(b.top - pane.top) : null,
       w: show ? Math.round(b.width) : null,
       h: show ? Math.round(b.height) : null,
@@ -117,7 +125,9 @@ for (const prof of ["d1440", "d1366"]) {
     };
   });
   t.check(n("item 5: Setup has no cut-check panel"), !bed.cutCheck3, JSON.stringify(bed));
-  t.check(n("item 7: Show machine is a small overlay in the canvas top-left"), bed.showMach && bed.left <= 16 && bed.top <= 16 && bed.h <= 40 && bed.w <= 200, JSON.stringify(bed));
+  // r15 (Josh): top-right is a deliberate move (98a0072: the hint chips took the top-left); same size limits as before
+  t.check(n("item 7: Show machine is a small overlay in a top corner of the canvas, clear of the hint chips and every other control"),
+    bed.showMach && bed.top <= 16 && (bed.left <= 16 || bed.right <= 16) && bed.h <= 40 && bed.w <= 200 && bed.hits.length === 0, JSON.stringify(bed));
   t.check(n("item 8: Setup is the bed step, not the part-only preview"), bed.step === 3 && (bed.mmap || bed.layout), JSON.stringify(bed));
 
   // Live connection: Practice on Setup flips the header pill (never press USB Connect).
