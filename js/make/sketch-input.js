@@ -146,7 +146,7 @@ export class InputMethods {
       if (!it || radius != null) return;
       const cs = this.contoursOf(it) || [];
       for (const c of cs) {
-        const circ = c.circle || detectCircle(c);
+        const circ = c.circle || (c.closed !== false && detectCircle(c.pts));
         if (circ && circ.r > 0) {
           const d = Math.hypot(p[0] - circ.cx, p[1] - circ.cy);
           if (sn && (sn.kind === "centre" || sn.kind === "tangent") && sn.it === it) { radius = circ.r; return; }
