@@ -1,6 +1,6 @@
 // CAD dialog (trim, offset, ...) and the Pro command runner.
 import { evalExpr } from "../core/expr.js";
-import { $, esc, toast } from "../core/dom.js";
+import { $, esc, toast, clearToast } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
 import { renderProTools } from "./protools.js";
 import { clickVerb } from "../ui/laptop.js";
@@ -44,8 +44,30 @@ function readCadVals(fields, { loose } = {}) {
   return { vals };
 }
 
+// r15 3.10: the main button names what it does (never "Do it"); the arrays say how many they will make
+const CAD_OK = {
+  "Auto-arrange on the sheet": "Arrange",
+  "Chamfer a corner": "Chamfer",
+  "Circular array": (v) => `Make ${v.n} round the circle`,
+  "Curve through points": "Add the curve",
+  "Cut control (whole job)": "Apply to the job",
+  "Fill from a flange standard": "Fill in the sizes",
+  "Fillet a corner": "Fillet",
+  "Linear array": (v) => `Make ${v.n} copies`,
+  "Merge slivers closer than the cut width": "Merge slivers",
+  "Offset the outline": "Offset",
+  "Rotate about a point": "Rotate",
+  "Scale by percent": "Scale",
+  "Set this distance": "Set the distance",
+};
+function cadOkLabel(title, vals) {
+  const l = CAD_OK[title];
+  if (typeof l === "function") { const n = vals && Number(vals.n); return Number.isFinite(n) && n > 0 ? l({ ...vals, n: Math.round(n) }) : "Make copies"; }
+  return l || String(title).split(/\s+/)[0];
+}
 export function openCad(title, fields, onOk, onPreview) {
   const used = withLastUsed(title, fields);
+  clearToast();
   $("cadTitle").textContent = title;
   $("cadFields").innerHTML = used.map((f) => {
     if (f.note) return `<p class="muted small">${esc(f.note)}</p>`;
@@ -55,11 +77,13 @@ export function openCad(title, fields, onOk, onPreview) {
     return `<label>${esc(f.label)}<input id="cad_${f.id}" type="${f.type || "number"}" inputmode="${f.text ? "text" : "decimal"}" step="any" value="${esc(String(f.value ?? ""))}"></label>`;
   }).join("");
   const dlg = $("cadDialog");
+  $("cadOk").textContent = cadOkLabel(title, Object.fromEntries(used.filter((f) => f.id).map((f) => [f.id, f.value])));
   dlg.classList.remove("hidden");
   dlg._preview = onPreview || null;
   const runPreview = () => {
     const got = readCadVals(used, { loose: true });
     if (!got.vals) return;
+    $("cadOk").textContent = cadOkLabel(title, got.vals);
     if (sketch && sketch.setCadPreview) sketch.setCadPreview(title, got.vals);
     if (dlg._preview) dlg._preview(got.vals);
   };
@@ -186,7 +210,7 @@ export function runPro(cmd) {
     openCad("Cut control (whole job)", [
       { id: "leadIn", label: "Lead-in length (mm)", value: Number(document.getElementById("ovLead") && document.getElementById("ovLead").value) || 3 },
       { id: "leadType", type: "select", label: "Lead-in type", value: c.leadType || "auto", options: [
-        { v: "auto", l: "Automatic (current behaviour)" },
+        { v: "auto", l: "Automatic (recommended)" },
         { v: "straight", l: "Straight" },
         { v: "arc", l: "Arc" },
       ] },

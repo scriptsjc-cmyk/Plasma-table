@@ -7,6 +7,8 @@ import { contoursToEditable } from "./editable.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const $ = (id) => document.getElementById(id);
+// r15 3.10: a dialog opening clears any old message (same as clearToast in core/dom.js; this module stays free of the app core)
+const clearToast = () => { const t = $("toast"); if (t) t.classList.add("hidden"); };
 
 // draw closed outlines (mm, y up) into a canvas, filled with the even-odd rule so holes show as holes
 function drawOutlines(cv, contours, bbox) {
@@ -59,7 +61,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
     </div><div class="mt-view">
     <canvas id="mtPrev" width="640" height="220" aria-label="Preview of the text"></canvas>
     <p class="small muted" id="mtInfo" role="status"></p>
-    <div class="row wrap"><button type="button" id="mtAdd" class="xl accent">Add to my drawing</button><button type="button" id="mtCancel" class="xl">Cancel</button></div>
+    <div class="row wrap"><button type="button" id="mtCancel" class="xl">Cancel</button><button type="button" id="mtAdd" class="xl accent">Add to my drawing</button></div>
     </div></div>
   </div>
 </div>
@@ -68,7 +70,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
     <div class="shapelib-head"><h2 id="trTitle">Trace a picture</h2><button type="button" id="trClose">Close</button></div>
     <p class="muted small mt-guide">Pick a logo or picture (PNG, JPG, WebP). Dark parts become outlines you can edit and cut. A clear black-on-white picture works best.</p>
     <div class="mt-cols"><div class="mt-ctl">
-    <label><span class="mt-lab"><span class="mt-step">1</span>Choose a picture</span><input id="trFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp"></label>
+    <div class="filepick"><span class="mt-lab"><span class="mt-step">1</span>Choose a picture</span><input id="trFile" class="file-native" type="file" hidden accept="image/png,image/jpeg,image/webp,image/gif,image/bmp"><button type="button" id="trPick" class="file-btn">Choose a picture…</button><span class="muted small file-name" id="trFileName">No picture yet</span></div>
     <div class="grid2">
       <label><span class="mt-lab"><span class="mt-step">2</span>Finished width (mm)</span><input id="trWidth" type="number" min="5" max="2000" step="1" value="100" inputmode="decimal"></label>
       <label><span class="mt-lab"><span class="mt-step">3</span>How much to keep </span><span class="muted small" id="trThrVal"></span><input id="trThr" type="range" min="1" max="254" step="1" value="128"></label>
@@ -87,7 +89,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
     </div><div class="mt-view">
     <canvas id="trPrev" width="640" height="260" aria-label="Preview of the traced outlines"></canvas>
     <p class="small muted" id="trInfo" role="status">Choose a picture to start.</p>
-    <div class="row wrap"><button type="button" id="trAdd" class="xl accent" disabled>Add to my drawing</button><button type="button" id="trCancel" class="xl">Cancel</button></div>
+    <div class="row wrap"><button type="button" id="trCancel" class="xl">Cancel</button><button type="button" id="trAdd" class="xl accent" disabled>Add to my drawing</button></div>
     </div></div>
   </div>
 </div>`;
@@ -136,7 +138,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
   const textSoon = () => { clearTimeout(timer); timer = setTimeout(paintText, 120); };
   function openText() {
     if (blocked && blocked()) return;
-    syncPro(); closeBoth();
+    syncPro(); closeBoth(); clearToast();
     if (!$("mtWeight").value) $("mtWeight").placeholder = "auto";
     $("mtMargin").placeholder = "auto"; $("mtBridge").placeholder = "auto";
     $("mtSize").value = "40";
@@ -192,7 +194,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
   const traceSoon = () => { clearTimeout(timer); timer = setTimeout(paintTrace, 140); };
   function openTrace() {
     if (blocked && blocked()) return;
-    syncPro(); closeBoth(); rdlg.classList.remove("hidden"); paintTrace();
+    syncPro(); closeBoth(); clearToast(); rdlg.classList.remove("hidden"); paintTrace();
   }
   async function loadPicture(file) {
     if (!file) return;
@@ -219,7 +221,8 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
       paintTrace();
     } catch (e) { img = null; $("trInfo").textContent = e.message || "Could not read that picture."; }
   }
-  $("trFile").addEventListener("change", () => loadPicture($("trFile").files[0]));
+  $("trPick").onclick = () => $("trFile").click();
+  $("trFile").addEventListener("change", () => { const f = $("trFile").files[0]; $("trFileName").textContent = f ? f.name : "No picture yet"; loadPicture(f); });
   ["trWidth", "trThr", "trInvert", "trBlur", "trSpeck", "trSimp"].forEach((id) => { $(id).addEventListener("input", traceSoon); $(id).addEventListener("change", traceSoon); });
   $("trAuto").onclick = () => { if (imgHist != null) { $("trThr").value = String(Math.max(1, Math.min(254, imgHist))); paintTrace(); } };
   $("trAdd").onclick = () => {

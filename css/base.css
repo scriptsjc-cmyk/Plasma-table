@@ -56,6 +56,20 @@ button.switch[aria-pressed="true"] .switch-track,
 button.switch[aria-checked="true"] .switch-track { background: var(--go); }
 button.switch[aria-pressed="true"] .switch-track::after,
 button.switch[aria-checked="true"] .switch-track::after { transform: translateX(16px); }
+/* r15 3.10: tick boxes inside the tool dialogs look like the app's own switches (still real checkboxes underneath,
+   so .checked, labels and keyboard all work as before) */
+#cadDialog input[type="checkbox"], .mtdlg input[type="checkbox"], #resizeDlg input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; margin: 0; flex: none; width: 40px; height: 24px; border-radius: 999px;
+  border: 0; cursor: pointer; background: var(--c-white) radial-gradient(circle at 12px 12px, var(--c-white) 9px, transparent 10px) no-repeat;
+  background-color: var(--line-strong); box-shadow: inset 0 0 0 1px var(--shade-25);
+  transition: background-color var(--motion) var(--ease), background-position var(--motion) var(--ease); background-position: 0 0; }
+#cadDialog input[type="checkbox"]:checked, .mtdlg input[type="checkbox"]:checked, #resizeDlg input[type="checkbox"]:checked {
+  background-color: var(--go); background-position: 16px 0; }
+#cadDialog input[type="checkbox"]:disabled, .mtdlg input[type="checkbox"]:disabled, #resizeDlg input[type="checkbox"]:disabled { opacity: .5; cursor: not-allowed; }
+/* r15 3.10: the app's own file button (a real button that opens the hidden native file input) */
+.filepick { display: flex; flex-direction: column; gap: 4px; }
+.filepick .file-btn { align-self: flex-start; }
+.filepick .file-name { overflow-wrap: anywhere; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .card, .cutgrid { background: var(--card); border: 1px solid var(--line); border-radius: 0 0 var(--r) var(--r);
   padding: 12px; box-shadow: var(--shadow); min-width: 0; }

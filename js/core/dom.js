@@ -102,6 +102,12 @@ export function toast(text, err = false) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add("hidden"), err ? 6000 : 2500);
 }
+// r15 3.10: a dialog opening clears any old message, so a stale toast never sits over the new dialog
+export function clearToast() {
+  const t = $("toast");
+  clearTimeout(toastTimer);
+  if (t) t.classList.add("hidden");
+}
 export function clock(s) {
   s = Math.max(0, Math.round(s));
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;

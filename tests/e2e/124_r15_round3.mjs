@@ -137,8 +137,8 @@ try {
   // each: how to open it, the dialog, its main button, its Cancel button, and what the main button must say
   const DLG = [
     ["offset", () => window.plasmaTest.runPro("offset"), "cadDialog", "#cadOk", "#cadCancel", /^Offset$/],
-    ["linear array", () => window.plasmaTest.runPro("linarray"), "cadDialog", "#cadOk", "#cadCancel", /^Make 3 copies$/],
-    ["circular array", () => window.plasmaTest.runPro("polar"), "cadDialog", "#cadOk", "#cadCancel", /^Make 4 round the circle$/],
+    ["linear array", () => window.plasmaTest.runPro("linarray"), "cadDialog", "#cadOk", "#cadCancel", /^Make \d+ copies$/],
+    ["circular array", () => window.plasmaTest.runPro("polar"), "cadDialog", "#cadOk", "#cadCancel", /^Make \d+ round the circle$/],
     ["cut control", () => window.plasmaTest.runPro("cutctl"), "cadDialog", "#cadOk", "#cadCancel", /^Apply to the job$/],
     ["add text", () => window.plasmaTest.openMakeTool("text"), "textDlg", "#mtAdd", "#mtCancel", /Add to my drawing/],
     ["trace", () => window.plasmaTest.openMakeTool("trace"), "traceDlg", "#trAdd", "#trCancel", /Add to my drawing/],
@@ -167,6 +167,12 @@ try {
     t.check(`3.10 ${name}: Cancel is on the left of the main button`, d.open && d.cancelLeft, J(d));
     t.check(`3.10 ${name}: no native checkbox or file button shows (the app's own switch / file button)`, d.open && d.natives.length === 0, J(d));
     t.check(`3.10 ${name}: an old toast is cleared when the dialog opens`, d.open && !d.toast, J(d));
+    if (/array/.test(name)) {
+      // the count on the button follows the "How many" field (it remembers the last value, so read it, then change it)
+      const live = await ev(page, () => { const f = document.getElementById("cad_n"), before = [f.value, document.getElementById("cadOk").textContent];
+        f.value = "6"; f.dispatchEvent(new Event("input", { bubbles: true })); return { before, after: document.getElementById("cadOk").textContent }; });
+      t.check(`3.10 ${name}: the button's count follows the How many field`, live.before[1].includes(" " + live.before[0] + " ") && / 6 /.test(live.after), J(live));
+    }
     if (name === "cut control") t.check("3.10 cut control: says 'Automatic (recommended)', not 'current behaviour'", d.recommended && !d.current, J(d));
     await ev(page, () => { for (const id of ["cadCancel", "mtCancel", "trCancel", "rsCancel"]) { const b = document.getElementById(id); if (b && b.getClientRects().length) b.click(); } });
     await sleep(500);

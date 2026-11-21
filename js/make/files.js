@@ -7,7 +7,7 @@ import { evalExpr } from "../core/expr.js";
 import * as Setup from "../cut/setup.js";
 import { askSize, scaleContours, sizeCheckWanted } from "./sizecheck.js";
 import { designChanged } from "../cut/camedit.js";
-import { $, esc, toast } from "../core/dom.js";
+import { $, esc, toast, clearToast } from "../core/dom.js";
 import { askConfirm } from "../core/safeprompt.js";
 import { S, sketch } from "../core/state.js";
 import { goStep } from "../ui/nav.js";
@@ -207,6 +207,7 @@ export function openResize() {
   $("resizeNow").textContent = `Now ${W} × ${H} mm.`;
   $("rsW").value = W; $("rsH").value = H; $("rsKeep").checked = it.type === "custom" ? S.keepProp !== false : true;
   $("rsKeep").disabled = it.type !== "custom";
+  clearToast();
   dlg.classList.remove("hidden");
   setTimeout(() => $("rsW").select(), 30);
 }
