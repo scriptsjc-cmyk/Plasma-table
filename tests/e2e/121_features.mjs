@@ -39,6 +39,7 @@ const cut = () => ev(page, () => {
 async function typeIn(sel, v) { const l = page.locator(sel).first(); await l.fill(String(v)); await l.press("Tab"); await sleep(120); }
 async function setFeat(fid, key, v) {
   const sel = `#featList .feat-row[data-fid="${fid}"] .feat-edit [data-ff="${key}"]`;
+  if (!(await page.locator(sel).count())) { await page.click(`#featList .feat-row[data-fid="${fid}"] .feat-open`); await sleep(150); }   // open the row, as a person would
   if (await page.locator(sel).evaluate((e) => e.tagName === "SELECT")) { await page.locator(sel).selectOption(String(v)); await sleep(120); }
   else await typeIn(sel, v);
 }
@@ -59,7 +60,8 @@ const at = (c, x, y, tol) => c.cs.filter((q) => near(q.cx, x, tol) && near(q.cy,
 try {
   // ---------------------------------------------------------------- the plate: 200 x 150 R10, typed in the Size tab
   await ev(page, () => {
-    const T = window.plasmaTest; T.showScreen("make", { force: true });
+    const T = window.plasmaTest; T.S.thickness = 3;                 // a 3 mm plate (thickness is picked on the Cut screen)
+    T.showScreen("make", { force: true });
     T.setAppMode && T.setAppMode("pro", { persist: false, autoFs: false }); T.setShapeFs(false);
     const s = T.sketch; s.clear(); s.add("rect", true, {}); s.commit && s.commit(); s.fitView && s.fitView();
     const tab = document.querySelector('#srcShape .insp-tabs [data-insp="size"]'); if (tab) tab.click();
