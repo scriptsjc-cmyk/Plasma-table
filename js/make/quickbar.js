@@ -54,8 +54,36 @@ export function toggleMore(force) {
   }
   document.body.classList.toggle("qb-more-open", moreOpen);
   if (!moreOpen) document.body.classList.remove("qb-searching");
+  if (moreOpen) placeMorePop();
   return moreOpen;
 }
+
+// r15 (7.2 / 3.3): on a laptop "⋯ More" opens beside the rail, from the top of the drawing down, fitted to the window: the
+// tools flow into as many columns as it takes, so every one is in view with no scrolling (it used to open upwards off
+// the top of the screen as one long scrolling list).
+const MORE_COL_W = 176;
+export function placeMorePop() {
+  const pop = document.getElementById("qbMorePop"), list = pop && pop.querySelector(".qb-more-list");
+  const rail = document.getElementById("quickBarWrap") || $("quickBar");
+  if (!pop || !list || !rail || pop.classList.contains("hidden")) return;
+  const laptop = matchMedia("(min-width: 900px) and (hover: hover) and (pointer: fine)").matches && !document.body.classList.contains("phone-ui");
+  const clear = () => { for (const k of ["position", "left", "top", "bottom", "width", "maxHeight", "overflow"]) pop.style[k] = ""; list.style.columnCount = ""; };
+  if (!laptop) { clear(); return; }
+  const rr = rail.getBoundingClientRect(), pane = rail.closest(".cutgrid") || rail.parentElement;
+  const pr = pane ? pane.getBoundingClientRect() : rr;
+  const top = Math.max(8, Math.round(pr.top)), left = Math.round(rr.right + 6);
+  const availH = Math.max(160, Math.min(window.innerHeight, pr.bottom || window.innerHeight) - top - 8);
+  const availW = Math.max(MORE_COL_W, window.innerWidth - left - 8);
+  Object.assign(pop.style, { position: "fixed", left: left + "px", top: top + "px", bottom: "auto", maxHeight: availH + "px", overflow: "hidden" });
+  const maxCols = Math.max(1, Math.floor(availW / (MORE_COL_W + 8)));
+  for (let cols = 1; cols <= maxCols; cols++) {
+    list.style.columnCount = String(cols);
+    pop.style.width = (cols * MORE_COL_W + (cols - 1) * 8 + 18) + "px";
+    if (pop.scrollHeight <= pop.clientHeight + 1) return;
+  }
+  pop.style.overflow = "auto";   // a window too small for every tool even in columns: let it scroll rather than cut tools off
+}
+if (typeof window !== "undefined") window.addEventListener("resize", () => { if (moreOpen) placeMorePop(); });
 export function focusToolSearch() {
   moreOpen = true;
   document.body.classList.add("qb-searching", "qb-more-open");
@@ -193,7 +221,7 @@ export function renderQuickBar() {
       extra.push(B(id, n.icon, n.label));
     }
     extra.push(B("customise", "⚙", "Customise toolbar"));
-    parts.push(`<div id="qbMorePop" class="qb-more${moreOpen ? " is-open" : " hidden"}" role="menu" aria-hidden="${moreOpen ? "false" : "true"}">${searchHtml.replace('id="qbSearch"', 'id="qbMoreSearch"').replace('id="qbSearchBtn"', 'id="qbMoreSearchBtn"')}${extra.join("")}</div>`);
+    parts.push(`<div id="qbMorePop" class="qb-more${moreOpen ? " is-open" : " hidden"}" role="menu" aria-hidden="${moreOpen ? "false" : "true"}">${searchHtml.replace('id="qbSearch"', 'id="qbMoreSearch"').replace('id="qbSearchBtn"', 'id="qbMoreSearchBtn"')}<div class="qb-more-list">${extra.join("")}</div></div>`);
   }
   const hadFocus = document.activeElement && (document.activeElement.id === "qbSearch" || document.activeElement.id === "qbMoreSearch");
   const focusId = hadFocus ? document.activeElement.id : "";
@@ -207,6 +235,7 @@ export function renderQuickBar() {
   mountScrollRow(qb);
   refreshScrollRows();
   syncQbRoving();
+  if (moreOpen) placeMorePop();
 }
 function qbToolButtons() {
   const wrap = document.getElementById("quickBarWrap") || ($("quickBar") && $("quickBar").closest(".scrollrow-wrap"));
