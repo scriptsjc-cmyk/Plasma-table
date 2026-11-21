@@ -64,26 +64,42 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// r15: on a laptop the pop-up opens over the bed drawing (below its top chips), not over the Part / Setup panels it
+// used to cover from the header; a phone (or no drawing on screen) keeps it under the button.
+function placePop(pop) {
+  const cv = $("preview"), r = cv && cv.getBoundingClientRect();
+  const laptop = matchMedia("(min-width: 1280px) and (hover: hover) and (pointer: fine)").matches;
+  if (laptop && r && r.width >= 320 && r.height >= 200) {
+    Object.assign(pop.style, { position: "fixed", left: Math.round(r.left + 8) + "px", top: Math.round(r.top + 44) + "px",
+      maxWidth: Math.round(Math.min(420, r.width - 16)) + "px", maxHeight: Math.round(r.height - 52) + "px", marginTop: "0" });
+  } else {
+    for (const k of ["position", "left", "top", "maxWidth", "maxHeight", "marginTop"]) pop.style[k] = "";
+  }
+}
 function setOpen(on) {
   const btn = $("cutStatus"), pop = $("cutStatusPop");
   if (!btn || !pop) return;
   pop.hidden = !on;
   pop.classList.toggle("hidden", !on);
   btn.setAttribute("aria-expanded", on ? "true" : "false");
-  if (on) paintCutStatus();
+  if (on) { paintCutStatus(); placePop(pop); }
 }
 
 export function bindCutStatus() {
   const btn = $("cutStatus"), pop = $("cutStatusPop");
   if (!btn || !pop) return;
+  // a click pins it open (the pop-up sits over the drawing, away from the button, so the pointer may cross other things
+  // on its way there); hovering only peeks
+  let pinned = false;
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
-    setOpen(pop.hidden || pop.classList.contains("hidden"));
+    pinned = !pinned || pop.hidden || pop.classList.contains("hidden");
+    setOpen(pinned);
   });
   btn.addEventListener("mouseenter", () => setOpen(true));
   btn.addEventListener("focus", () => setOpen(true));
   const hideSoon = () => { setTimeout(() => {
-    if (btn.matches(":hover, :focus, :focus-visible") || pop.matches(":hover, :focus-within")) return;
+    if (pinned || btn.matches(":hover, :focus, :focus-visible") || pop.matches(":hover, :focus-within")) return;
     setOpen(false);
   }, 200); };
   btn.addEventListener("mouseleave", hideSoon);
@@ -93,13 +109,15 @@ export function bindCutStatus() {
     const b = e.target.closest("[data-goto=setup]");
     if (!b) return;
     e.preventDefault();
+    pinned = false;
     setOpen(false);
     import("../ui/flow.js").then((f) => f.showScreen("cut"));
     import("../ui/nav.js").then((n) => n.showTab("setup"));
   });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { pinned = false; setOpen(false); } });
   document.addEventListener("click", (e) => {
     if (e.target.closest("#cutStatus, #cutStatusPop")) return;
+    pinned = false;
     setOpen(false);
   });
   paintCutStatus();
