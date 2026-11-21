@@ -844,7 +844,7 @@ body.laptop-ui.pro-mode[data-screen="make"] #ptInspector {
 .layer-row.is-hole { padding-left: 16px; }
 .layer-row.is-hole .layer-pick { font-weight: 500; color: var(--muted-text, var(--muted)); }
 
-.layer-row { display: grid; grid-template-columns: minmax(0, 1fr) 36px 36px; gap: 4px; align-items: center; }
+.layer-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; /* r15: the eye and lock keep their own width (44 px on a laptop) instead of spilling past the list */ gap: 4px; align-items: center; }
 .layer-row.on .layer-pick { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .layer-row.is-hidden .layer-pick { opacity: 0.55; }
 .layer-pick { text-align: left; min-height: 40px; padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
