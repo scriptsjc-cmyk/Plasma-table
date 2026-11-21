@@ -283,15 +283,17 @@ try {
   await sleep(250);
   await page.click('#featList .feat-row[data-fid="1"] .feat-open'); await sleep(250);
   const inField = await ev(page, () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.feat-row[data-fid="1"] .feat-edit') && a.matches("input, select")); });
-  await page.keyboard.press("Control+d"); await sleep(250);
+  await page.keyboard.press("Control+d");
+  await page.waitForFunction(() => (window.plasmaTest.sketch.items[0] && window.plasmaTest.sketch.items[0].feats || []).length === 2, null, { timeout: 4000 }).catch(() => {});
   const afterDup = await feats();
   t.check("2.15: Ctrl+D with the open row's field focused duplicates that row", inField && afterDup.length === 2 && afterDup.every((f) => f.k === "hole" && f.d === 10), J({ inField, afterDup }));
-  await ev(page, () => window.plasmaTest.sketch.undo()); await sleep(200);
-  t.check("2.15: one undo removes the duplicate", (await feats()).length === 1, J(await feats()));
+  if (afterDup.length === 2) { await ev(page, () => window.plasmaTest.sketch.undo()); await sleep(200); }
+  t.check("2.15: one undo removes the duplicate", afterDup.length === 2 && (await feats()).length === 1, J(await feats()));
   await ev(page, () => { const b = document.querySelector('#featList .feat-row[data-fid="1"] .feat-open'); if (b) b.focus(); });
-  await page.keyboard.press("Delete"); await sleep(250);
+  await page.keyboard.press("Delete");
+  await page.waitForFunction(() => (window.plasmaTest.sketch.items[0] && window.plasmaTest.sketch.items[0].feats || []).length === 0, null, { timeout: 4000 }).catch(() => {});
   const afterDel = await feats();
-  await ev(page, () => window.plasmaTest.sketch.undo()); await sleep(200);
+  if (afterDel.length === 0) { await ev(page, () => window.plasmaTest.sketch.undo()); await sleep(200); }
   t.check("2.15: Delete on a focused row removes it, and one undo brings it back", afterDel.length === 0 && (await feats()).length === 1, J({ afterDel, now: await feats() }));
   // r15 2.19 (Josh t543u): typing a bigger size in the Size tab zooms the view to fit the part again, like Fit (no blur needed)
   await ev(page, () => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect", true, { w: 80, h: 50 }); s.commit(); s.pick([s.items[0].id]); s.onSelect(); s.fitView();
