@@ -110,4 +110,32 @@ for (const [rotd, fx] of [[0, false], [90, false], [30, true]]) {
   t.check(`handle: feature centre maps onto the cut hole (rot ${rotd}${fx ? ", mirrored" : ""})`, Math.hypot(w[0] - m[0], w[1] - m[1]) < 1e-6, J({ w, m }));
 }
 
+// loose holes inside a part become feature rows that cut the same holes (plan 2.16)
+for (const [hrot, hfx] of [[0, false], [90, false], [30, true]]) {
+  const ak = A.newSketch(); ak.add("rect", true, {}); const host = ak.items[0]; Object.assign(host.p, { w: 200, h: 150, r: 0 }); host.x = 0; host.y = 0;
+  const add = (type, p, x, y, rot = 0) => { ak.add(type, true, {}); const o = ak.items[ak.items.length - 1]; Object.assign(o.p, p); o.x = x; o.y = y; o.rot = rot; o._key = undefined; return o; };
+  add("hole", { d: 10 }, 20, 20); add("slothole", { len: 30, wid: 8 }, 60, 100, 90); add("boltcircle", { n: 6, pcd: 50, hole: 6, start: 90 }, 70, 40);
+  add("holegrid", { cols: 3, rows: 2, sx: 20, sy: 15, hole: 5 }, 130, 20); add("cornerholes", { w: 40, h: 30, hole: 4 }, 130, 90); add("holerow", { n: 4, sp: 12, hole: 4 }, 20, 120);
+  const holesOf = (sk) => sk.contours().slice(1).map((c) => { const b = box(c.pts); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2, b[2] - b[0]]; });
+  host.rot = hrot; host.fx = hfx; host._key = undefined;
+  // turning the host would move the loose holes away; turn everything together as the app does (carryOwned)
+  if (hrot || hfx) { for (const o of ak.items.slice(1)) o._key = undefined; }
+  const before = holesOf(ak).map((h) => h.map((v) => Math.round(v * 10) / 10)).sort().join(";");
+  const list = F.adoptableHoles(ak, host);
+  if (!hrot && !hfx) {
+    t.check("adopt: all 6 loose hole items are offered", list.length === 6, J(list.map((x) => x.item.type)));
+    host.feats = list.map((x) => x.feat); ak.items = [host]; host._key = undefined;
+    const after = holesOf(ak).map((h) => h.map((v) => Math.round(v * 10) / 10)).sort().join(";");
+    t.check("adopt: the features cut the same holes as the loose items did", after === before, `${before}\n${after}`);
+    t.check("adopt: one row per item (bolt circle / grid / row stay patterns)", J(host.feats.map((f) => f.k)) === J(["hole", "slot", "bolt", "grid", "grid", "edge"]), J(host.feats));
+    t.check("adopt: bolt circle keeps n 6 / PCD 50 / start 90", host.feats[2].n === 6 && host.feats[2].pcd === 50 && host.feats[2].ang === 90, J(host.feats[2]));
+  } else {
+    t.check(`adopt: on a turned / mirrored host the offer only includes items that rebuild exactly (rot ${hrot}${hfx ? ", mirrored" : ""})`, list.length >= 2 && list.every((x) => {
+      const sk2 = A.newSketch(); sk2.items = [JSON.parse(JSON.stringify(host))]; sk2.items[0].feats = [x.feat];
+      const want = ak.contoursOf(x.item).map((c) => mid(c.pts)), got = sk2.contoursOf(sk2.items[0]).slice(1).map((c) => mid(c.pts));
+      return want.length === got.length && want.every((w) => got.some((g) => Math.hypot(g[0] - w[0], g[1] - w[1]) < 0.06));
+    }), J(list.map((x) => x.feat)));
+  }
+}
+
 process.exit(t.done() ? 1 : 0);

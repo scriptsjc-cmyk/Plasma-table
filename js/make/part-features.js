@@ -267,3 +267,66 @@ export function drawFeatureHandles(sk, ctx, S, C, it) {
     ctx.restore();
   });
 }
+
+// ---------------------------------------------------------------- loose holes -> features (plan 2.16)
+// A separate hole / slot / bolt circle / grid / row item sitting fully inside a part can become one feature row of
+// that part. Only offered when the rebuilt feature cuts the same holes (centres within 0.05 mm, same sizes).
+const tidy = (v) => { const a = Math.round(v * 10) / 10; return exact(Math.abs(v - a) < 0.03 ? a : Math.round(v * 100) / 100); };
+const tidyAng = (a) => tidy(((a % 360) + 360) % 360);
+function looseToFeature(sk, host, o, id) {
+  const cs = sk.contoursOf(o); if (!cs.length) return null;
+  const circ = cs.filter((c) => c.circle);
+  const P = (pts) => sk.worldToPart(host, pts);
+  const centres = P(circ.map((c) => [c.circle.cx, c.circle.cy]));
+  const mean = (a) => [a.reduce((s, q) => s + q[0], 0) / a.length, a.reduce((s, q) => s + q[1], 0) / a.length];
+  const ang = (a, b) => (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+  const p = o.p || {};
+  let f = null;
+  if (o.type === "hole" && centres.length === 1) f = { k: "hole", x: tidy(centres[0][0]), y: tidy(centres[0][1]), d: exact(p.d) };
+  else if (o.type === "slothole" && cs.length === 1) {
+    const b = cs[0].pts.reduce((a, [x, y]) => [Math.min(a[0], x), Math.min(a[1], y), Math.max(a[2], x), Math.max(a[3], y)], [Infinity, Infinity, -Infinity, -Infinity]);
+    const [c] = P([[(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]]);
+    const [a0, a1] = P([[0, 0], [Math.cos(((o.rot || 0) * Math.PI) / 180), Math.sin(((o.rot || 0) * Math.PI) / 180)]]);
+    f = { k: "slot", x: tidy(c[0]), y: tidy(c[1]), len: exact(p.len), wid: exact(p.wid), rot: tidyAng(ang(a0, a1)) };
+  } else if (o.type === "boltcircle" && centres.length >= 1) {
+    const m = mean(centres);
+    f = { k: "bolt", x: tidy(m[0]), y: tidy(m[1]), n: centres.length, d: exact(p.hole), pcd: exact(p.pcd), ang: tidyAng(ang(m, centres[0])) };
+  } else if ((o.type === "holegrid" || o.type === "cornerholes") && centres.length >= 1) {
+    const xs = [...new Set(centres.map((q) => Math.round(q[0] * 20) / 20))].sort((a, b) => a - b);
+    const ys = [...new Set(centres.map((q) => Math.round(q[1] * 20) / 20))].sort((a, b) => a - b);
+    const m = mean(centres);
+    f = { k: "grid", x: tidy(m[0]), y: tidy(m[1]), cols: xs.length, rows: ys.length, px: tidy(xs.length > 1 ? (xs[xs.length - 1] - xs[0]) / (xs.length - 1) : 20), py: tidy(ys.length > 1 ? (ys[ys.length - 1] - ys[0]) / (ys.length - 1) : 20), d: exact(2 * circ[0].circle.r) };
+  } else if (o.type === "holerow" && centres.length >= 1) {
+    const m = mean(centres), n = centres.length;
+    f = { k: "edge", x: tidy(m[0]), y: tidy(m[1]), n, pitch: exact(p.sp), d: exact(p.hole), rot: n > 1 ? tidyAng(ang(centres[0], centres[n - 1])) : 0 };
+  }
+  if (!f) return null;
+  f = sanitizeFeature({ ...f, id });
+  if (!f) return null;
+  // the rebuilt feature must cut the same holes
+  const want = o.type === "slothole" ? null : centres.map((q, i) => [q[0], q[1], 2 * circ[i].circle.r]);
+  if (want) {
+    const got = holeCentres(f);
+    if (got.length !== want.length) return null;
+    const used = new Set();
+    for (const [x, y, d] of want) {
+      const j = got.findIndex((g, k) => !used.has(k) && Math.hypot(g[0] - x, g[1] - y) < 0.05);
+      if (j < 0 || Math.abs(f.d - d) > 0.05) return null;
+      used.add(j);
+    }
+  }
+  if (o.op === "score" || o.op === "mark") f.op = o.op;
+  return f;
+}
+// the loose hole items inside host that can become its features: [{ item, feat }]
+export function adoptableHoles(sk, host) {
+  if (!host || host.lock || sk.isHole(host) || sk.layout) return [];
+  let id = Math.max(0, ...(host.feats || []).map((f) => f.id));
+  const out = [];
+  for (const o of sk.ownedHoles(host)) {
+    if (o.lock || o.hide) continue;
+    const f = looseToFeature(sk, host, o, id + 1);
+    if (f) { id++; out.push({ item: o, feat: f }); }
+  }
+  return out;
+}

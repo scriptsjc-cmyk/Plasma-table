@@ -100,6 +100,12 @@ export class GeomMethods {
     const rb = bbox([{ pts: base.pts.map(R) }]), wb = bbox([world]);
     return pts.map(([x, y]) => { const [a, b] = R([x + o[0], y + o[1]]); return [a + wb[0] - rb[0], b + wb[1] - rb[1]]; });
   }
+  worldToPart(it, pts) {                                 // the inverse of partToWorld
+    const [p0, px, py] = this.partToWorld(it, [[0, 0], [1, 0], [0, 1]]);
+    if (!p0) return [];
+    const ax = [px[0] - p0[0], px[1] - p0[1]], ay = [py[0] - p0[0], py[1] - p0[1]], det = ax[0] * ay[1] - ax[1] * ay[0];
+    return pts.map(([x, y]) => { const dx = x - p0[0], dy = y - p0[1]; return [(dx * ay[1] - dy * ay[0]) / det, (ax[0] * dy - ax[1] * dx) / det]; });
+  }
   partWidth(it) {                                       // outline width in the part's own frame (features are measured in it)
     try { const c = this.baseContours(it)[0]; if (c) { const b = bbox([c]); return b[2] - b[0]; } } catch (e) { /* no outline */ }
     return 0;
