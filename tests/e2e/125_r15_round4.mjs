@@ -306,6 +306,78 @@ try {
     t.check(`no page error (${prof} cutting)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 4.15–4.22 Make a part, visual only (laptop)
+  const truncated = (page, sel) => ev(page, (sel) => [...document.querySelectorAll(sel)].filter((e) => e.getClientRects().length && e.getBoundingClientRect().width > 2)
+    .filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 2).map((e) => e.textContent.trim().slice(0, 30)), sel);
+  for (const prof of ["d1280x600", "d1366x640", "d1536x730"]) {
+    const page = await newPage(br, prof, { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    const pro = () => ev(page, () => { const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { persist: false, autoFs: false });
+      const s = T.sketch; s.clear(); s.add("rect", true, { w: 120, h: 80 }); s.commit(); s.pick([s.items[0].id]); s.onSelect(); s.fitView(); });
+    await pro(); await sleep(600);
+    await ev(page, () => { const b = document.querySelector('.insp-tabs [data-insp="size"]') || document.querySelector('[data-insp="size"]'); if (b) b.click(); }); await sleep(300);
+    // 4.15 Versions of this shape: two columns, no name cut with "…"
+    const ver = await ev(page, () => { const row = document.querySelector("#srcShape .varrow"); if (!row || !row.getClientRects().length) return null;
+      const bs = [...row.querySelectorAll("button")].filter((b) => b.getClientRects().length);
+      return { cols: new Set(bs.map((b) => Math.round(b.getBoundingClientRect().left))).size, cut: bs.filter((b) => b.scrollWidth > b.clientWidth + 1).map((b) => b.textContent.trim()), n: bs.length }; });
+    t.check(`4.15 ${prof}: the shape versions are in 2 columns and no name is cut off`, ver && ver.n >= 4 && ver.cols === 2 && ver.cut.length === 0, J(ver));
+    // 4.16 the size is said once (no greyed "Size 120 × 80 mm" box beside Width / Height)
+    const dupSize = await ev(page, () => [...document.querySelectorAll("#srcShape input[disabled]")].filter((i) => i.getClientRects().length && /×/.test(i.value)).map((i) => i.value));
+    t.check(`4.16 ${prof}: no duplicate greyed Size box under Width / Height`, dupSize.length === 0, J(dupSize));
+    // 4.17 the X 0 / Y 0 chips are off the part outline
+    const xy = await ev(page, () => { const s = window.plasmaTest.sketch; s.draw && s.draw(); const b = s.pickedBox(); const [x0, y0] = s.toScreen(b[0], b[3]), [x1, y1] = s.toScreen(b[2], b[1]);
+      const L = Math.min(x0, x1), R = Math.max(x0, x1), Tt = Math.min(y0, y1), B = Math.max(y0, y1);
+      const chips = (s.dimHits || []).filter((h) => h.kind === "x" || h.kind === "y");
+      const crosses = (c) => { const cl = c.x, cr = c.x + c.w, ct = c.y, cb = c.y + c.h, pad = 2;
+        const hz = (y) => ct - pad < y && cb + pad > y && cr > L && cl < R, vt = (x) => cl - pad < x && cr + pad > x && cb > Tt && ct < B;
+        return hz(Tt) || hz(B) || vt(L) || vt(R); };
+      return { n: chips.length, on: chips.filter(crosses).map((c) => c.kind), box: [L, Tt, R, B].map(Math.round), chips: chips.map((c) => [c.x, c.y, c.w, c.h].map(Math.round)) }; });
+    t.check(`4.17 ${prof}: the X / Y position chips don't sit on the part outline`, xy.n === 2 && xy.on.length === 0, J(xy));
+    // 4.18 rail: the first tool clears the rail's border; 3-point arc / Tangent arc / Spline are one "Arc ▾" button that opens them
+    const rail = await ev(page, () => { const qb = document.getElementById("quickBar"), r = qb.getBoundingClientRect(), c = getComputedStyle(qb);
+      const btns = [...qb.querySelectorAll(":scope > button[data-qb]")].filter((b) => b.getClientRects().length);
+      const top = Math.min(...btns.map((b) => b.getBoundingClientRect().top)), left = Math.min(...btns.map((b) => b.getBoundingClientRect().left));
+      const vis = (q) => { const e = qb.querySelector(`:scope > [data-qb="${q}"]`); return !!e && e.getClientRects().length > 0; };
+      const arc = qb.querySelector(':scope > [data-qb="arcmenu"]');
+      return { gapTop: Math.round(top - r.top - parseFloat(c.borderTopWidth)), gapLeft: Math.round(left - r.left - parseFloat(c.borderLeftWidth)), arc: !!arc && arc.getClientRects().length > 0, arcText: arc ? arc.textContent.trim() : "",
+        loose: ["arc3", "arctan", "spline"].filter(vis) }; });
+    t.check(`4.18 ${prof}: the rail's top tools don't touch its border (4 px or more)`, rail.gapTop >= 4 && rail.gapLeft >= 2, J(rail));
+    t.check(`4.18 ${prof}: one "Arc ▾" rail button instead of three arc / curve buttons`, rail.arc && /▾/.test(rail.arcText) && rail.loose.length === 0, J(rail));
+    await page.click('#quickBar > [data-qb="arcmenu"]').catch(() => {}); await sleep(300);
+    const arcPop = await ev(page, () => ["arc3", "arctan", "spline"].map((q) => { const e = document.querySelector(`#qbArcPop [data-qb="${q}"]`); if (!e || !e.getClientRects().length) return null; const r = e.getBoundingClientRect(); return r.right <= innerWidth && r.bottom <= innerHeight ? q : null; }));
+    t.check(`4.18 ${prof}: Arc ▾ opens 3-point arc, Tangent arc and Spline (on screen)`, arcPop.every(Boolean), J(arcPop));
+    if (arcPop[0]) { await page.click('#qbArcPop [data-qb="arc3"]'); await sleep(250); }
+    const arcTool = await ev(page, () => ({ tool: window.plasmaTest.sketch.tool, popOpen: !!document.querySelector("#qbArcPop:not(.hidden)") && document.getElementById("qbArcPop").getClientRects().length > 0 }));
+    t.check(`4.18 ${prof}: picking 3-point arc there starts the tool and closes the list`, arcTool.tool === "arc3" && !arcTool.popOpen, J(arcTool));
+    await page.keyboard.press("Escape"); await ev(page, () => window.plasmaTest.sketch.setTool(null)); await sleep(150);
+    // 4.20 header: Select / Snap not bold, Delete not red when it can't be used, Snap set only in the header
+    await ev(page, () => { const s = window.plasmaTest.sketch; s.pick([]); s.onSelect && s.onSelect(); }); await sleep(300);
+    const hd = await ev(page, () => { const fw = (id) => { const e = document.getElementById(id); return e && e.getClientRects().length ? Number(getComputedStyle(e).fontWeight) : null; };
+      const del = [...document.querySelectorAll('[data-qb="del"]')].find((b) => b.getClientRects().length);
+      const dc = del && getComputedStyle(del);
+      return { sel: fw("btnSelectMenu"), snap: fw("btnSnapMenu"), delDis: del && (del.getAttribute("aria-disabled") === "true" || del.disabled), delRed: !!del && (del.classList.contains("danger") || /rgb\(253, 236, 236\)/.test(dc.backgroundColor)),
+        railSnap: [...document.querySelectorAll('#quickBar > [data-qb="snap"]')].some((b) => b.getClientRects().length) }; });
+    t.check(`4.20 ${prof}: Select and Snap in the header are not bold`, hd.sel != null && hd.sel < 600 && hd.snap != null && hd.snap < 600, J(hd));
+    t.check(`4.20 ${prof}: Delete is not red while nothing is picked`, hd.delDis && !hd.delRed, J(hd));
+    t.check(`4.20 ${prof}: Snap is set in one place (the header), not on the rail too`, !hd.railSnap, J(hd));
+    // 4.22 plain names for the expert tools (the old names still find them)
+    const names = await ev(page, () => { const T = [...document.querySelectorAll('#quickBar [data-qb="sliver"], #quickBar [data-qb="drivedim"]')]; return T.map((b) => b.dataset.qb + ":" + b.dataset.label); });
+    t.check(`4.22 ${prof}: "Clean up tiny gaps" and "Set hole position" are the tool names`, names.includes("sliver:Clean up tiny gaps") && names.includes("drivedim:Set hole position"), J(names));
+    // 4.21 preset names wrap to 2 lines instead of "…"
+    await ev(page, () => { const b = document.querySelector('#quickBar [data-qb="presets"]'); if (b) b.click(); }); await sleep(700);
+    const pn = await ev(page, () => { const ns = [...document.querySelectorAll(".presetbrowser .pb-name")].filter((e) => e.getClientRects().length && e.getBoundingClientRect().top < innerHeight);
+      return { n: ns.length, cut: ns.filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 2 || getComputedStyle(e).textOverflow === "ellipsis" && e.scrollWidth > e.clientWidth).map((e) => e.textContent.trim()).slice(0, 5),
+        lines: Math.max(0, ...ns.map((e) => Math.round(e.getBoundingClientRect().height / (parseFloat(getComputedStyle(e).lineHeight) || 16)))) }; });
+    t.check(`4.21 ${prof}: preset names are whole (up to 2 lines), not cut with "…"`, pn.n > 4 && pn.cut.length === 0 && pn.lines <= 2, J(pn));
+    await page.keyboard.press("Escape"); await sleep(200);
+    // 4.19 Simple: Remove is quiet (the header's Delete is the main one)
+    await ev(page, () => { const T = window.plasmaTest; T.setAppMode("simple", { persist: false, autoFs: false }); const s = T.sketch; s.pick([s.items[0].id]); s.onSelect(); }); await sleep(500);
+    const rm = await ev(page, () => { const b = [...document.querySelectorAll('button[data-sk="remove"]')].find((x) => x.getClientRects().length); if (!b) return null; const c = getComputedStyle(b), sib = b.parentElement.querySelector('button[data-sk="rotateBy"], button[data-sk="add"]');
+      return { bg: c.backgroundColor, border: c.borderTopColor, bw: parseFloat(c.borderTopWidth), w: b.getBoundingClientRect().width, row: b.parentElement.getBoundingClientRect().width, h: b.getBoundingClientRect().height, sibH: sib ? sib.getBoundingClientRect().height : 0 }; });
+    t.check(`4.19 ${prof}: Simple's Remove is a quiet text button, not a full-width boxed one`, rm && /rgba\(0, 0, 0, 0\)|transparent/.test(rm.bg) && (rm.bw === 0 || /rgba\(0, 0, 0, 0\)/.test(rm.border)) && rm.w < rm.row * 0.6, J(rm));
+    t.check(`no page error (${prof} make)`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("125 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
