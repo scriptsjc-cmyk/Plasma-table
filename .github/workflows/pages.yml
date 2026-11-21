@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   # r13 section 5: deploy only after the gate passes. tests/ci-gate.mjs runs every unit suite plus the safety and fit
-  # end-to-end suites (20_demo_job_safety, 22_stop_overlay, 70, 74, 92_r9_chrome, 96_fits_screen, 110, 111, 112, 113_r15_fits, 120_every_tool, 121_features, 122_loose_holes, 123_features_phone); only the checks listed in
+  # end-to-end suites (20_demo_job_safety, 22_stop_overlay, 70, 74, 92_r9_chrome, 96_fits_screen, 110, 111, 112, 113_r15_fits, 120_every_tool, 121_features, 122_loose_holes, 123_features_phone, 124_r15_round3); only the checks listed in
   # tests/known-failures.txt may fail. Everything runs against a local static server and the in-browser practice table.
   test:
     runs-on: ubuntu-latest
