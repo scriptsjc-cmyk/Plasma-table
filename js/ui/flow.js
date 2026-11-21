@@ -113,15 +113,26 @@ function onEstopButton(e) {
 // ---------------------------------------------------------------- the lock
 export const navLocked = () => !!(H && H.jobLive && H.jobLive());
 const WHY = "Not while the machine is cutting. Press the red E-STOP first.";
+// r15 1.1: while "Before you cut" is open, Menu, ☰, the step tabs and the Cut / Machine setup tabs are off, so the
+// confirm can't be answered from another screen. (Any screen, step or tab change also cancels it: showScreen, showTab, goStep.)
+let startAsk = false;
+const ASK_WHY = "Answer “Before you cut” first.";
+export function setStartAsk(on) { startAsk = !!on; paintLock(); }
+export const startAskOpen = () => startAsk;
+const lockEl = (el, on, why) => {
+  if (!el) return;
+  if (el.tagName === "BUTTON") el.disabled = on;
+  if (on) { el.setAttribute("aria-disabled", "true"); el.dataset.why = why; }
+  else { el.removeAttribute("aria-disabled"); el.removeAttribute("data-why"); }
+};
 export function paintLock() {
   const lock = navLocked();
-  const home = $("btnHome");
-  if (home) {
-    home.disabled = lock;
-    if (lock) { home.setAttribute("aria-disabled", "true"); home.dataset.why = WHY; }
-    else { home.removeAttribute("aria-disabled"); home.removeAttribute("data-why"); }
-  }
+  lockEl($("btnHome"), lock || startAsk, lock ? WHY : ASK_WHY);
+  lockEl($("btnTopMenu"), startAsk, ASK_WHY);
+  document.querySelectorAll("#stepper li, .tabs .tab").forEach((el) => lockEl(el, startAsk, ASK_WHY));
+  if (startAsk) { const bar = document.querySelector(".topbar"); if (bar) bar.classList.remove("menu-open"); }
   document.body.classList.toggle("nav-locked", lock);
+  document.body.classList.toggle("start-ask", startAsk);
 }
 window.addEventListener("beforeunload", (e) => {
   if (!navLocked()) return;
@@ -137,6 +148,7 @@ export function showScreen(name, opts = {}) {
   if (name !== "login" && name !== "boot" && !signedIn && !H.bypass) name = "login";
   if (name === prev && !opts.force) return true;
   if (prev === "cut" && name !== "cut" && navLocked()) { H.toast(WHY, true); return false; }
+  if (name !== prev) cancelConfirm();             // r15 1.1: a confirm never outlives the screen it was asked on
   document.body.dataset.screen = name;
   if (!opts.fromPop && !opts.noHistory && name !== "boot") {
     try { history.pushState({ s: name }, "", location.href); } catch (e) { /* ignore */ }
@@ -161,7 +173,7 @@ export function initFlow(host) {
     stopBtn.addEventListener("contextmenu", (e) => { if (latched) e.preventDefault(); });   // a long press on a phone must not open a menu
     stopBtn.addEventListener("blur", () => { if (holdTimer) holdCancel(); });
   }
-  $("btnHome").onclick = () => { if (!navLocked()) showScreen("menu"); };
+  $("btnHome").onclick = () => { if (!navLocked() && !startAsk) showScreen("menu"); };
   $("menuMake").onclick = () => showScreen("make");
   $("menuCut").onclick = () => {
     // Always the Cut tab. Entering the cut screen used to restore a leftover

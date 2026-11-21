@@ -1,6 +1,7 @@
 // Screens and steps: menu, Make a part -> Get set up -> Cut, tabs and the stepper.
 import { closeAccountUi, openAccount } from "../account/accounthome.js";
-import { navLocked, screen, showScreen } from "./flow.js";
+import { navLocked, screen, showScreen, startAskOpen } from "./flow.js";
+import { cancelConfirm } from "../core/safeprompt.js";
 import * as Acc from "../account/account.js";
 import * as Setup from "../cut/setup.js";
 import { demoEdges } from "./demo.js";
@@ -112,6 +113,7 @@ export function routeAuth() {
 export function showTab(name) {
   if (name !== "setup") name = "cut";
   if (name !== S.tab && screen() === "cut" && navLocked()) { toast("Not while the machine is cutting. Press the red E-STOP first.", true); return; }
+  if (name !== S.tab) cancelConfirm();            // r15 1.1: leaving the tab cancels an open confirm (it answers "no")
   const scr = screen();
   $$(".tab").forEach((t) => t.classList.toggle("sel", t.dataset.tab === name));
   $("cutView").classList.toggle("hidden", !(scr === "make" || (scr === "cut" && name === "cut")));
@@ -134,6 +136,7 @@ export function goStep(n) {
   if (S.job && S.job.running && n !== 4) { toast("A job is running. Pause or stop it first.", true); return; }
   if (n !== 1 && S.shapeFs) setShapeFs(false);
   const was = S.cur;
+  if (n !== was) cancelConfirm();                // r15 1.1: a step change cancels an open confirm (it answers "no")
   S.cur = n; document.body.dataset.step = String(n);
   $$(".step").forEach((el) => el.classList.toggle("hidden", Number(el.dataset.step) !== n));
   const ulFrom = document.querySelector("#stepper li.cur");
@@ -157,7 +160,7 @@ export function syncSteps() {
 export function bindNav() {
   $("menuRecent").addEventListener("click", (e) => { const b = e.target.closest("button[data-part]"); if (b) openRecentPart(b.dataset.part); });
   $$(".tab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
-  $$("#stepper li").forEach((li) => (li.onclick = () => goStep(Number(li.dataset.step))));
+  $$("#stepper li").forEach((li) => (li.onclick = () => { if (!startAskOpen()) goStep(Number(li.dataset.step)); }));
   $$("[data-go]").forEach((b) => (b.onclick = () => goStep(Number(b.dataset.go))));
   $("next1").onclick = () => (screen() === "make" ? sendToCutting() : goStep(3));
   $("btnChangeMat").onclick = () => goStep(1);

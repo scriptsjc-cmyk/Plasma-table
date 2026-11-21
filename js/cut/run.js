@@ -7,9 +7,13 @@ import { M, S } from "../core/state.js";
 import { blockers, startReminders } from "./checklist.js";
 import { refresh } from "../ui/refresh.js";
 import { goStep, markFirstJobDone } from "../ui/nav.js";
+import { screen, setStartAsk } from "../ui/flow.js";
 import { keepAwake } from "../machine/connection.js";
 import { maybeLogJob } from "../machine/events.js";
 import { startOver } from "../make/files.js";
+
+// Get to cutting, step 2 Setup (S.cur 3) on the Cut tab: the only place a job may start (STOP is on this screen).
+const onSetupStep = () => screen() === "cut" && S.tab === "cut" && S.cur === 3;
 
 export function bindRun() {
   // step 3
@@ -30,16 +34,22 @@ export function bindRun() {
   // step 4
   if ($("checklist")) $("checklist").addEventListener("change", refresh);
   $("btnStart").onclick = async () => {
+    if (!onSetupStep()) return;
     if (!requireMachine("Link your machine to run jobs")) return;
     { const b = blockers(); if (b.length) { toast(b[0], true); return; } }   // a script/DOM-poke can't bypass the disabled button: zero, alarm, fit, and the other start gates are re-checked here
-    if (!(await askConfirm({
-      title: "Before you cut",
-      body: "",
-      lines: startReminders(),
-      ok: "Everything's correct – start",
-      cancel: "Cancel",
-      compact: true,
-    }))) return;
+    setStartAsk(true);
+    let go = false;
+    try {
+      go = await askConfirm({
+        title: "Before you cut",
+        body: "",
+        lines: startReminders(),
+        ok: "Everything's correct – start",
+        cancel: "Cancel",
+        compact: true,
+      });
+    } finally { setStartAsk(false); }
+    if (!go || !onSetupStep()) return;              // r15 1.1: only ever starts from Get to cutting, step 2 Setup, where STOP is
     { const b = blockers(); if (b.length) { toast(b[0], true); return; } }
     try {
       M.command({ cmd: "feed_override", step: "reset" });  // cut at exactly the speed chosen in step 2
