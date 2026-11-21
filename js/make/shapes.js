@@ -5,6 +5,7 @@ import { FAB_SHAPES } from "./shapes-fab.js";
 import { PRESET_SHAPES, PRESET_GROUPS } from "./presets/index.js";
 import { isFoldPart, foldTileSvg, foldModel, FOLD_MODELS } from "./fold3d.js";
 import { attachPipeFlanges } from "./pipeflanges.js";
+import { attachBendAllowance } from "./bends.js";
 export { isFoldPart, foldModel, FOLD_MODELS };
 export { PRESET_SHAPES, PRESET_GROUPS, PRESET_IDS, R8_PRESETS, FOLD_PRESETS, WORKSHOP_IDS } from "./presets/index.js";
 
@@ -611,6 +612,8 @@ export const SHAPES = [
 
 // several copies in a grid
 for (const sh of SHAPES) attachPipeFlanges(sh);
+// r15 5.1: folded presets with square bend lines take the bend deduction off their flat pattern
+for (const sh of SHAPES) attachBendAllowance(sh, { isFold: isFoldPart });
 
 export function copies(contours, cols, rows, gap) {
   cols = Math.max(1, Math.min(50, Math.round(cols) || 1)); rows = Math.max(1, Math.min(50, Math.round(rows) || 1));

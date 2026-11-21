@@ -87,6 +87,12 @@ export function sanitizePrefs(raw) {
     const n = Number(src[k]);
     return Number.isFinite(n) && n >= 50 && n <= cap ? Math.round(n * 100) / 100 : 0;
   };
+  // r15 5.1: measured bend deductions, mm per bend keyed by sheet thickness ("1.5": 2.5)
+  if (isObj(src.bendBD)) {
+    const bd = {};
+    for (const [k, v] of Object.entries(src.bendBD)) { const th = Number(k), n = Number(v); if (th > 0 && th <= 50 && Number.isFinite(n) && n > 0 && n < 50) bd[String(th)] = Math.round(n * 1000) / 1000; }
+    if (Object.keys(bd).length) out.bendBD = bd;
+  }
   out.sheetW = sheet("sheetW", 20000);
   out.sheetH = sheet("sheetH", 20000);
   if ("tools" in src) {

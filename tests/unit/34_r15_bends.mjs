@@ -85,6 +85,11 @@ for (const s of withB) {
 }
 t.check("every preset with bend fields shrinks by its bends and stays valid", bad.length === 0, bad.slice(0, 6).join("; "));
 
+// ---- a preset whose bends aren't 90° (ridge cap, 45°) uses its own angle
+const RC = sh("ridgecap"), pr = defaults(RC), rc0 = bb(RC.make({ ...pr, bsz: 2 })), rc1 = bb(RC.make({ ...pr, bt: 1, bir: 1, bk: 0.44 }));
+const BD45 = B.bendDeduction({ t: 1, r: 1, k: 0.44, deg: 45 }), nb = bends(RC.make({ ...pr, bsz: 2 })).length;
+t.check("ridge cap: 45° bends take the 45° deduction off", nb >= 1 && near(rc1.h, rc0.h - nb * BD45) && BD45 < BDo, JSON.stringify({ rc0, rc1, BD45, nb }));
+
 // ---- the size form says what was taken off and whether sizes are outside or inside
 const note = typeof L.note === "function" ? L.note({ ...p0, bt: 2, bir: 2, bk: 0.44, bsz: 0 }) : "";
 t.check("the note says the deduction per bend and that sizes are outside", /3\.4\d? mm/.test(note) && /per bend/i.test(note) && /outside/i.test(note), note);

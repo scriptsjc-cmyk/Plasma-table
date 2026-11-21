@@ -3,6 +3,7 @@ import { bbox, classifyContainment, classifyLoops, expandContour, pointInPoly } 
 import { contoursToEditable } from "./editable.js";
 import { def, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { makeShape } from "./shapes.js";
+import { bendKey } from "./bends.js";
 import { applyCorners, cornerRows, flattenFeatures } from "./part-features.js";
 
 export class GeomMethods {
@@ -72,7 +73,8 @@ export class GeomMethods {
     return 1;
   }
   contoursOf(it) {
-    const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0, it.feats || 0]);
+    const sd = def(it.type), bk = sd && sd.bendAllowance ? bendKey() : 0;     // r15 5.1: a folded part follows the job's sheet
+    const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0, it.feats || 0, bk]);
     if (it._key === key) return it._cs;
     let cs;
     try { cs = this.baseContours(it); } catch (e) { cs = []; }

@@ -15,6 +15,7 @@ import { fillSettingsFromText, setFirmwareText, filterConsoleCommand } from "./m
 import { convertGcode } from "./machine/dialect.js";
 import { initSettings, bindSettings, openSettings, closeSettings, currentSettings, matchPreset, refreshPublishedPresets } from "./machine/settings.js";
 import { applyChrome, drawingSheet, getPrefs, savePrefs } from "./core/prefs.js";
+import { setBendContext } from "./make/bends.js";
 import { initYours, bindYours, paintYours } from "./ui/yours.js";
 import { bindScrollRows, refreshScrollRows } from "./ui/scrollrow.js";
 import { bindPreviewNav, previewCam, resetPreviewCam } from "./cut/previewnav.js";
@@ -129,6 +130,8 @@ async function init() {
   const [machine, chart, settings] = await Promise.all([
     text("config/machine.json").then(JSON.parse), text("config/cut_chart.json").then(JSON.parse), text("config/grblhal_settings.txt")]);
   S.cfg = machine; S.chart = chart;
+  // r15 5.1: folded flat patterns take their bends off for the job's sheet, or a deduction Josh measured and saved for it
+  setBendContext({ thickness: () => S.thickness, measured: (th) => { const m = getPrefs().bendBD; return m && m[String(th)] != null ? m[String(th)] : null; } });
   let store = null;
   try { store = window.localStorage; } catch (e) { /* private mode */ }
   setM(new Machine(machine, chart, settings, store));

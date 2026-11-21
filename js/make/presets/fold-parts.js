@@ -412,7 +412,7 @@ export const FOLD_PRESETS = [
     "Ridge cap: two roof legs and a small centre welt, one developed strip.",
     [["leg", "Each roof leg", 80], ["welt", "Centre welt (0 = none)", 10], ["len", "Length", 400]],
     (p) => strip(p.len, [p.leg, Math.max(0, p.welt), p.leg]),
-    { noResize: true, fold: (p) => {
+    { noResize: true, bendDeg: 45, fold: (p) => {
       const W = face(p.len, Math.max(0.1, p.welt));
       attach(W, 0, -45, face(p.len, p.leg));
       attach(W, 2, -45, face(p.len, p.leg));

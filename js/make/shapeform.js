@@ -15,6 +15,8 @@ import { paintCutSummary } from "./cutsummary.js";
 import { onShapeFormPainted } from "./phonesheet.js";
 import { clickVerb } from "../ui/laptop.js";
 import { isFoldPart, mountFoldView } from "./fold3d.js";
+import { bendFor } from "./bends.js";
+import { getPrefs, savePrefs } from "../core/prefs.js";
 import { flangeShapeKeys } from "./flange-tables.js";
 import { tableToHtml, openSheetTable } from "./sheetopts.js";
 import { setInfoText } from "../ui/hovertip.js";
@@ -136,6 +138,11 @@ function extraFormHtml(it, sh) {
   if (sh && sh.note) {
     const note = typeof sh.note === "function" ? sh.note(it && it.p ? it.p : {}) : sh.note;
     if (note) html += `<p class="tip fold-note">${esc(String(note))}</p>`;
+  }
+  // r15 5.1: a deduction measured on your own brake can be kept for this sheet thickness (every folded part then uses it)
+  if (sh && sh.bendAllowance && it && it.p && Number(it.p.bd) > 0) {
+    const b = bendFor({ ...it.p, bd: 0 }), T = b.T, v = Number(it.p.bd);
+    if (T > 0 && Number(it.p.bsz) !== 2) html += `<div class="skbtns"><button type="button" class="quiet" data-bend-save="${esc(String(v))}" data-bend-th="${esc(String(T))}">Remember ${esc(String(v))} mm for every ${esc(String(T))} mm bend</button></div>`;
   }
   if (sh && sh.table) {
     html += `<div class="skbtns"><button type="button" data-sheet-table="1">Print true-length / marking-out table</button></div>`;
@@ -379,6 +386,14 @@ export function bindShapeForm() {
     if (bp) { sketch.pick([Number(bp.dataset.bpart)]); sketch.draw(); renderShapeForm(); return; }
     const p = e.target.closest("[data-pro]");
     if (p) { runPro(p.dataset.pro); return; }
+    const bs = e.target.closest("[data-bend-save]");
+    if (bs) {
+      const th = String(Number(bs.dataset.bendTh)), v = Number(bs.dataset.bendSave);
+      try { savePrefs({ bendBD: { ...(getPrefs().bendBD || {}), [th]: v } }); } catch (err) { /* ignore */ }
+      toast(`Saved: ${v} mm per bend for ${th} mm sheet. Folded parts on ${th} mm use it (type 0 in a part to work it out instead).`);
+      renderShapeForm();
+      return;
+    }
     const tb = e.target.closest("[data-sheet-table]");
     if (tb) {
       const it = sketch.selected();
