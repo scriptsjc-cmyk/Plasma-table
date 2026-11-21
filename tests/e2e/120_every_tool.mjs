@@ -203,6 +203,24 @@ for (const [size, prof] of SIZES.filter(([s]) => !ONLY_SIZES.length || ONLY_SIZE
   const ids = await ev(page, async () => { const m = await import("/js/make/toolbarcustom.js");
     return [...m.TOOL_GROUPS.flatMap((g) => g.items.map((i) => i[0])), ...m.HEADER_TOOLS.map((h) => h[0])]; });
   t.check(`${size}: every tool has a test plan here`, ids.every((id) => SPEC[id]), ids.filter((id) => !SPEC[id]).join(", "));
+  // r15 3.3: ⋯ More has a search box in view, and searching it finds a tool that is not on the rail (Ungroup)
+  {
+    await page.locator('[data-qb="more"]:visible').first().click({ timeout: 2000 }).catch(() => {});
+    await sleep(200);
+    const box = page.locator("#qbMoreSearch:visible").first();
+    const shown = await box.count() ? await box.boundingBox() : null;
+    const vp = page.viewportSize();
+    t.check(`${size}: ⋯ More shows its search box on screen`, !!shown && shown.y >= 0 && shown.y + shown.height <= vp.height, JSON.stringify(shown));
+    if (shown) { await box.click(); await box.fill("ungroup"); await sleep(250); }
+    const found = await page.locator('#quickBar [data-qb="ungroup"]:visible').count();
+    t.check(`${size}: searching ⋯ More finds Ungroup`, found > 0, String(found));
+    // clear the search (typing turns the rail into the results list with a "Showing: …" chip)
+    const chip = page.locator("#qbFilterChip:visible").first();
+    if (await chip.count()) await chip.click({ timeout: 2000 }).catch(() => {});
+    await page.keyboard.press("Escape"); await sleep(150);
+    await ev(page, () => import(window.__J.quickbar).then((q) => q.toggleMore(false)));
+    await sleep(150);
+  }
 
   for (const id of ids.filter((x) => !ONLY.length || ONLY.includes(x))) {
     const sp = SPEC[id]; if (!sp) continue;
