@@ -106,6 +106,12 @@ try {
     t.check("6.5 with a job material set, Check cut doesn't ask again: no material / thickness picker", !a.pick, J(a));
     t.check("6.5 it says which material it checked for, with a Change link", /mild steel/i.test(a.job) && /3 mm/.test(a.job) && a.change, J(a));
     t.check("6.5 the results are there straight away, for 3 mm", /3 mm/.test(a.out) && a.out.length > 20, J(a.out));
+    // found in the r6 screenshots: the Check cut box was the only dialog without .shapelib, so it sat under the page and squashed the drawing
+    const lay = await ev(page, () => {
+      const d = document.getElementById("makeCheckDlg"), c = d.querySelector(".acctcard").getBoundingClientRect(), cs = getComputedStyle(d);
+      return { pos: cs.position, modal: d.getAttribute("aria-modal"), card: [Math.round(c.top), Math.round(c.bottom)], vh: innerHeight, scrollH: document.documentElement.scrollHeight };
+    });
+    t.check("6.5 Check cut opens over the page (fixed, modal), its card inside the window, page not made taller", lay.pos === "fixed" && lay.modal === "true" && lay.card[0] >= 0 && lay.card[1] <= lay.vh && lay.scrollH <= lay.vh + 1, J(lay));
     const ch = await ev(page, async () => {
       document.getElementById("makeCheckChange").click();
       await new Promise((r) => setTimeout(r, 150));
