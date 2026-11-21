@@ -109,9 +109,11 @@ try {
     // found in the r6 screenshots: the Check cut box was the only dialog without .shapelib, so it sat under the page and squashed the drawing
     const lay = await ev(page, () => {
       const d = document.getElementById("makeCheckDlg"), c = d.querySelector(".acctcard").getBoundingClientRect(), cs = getComputedStyle(d);
-      return { pos: cs.position, modal: d.getAttribute("aria-modal"), card: [Math.round(c.top), Math.round(c.bottom)], vh: innerHeight, scrollH: document.documentElement.scrollHeight };
+      const bg = getComputedStyle(d.querySelector(".acctcard")).backgroundColor;
+      return { pos: cs.position, modal: d.getAttribute("aria-modal"), card: [Math.round(c.top), Math.round(c.bottom)], vh: innerHeight, scrollH: document.documentElement.scrollHeight, bg };
     });
     t.check("6.5 Check cut opens over the page (fixed, modal), its card inside the window, page not made taller", lay.pos === "fixed" && lay.modal === "true" && lay.card[0] >= 0 && lay.card[1] <= lay.vh && lay.scrollH <= lay.vh + 1, J(lay));
+    t.check("6.5 the Check cut card has its own solid background, like the other dialogs (text not on the dimmed drawing)", !/rgba\(0, 0, 0, 0\)|transparent/.test(lay.bg), J(lay.bg));
     const ch = await ev(page, async () => {
       document.getElementById("makeCheckChange").click();
       await new Promise((r) => setTimeout(r, 150));
