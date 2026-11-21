@@ -2,6 +2,7 @@
 import { bbox, bulgeFromPoint, bulgeFromRadius, bulgeFromSagitta, bulgeMidpoint, bulgeRadius, expandContour, polysCross, selfIntersects, signedArea, splitBulge } from "../core/geom.js";
 import { fitContour } from "../core/arcs.js";
 import { cleanContour, clampBulge, clone, distToEdge, r1, wholeSet } from "./sketch-util.js";
+import { applyCorners, cornerIndices, cornerRows } from "./part-features.js";
 
 export class EdgeMethods {
   isEditableCustom(it) { return !!(it && it.type === "custom" && this.canMutate(it) && it.shape && it.shape.cs && it.shape.cs.length); }
@@ -309,6 +310,58 @@ export class EdgeMethods {
     for (const c of cs || []) n += this.sharpCornerIndices(c).length;
     return n;
   }
+  // ---- r15 2.12: Fillet / Chamfer / Relief on a shape with its own sizes adds a Corners row; it never becomes a fixed outline
+  cornerRowable(it) { return !!it && it.type !== "custom" && !this.isHole(it) && !wholeSet(it.type) && !this.layout; }
+  cornerList(it) {                                      // sharp corners of the shape's own outline, with where they are on the table
+    let base; try { base = this.baseContours(it)[0]; } catch (e) { base = null; }
+    if (!base) return [];
+    const o = bbox([base]), list = cornerIndices(base.pts);
+    const world = this.partToWorld(it, list.map((c) => [base.pts[c.i][0] - o[0], base.pts[c.i][1] - o[1]]));
+    return list.map((c, k) => ({ ord: k, i: c.i, inside: c.inside, world: world[k] }));
+  }
+  cornerRow(it, { kind = "round", r, ang = 45, at = "all" } = {}) {
+    r = Number(r);
+    if (!(r > 0)) { this.onMessage(kind === "relief" ? "Enter a diameter." : kind === "chamfer" ? "Enter a distance." : "Enter a radius."); return 0; }
+    if (!this.canMutate(it)) return 0;
+    const base = this.baseContours(it)[0]; if (!base) return 0;
+    this.remember();
+    it.feats = it.feats || [];
+    const ord = Array.isArray(at) ? at : null;
+    if (kind === "round" && at === "all" && it.p && "r" in it.p) {          // a rectangle (or any shape with a corner radius): set it
+      it.p.r = r; const plain = it.feats.find((f) => f.k === "corner" && f.at == null); if (plain) plain.r = r;
+      it._key = undefined; this.commit(); this.onSelect();
+      return Math.max(1, cornerIndices(base.pts).length);
+    }
+    const same = ord && it.feats.find((f) => f.k === "corner" && Array.isArray(f.at) && f.kind === kind && f.r === r && (kind !== "chamfer" || f.ang === ang));
+    let row;
+    if (same) { row = same; row.at = [...new Set([...row.at, ...ord])].sort((a, b) => a - b); }
+    else {
+      row = { id: it.feats.reduce((m, f) => Math.max(m, f.id), 0) + 1, k: "corner", r, kind, at: ord ? [...ord] : at };
+      if (kind === "chamfer") row.ang = ang;
+      // a whole-outline row replaces an earlier one of the same reach
+      if (!ord) it.feats = it.feats.filter((f) => !(f.k === "corner" && f.at === at));
+      it.feats.push(row);
+    }
+    const done = applyCorners(base, [row]).done;
+    if (!done) {
+      this.restore(this.past.pop());
+      this.onMessage(kind === "relief" && at !== "all" ? "A relief cut is only for inside corners." : "That size is too big for these corners, or there are no sharp corners there.");
+      return 0;
+    }
+    it._key = undefined; this.commit(); this.onSelect();
+    const asked = applyCorners(base, cornerRows([row])).asked;
+    if (asked > done) this.onMessage(done + " corner" + (done === 1 ? "" : "s") + " done. " + (asked - done) + " could not use that size.");
+    return done;
+  }
+  cornerPickAt(wx, wy, tol, pick = this.filletPick) {    // Fillet pick mode on a shape with its own sizes: the clicked corner joins a Corners row
+    const it = this.selected() || (this.picked().length === 1 ? this.picked()[0] : null);
+    if (!pick || !this.cornerRowable(it)) return false;
+    let best = null, bd = tol;
+    for (const c of this.cornerList(it)) { const d = Math.hypot(c.world[0] - wx, c.world[1] - wy); if (d <= bd) { bd = d; best = c; } }
+    if (!best) return false;
+    if (pick.mode === "relief" && !best.inside) { this.onMessage("A relief cut is only for inside corners, so a square corner can sit into them. Use Round corner for an outside corner."); return false; }
+    return this.cornerRow(it, { kind: pick.mode || "round", r: pick.radius, ang: pick.angle || 45, at: [best.ord] }) > 0;
+  }
   startFilletPick(size, mode, angle) {
     const r = Number(size);
     const kind = mode === "relief" ? "relief" : mode === "chamfer" ? "chamfer" : "round";
@@ -316,7 +369,9 @@ export class EdgeMethods {
       this.onMessage(kind === "relief" ? "Enter a diameter." : kind === "chamfer" ? "Enter a distance." : "Enter a radius.");
       return false;
     }
-    if (!this.prepareFillet()) return false;
+    const one = this.selected() || (this.picked().length === 1 ? this.picked()[0] : null);
+    if (this.cornerRowable(one)) { if (!this.canMutate(one)) return false; this.pick([one.id]); }   // stays a shape: clicks add Corners rows
+    else if (!this.prepareFillet()) return false;
     this.filletPick = { radius: r, mode: kind, angle: Number(angle) > 0 ? Number(angle) : 45 };
     this.filletHover = null;
     this.draw();
@@ -420,6 +475,7 @@ export class EdgeMethods {
     if (!(r > 0)) { this.onMessage("Enter a radius."); return 0; }
     const host = it || this.selected();
     if (!host) { this.onMessage("Pick a part first, then Fillet."); return 0; }
+    if (this.cornerRowable(host)) return this.cornerList(host).some((c) => c.inside) ? this.cornerRow(host, { kind: "round", r, at: "inside" }) : (this.onMessage("This part has no sharp inside corners to round."), 0);
     if (!this.countInsideCorners(host)) { this.onMessage("This part has no sharp inside corners to round."); return 0; }
     this.remember();
     this._batchGuard = true;
@@ -530,6 +586,7 @@ export class EdgeMethods {
     if (!(d > 0)) { this.onMessage("Enter a diameter."); return 0; }
     const host = it || this.selected();
     if (!host) { this.onMessage("Pick a part first, then Fillet."); return 0; }
+    if (this.cornerRowable(host)) return this.cornerList(host).some((c) => c.inside) ? this.cornerRow(host, { kind: "relief", r: d, at: "inside" }) : (this.onMessage("This part has no sharp inside corners for a relief cut."), 0);
     if (!this.countInsideCorners(host)) { this.onMessage("This part has no sharp inside corners for a relief cut."); return 0; }
     this.remember();
     this._batchGuard = true;
@@ -634,6 +691,7 @@ export class EdgeMethods {
     const ang = Number(angle) > 0 ? Number(angle) : 45;
     const host = it || this.selected();
     if (!host) { this.onMessage("Pick a part first, then Fillet."); return 0; }
+    if (this.cornerRowable(host)) return this.cornerList(host).length ? this.cornerRow(host, { kind: "chamfer", r: d, ang, at: "all" }) : (this.onMessage("This part has no sharp corners to chamfer."), 0);
     if (!this.countSharpCorners(host)) { this.onMessage("This part has no sharp corners to chamfer."); return 0; }
     this.remember();
     this._batchGuard = true;
@@ -776,6 +834,15 @@ export class EdgeMethods {
   drawEdgeHandles(ctx, C, S) {
     const one = this.selected();
     if (this.layout) return;
+    if (this.filletPick && this.cornerRowable(one)) {      // r15 2.12: Fillet pick on a shape: a dot on every sharp corner (inside ones bigger)
+      for (const c of this.cornerList(one)) {
+        if (!c.world) continue;
+        const [X, Y] = S(c.world[0], c.world[1]);
+        ctx.beginPath(); ctx.arc(X, Y, c.inside ? 6.5 : 4.5, 0, 7);
+        ctx.fillStyle = C.canvas; ctx.strokeStyle = C.sel; ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
+      }
+      return;
+    }
     if (!this.isEditableCustom(one)) return;
     const world = this.rawWorld(one);
     const e = this.edgeSel && this.edgeSel.id === one.id ? this.edgeSel : null;

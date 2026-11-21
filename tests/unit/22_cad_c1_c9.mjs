@@ -48,8 +48,10 @@ const overlap = (a, b) => a[0] < b[2] - 0.2 && b[0] < a[2] - 0.2 && a[1] < b[3] 
   const n = sk.chamferCorners(10, 45);
   t.check("C1: all four corners of a rectangle chamfer at 10 × 45°", n === 4, `n=${n} msg=${sk.messages.slice(-1)}`, "C1-CHAMFER");
   const it = sk.items[0];
-  t.check("C1: result is a custom outline", it.type === "custom");
-  const c = it.shape.cs[0];
+  // r15 2.12 (Josh's plan): a chamfer no longer turns the rectangle into a fixed outline - it stays a rectangle with a
+  // Corners row, and the CUT outline (checked below exactly as before) carries the chamfers
+  t.check("C1: result stays a rectangle with a 'Chamfer 10 at all corners' row", it.type === "rect" && (it.feats || []).some((f) => f.k === "corner" && f.kind === "chamfer" && f.r === 10 && f.at === "all"), JSON.stringify({ type: it.type, feats: it.feats }));
+  const c = sk.contours()[0];
   t.check("C1: 8 vertices (each corner split into two)", c.pts.length === 8, `pts=${c.pts.length}`);
   t.check("C1: chamfer edges are straight (no bulge)", (c.bulges || []).every((b) => Math.abs(b) < 1e-6), JSON.stringify(c.bulges));
   const a = Math.abs(signedArea(sk.contours()[0].pts));

@@ -218,6 +218,49 @@ for (const [hrot, hfx] of [[0, false], [90, false], [30, true]]) {
   t.check("cut out: across the edge -> one 'Outline' part with a notch, the plate's Hole kept as a row", e.ck.items.length === 2 && eo.type === "custom" && eo.name === "Outline" && J((eo.feats || []).map((f) => [f.k, f.d])) === J([["hole", 8.5]]) && eo.shape.cs.length === 1, J({ t: eo.type, n: eo.name, f: eo.feats, cs: eo.shape && eo.shape.cs.length }));
 }
 
+// Corners as a feature (plan 2.12): fillet / chamfer never turns a shape into a fixed outline
+{
+  const area = (pts) => Math.abs(pts.reduce((a, p, i) => { const q = pts[(i + 1) % pts.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0) / 2);
+  const mkG = () => { const g = A.newSketch(); g.add("gusset", true, {}); const it = g.items[0]; it.p.cut = 30; it.x = 10; it.y = 10; it._key = undefined;
+    it.feats = [{ ...F.newFeature("hole", 1, 100, 100), x: 30, y: 30, d: 8 }]; g.pick([it.id]); return { g, it }; };
+  const { g, it } = mkG();
+  const P0 = J(it.p), out0 = g.contoursOf(it)[0].pts.map((p) => [...p]), hole0 = J(mid(g.contours().find((c) => c.feat === 1).pts));
+  const n0 = g.cornerList(it).length, past0 = g.past.length;
+  t.check("corners: a gusset (no corner radius) has sharp corners to pick", n0 >= 3, n0);
+  const n = g.chamferCorners(5, 45);
+  const row = (it.feats || []).find((f) => f.k === "corner") || {};
+  t.check("corners: Chamfer all on a gusset keeps it a gusset (same sizes) and adds ONE Corners row", it.type === "gusset" && J(it.p) === P0 && n === n0 && J([row.kind, row.r, row.at]) === J(["chamfer", 5, "all"]), J({ type: it.type, n, row }));
+  t.check("corners: the row reads 'Chamfer 5 at all corners'", /chamfer 5 at all corners/i.test(F.featureSummary(row)), F.featureSummary(row));
+  const out1 = g.contoursOf(it)[0].pts;
+  t.check("corners: the cut outline is chamfered (more points, less area) and the part does not move", out1.length === out0.length + n0 && area(out1) < area(out0) && J(g.boxOf(it).slice(0, 2)) === J([10, 10]), J({ a0: area(out0), a1: area(out1), box: g.boxOf(it) }));
+  t.check("corners: the part's holes stay exactly where they were", J(mid(g.contours().find((c) => c.feat === 1).pts)) === hole0);
+  g.undo();
+  t.check("corners: one undo removes the chamfer", !g.items[0].feats.some((f) => f.k === "corner") && g.past.length === past0 && J(g.contoursOf(g.items[0])[0].pts) === J(out0));
+  // round one picked corner, then change its radius on the row
+  const r2 = mkG(); const c0 = r2.g.cornerList(r2.it)[0];
+  const hit = r2.g.cornerPickAt(c0.world[0] + 0.3, c0.world[1] - 0.2, 4, { mode: "round", radius: 6 });
+  const rr = (r2.it.feats || []).find((f) => f.k === "corner") || {};
+  t.check("corners: clicking one corner in Fillet mode adds 'R6 at 1 corner' (shape unchanged)", hit && r2.it.type === "gusset" && J([rr.kind, rr.r, rr.at]) === J(["round", 6, [0]]) && /R6 at 1 corner/.test(F.featureSummary(rr)), J(rr));
+  const P = c0.world, d6 = Math.min(...r2.g.contoursOf(r2.it)[0].pts.map((q) => Math.hypot(q[0] - P[0], q[1] - P[1])));
+  F.setFeatureValue(rr, "r", 12); r2.it._key = undefined;
+  const d12 = Math.min(...r2.g.contoursOf(r2.it)[0].pts.map((q) => Math.hypot(q[0] - P[0], q[1] - P[1])));
+  t.check("corners: the rounded corner pulls in from the sharp point, more for R12 than R6", d6 > 0.5 && d12 > d6 * 1.5, J({ d6, d12 }));
+  const back = A.newSketch(); back.items = JSON.parse(JSON.stringify(r2.g.items)).map((i) => back.sanitizeItem(i));
+  t.check("corners: a save / reload keeps the corner row and its cut", J(back.contoursOf(back.items[0])[0].pts) === J(r2.g.contoursOf(r2.it)[0].pts), J(back.items[0].feats));
+  // a rectangle: rounding all corners still just sets its corner radius
+  const rk = A.newSketch(); rk.add("rect", true, {}); const ri = rk.items[0]; Object.assign(ri.p, { w: 200, h: 150, r: 0 }); rk.pick([ri.id]);
+  rk.cornerRow(ri, { kind: "round", r: 10, at: "all" });
+  t.check("corners: Round all corners on a rectangle sets its corner radius (R10), no extra outline work", ri.type === "rect" && ri.p.r === 10, J({ p: ri.p, f: ri.feats }));
+  // inside corners of an L bracket get rounded without making it a fixed outline
+  const lk = A.newSketch(); lk.add("lbracket", true, {}); const li = lk.items[0]; li.p.r = 0; li._key = undefined; lk.pick([li.id]);
+  const nIn = lk.filletInsideCorners(3);
+  t.check("corners: All inside corners on an L bracket -> a row, still an L bracket", li.type === "lbracket" && nIn >= 1 && (li.feats || []).some((f) => f.k === "corner" && f.at === "inside"), J({ nIn, t: li.type, f: li.feats }));
+  // Fillet pick mode on a shape with no radius keeps the shape (no conversion to a custom outline)
+  const pk = mkG(); pk.g.startFilletPick(5, "round");
+  t.check("corners: starting Fillet pick on a gusset does not turn it into a fixed outline", pk.g.items[0].type === "gusset" && !!pk.g.filletPick, pk.g.items[0].type);
+  pk.g.endFilletPick();
+}
+
 // DXF / SVG imports: circles inside the only outline open as Hole rows (plan 2.16); anything else stays in the outline
 {
   const b = Math.tan(Math.PI / 8), circ = (cx, cy, r) => ({ pts: [[cx + r, cy], [cx, cy + r], [cx - r, cy], [cx, cy - r]], bulges: [b, b, b, b] });

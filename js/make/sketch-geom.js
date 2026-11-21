@@ -3,7 +3,7 @@ import { bbox, classifyContainment, classifyLoops, expandContour, pointInPoly } 
 import { contoursToEditable } from "./editable.js";
 import { def, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { makeShape } from "./shapes.js";
-import { flattenFeatures } from "./part-features.js";
+import { applyCorners, cornerRows, flattenFeatures } from "./part-features.js";
 
 export class GeomMethods {
   baseContours(it) {
@@ -80,12 +80,19 @@ export class GeomMethods {
     if (cs.length) {
       const hs = this.holeStart(it);
       cs = cs.map((c, i) => (i >= hs && it.holes && it.holes[i] ? mapC(c, ([x, y]) => [x + it.holes[i][0], y + it.holes[i][1]]) : c));
-      if (it.feats && it.feats.length && !wholeSet(it.type)) { const o = bbox([cs[0]]); cs = cs.concat(flattenFeatures(it.feats, o[0], o[1])); }   // r15 Round 2: features flatten to plain contours
+      let corners = 0;
+      if (it.feats && it.feats.length && !wholeSet(it.type)) {
+        const o = bbox([cs[0]]); cs = cs.concat(flattenFeatures(it.feats, o[0], o[1]));   // r15 Round 2: features flatten to plain contours
+        // r15 2.12: Corners rows reshape the outline; the part keeps its place (its box is still the sharp outline's)
+        const cr = cornerRows(it.feats); if (cr.length) { const r = applyCorners(cs[0], cr); if (r.done) { cs.push(r.c); corners = 1; } }
+      }
       if (it.fx) cs = cs.map((c) => { const m = mapC(c, ([x, y]) => [-x, y]); m.pts.reverse(); return m; });
       if (it.fy) cs = cs.map((c) => { const m = mapC(c, ([x, y]) => [x, -y]); m.pts.reverse(); return m; });
       if (it.rot) cs = cs.map((c) => mapC(c, (p) => rot(p, it.rot)));
-      const b = bbox(cs);
+      const b = bbox(corners ? cs.slice(0, -1) : cs);
       cs = cs.map((c) => mapC(c, ([x, y]) => [x - b[0] + it.x, y - b[1] + it.y]));
+      if (corners) cs[0] = cs.pop();
+      Object.defineProperty(it, "_t", { value: [it.x - b[0], it.y - b[1]], writable: true, enumerable: false, configurable: true });
     }
     Object.defineProperty(it, "_cs", { value: cs, writable: true, enumerable: false, configurable: true });
     Object.defineProperty(it, "_key", { value: key, writable: true, enumerable: false, configurable: true });
@@ -94,11 +101,10 @@ export class GeomMethods {
   partToWorld(it, pts) {                                 // part-frame points (bottom-left of the outline = 0,0) -> world, same transform as contoursOf
     let base; try { base = this.baseContours(it)[0]; } catch (e) { base = null; }
     const world = this.contoursOf(it)[0];
-    if (!base || !world) return [];
-    const o = bbox([base]);
+    if (!base || !world || !it._t) return [];
+    const o = bbox([base]), t = it._t;                   // t = the shift contoursOf used (the sharp outline's box, even with Corners rows)
     const R = ([x, y]) => { if (it.fx) x = -x; if (it.fy) y = -y; return it.rot ? rot([x, y], it.rot) : [x, y]; };
-    const rb = bbox([{ pts: base.pts.map(R) }]), wb = bbox([world]);
-    return pts.map(([x, y]) => { const [a, b] = R([x + o[0], y + o[1]]); return [a + wb[0] - rb[0], b + wb[1] - rb[1]]; });
+    return pts.map(([x, y]) => { const [a, b] = R([x + o[0], y + o[1]]); return [a + t[0], b + t[1]]; });
   }
   worldToPart(it, pts) {                                 // the inverse of partToWorld
     const [p0, px, py] = this.partToWorld(it, [[0, 0], [1, 0], [0, 1]]);

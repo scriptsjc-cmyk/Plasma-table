@@ -2,7 +2,7 @@
 // A feature is a small record kept on the sketch item (it.feats) and measured from the part's bottom-left corner,
 // exactly as typed. Before anything is cut, features are flattened to ordinary contours (sketch-geom contoursOf),
 // so cam.js and the G-code never see them. A part with no features is cut exactly as before.
-import { TOL, expandContour, pointInPoly, polysCross } from "../core/geom.js";
+import { TOL, bulgeMidpoint, expandContour, pointInPoly, polysCross, signedArea } from "../core/geom.js";
 import { textToContours } from "./textshape.js";
 
 export const FEATURE_KINDS = {
@@ -18,6 +18,7 @@ export const FEATURE_KINDS = {
   corner: { label: "Corners",         icon: "◜", keys: [["r", "Radius", 10]] },
 };
 export const CUTOUT_SHAPES = ["triangle", "hexagon", "diamond"];
+export const CORNER_KINDS = ["round", "chamfer", "relief"];
 export const FEATURE_OPS = [["cut", "Cut"], ["score", "Etch"], ["mark", "Mark"]];
 const STRING_KEYS = new Set(["shape", "text", "op", "from"]);
 const INT_KEYS = new Set(["n", "cols", "rows"]);
@@ -44,6 +45,11 @@ export function sanitizeFeature(f) {
   if (f.from === "centre") out.from = "centre";
   if (f.k === "hole" && f.arcs && Number(f.arcs.n) >= 2) out.arcs = { n: Math.max(2, Math.min(64, Math.round(Number(f.arcs.n)))), a0: exact(NUM(f.arcs.a0, 0)), b: Math.abs(NUM(f.arcs.b, 0)), cw: !!f.arcs.cw };
   if (Number(f.link) > 0) out.link = Math.round(Number(f.link));
+  if (f.k === "corner" && f.at != null) {             // a Corners row that shapes the outline itself (plan 2.12)
+    out.kind = CORNER_KINDS.includes(f.kind) ? f.kind : "round";
+    out.at = f.at === "all" || f.at === "inside" ? f.at : Array.isArray(f.at) ? [...new Set(f.at.map((v) => Math.round(Number(v))).filter((v) => v >= 0 && v < 512))].sort((a, b) => a - b) : "all";
+    if (out.kind === "chamfer") out.ang = exact(Math.max(1, Math.min(89, NUM(f.ang, 45))));
+  }
   if (f.k === "shape") {
     const pts = drawnPts(f.pts);
     if (f.shape === "drawn" && pts) out.pts = pts;
@@ -61,6 +67,11 @@ function clampKey(key, v) {
 export function setFeatureValue(f, key, raw) {
   const k = FEATURE_KINDS[f.k]; if (!k) return false;
   if (key === "op") { if (!["cut", "score", "mark"].includes(raw)) return false; f.op = raw; return true; }
+  if (f.k === "corner" && f.at != null) {
+    if (key === "kind") { if (!CORNER_KINDS.includes(raw)) return false; f.kind = raw; if (raw === "chamfer" && !(f.ang > 0)) f.ang = 45; if (raw !== "chamfer") delete f.ang; return true; }
+    if (key === "at") { if (raw !== "all" && raw !== "inside") return false; f.at = raw; return true; }
+    if (key === "ang") { const a = Number(raw); if (!(a >= 1 && a <= 89)) return false; f.ang = exact(a); return true; }
+  }
   if (STRING_KEYS.has(key)) { if (key === "shape" && !CUTOUT_SHAPES.includes(raw) && !(raw === "drawn" && f.pts)) return false; f[key] = String(raw).slice(0, 80); return true; }
   const v = Number(raw);
   if (!Number.isFinite(v)) return false;
@@ -164,7 +175,62 @@ export function featureContours(f) {
     const dx = f.x - t.width / 2, dy = f.y - t.height / 2;
     return t.contours.map((c) => tag({ pts: c.pts.map(([x, y]) => [x + dx, y + dy]), closed: true }));
   }
-  return [];                                   // corner: lives on the outline (it.p.r), nothing extra to cut
+  return [];                                   // corner: shapes the outline itself (it.p.r, or applyCorners), nothing extra to cut
+}
+
+// ---------------------------------------------------------------- Corners rows on any outline (plan 2.12)
+// The sharp corners of an outline polyline, in order from its first point: the k-th one is corner k (stable when sizes change).
+export function cornerIndices(pts) {
+  const n = pts.length, out = [], o = signedArea(pts) > 0 ? 1 : -1;
+  if (n < 3) return out;
+  for (let i = 0; i < n; i++) {
+    const A = pts[(i - 1 + n) % n], P = pts[i], Q = pts[(i + 1) % n];
+    const ax = P[0] - A[0], ay = P[1] - A[1], bx = Q[0] - P[0], by = Q[1] - P[1], la = Math.hypot(ax, ay), lb = Math.hypot(bx, by);
+    if (la < 0.05 || lb < 0.05) continue;
+    const turn = Math.atan2(ax * by - ay * bx, ax * bx + ay * by);
+    if (Math.abs(turn) < (20 * Math.PI) / 180 || Math.abs(turn) > Math.PI - 1e-3) continue;   // arc segments are not corners
+    out.push({ i, inside: turn * o < 0 });
+  }
+  return out;
+}
+export const cornerRows = (feats) => (feats || []).filter((f) => f.k === "corner" && f.at != null && !f.hide && f.r > 0);
+const pickedBy = (f, k, c) => f.at === "all" || (f.at === "inside" ? c.inside : Array.isArray(f.at) && f.at.includes(k));
+// the outline with its Corners rows applied (later rows win at a corner they share); returns how many corners took it
+export function applyCorners(c, rows) {
+  const pts = c.pts, n = pts.length, list = cornerIndices(pts), spec = new Map();
+  list.forEach((cn, k) => { for (const f of rows) if (pickedBy(f, k, cn) && !(f.kind === "relief" && !cn.inside)) spec.set(cn.i, { f, cn }); });
+  const cut = new Map();                                // vertex -> [trim back along the edge in, trim along the edge out, bulge]
+  for (const [i, { f, cn }] of spec) {
+    const A = pts[(i - 1 + n) % n], P = pts[i], Q = pts[(i + 1) % n];
+    const v1 = [A[0] - P[0], A[1] - P[1]], v2 = [Q[0] - P[0], Q[1] - P[1]], l1 = Math.hypot(...v1), l2 = Math.hypot(...v2);
+    const ang = Math.acos(Math.max(-1, Math.min(1, (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2))));
+    const s = Math.sign(-v1[0] * v2[1] + v1[1] * v2[0]) || 1;                 // which way the outline turns here
+    let d1, d2, b = 0;
+    if (f.kind === "chamfer") { const phi = rad(f.ang || 45), den = Math.sin(Math.PI - ang - phi); if (!(den > 1e-6)) continue; d1 = f.r; d2 = (f.r * Math.sin(phi)) / den; }
+    else if (f.kind === "relief") {
+      d1 = d2 = f.r / 2;
+      const T1 = [P[0] + (v1[0] / l1) * d1, P[1] + (v1[1] / l1) * d1], T2 = [P[0] + (v2[0] / l2) * d2, P[1] + (v2[1] / l2) * d2];
+      const bis = [v1[0] / l1 + v2[0] / l2, v1[1] / l1 + v2[1] / l2], bl = Math.hypot(...bis); if (!(bl > 1e-9)) continue;
+      const mid = [P[0] - (bis[0] / bl) * d1, P[1] - (bis[1] / bl) * d1], mag = Math.tan((2 * Math.PI - ang) / 4);
+      const off = (bb) => { const m = bulgeMidpoint(T1, T2, bb); return Math.hypot(m[0] - mid[0], m[1] - mid[1]); };
+      b = off(mag) <= off(-mag) ? mag : -mag;
+    } else { d1 = d2 = f.r / Math.tan(ang / 2); b = s * Math.tan((Math.PI - ang) / 4); }
+    if (!(d1 > 0.05 && d2 > 0.05 && d1 < l1 - 0.05 && d2 < l2 - 0.05)) continue;
+    cut.set(i, [d1, d2, b, cn]);
+  }
+  // two trims on one edge must not meet
+  for (const i of [...cut.keys()]) { const j = (i + 1) % n, a = cut.get(i), z = cut.get(j); if (a && z && a[1] + z[0] > Math.hypot(pts[j][0] - pts[i][0], pts[j][1] - pts[i][1]) - 0.05) cut.delete(j); }
+  if (!cut.size) return { c, done: 0, asked: spec.size };
+  const P2 = [], B2 = [];
+  for (let i = 0; i < n; i++) {
+    const t = cut.get(i), P = pts[i];
+    if (!t) { P2.push(P); B2.push(0); continue; }
+    const A = pts[(i - 1 + n) % n], Q = pts[(i + 1) % n], l1 = Math.hypot(A[0] - P[0], A[1] - P[1]), l2 = Math.hypot(Q[0] - P[0], Q[1] - P[1]);
+    P2.push([P[0] + ((A[0] - P[0]) / l1) * t[0], P[1] + ((A[1] - P[1]) / l1) * t[0]]); B2.push(t[2]);
+    P2.push([P[0] + ((Q[0] - P[0]) / l2) * t[1], P[1] + ((Q[1] - P[1]) / l2) * t[1]]); B2.push(0);
+  }
+  const out = expandContour({ pts: P2, bulges: B2, closed: true });
+  return { c: { ...c, pts: out.pts }, done: cut.size, asked: spec.size };
 }
 
 // every shown feature, flattened, shifted by (ox, oy) = the outline's bottom-left corner in the shape's own frame
@@ -230,7 +296,11 @@ export function featureSummary(f) {
     case "shape": return `${f.shape === "drawn" ? "drawn shape" : f.shape} ${n(f.w)} × ${n(f.h)} at ${n(f.x)}, ${n(f.y)}`;
     case "text": return `"${f.text}" ${n(f.h)} high`;
     case "etch": return `${n(f.len)} long${f.rot ? `, ${n(f.rot)}°` : ""}`;
-    case "corner": return `R${n(f.r)}`;
+    case "corner": {
+      if (f.at == null) return `R${n(f.r)}`;
+      const where = f.at === "all" ? "all corners" : f.at === "inside" ? "all inside corners" : `${f.at.length} corner${f.at.length === 1 ? "" : "s"}`;
+      return `${f.kind === "chamfer" ? `Chamfer ${n(f.r)}${f.ang && f.ang !== 45 ? ` × ${n(f.ang)}°` : ""}` : f.kind === "relief" ? `Relief Ø${n(f.r)}` : `R${n(f.r)}`} at ${where}`;
+    }
     default: return "";
   }
 }

@@ -56,8 +56,18 @@ function field(f, key, label, fr) {
   const v = key === "x" ? shownXY(f, fr)[0] : key === "y" ? shownXY(f, fr)[1] : f[key];
   return `<label>${esc(label)}<input type="number" step="any" inputmode="decimal" data-ff="${key}" value="${esc(String(v))}"></label>`;
 }
+// a Corners row that shapes the outline (plan 2.12): kind, size, which corners
+function cornerEditor(f) {
+  const size = f.kind === "chamfer" ? "Distance" : f.kind === "relief" ? "Circle Ø" : "Radius";
+  const kinds = [["round", "Round"], ["chamfer", "Chamfer"], ["relief", "Relief cut (inside corners)"]];
+  const at = Array.isArray(f.at) ? `<option value="picked" selected disabled>The ${f.at.length} picked corner${f.at.length === 1 ? "" : "s"}</option>` : "";
+  return `<div class="feat-edit grid2"><label>Kind<select data-ff="kind">${kinds.map(([v, l]) => `<option value="${v}"${f.kind === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>
+    ${field(f, "r", size)}${f.kind === "chamfer" ? field(f, "ang", "Angle °") : ""}
+    <label>Which corners<select data-ff="at">${at}<option value="all"${f.at === "all" ? " selected" : ""}>All corners</option><option value="inside"${f.at === "inside" ? " selected" : ""}>All inside corners</option></select></label></div>`;
+}
 function editor(f, fr) {
   const k = FEATURE_KINDS[f.k];
+  if (f.k === "corner" && f.at != null) return cornerEditor(f);
   const pos = f.k === "corner" ? "" : `${field(f, "x", fromCentre(f) ? "X from centre" : "X (by centre)", fr)}${field(f, "y", fromCentre(f) ? "Y from centre" : "Y (by centre)", fr)}
       <label title="Corner = the part's bottom-left corner; Centre = the middle of the part">Measured from<select data-ff="from"><option value="corner"${fromCentre(f) ? "" : " selected"}>Corner</option><option value="centre"${fromCentre(f) ? " selected" : ""}>Centre</option></select></label>`;
   const op = f.k === "corner" ? "" : `<label>How it's made<select data-ff="op">${FEATURE_OPS.map(([v, l]) => `<option value="${v}"${(f.op || "cut") === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
@@ -148,13 +158,15 @@ const nextId = (it) => Math.max(0, ...(it.feats || []).map((f) => f.id)) + 1;
 function addFeature(kind) {
   closeMenus();
   if (kind === "corner") {
-    const it = part(); const have = it && (it.feats || []).find((f) => f.k === "corner");
+    const it = part(); const have = it && "r" in it.p && (it.feats || []).find((f) => f.k === "corner" && f.at == null);
     if (have) { openId = have.id; renderFeatureList(); return; }
-    if (it && !("r" in it.p)) { toast("This outline has no corner radius to set. Use Edit corner on the Part tab.", true); return; }
   }
   change((it, fr) => {
     const f = newFeature(kind, nextId(it), fr.W, fr.H);
-    if (kind === "corner") f.r = Number(it.p.r) || 0;
+    if (kind === "corner") {                            // a shape with a corner radius: the row sets it; any other outline: a Corners row (plan 2.12)
+      if ("r" in it.p) f.r = Number(it.p.r) || 0;
+      else { f.r = 5; f.kind = "round"; f.at = "all"; }
+    }
     it.feats.push(f); openId = f.id;
   });
   focusFirst();
@@ -170,7 +182,7 @@ function setValue(fid, key, raw, inp) {
     let v = raw;
     if ((key === "x" || key === "y") && fromCentre(f)) { const n = Number(raw); if (!Number.isFinite(n)) return false; v = n + (key === "x" ? fr.W : fr.H) / 2; }
     if (!setFeatureValue(f, key, v)) return false;
-    if (f.k === "corner" && key === "r" && "r" in it.p) it.p.r = f.r;
+    if (f.k === "corner" && f.at == null && key === "r" && "r" in it.p) it.p.r = f.r;
     syncLinks(it.feats, f, fr.W);
     return true;
   });

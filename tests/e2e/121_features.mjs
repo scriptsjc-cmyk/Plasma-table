@@ -223,6 +223,24 @@ try {
   await sleep(200);
   const cr = await rows();
   t.check("cut out (toolbar): the Features tab lists it as 'Shape cut-out · drawn shape'", cr.some((r) => /Shape cut-out/.test(JSON.stringify(r)) && /drawn shape/.test(JSON.stringify(r))), J(cr));
+
+  // ---------------------------------------------------------------- Corners row on an outline with no corner radius (plan 2.12)
+  await ev(page, () => {
+    const s = window.plasmaTest.sketch; s.items = []; s.add("gusset", true, {}); const g = s.items[0]; g.p.cut = 30; g._key = undefined;
+    s.commit(); s.pick([g.id]); s.onSelect();
+    const b = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (b) b.click();
+  });
+  await sleep(250);
+  const pts0 = await ev(page, () => window.plasmaTest.sketch.contoursOf(window.plasmaTest.sketch.items[0])[0].pts.length);
+  const cid = await addFeat("corner");
+  const c1 = await ev(page, () => { const s = window.plasmaTest.sketch, g = s.items[0]; return { type: g.type, n: s.contoursOf(g)[0].pts.length, f: g.feats }; });
+  t.check("corners: + Add > Corners on a gusset adds a Corners row (R5 at all corners) and rounds the cut outline; still a gusset", !!cid && c1.type === "gusset" && c1.n > pts0 && (await rows()).some((r) => /R5 at all corners/.test(r.sum)), J({ pts0, c1 }));
+  await setFeat(cid, "kind", "chamfer");
+  const c2 = await ev(page, () => { const s = window.plasmaTest.sketch, g = s.items[0]; return { n: s.contoursOf(g)[0].pts.length, f: g.feats[0] }; });
+  t.check("corners: switching the row to Chamfer chamfers every corner (one extra point each)", c2.f.kind === "chamfer" && c2.n === pts0 * 2 && (await rows()).some((r) => /Chamfer 5 at all corners/.test(r.sum)), J({ pts0, c2 }));
+  await ev(page, () => window.plasmaTest.sketch.undo());
+  const c3 = await ev(page, () => window.plasmaTest.sketch.items[0].feats[0].kind);
+  t.check("corners: one undo goes back to Round", c3 === "round", c3);
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("121 ran to the end", false, String(e && e.stack || e).slice(0, 400));

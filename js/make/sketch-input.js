@@ -210,6 +210,14 @@ export class InputMethods {
         this.draw(); return;
       }
       if (this.filletPick && !panBtn) {
+        if (this.cornerRowable(this.selected())) {          // r15 2.12: a shape with its own sizes gets a Corners row
+          const tol = (touch ? 22 : 12) / (this.view && this.view.s ? this.view.s : 1);
+          if (this.cornerPickAt(wx, wy, tol)) {
+            const m = this.filletPick.mode;
+            this.onMessage((m === "relief" ? "Relief cut added" : m === "chamfer" ? "Corner chamfered" : "Corner rounded") + " (a Corners row in Features). Click another, or press Done.");
+          }
+          this.draw(); this.onSelect(); return;
+        }
         const ch = this.hitCustomHandles(sx, sy, touch, true);
         if (ch && ch.kind === "vertex") {
           this.pick([ch.it.id]);
