@@ -153,6 +153,9 @@ for (const prof of ["d1366", "iphone14"]) {
     return !!(document.getElementById("presetBrowser") && !document.getElementById("presetBrowser").hidden);
   });
   await sleep(200);
+  // r15 5.8: since paging (r14 C5) the fold tile is not on page 1 of All, so look it up by name as a person would
+  await ev(page, () => { const q = document.getElementById("pbSearch"); if (q) { q.value = "Folded L"; q.dispatchEvent(new Event("input", { bubbles: true })); } });
+  await sleep(250);
   const tile = await ev(page, () => {
     const btn = document.querySelector('#pbGrid [data-shape="foldlbr"], #libGrid [data-shape="foldlbr"]');
     if (!btn) return { ok: false, reason: "no tile" };
