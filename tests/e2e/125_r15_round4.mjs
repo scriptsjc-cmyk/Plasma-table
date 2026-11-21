@@ -146,6 +146,89 @@ try {
     t.check(`no page error (${prof} cut step 1)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 4.6–4.10 Setup (laptop), not connected and in Practice
+  const toSetup = async (page) => {
+    await ev(page, () => { const T = window.plasmaTest; T.showScreen("make", { force: true }); const s = T.sketch; s.clear(); s.add("rect", true, { w: 120, h: 80 }); s.commit(); T.sendToCutting(); });
+    await page.waitForFunction(() => window.plasmaTest.screen() === "cut");
+    await ev(page, () => window.plasmaTest.goStep(3)); await sleep(600);
+  };
+  // text cut off: an element with its own words whose words don't fit (ellipsis / clipped), skipping screen-reader-only and folded tips
+  const cutText = (page, rootSel) => ev(page, (rootSel) => {
+    const out = [];
+    for (const root of document.querySelectorAll(rootSel)) for (const e of [root, ...root.querySelectorAll("*")]) {
+      if (!e.getClientRects().length) continue;
+      const r = e.getBoundingClientRect(); if (r.width <= 2 || r.height <= 2) continue;
+      if (e.closest(".sr-only, .info-body, .dl-label") && getComputedStyle(e.closest(".sr-only, .info-body, .dl-label")).position === "absolute") continue;
+      const c = getComputedStyle(e);
+      if (![...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      const wide = e.scrollWidth > e.clientWidth + 1 && c.overflowX !== "visible";
+      const tall = e.scrollHeight > e.clientHeight + 2 && c.overflowY !== "visible";
+      if (wide || tall) out.push({ id: e.id || String(e.className).slice(0, 30), t: e.textContent.trim().slice(0, 40), sw: e.scrollWidth, cw: e.clientWidth });
+    }
+    return out;
+  }, rootSel);
+  const secondaryLook = (page, sel) => ev(page, (sel) => {
+    const e = document.querySelector(sel); if (!e || !e.getClientRects().length) return null;
+    const c = getComputedStyle(e), r = e.getBoundingClientRect();
+    return { tag: e.tagName, border: parseFloat(c.borderTopWidth), bstyle: c.borderTopStyle, bg: c.backgroundColor, ul: c.textDecorationLine, h: r.height, w: r.width };
+  }, sel);
+  const looksSecondary = (b) => !!b && b.tag === "BUTTON" && b.border >= 1 && b.bstyle === "solid" && !/rgba\(0, 0, 0, 0\)|transparent/.test(b.bg) && !/underline/.test(b.ul) && b.h >= 28;
+  for (const prof of ["d1280x600", "d1366x640", "d1536x730"]) {
+    const page = await newPage(br, prof, { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    await toSetup(page);
+    for (const state of ["not connected", "practice"]) {
+      if (state === "practice") { await page.click("#btnDemo"); await sleep(1500); }
+      // 4.6 nothing on the cards' bottom lines (the summary strip under the bed, the checklist, Sheet & parts) is cut off
+      const cut = await cutText(page, ".step[data-step='3'] #layoutCard, .step[data-step='3'] #checkCard, #cutView .previewDock");
+      t.check(`4.6 ${prof} ${state}: no Setup text is cut off (the line under the bed, Before you cut, Sheet & parts)`, cut.length === 0, J(cut));
+      const dock = await ev(page, () => { const d = document.querySelector("#cutView .previewDock"), r = d.getBoundingClientRect();
+        return [...d.children].filter((e) => e.getClientRects().length && e.getBoundingClientRect().width > 0).map((e) => { const b = e.getBoundingClientRect(); return { id: e.id, in: b.left >= r.left - 1 && b.right <= r.right + 1 && b.top >= r.top - 1 && b.bottom <= r.bottom + 1 }; }); });
+      t.check(`4.6 ${prof} ${state}: everything in the strip under the bed sits inside it`, dock.every((d) => d.in), J(dock));
+      // 4.7 Check cut and Layout are buttons that look like buttons
+      const lay = await secondaryLook(page, "#btnLayout"), chk = await secondaryLook(page, "#beforeCut .beforecut-link");
+      t.check(`4.7 ${prof} ${state}: Layout has the secondary button look (border, fill, no underline)`, looksSecondary(lay), J(lay));
+      t.check(`4.7 ${prof} ${state}: Check cut has the secondary button look (border, fill, no underline)`, chk == null || looksSecondary(chk), J(chk));
+      // 4.8 Download G-code: the icon with a visible word, not a bare arrow; still fits beside Start cutting
+      const dl = await ev(page, () => { const b = document.getElementById("btnExport3"), l = b.querySelector(".dl-label"), s = document.getElementById("btnStart");
+        const lr = l.getBoundingClientRect(), br = b.getBoundingClientRect(), sr = s.getBoundingClientRect(), lc = getComputedStyle(l);
+        return { label: l.getClientRects().length > 0 && lr.width > 20 && lc.position !== "absolute" ? l.innerText.trim() : "", name: b.getAttribute("aria-label") || b.title, icon: !!b.querySelector(".dl-icon"),
+          inBtn: lr.right <= br.right + 1 && lr.left >= br.left - 1, apart: br.right <= sr.left + 1 || sr.right <= br.left + 1, startW: sr.width, sw: b.scrollWidth, cw: b.clientWidth }; });
+      t.check(`4.8 ${prof} ${state}: Download G-code shows the download icon and a word (G-code), not a bare arrow`, dl.icon && /G-code/.test(dl.label) && /Download G-code/.test(dl.name) && dl.inBtn && dl.sw <= dl.cw + 1, J(dl));
+      t.check(`4.8 ${prof} ${state}: it sits beside Start cutting without touching it`, dl.apart && dl.startW >= 150, J(dl));
+    }
+    // 4.9 Torch card (Practice): one "i", lamps big enough and clear of it, one X / Y / Z readout row, no inner scroll
+    const tc = await ev(page, () => {
+      const zc = document.getElementById("zeroCard"), sum = zc.querySelector(":scope > summary");
+      const vis = (e) => e.getClientRects().length > 0 && e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility !== "hidden";
+      const R = (e) => e.getBoundingClientRect();
+      const infos = [...zc.querySelectorAll(".info-i")].filter(vis), lamps = [...zc.querySelectorAll(".lamp")].filter(vis);
+      const hit = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+      const pos = [...zc.querySelectorAll(".jogwrap .pos > div")].filter(vis), pr = pos.map(R), card = R(zc);
+      const row = pos.length ? { top: Math.min(...pr.map((r) => r.top)), bottom: Math.max(...pr.map((r) => r.bottom)), l: Math.min(...pr.map((r) => r.left)), r: Math.max(...pr.map((r) => r.right)) } : null;
+      // anything else sitting beside the readouts in their row
+      const beside = row ? [...zc.querySelectorAll(".jogwrap button, .jogwrap .lamps, .jogwrap .steps")].filter(vis).filter((e) => { const b = R(e); return b.top < row.bottom - 2 && b.bottom > row.top + 2; }).map((e) => e.textContent.trim().slice(0, 12)) : ["no readout"];
+      const scr = [zc, ...zc.querySelectorAll("*")].filter((e) => /(auto|scroll)/.test(getComputedStyle(e).overflowY) && e.scrollHeight > e.clientHeight + 2).map((e) => e.className || e.id);
+      const tip = (sum.querySelector(".info-i") || {}).dataset ? sum.querySelector(".info-i").dataset.tip || "" : "";
+      return { infos: infos.length, inSummary: infos.filter((i) => sum.contains(i)).length, lampHit: lamps.some((l) => infos.some((i) => hit(R(l), R(i)))),
+        lamps: lamps.map((l) => ({ h: Math.round(R(l).height), fs: parseFloat(getComputedStyle(l).fontSize) })),
+        pos: pos.map((d) => ({ w: Math.round(R(d).width), h: Math.round(R(d).height), fs: parseFloat(getComputedStyle(d.querySelector("b")).fontSize), tab: getComputedStyle(d.querySelector("b")).fontVariantNumeric })),
+        rowW: row ? Math.round(row.r - row.l) : 0, cardW: Math.round(card.width), beside, scr, keyTip: /Page Up/i.test(tip) };
+    });
+    t.check(`4.9 ${prof}: the Torch card has one "i" (in its title), and it covers no lamp`, tc.infos === 1 && tc.inSummary === 1 && !tc.lampHit && tc.keyTip, J(tc));
+    t.check(`4.9 ${prof}: the E-stop / Head / Torch lamps are at least 13 px text and 24 px tall`, tc.lamps.length >= 3 && tc.lamps.every((l) => l.h >= 24 && l.fs >= 13), J(tc.lamps));
+    t.check(`4.9 ${prof}: X / Y / Z is one readout row across the card (same widths, tabular numbers, 15 px+), nothing beside it`,
+      tc.pos.length === 3 && tc.pos.every((p) => p.h >= 28 && p.fs >= 15 && /tabular-nums/.test(p.tab) && Math.abs(p.w - tc.pos[0].w) <= 1) && tc.rowW >= 0.75 * (tc.cardW - 24) && tc.beside.length === 0, J(tc));
+    t.check(`4.9 ${prof}: the Torch card has no inner scroll`, tc.scr.length === 0, J(tc.scr));
+    // 4.10 the touch-off tag on the bed is off the gantry's X beam
+    await ev(page, () => { const c = document.getElementById("showMach"); if (c && !c.checked) c.click(); }); await sleep(500);
+    const tg = await ev(page, () => { const cv = document.querySelector("#cutView canvas#preview") || document.getElementById("preview"); const m = cv && cv._mach, boxes = (cv && cv._labelBoxes) || [];
+      const pill = boxes.find((b) => b.startTag); return { beam: m && m.beamPx, pill }; });
+    const off = tg.beam && tg.pill && !(tg.pill.l < tg.beam.r && tg.beam.l < tg.pill.r && tg.pill.t < tg.beam.b && tg.beam.t < tg.pill.b);
+    t.check(`4.10 ${prof}: the "Touch off, then cut starts here" tag is not on the X beam`, !!off, J(tg));
+    t.check(`no page error (${prof} setup)`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("125 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
