@@ -2485,6 +2485,22 @@ body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display
 }
 
 
+/* r15 (Josh): while the Cut header has two rows (1280-1535 px wide), STOP spans both rows. To keep it one size and place
+   on every screen at that width (r13), it is 168 x 104 there on Machine setup and Make too. At 1536 px and up the Cut
+   header is one row and STOP stays 168 x 88. */
+@media (min-width: 1280px) and (max-width: 1535.98px) and (hover: hover) and (pointer: fine) {
+  body.app-shell:not(.short-land)[data-screen="cut"] #btnStop.estop,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop,
+  body.app-shell:not(.short-land)[data-screen="cut"][data-tab="setup"] #btnStop.estop,
+  body.app-shell:not(.short-land)[data-screen="make"].stop-needed #btnStop.estop,
+  body:not(.short-land)[data-screen="cut"][data-tab="cut"] #btnStop.estop {
+    height: 104px;
+    min-height: 104px;
+    max-height: 104px;
+  }
+  body.app-shell:not(.short-land):not(.header-hidden)[data-screen="cut"][data-tab="cut"] #btnStop.estop { grid-row: 1 / 3; }
+}
+
 /* r13: Cut header second row — one clean strip; Check cut and Layout as quiet
    buttons at each end; a full-height underline under the active step. At
    1536 px and up the strip joins the first row (r15: at 1440 the steps ran under Layout once the status pills grew). Phone layout is unchanged. */
