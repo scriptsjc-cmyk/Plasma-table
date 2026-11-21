@@ -2,10 +2,10 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 16:12 (UK time). Round 4 is live @ ec7cf4b (CI run 44921063938 green); this push adds two Round 4 follow-ups. Live: see `version.json`.
+Last updated: 21 Nov 2026, 17:06 (UK time). This push is Round 5 (folded parts, flat patterns, 3D), all items 5.1–5.8; Round 4 + follow-ups are live. Live: see `version.json`.
 
 ## Working on
-- r15 Round 5 (folded parts, flat patterns, 3D), starting with 5.1 bend allowance, tests first. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
+- Nothing open from Round 5; next is Round 6. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
@@ -57,13 +57,38 @@ Last updated: 21 Nov 2026, 16:12 (UK time). Round 4 is live @ ec7cf4b (CI run 44
     lamps (a Cut jog-card rule, from 20 Nov) @ d464c55, test @ 5f129d5; Snap showed on the rail as well right after
     switching to Advanced (rail drawn before the header Snap ▾) @ 98e7a66, test @ 7cfe949. e2e 125 now 220 checks.
 
+- r15 Round 5 (folded parts, flat patterns, 3D), checked by unit 34–39 and the new e2e 126_r15_round5 (30 checks, in the deploy gate @ a7477ce):
+  - r15 5.8 e2e 96_fold3d finds the fold tile in Preset parts by name (paging moved it off page 1) @ 2e4c03b. 14/15: the last is the
+    iPhone 14 Make picture height (119 px, same root as e2e 63), so 96_fold3d stays out of the gate (Round 7/8 list)
+  - r15 5.1 bend allowance: every folded preset gets Sheet thickness (0 = the job's), Inside bend radius, K-factor, Measured
+    deduction and "Sizes are Outside / Inside / As cut"; flanges are shortened by the deduction; a measured deduction can be saved
+    per thickness like the cut chart @ b6bd65d, tests @ 87ec045, f0608eb
+  - r15 5.2 the 3D is built from the flat pattern and its fold lines (js/make/flat3d.js) instead of hand-written models; the eight
+    wrong ones fixed (pan flashing, skylight curb, chimney round + square, roof jack, cricket, dustpan, pipe clamp: its feet now
+    fold out at the fold lines) @ 6d932d8, tests @ fb08be4, aede102. Rolled cones / elbows keep their own models
+  - **Cut change, on purpose:** the dustpan bottom's back edge was 1.5 × the back width (it didn't meet the back); it now matches.
+    precheck: 339 presets identical except dustpan (new + saved); 35 DXF/SVG identical
+  - r15 5.3 holes go through to the 3D: Z / U brackets (U-bracket holes on the legs), firepit, BBQ panel, cable tray, corner guard
+    are folded from their cut pattern; saddle hole / tee template show their hole; cyclone hopper no longer shows a ring that isn't
+    cut @ dac82a4, tests @ 86356a7
+  - r15 5.4 fishmouth, pipe-on-flat, tee template, Y-branch, britches are `template: true`: the template is drawn in accent blue on
+    a grey pipe, with a caption saying so @ b90ef5d, tests @ d7a1f08
+  - r15 5.5 each fold line carries up / down (and its angle when not 90°); the drawing marks ▲ Up / ▼ Down (Make only, up to 12 folds
+    per part) and the 3D folds the same way @ ae31f44, tests @ d818df8
+  - r15 5.6 fold lines are darker amber, longer dashes, with a light halo, so they show on narrow strips (sign bracket, shelf bracket,
+    pipe clamp); dark-theme tokens @ 15571f1, test @ 5785d53
+  - r15 5.7 3D viewer: drawn at the part's sheet (its own bend thickness, else the job's), overall sizes in mm on the view (neutral
+    ink, since blue means "template"), an Unfold slider (0 flat, 100 folded; not shown on rolled parts; a new part starts folded)
+    @ 7a949ef, 4a5f10e, tests @ 3f2d109
+  - Screenshots: briefs r5-1 … r5-8 (Josh has them)
+
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
 - Item 2: the walk stopped a ONE-part job before its first pierce, so Save speed, "Stopped during cut N" and Continue from cut never
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- r15 Round 5, tests first.
+- r15 Round 6, tests first.
 
 ## Not a bug
 - Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
@@ -74,11 +99,12 @@ Last updated: 21 Nov 2026, 16:12 (UK time). Round 4 is live @ ec7cf4b (CI run 44
   test to match each layout in Round 7/8 (no app change, nothing weakened).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
-- Nothing open (the Export pop-up was fixed in 4.x-extra; the space bar is under Not a bug).
+- Ideas from Round 5 (need Josh's OK; not built): the skylight pan flashings' upstands overlap at the corners in 3D (the cut pieces
+  are unchanged and correct); the 3D thickens each face about its middle, not to the inside of the bend.
 
 ## Questions for the checker
 - 41 item 11 (your request): `node run-all.mjs 41` fails item 11 ×3 on 75b7df1, on 55c3d71, and on HEAD (rerun 21 Nov 15:50 at 82d99d8) with today's `tests/lib/browser.mjs`.
   The difference between your two runs is the launcher: 55c3d71 changed launchKillable from raw headless Chrome (no hover, so the
   touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
 - 2.17 (G-code unchanged when a part has no features): the developer checks it before every geometry/import push with `tmp/precheck.sh` (339 presets + 35 DXF/SVG byte-identical). Can you confirm it independently on the next push?
-- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×8, 83, 85 (C46/C48/C49), 96_fold3d ×3, 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×6, 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×4, 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
+- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×8, 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×6, 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×4, 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
