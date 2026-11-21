@@ -4,6 +4,7 @@
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
+@layer app {
 
 html, body { margin: 0; background: var(--bg); color: var(--text);
   font: var(--fs-md)/1.45 var(--font); }
@@ -996,4 +997,5 @@ body[data-screen="cut"] .step[data-step="1"] .pickpane { padding-bottom: 88px; }
   }
   body.app-shell[data-screen="cut"] .tabs { flex: 0 1 auto; min-width: 0; }
   body.app-shell[data-screen="cut"] #btnLayout { flex: 0 0 auto; }
+}
 }

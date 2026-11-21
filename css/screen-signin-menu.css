@@ -3,6 +3,7 @@
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
+@layer app {
 
 .drop b { font-size: var(--fs-lg); font-weight: 650; }
 /* speed */
@@ -231,4 +232,5 @@ body.app-shell #menuView { flex: 1 1 auto; min-height: 0; overflow: auto; max-wi
   #acctSigned > .row:not(.acctwhorow) { grid-column: 2; grid-row: 5; }
   #acctSigned > h3:nth-of-type(2) { grid-column: 2; grid-row: 6; }
   #acctSigned > #btnAcctParts { grid-column: 2; grid-row: 7; justify-self: start; }
+}
 }

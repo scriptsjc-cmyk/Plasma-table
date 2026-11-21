@@ -4,8 +4,9 @@
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
-/* r15 8.1: one cascade layer per stylesheet, in link order (later layers win). */
-@layer tokens, base, layout, components, signin-menu, make, cut, cut-part, cut-run, cut-setup, parts, setup, admin, yours;
+/* r15 8.1: cascade layers. "tokens" (this file) sits under "app" (every other stylesheet, each wrapped in @layer app,
+   in link order, so the cascade between files is unchanged). Give a new reset / vendor / override sheet its own layer here. */
+@layer tokens, app;
 
 /* r15 4.26: the app brings its own Barlow (SIL Open Font Licence, fonts/OFL.txt), latin set, 400–700. Every buyer's computer then
    draws the same text widths as Josh's (it used to fall back to whatever system-ui is, e.g. DejaVu Sans on Linux). */

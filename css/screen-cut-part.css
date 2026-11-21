@@ -1,5 +1,6 @@
 /* Cutting screen, Part step (r12 three columns on a laptop). Split from screen-cut.css in r15 8.1: it is linked straight after
    it, so the rules keep their order. */
+@layer app {
 /* ---- r12 Cut step 1 (Part): three columns on a laptop, no inner scroll ---- */
 @media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
   body.app-shell[data-screen="cut"][data-step="1"] .cutgrid {
@@ -223,3 +224,4 @@
   body[data-screen="cut"][data-step="1"] #pathLegend.hidden { display: none; }
 }
 .next-setup { display: none; }
+}

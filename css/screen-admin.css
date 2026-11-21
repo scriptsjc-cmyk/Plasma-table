@@ -3,6 +3,7 @@
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
+@layer app {
 
 .limits { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: var(--fs-sm); }
 .limits td { padding: 6px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -96,3 +97,4 @@ body:not([data-mode="pro"]) .pro-copy, body[data-mode="pro"] .beg-copy { display
 #gateDlg .acctcard, #gateDlg .shapelib-card { max-height: calc(100vh - 24px); overflow: auto; padding-bottom: 16px; }
 #gateDlg .row { position: sticky; bottom: 0; background: var(--well); padding-top: 8px; }
 .adv-warn { color: var(--warn-text); }
+}

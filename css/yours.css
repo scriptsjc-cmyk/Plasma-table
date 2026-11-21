@@ -1,6 +1,7 @@
 /* Make it yours + the sliding bottom (or top) canvas toolbar.
    Load last (see index.html) so these layout rules win over the older side-rail / wrap rules
    in layout.css and screen-make.css. */
+@layer app {
 
 /* ---- toolbar button size (compact is the default; touch screens stay at least 44px) ---- */
 body, body.yours-btns-compact { --tool-h: 36px; --tool-minw: 56px; --tool-fs: 11px; --tool-icon: 16px; --tool-pad: 2px 6px; }
@@ -562,4 +563,5 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
    --tool-h height had been winning over the 28 px above), so every tool still fits over the drawing */
 @media (min-width: 900px) and (max-height: 640px) and (hover: hover) and (pointer: fine) {
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list button { --tool-h: 28px; }
+}
 }

@@ -14,7 +14,9 @@ const at = links.indexOf(FILES[0]);
 t.check("the four cut stylesheets are linked together, in order", at >= 0 && FILES.every((f, i) => links[at + i] === f), links.join(" "));
 const have = FILES.filter((f) => fs.existsSync(SITE + f));
 t.check("all four files exist", have.length === 4, have.join(", "));
-const rules = have.map((f) => fs.readFileSync(SITE + f, "utf8")).join("\n").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ").trim();
+// r15 8.1 @layer: each file's rules now sit inside "@layer app { ... }"; the wrapper is set aside, the rules must still match.
+const unwrap = (src) => { const s = src.replace(/\/\*[\s\S]*?\*\//g, "").trim(); const m = s.match(/^@layer app \{([\s\S]*)\}$/); return m ? m[1] : s; };
+const rules = have.map((f) => unwrap(fs.readFileSync(SITE + f, "utf8"))).join("\n").replace(/\s+/g, " ").trim();
 t.check("together they hold exactly the rules screen-cut.css had, in the same order", crypto.createHash("sha1").update(rules).digest("hex") === BEFORE);
 for (const f of have) { const n = fs.readFileSync(SITE + f, "utf8").split("\n").length; t.check(`${f} is under 2,000 lines`, n < 2000, n + " lines"); }
 process.exit(t.done() ? 1 : 0);

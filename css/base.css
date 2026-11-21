@@ -3,6 +3,7 @@
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
+@layer app {
 
 * { box-sizing: border-box; }
 button, select, input, textarea { font: inherit; color: inherit; }
@@ -123,3 +124,4 @@ a { color: var(--accent-text); }
 @keyframes phPulse { 50% { opacity: .55; } }
 .ph-row { height: 64px; margin: 0 0 8px; border-radius: var(--r); background: var(--line); opacity: .8; }
 @media (prefers-reduced-motion: no-preference) { body:not(.running-job) .ph-row { animation: phPulse 1.2s ease-in-out infinite; } }
+}

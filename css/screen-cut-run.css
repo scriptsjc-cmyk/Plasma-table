@@ -1,5 +1,6 @@
 /* Cutting screen, running / stopped / done (r12 step 3 on a laptop). Split from screen-cut.css in r15 8.1: linked straight after
    screen-cut-part.css, so the rules keep their order. */
+@layer app {
 /* ---- r12 Cut step 3 running / stopped / done ---- */
 @media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
   /* the job and machine strip stays under the picture while the job runs; the stopped / done panel needs the room */
@@ -943,4 +944,5 @@ body.running-job #dryRun[role="switch"], body.job-live #dryRun[role="switch"] { 
   body[data-screen="cut"][data-step="1"] #pickPane > .run-col { gap: 4px; padding: 6px 8px; }
   body[data-screen="cut"][data-step="1"] #pickPane > .run-col .cutmore-row { gap: 4px; }
   body[data-screen="cut"][data-step="1"] #pickPane > .run-col label.check.prominent { min-height: 32px; line-height: 1.2; }
+}
 }

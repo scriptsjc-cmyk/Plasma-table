@@ -3,6 +3,7 @@
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
+@layer app {
 
 canvas#preview.placing { touch-action: none; }
 .fit { margin-top: 8px; font-weight: 700; font-size: var(--fs-md); }
@@ -1979,3 +1980,4 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
 body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layFit,
 body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layZoom,
 body[data-screen="cut"]:not([data-step="3"]) .previewPane > #layoutSel { display: none !important; }
+}

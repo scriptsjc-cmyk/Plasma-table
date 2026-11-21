@@ -1,6 +1,7 @@
 /* Your parts: the parts dialog, folders and the list of saved parts.
    Load order (see index.html): tokens, base, layout, components, screen-signin-menu,
    screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours. */
+@layer app {
 
 .partlist { display: grid; gap: 8px; margin-top: 10px; overflow: auto; max-height: 52vh; }
 .partrow .row { flex-wrap: wrap; gap: 6px; }
@@ -61,4 +62,5 @@
     padding: 8px;
   }
   #partsDlg #partsPage { grid-column: 2; grid-row: 2; }
+}
 }

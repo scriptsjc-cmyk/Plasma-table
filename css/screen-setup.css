@@ -1,6 +1,7 @@
 /* Machine setup: the edges wizard, status lamps layout and the setup page cards.
    Load order (see index.html): tokens, base, layout, components, screen-signin-menu,
    screen-make, screen-cut, screen-parts, screen-setup, screen-admin, yours. */
+@layer app {
 
 #setupView .card + .card { border-radius: var(--r); margin-top: 12px; }
 body.app-shell #setupView { overflow: auto; }
@@ -320,4 +321,5 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
    (screen-cut.css "[data-step=3] .jogwrap .lamps.mini"); the Machine setup strip always shows them (Simple keeps its own choice) */
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   body.laptop-ui:not(.beginner) #setupBedWrap .jogmount .jogwrap > .lamps.mini { display: flex; }
+}
 }

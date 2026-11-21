@@ -1,5 +1,6 @@
 /* Cutting screen, Setup polish on a laptop (r15 4.6–4.9), then the later r15 laptop additions (4.11, 4.12, 4.14, 4.25: header
    pill, run and stopped panels). Split from screen-cut.css in r15 8.1: linked last, so the rules keep their order. */
+@layer app {
 /* ---- r15 4.6–4.9: Setup polish on a laptop ---- */
 @media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
   /* 4.6 the strip under the bed: the fit note may take two lines and the job size / time stack, so nothing is cut off */
@@ -107,3 +108,4 @@
 /* r15 6.1: Slow down for small holes (More cut options) */
 .slowholes { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; }
 .slowholes-note { margin: 0 0 6px; }
+}

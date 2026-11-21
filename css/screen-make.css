@@ -3,6 +3,7 @@
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
+@layer app {
 
 .log .tx { color: var(--accent-text); }
 .shapeform { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--well); }
@@ -2428,3 +2429,4 @@ body[data-screen="make"] #btnSelectMenu, body[data-screen="make"] #btnSnapMenu {
 /* r15 6.3: small-hole rule under a hole-size field (spans the form's row) */
 .shapeform .holerule, #shapeForm .holerule { grid-column: 1 / -1; margin: -2px 0 4px; line-height: 1.35; }
 .shapeform .holerule button, #shapeForm .holerule button { margin-left: 4px; }
+}
