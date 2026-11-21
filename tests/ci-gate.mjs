@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// The deploy gate (run by .github/workflows/pages.yml before Pages deploys). Runs every unit suite and the safety and fit
+// The deploy gate (run by .github/workflows/pages.yml before Pages deploys). Runs every unit suite, the safety and fit
 // end-to-end suites. Fails if any check fails that is not listed in known-failures.txt, or if a suite crashes.
 // An end-to-end suite that fails is run once more (Chrome timing on a busy runner); the second run must be clean.
 //   node ci-gate.mjs            (from tests/, after npm ci)
 import { spawn } from "node:child_process"; import fs from "node:fs"; import path from "node:path";
 const root = new URL("./", import.meta.url).pathname;
-const E2E = ["20_demo_job_safety", "22_stop_overlay", "70_laptop_cut", "74_r7_cut", "96_fits_screen", "110_r11_setup", "111_r13_transitions", "112_r15_safety", "92_r9_chrome", "113_r15_fits"];
+const E2E = ["20_demo_job_safety", "22_stop_overlay", "70_laptop_cut", "74_r7_cut", "96_fits_screen", "110_r11_setup", "111_r13_transitions", "112_r15_safety", "92_r9_chrome", "113_r15_fits", "120_every_tool"];
 const known = new Set(fs.readFileSync(path.join(root, "known-failures.txt"), "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")));
 const unit = fs.readdirSync(path.join(root, "unit")).filter((f) => /^\d+_.*\.mjs$/.test(f)).sort().map((f) => "unit/" + f.replace(/\.mjs$/, ""));
 const suites = [...unit, ...E2E.map((n) => "e2e/" + n)];
