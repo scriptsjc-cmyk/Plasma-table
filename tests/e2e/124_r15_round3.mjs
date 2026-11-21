@@ -133,6 +133,44 @@ try {
   await page.dblclick('#quickBar [data-qb="disc"]'); await sleep(250);
   const r5 = await items();
   t.check("3.6: double-clicking the Circle button drops a standard circle", r5.tool == null && r5.list.length === 1 && r5.list[0].type === "disc", J(r5));
+  // ---------------------------------------------------------------- 3.10 the tool dialogs are consistent
+  // each: how to open it, the dialog, its main button, its Cancel button, and what the main button must say
+  const DLG = [
+    ["offset", () => window.plasmaTest.runPro("offset"), "cadDialog", "#cadOk", "#cadCancel", /^Offset$/],
+    ["linear array", () => window.plasmaTest.runPro("linarray"), "cadDialog", "#cadOk", "#cadCancel", /^Make 3 copies$/],
+    ["circular array", () => window.plasmaTest.runPro("polar"), "cadDialog", "#cadOk", "#cadCancel", /^Make 4 round the circle$/],
+    ["cut control", () => window.plasmaTest.runPro("cutctl"), "cadDialog", "#cadOk", "#cadCancel", /^Apply to the job$/],
+    ["add text", () => window.plasmaTest.openMakeTool("text"), "textDlg", "#mtAdd", "#mtCancel", /Add to my drawing/],
+    ["trace", () => window.plasmaTest.openMakeTool("trace"), "traceDlg", "#trAdd", "#trCancel", /Add to my drawing/],
+    ["resize", async () => (await import(new URL("js/make/files.js", location.href).href)).openResize(), "resizeDlg", "#rsOk", "#rsCancel", /Resize/],
+  ];
+  for (const [name, open, id, okSel, cancelSel, okRe] of DLG) {
+    await fresh();
+    await ev(page, () => { const s = window.plasmaTest.sketch; s.add("rect", true, { w: 80, h: 50 }); s.commit(); s.pick([s.items[0].id]); s.onSelect(); });
+    await ev(page, () => { const t = document.getElementById("toast"); t.textContent = "an old message"; t.className = "toast"; });
+    await ev(page, open);
+    await sleep(300);
+    const d = await ev(page, ([id, okSel, cancelSel]) => {
+      const dlg = document.getElementById(id), ok = dlg && dlg.querySelector(okSel), no = dlg && dlg.querySelector(cancelSel);
+      const vis = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
+      const ro = ok && ok.getBoundingClientRect(), rn = no && no.getBoundingClientRect();
+      const natives = [...(dlg ? dlg.querySelectorAll('input[type="checkbox"], input[type="file"]') : [])].filter((i) => {
+        const cs = getComputedStyle(i), r = i.getBoundingClientRect();
+        const hidden = r.width <= 1 || r.height <= 1 || cs.opacity === "0" || cs.clipPath !== "none" && cs.clipPath !== "";
+        return vis(i) && !hidden && cs.appearance !== "none";
+      }).map((i) => i.id || i.type);
+      const t = document.getElementById("toast");
+      return { open: vis(dlg), ok: ok ? ok.textContent.trim() : null, cancelLeft: !!(ro && rn && rn.right <= ro.left + 1), natives, toast: !t.classList.contains("hidden") && t.textContent === "an old message",
+        current: dlg ? /current behaviour/i.test(dlg.textContent) : false, recommended: dlg ? /Automatic \(recommended\)/.test(dlg.innerHTML) : false };
+    }, [id, okSel, cancelSel]);
+    t.check(`3.10 ${name}: the main button names the action (${okRe.source.replace(/[\^$]/g, "")}), not "Do it"`, d.open && okRe.test(d.ok || "") && d.ok !== "Do it", J(d));
+    t.check(`3.10 ${name}: Cancel is on the left of the main button`, d.open && d.cancelLeft, J(d));
+    t.check(`3.10 ${name}: no native checkbox or file button shows (the app's own switch / file button)`, d.open && d.natives.length === 0, J(d));
+    t.check(`3.10 ${name}: an old toast is cleared when the dialog opens`, d.open && !d.toast, J(d));
+    if (name === "cut control") t.check("3.10 cut control: says 'Automatic (recommended)', not 'current behaviour'", d.recommended && !d.current, J(d));
+    await ev(page, () => { for (const id of ["cadCancel", "mtCancel", "trCancel", "rsCancel"]) { const b = document.getElementById(id); if (b && b.getClientRects().length) b.click(); } });
+    await sleep(500);
+  }
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("124 ran to the end", false, String(e && e.stack || e).slice(0, 400));
