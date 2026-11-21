@@ -124,6 +124,12 @@ for (const [size, prof] of SIZES.filter(([sz]) => !ONLY.length || ONLY.includes(
     T.setShapeFs(false);
   });
   await check(page, size, "make-advanced", stopSamples);
+  // r15 3.9: the Arrange tab (Offset, Lock, Flip, copies) fits above Cut this part. The walk only ever opened the Size and
+  // Holes tabs, so Arrange was never measured.
+  await ev(page, () => { const tab = document.querySelector('#srcShape .insp-tabs [data-insp="arrange"]'); if (tab) tab.click(); });
+  await sleep(200);
+  t.check(`${size} make-advanced: the Arrange tab opens`, await ev(page, () => document.getElementById("srcShape")?.dataset.insp === "arrange"));
+  await check(page, size, "make-advanced-arrange", stopSamples);
 
   // r13 #12: a shape with many size fields (Plate with holes) still fits the Size tab.
   await ev(page, () => {
@@ -312,6 +318,39 @@ for (const [size, prof] of SIZES.filter(([sz]) => !ONLY.length || ONLY.includes(
   });
   t.check(`${size} machine-setup-controller-not-admin: panel says why it is empty`, !notAdmin.admin && notAdmin.pane && notAdmin.text.length > 10, JSON.stringify(notAdmin));
   await check(page, size, "machine-setup-controller-not-admin", stopSamples);
+
+  // r15: Cut > Stopped part-way through a 3-part job after the speed was changed - the fullest Stopped panel (Save speed,
+  // Stopped during cut N, Continue from cut, Download G-code). The walk above stops before the first pierce of a one-part
+  // job, where none of those show, so Download G-code being pushed off the bottom was never measured.
+  {
+    const p2 = await newPage(br, prof, { base: srv.base, consoleErrors: false });
+    await ev(p2, () => { const T = window.plasmaTest, sk = T.sketch; T.setAppMode && T.setAppMode("beginner", { persist: false, autoFs: false });
+      T.showScreen("make", { force: true }); T.setShapeFs(false); sk.clear(); sk.add("rect"); sk.add("disc"); sk.add("rect"); sk.commit && sk.commit();
+      T.sendToCutting(); T.goStep(3); });
+    await sleep(300);
+    await ev(p2, () => document.getElementById("btnDemo").click());   // Practice table — never #btnConnect
+    await p2.waitForFunction(() => window.plasmaTest.S.connected, null, { timeout: 10000 }).catch(() => {});
+    try { await ensurePracticeHomed(p2, { timeout: 20000 }); } catch (e) {}
+    await ev(p2, () => { window.plasmaTest.goStep(3); const b = document.getElementById("btnZero"); if (b) b.click(); });
+    await sleep(400);
+    await ev(p2, () => { document.querySelectorAll("#checklist input").forEach((i) => { if (!i.disabled) i.checked = true; }); const c = document.getElementById("checklist"); if (c) c.dispatchEvent(new Event("change")); });
+    await sleep(200);
+    const ok = await ev(p2, () => { const b = document.getElementById("btnStart"); if (b && !b.disabled && b.getAttribute("aria-disabled") !== "true") { b.click(); return true; } return false; });
+    t.check(`${size} cut-stopped-midjob: the practice job started`, ok);
+    const t0 = Date.now();
+    while (ok && Date.now() - t0 < 60000) { if (await ev(p2, () => (window.plasmaTest.S.run ? window.plasmaTest.S.run.ons : 0) >= 2)) break; await sleep(300); }
+    await ev(p2, () => { window.plasmaTest.goStep(4); for (let i = 0; i < 2; i++) { const b = document.getElementById("lsUp"); if (b) b.click(); } });
+    await sleep(400);
+    await ev(p2, () => document.getElementById("btnStop").click());
+    await sleep(2500);
+    const shownIds = await ev(p2, () => ["btnSaveSpeed", "restartBox", "btnRestart", "btnExport4"].filter((id) => { const el = document.getElementById(id); return el && !el.classList.contains("hidden") && el.getBoundingClientRect().height > 0; }));
+    t.check(`${size} cut-stopped-midjob: Save speed, Stopped during cut, Continue and Download G-code are all shown`, shownIds.length === 4, JSON.stringify(shownIds));
+    await check(p2, size, "cut-stopped-midjob");
+    await ev(p2, () => { try { window.plasmaTest.estopReset(); } catch (e) {} });
+    await sleep(800);
+    await check(p2, size, "cut-stopped-midjob-reset");
+    await p2.ctx.close();
+  }
 
   // r13: STOP stays the same size and place on every screen where it is shown (within 2 px).
   if (stopSamples.length) {
