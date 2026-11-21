@@ -241,6 +241,22 @@ try {
   await ev(page, () => window.plasmaTest.sketch.undo());
   const c3 = await ev(page, () => window.plasmaTest.sketch.items[0].feats[0].kind);
   t.check("corners: one undo goes back to Round", c3 === "round", c3);
+
+  // Fillet click mode on the canvas: clicking one sharp corner adds "R6 at 1 corner" (a real mouse click on the drawing)
+  await ev(page, () => { const s = window.plasmaTest.sketch; s.items = []; s.add("gusset", true, {}); const g = s.items[0]; g.p.cut = 30; g._key = undefined; s.commit(); s.pick([g.id]); s.onSelect(); });
+  await sleep(250);
+  await page.click('[data-qb="fillet"]'); await sleep(200);
+  await page.fill("#cad_r", "6"); await page.click("#cadOk"); await sleep(250);
+  const tgt = await ev(page, () => {
+    const s = window.plasmaTest.sketch, g = s.items[0], c = s.cornerList(g).find((k) => k.ord === 1), [x, y] = s.toScreen(c.world[0], c.world[1]), r = s.cv.getBoundingClientRect();
+    return { x: r.left + x + 2, y: r.top + y - 1, pick: !!s.filletPick, type: g.type };
+  });
+  t.check("corners: Fillet starts click mode and the gusset stays a gusset", tgt.pick && tgt.type === "gusset", J(tgt));
+  await page.mouse.click(tgt.x, tgt.y); await sleep(300);
+  const c4 = await ev(page, () => { const g = window.plasmaTest.sketch.items[0]; return { type: g.type, f: g.feats }; });
+  await ev(page, () => { const b = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (b) b.click(); }); await sleep(200);
+  t.check("corners: clicking a corner on the drawing adds 'R6 at 1 corner' (that corner) and keeps the gusset", c4.type === "gusset" && J((c4.f || []).map((f) => [f.k, f.kind, f.r, f.at])) === J([["corner", "round", 6, [1]]]) && (await rows()).some((r) => /R6 at 1 corner/.test(r.sum)), J(c4));
+  await ev(page, () => window.plasmaTest.sketch.endFilletPick());
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("121 ran to the end", false, String(e && e.stack || e).slice(0, 400));
