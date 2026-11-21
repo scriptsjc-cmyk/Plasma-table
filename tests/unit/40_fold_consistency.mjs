@@ -75,4 +75,11 @@ sized("rectelbow", {}, (p) => [p.w, Math.max(10, p.r) + p.h, Math.max(10, p.r) +
 // redelbow is cut as two end gores (one square end, one mitred end, α = bend / 4) and a square-ended cone: the only way they
 // join is gore – cone – gore, square end to square end, so the 3D is that run with the two mitres on its outer ends.
 sized("redelbow", {}, (p) => { const ta = Math.tan(((p.bend * Math.PI) / 180) / 4), L = Math.max(p.clr, p.d / 2 + 1) * ta + Math.max(p.clr, p.d2 / 2 + 1) * ta; return [p.d, p.d, L + p.h + ((p.d + p.d2) / 2) * ta]; }, "big gore + cone + small gore, mitres on the outer ends");
+// the offset rectangular transition's top opening sits ox along the width, as cut (rectangularTransition)
+{
+  const s = sh("recttransoff"), p = { ...defaults(s), ox: 30 }, fs = solid(A.foldModel(s, p));
+  const top = Math.max(...fs.flatMap((f) => f.pts.map((q) => q[1]))), xs = fs.flatMap((f) => f.pts.filter((q) => Math.abs(q[1] - top) < 1e-6).map((q) => q[0]));
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+  t.check("recttransoff: the 3D top opening is offset by ox (30 mm) and is a2 wide", Math.abs(cx - 30) < 0.05 && Math.abs(Math.max(...xs) - Math.min(...xs) - p.a2) < 0.05, `centre ${cx.toFixed(2)}, width ${(Math.max(...xs) - Math.min(...xs)).toFixed(2)}`);
+}
 process.exit(t.done() ? 1 : 0);
