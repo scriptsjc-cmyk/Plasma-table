@@ -42,6 +42,7 @@ export function sanitizeFeature(f) {
   if (f.op === "score" || f.op === "mark" || f.op === "cut") out.op = f.op;
   if (f.hide) out.hide = true;
   if (f.from === "centre") out.from = "centre";
+  if (f.k === "hole" && f.arcs && Number(f.arcs.n) >= 2) out.arcs = { n: Math.max(2, Math.min(64, Math.round(Number(f.arcs.n)))), a0: exact(NUM(f.arcs.a0, 0)), b: Math.abs(NUM(f.arcs.b, 0)), cw: !!f.arcs.cw };
   if (Number(f.link) > 0) out.link = Math.round(Number(f.link));
   return out;
 }
@@ -82,6 +83,13 @@ export function circleAt(cx, cy, r) {
   const n = Math.max(8, Math.ceil(segs(r) / 4) * 4), pts = [];
   for (let i = 0; i < n; i++) { const [c, s] = cs((360 * i) / n); pts.push([cx + r * c, cy + r * s]); }
   return { pts, closed: true, circle: { cx, cy, r } };
+}
+// a hole that came from a drawing is cut exactly as the drawing drew it (the same arcs from the same start point, as a
+// polyline like any other drawn outline), so opening a DXF never changes its cut, pierce point or order (plan 2.16/2.17)
+function drawnCircle(cx, cy, r, { n, a0, b: b0, cw }) {
+  const pts = [], b = (b0 > 0 ? b0 : Math.tan(Math.PI / (2 * n))) * (cw ? -1 : 1);   // the drawing's own bulge value
+  for (let i = 0; i < n; i++) { const [c, s2] = cs(a0 + ((cw ? -360 : 360) * i) / n); pts.push([cx + r * c, cy + r * s2]); }
+  return expandContour({ pts, closed: true, bulges: pts.map(() => b) });
 }
 function slotPts(len, wid) {
   const r = wid / 2, a = Math.max(0, len / 2 - r), n = Math.max(2, Math.ceil(segs(r, Math.PI) / 2) * 2), pts = [];
@@ -128,6 +136,7 @@ export const isHoleFeature = (f) => ["hole", "bolt", "grid", "edge"].includes(f.
 export function featureContours(f) {
   const op = f.op && f.op !== "cut" ? f.op : null;
   const tag = (c) => (op ? { ...c, op } : c);
+  if (f.k === "hole" && f.arcs) return [tag(drawnCircle(f.x, f.y, f.d / 2, f.arcs))];
   if (isHoleFeature(f)) return holeCentres(f).map(([x, y]) => tag(circleAt(x, y, f.d / 2)));
   if (f.k === "slot") return [tag({ pts: turn(slotPts(f.len, f.wid), f.rot, f.x, f.y), closed: true })];
   if (f.k === "rect") return [tag({ pts: turn(roundRectPts(f.w, f.h, f.r), f.rot, f.x, f.y), closed: true })];
@@ -364,17 +373,18 @@ export function carryFeatures(sk, fromParts, to) {
 // A closed loop that is a true circle (equal-bulge arcs round one centre, or a fine polygon on one circle) and sits inside
 // the part's only outline becomes a Hole feature with the drawing's exact centre and size; it is dropped from the outline.
 function loopCircle(c) {
+  // only a true circle as the drawing gave it: n equal-bulge arcs making one full turn round one centre. A polygon that
+  // merely looks round stays in the outline (turning it into a hole row would change the cut).
   const pts = c.pts || [], n = pts.length, bs = c.bulges || [];
-  if (c.closed === false || c.op || c.role || n < 2) return null;
-  const cx = pts.reduce((s, p) => s + p[0], 0) / n, cy = pts.reduce((s, p) => s + p[1], 0) / n;
-  const rs = pts.map((p) => Math.hypot(p[0] - cx, p[1] - cy)), r = rs.reduce((s, v) => s + v, 0) / n;
-  if (!(r > 0.05) || rs.some((v) => Math.abs(v - r) > 1e-6 * Math.max(1, r))) return null;
+  if (c.closed === false || c.op || c.role || n < 2 || n > 64) return null;
   const b0 = Number(bs[0]) || 0;
-  if (Math.abs(b0) > 1e-9) {                                   // arcs: all the same bulge and together a full turn
-    if (bs.length < n || bs.slice(0, n).some((b) => Math.abs((Number(b) || 0) - b0) > 1e-6)) return null;
-    if (Math.abs(n * 4 * Math.atan(Math.abs(b0)) - 2 * Math.PI) > 1e-3) return null;
-  } else if (n < 16 || bs.some((b) => Math.abs(Number(b) || 0) > 1e-9)) return null;
-  return { cx, cy, r };
+  if (!(Math.abs(b0) > 1e-9) || bs.length < n || bs.slice(0, n).some((b) => Math.abs((Number(b) || 0) - b0) > 1e-9)) return null;
+  if (Math.abs(n * 4 * Math.atan(Math.abs(b0)) - 2 * Math.PI) > 1e-4) return null;   // DXF bulges are often written to 6 places
+  const cx = pts.reduce((s2, p) => s2 + p[0], 0) / n, cy = pts.reduce((s2, p) => s2 + p[1], 0) / n;
+  const rs = pts.map((p) => Math.hypot(p[0] - cx, p[1] - cy)), r = rs.reduce((s2, v) => s2 + v, 0) / n;
+  if (!(r > 0.05) || rs.some((v) => Math.abs(v - r) > 1e-6 * Math.max(1, r))) return null;
+  const a0 = (Math.atan2(pts[0][1] - cy, pts[0][0] - cx) * 180) / Math.PI;
+  return { cx, cy, r, arcs: { n, a0: exact(a0), b: Math.abs(b0), cw: b0 < 0 } };
 }
 export function adoptCircleHoles(it) {
   if (!it || it.type !== "custom" || !it.shape || !Array.isArray(it.shape.cs)) return 0;
@@ -393,7 +403,7 @@ export function adoptCircleHoles(it) {
   for (const c of cs) {
     const ci = c !== out && loopCircle(c);
     if (ci && pointInPoly([ci.cx, ci.cy], ex.pts) && !polysCross(circleAt(ci.cx, ci.cy, ci.r).pts, ex.pts)) {
-      feats.push({ id: ++id, k: "hole", x: exact(ci.cx - x0), y: exact(ci.cy - y0), d: exact(2 * ci.r) });
+      feats.push({ id: ++id, k: "hole", x: exact(ci.cx - x0), y: exact(ci.cy - y0), d: exact(2 * ci.r), arcs: ci.arcs });   // cut as the drawing drew it
     } else keep.push(c);
   }
   if (!feats.length) return 0;

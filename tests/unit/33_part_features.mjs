@@ -2,7 +2,7 @@
 // mirror links, live checks, and that a part with no features cuts exactly as before (flattening only adds contours).
 import { T } from "../lib/t.mjs";
 import { load } from "../lib/env.mjs";
-import { mod } from "../lib/site.mjs";
+import { mod, REPO } from "../lib/site.mjs";
 
 const t = new T("33_part_features");
 const A = await load();
@@ -169,12 +169,39 @@ for (const [hrot, hfx] of [[0, false], [90, false], [30, true]]) {
   const ik = A.newSketch();
   ik.importParts([{ x: 0, y: 0, cs: [rounded, circ(20, 20, 4.25), poly(100, 75, 30, 64), circ(197, 75, 6), { pts: [[50, 120], [70, 120], [60, 135]] }] }], true, { adoptHoles: true });
   const it = ik.items[0];
-  t.check("import: circles inside a rounded outline become Hole rows with exact centres", J((it.feats || []).map((f) => [f.k, f.x, f.y, f.d])) === J([["hole", 20, 20, 8.5], ["hole", 100, 75, 60]]), J(it.feats));
-  t.check("import: a circle crossing the edge and a triangle stay in the outline", it.shape.cs.length === 3, it.shape.cs.length);
+  t.check("import: circles inside a rounded outline become Hole rows with exact centres", J((it.feats || []).map((f) => [f.k, f.x, f.y, f.d])) === J([["hole", 20, 20, 8.5]]), J(it.feats));
+  // a 64-sided polygon only looks round: as a hole row it would cut as a true circle, so it stays in the outline (cut unchanged)
+  t.check("import: a polygon circle, a circle crossing the edge and a triangle stay in the outline", it.shape.cs.length === 4, it.shape.cs.length);
   const plain = A.newSketch(); plain.importParts([{ x: 0, y: 0, cs: [rounded, circ(20, 20, 4.25)] }], true);
   t.check("import: without adoptHoles (other tools) nothing changes", !plain.items[0].feats && plain.items[0].shape.cs.length === 2);
   const two = A.newSketch(); two.importParts([{ x: 0, y: 0, cs: [{ pts: [[0, 0], [50, 0], [50, 50], [0, 50]] }, { pts: [[100, 0], [150, 0], [150, 50], [100, 50]] }, circ(25, 25, 5)] }], true, { adoptHoles: true });
   t.check("import: a part with two outlines keeps its circles (rows are measured from one outline)", !two.items[0].feats, J(two.items[0].feats));
+}
+
+// Josh: auto-adopting DXF circles must never change the cut. Same G-code (hole positions, sizes, order, lead-ins, pierce
+// points) with and without adoptHoles, for the repo's own DXFs and a mixed part (circles drawn from odd start angles, CW).
+{
+  const fs = await import("node:fs");
+  const D = await mod("dxf"), E = await mod("editable");
+  const files = ["samples/plate_with_slot.dxf", "tests/data/plate.dxf", "tests/data/part02.dxf", "tests/data/inch.dxf",
+    ...fs.readdirSync(REPO + "/tests/data/batch20").filter((f) => /^part\d+(_inches)?\.dxf$/.test(f)).map((f) => "tests/data/batch20/" + f)];
+  const gcodeOf = (parts, adoptHoles) => { const sk = A.newSketch(); sk.importParts(parts, true, { adoptHoles }); return { sk, g: A.designToGcode(sk.contours(), { kerf: 1.5, leadIn: 3, name: "x" }).gcode }; };
+  let adopted = 0; const bad = [];
+  for (const f of files) {
+    const e = E.contoursToEditable(D.parseDXF(fs.readFileSync(REPO + "/" + f, "utf8")).contours);
+    const a = gcodeOf(e.parts, false), b = gcodeOf(e.parts, true);
+    adopted += b.sk.items.reduce((n, i) => n + (i.feats || []).length, 0);
+    if (a.g !== b.g) bad.push(f);
+  }
+  t.check("DXF import: adopting circles as Hole rows leaves every repo DXF's G-code byte-identical", !bad.length && adopted >= 12, J({ bad, adopted }));
+  const odd = (cx, cy, r, n, a0, cw) => { const bb = Math.tan(Math.PI / (2 * n)) * (cw ? -1 : 1), pts = [];
+    for (let i = 0; i < n; i++) { const a = ((a0 + (cw ? -360 : 360) * i / n) * Math.PI) / 180; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+    return { pts, bulges: pts.map(() => +bb.toFixed(6)) }; };   // DXF writers round bulges to 6 places
+  const parts = [{ x: 0, y: 0, cs: [{ pts: [[0, 0], [160, 0], [160, 90], [0, 90]] }, odd(20, 20, 4.25, 2, 90, false), odd(140, 20, 3.3, 4, 37, true), odd(80, 45, 15, 3, 200, false), { pts: [[60, 70], [100, 70], [100, 80], [60, 80]] }] }];
+  const a = gcodeOf(parts, false), b = gcodeOf(parts, true);
+  t.check("DXF import: circles drawn as 2/3/4 arcs, CW, from odd start angles adopt and cut byte-identically", (b.sk.items[0].feats || []).length === 3 && a.g === b.g, J(b.sk.items[0].feats));
+  const back = A.newSketch(); back.items = JSON.parse(JSON.stringify(b.sk.items)).map((i) => back.sanitizeItem ? back.sanitizeItem(i) : i);
+  t.check("DXF import: still byte-identical after a save / reload round trip", A.designToGcode(back.contours(), { kerf: 1.5, leadIn: 3, name: "x" }).gcode === a.g);
 }
 
 process.exit(t.done() ? 1 : 0);

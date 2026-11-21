@@ -148,6 +148,23 @@ async function makeScreen(page) {
     const rows = await ev(page, () => [...document.querySelectorAll("#featList .feat-row:not(.feat-builtin)")].map((x) => x.textContent.replace(/\s+/g, " ").trim()));
     t.check("dxf: the Features tab lists them as three Hole rows", rows.length === 3 && rows.every((x) => /Hole/.test(x)), J(rows));
     t.check("dxf: no prompt (they are already rows)", !(await offer(page)));
+    // Josh: adoption must never change the cut. The app's own import path gives byte-identical G-code to the same drawing
+    // imported with its circles left in the outline, for this DXF and for an SVG with circles and an arc-drawn hole.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120mm" height="80mm" viewBox="0 0 120 80"><rect x="0" y="0" width="120" height="80" fill="none" stroke="black"/>
+      <circle cx="15" cy="15" r="4" fill="none" stroke="black"/><circle cx="105" cy="15" r="4" fill="none" stroke="black"/><circle cx="60" cy="40" r="12.5" fill="none" stroke="black"/>
+      <path d="M 20 60 A 5 5 0 1 0 30 60 A 5 5 0 1 0 20 60 Z" fill="none" stroke="black"/></svg>`;
+    for (const [name, text] of [["plate-circles.dxf", dxf], ["plate-circles.svg", svg]]) {
+      const g = await ev(page, async ([name, text]) => {
+        const T = window.plasmaTest, cam = await import("/js/cut/cam.js"), E = await import("/js/make/editable.js");
+        const P = /\.svg$/.test(name) ? (await import("/js/make/svg.js")).parseSVG(text) : (await import("/js/make/dxf.js")).parseDXF(text);
+        const gc = () => cam.designToGcode(T.sketch.contours(), { kerf: 1.5, leadIn: 3, name: "x" }).gcode;
+        T.sketch.importParts(E.contoursToEditable(P.contours).parts, true);
+        const plain = gc();
+        await T.importIntoMake([new File([text], name)], { replace: true, skipSizeCheck: true });
+        return { feats: (T.sketch.items[0].feats || []).length, same: gc() === plain };
+      }, [name, text]);
+      t.check(`${name}: adopted circles cut byte-identically (holes, sizes, order, lead-ins, pierces)`, g.feats >= 3 && g.same, J(g));
+    }
     t.check("(b) no page error", !page.errors.length, J(page.errors.slice(0, 3)));
   } catch (e) { t.check("(b) ran to the end", false, String(e && e.stack || e).slice(0, 400)); }
   await page.ctx.close();
