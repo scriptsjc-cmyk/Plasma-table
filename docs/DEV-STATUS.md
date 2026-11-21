@@ -2,7 +2,7 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 12:20 (UK time). Live: see `version.json`.
+Last updated: 21 Nov 2026, 13:35 (UK time). Round 3 is live @ fd60dcd (CI run 44904366501 green). Live: see `version.json`.
 
 ## Working on
 - r15 Round 4 (screen polish), starting next. (Live signed-in motor-mount run: Josh does this himself at a later round end, t544u.)
@@ -40,7 +40,9 @@ Last updated: 21 Nov 2026, 12:20 (UK time). Live: see `version.json`.
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- r15 Round 4 (screen polish), items 1–26
+- Your 11:47 report, New problems 1 and 2 (phone): the Set the size / More cut options help line shows twice; the "Turn your phone
+  sideways" pill sits over the Features sheet. Fixing these first in Round 4.
+- r15 Round 4 (screen polish), items 1–26, in the order of your prep (4.3, 4.4, 4.2/4.5, 4.9, 4.11/4.25, 4.13, 4.26)
 
 ## Not a bug
 - Report ❌ "41 item 11 since 55c3d71": not the app. 55c3d71 also changed `tests/lib/browser.mjs` launchKillable to a real laptop
@@ -56,5 +58,8 @@ Last updated: 21 Nov 2026, 12:20 (UK time). Live: see `version.json`.
   so I have not touched it (house rule). Your call.
 
 ## Questions for the checker
+- 41 item 11 (your request): `node run-all.mjs 41` fails item 11 ×3 on both 75b7df1 and 55c3d71 with today's `tests/lib/browser.mjs`.
+  The difference between your two runs is the launcher: 55c3d71 changed launchKillable from raw headless Chrome (no hover, so the
+  touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
 - 2.17 (G-code unchanged when a part has no features): the developer checks it before every geometry/import push with `tmp/precheck.sh` (339 presets + 35 DXF/SVG byte-identical). Can you confirm it independently on the next push?
 - Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×8, 83, 85 (C46/C48/C49), 96_fold3d ×3, 106_r9_features ×2 (F10 rail list, ME1 checklist), 47 (Save G-code as never shows), 49 ESTOP ×3. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
