@@ -110,14 +110,13 @@ export async function tapCanvas(page, sx, sy) {
 }
 export const shot = (page, name) => page.screenshot({ path: SHOTS + name + ".png" }).catch(() => {});
 
-// A Chrome we can SIGKILL (a frozen renderer can wedge Playwright's own close()).
-import { spawn } from "node:child_process"; import os from "node:os";
+// A Chrome we can SIGKILL (a frozen renderer can wedge Playwright's own close()). Playwright starts it (the same way as
+// launch(), which works on every Chrome the runner gets) and we keep its process, so kill() never waits on the page.
 export async function launchKillable() {
-  const port = 20000 + Math.floor(Math.random() * 20000); const dir = fs.mkdtempSync(path.join(os.tmpdir(), "pt-chrome-"));
-  const child = spawn("google-chrome", ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${dir}`, "--no-first-run", "--no-sandbox", "--disable-gpu", "about:blank"], { stdio: "ignore", detached: true });
-  let browser; for (let i = 0; i < 50; i++) { try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); break; } catch (e) { await new Promise((r) => setTimeout(r, 200)); } }
-  if (!browser) { try { process.kill(-child.pid, "SIGKILL"); } catch (e) {} throw new Error("chrome did not start"); }
-  return { browser, kill: () => { try { process.kill(-child.pid, "SIGKILL"); } catch (e) {} try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} } };
+  const server = await chromium.launchServer({ channel: "chrome", headless: true });
+  const proc = server.process();
+  const browser = await chromium.connect(server.wsEndpoint());
+  return { browser, kill: () => { try { process.kill(-proc.pid, "SIGKILL"); } catch (e) { try { proc.kill("SIGKILL"); } catch (e2) { /* already gone */ } } } };
 }
 
 // Round-4 UI: menu -> make -> cut. Draw a plate, send it to the cutting screen and connect the practice (demo) controller.
