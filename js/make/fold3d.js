@@ -658,46 +658,27 @@ export function foldElbow(d, bendDeg, pieces, segs = 32, clr, d2) {
   // Leave mid-surface unshifted so endFrames (flanges) stay on the openings; thicken() sits the view.
   return { faces, panels: [{ w: Math.PI * (R0 + R1), h: totalL }] };
 }
+// r15 7.5: built from the cut pieces: two cheeks (sectors from the throat radius out by the duct height, 16 steps like the
+// cut) set the cheek spacing w apart, and the throat and back wrappers rolled between them. (It used to bend a w-deep,
+// h-high section, sizes swapped, with straight stubs on both ends that are not cut.)
+export const rectElbowDims = (w, h, r, bendDeg) => ({ ang: (Math.min(180, Math.max(20, Number(bendDeg) || 90)) * Math.PI) / 180, ri: Math.max(10, Number(r) || 0), ro: Math.max(10, Number(r) || 0) + h, w });
 export function foldRectElbow(w, h, r, bendDeg) {
-  const faces = [];
-  const bend = (Math.max(15, bendDeg) * Math.PI) / 180;
-  const segs = 8;
-  const hw = w / 2, hh = h / 2;
-  // r is treated as an inner radius; the centre-line must clear the half-width
-  const rad = Math.max(r, 8) + hw;
-  const frame = (ang) => ({
-    c: V(rad * (1 - Math.cos(ang)), 0, rad * Math.sin(ang)),
-    n: V(Math.cos(ang), 0, -Math.sin(ang)),
-  });
-  const ringPt = (f, u, v) => add(f.c, add(scl(f.n, u), V(0, v, 0)));
-  const corners = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]];
-  for (let i = 0; i < segs; i++) {
-    const a0 = (i / segs) * bend, a1 = ((i + 1) / segs) * bend;
-    const f0 = frame(a0), f1 = frame(a1);
-    for (let k = 0; k < 4; k++) {
-      const [uA, vA] = corners[k], [uB, vB] = corners[(k + 1) % 4];
-      const pts = [ringPt(f0, uA, vA), ringPt(f0, uB, vB), ringPt(f1, uB, vB), ringPt(f1, uA, vA)];
-      const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
-      faces.push({ pts, n, holes: [], w: mag(sub(pts[1], pts[0])), h: mag(sub(pts[3], pts[0])) });
-    }
-  }
-  const stub = Math.max(h, 50);
-  const stubAt = (ang, along) => {
-    const f = frame(ang);
-    const tan = V(Math.sin(ang), 0, Math.cos(ang)); // matches frame tangent
-    const end = { c: add(f.c, scl(tan, along)), n: f.n };
-    const ring = (fr, u, v) => add(fr.c, add(scl(fr.n, u), V(0, v, 0)));
-    for (let k = 0; k < 4; k++) {
-      const [uA, vA] = corners[k], [uB, vB] = corners[(k + 1) % 4];
-      const pts = [ring(f, uA, vA), ring(f, uB, vB), ring(end, uB, vB), ring(end, uA, vA)];
-      const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
-      faces.push({ pts, n, holes: [], w: mag(sub(pts[1], pts[0])), h: Math.abs(along) });
-    }
+  const { ang, ri, ro } = rectElbowDims(w, h, r, bendDeg), segs = 16, faces = [];
+  const P = (rad, a, y) => V(rad * Math.cos(a), y, rad * Math.sin(a));
+  const push = (pts, want, extra = {}) => {
+    let n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
+    if (dot(n, want) < 0) { pts = pts.slice().reverse(); n = scl(n, -1); }
+    faces.push({ pts, n, holes: [], w: mag(sub(pts[1], pts[0])), h: mag(sub(pts[3], pts[0])), ...extra });
   };
-  stubAt(0, -stub);
-  stubAt(bend, stub);
+  for (let i = 0; i < segs; i++) {
+    const a0 = (i * ang) / segs, a1 = ((i + 1) * ang) / segs, am = (a0 + a1) / 2, rad = V(Math.cos(am), 0, Math.sin(am));
+    push([P(ri, a0, 0), P(ro, a0, 0), P(ro, a1, 0), P(ri, a1, 0)], V(0, -1, 0));            // cheek on the table
+    push([P(ri, a0, w), P(ro, a0, w), P(ro, a1, w), P(ri, a1, w)], V(0, 1, 0));             // cheek on top
+    push([P(ri, a0, 0), P(ri, a1, 0), P(ri, a1, w), P(ri, a0, w)], scl(rad, -1), { smooth: true });   // throat wrapper
+    push([P(ro, a0, 0), P(ro, a1, 0), P(ro, a1, w), P(ro, a0, w)], rad, { smooth: true });            // back wrapper
+  }
   sitOnTable(faces);
-  return { faces, panels: [{ w: (w + h) * 2, h: rad * bend + 2 * stub }] };
+  return { faces, panels: [{ w: ro - ri, h: ro * ang }, { w: ro - ri, h: ro * ang }, { w, h: ri * ang }, { w, h: ro * ang }] };
 }
 export function foldUSaddle(wid, d, leg, segs = 12) {
   const faces = [];
@@ -963,20 +944,10 @@ function endFrames(id, p) {
         { origin: o2, xA: V(0, 0, 1), yA: yA2, outward: ax },
       ];
     }
-    case "rectelbow": {
-      const bend = (Math.max(15, p.bend || 90) * Math.PI) / 180;
-      const hw = (p.w || 0) / 2;
-      const rad = Math.max(p.r || 0, 8) + hw;
-      const stub = Math.max(p.h || 0, 50);
-      const tan = (ang) => V(Math.sin(ang), 0, Math.cos(ang));
-      const centre = (ang) => V(rad * (1 - Math.cos(ang)), 0, rad * Math.sin(ang));
-      const nrm = (ang) => V(Math.cos(ang), 0, -Math.sin(ang));
-      const o1 = add(centre(0), scl(tan(0), -stub));
-      const o2 = add(centre(bend), scl(tan(bend), stub));
-      return [
-        { origin: o1, xA: nrm(0), yA: V(0, 1, 0), outward: scl(tan(0), -1) },
-        { origin: o2, xA: nrm(bend), yA: V(0, 1, 0), outward: tan(bend) },
-      ];
+    case "rectelbow": {   // r15 7.5: the two duct openings of the cheek-and-wrapper elbow (see foldRectElbow)
+      const { ang, ri, ro, w } = rectElbowDims(p.w || 0, p.h || 0, p.r, p.bend), rm = (ri + ro) / 2;
+      const end = (a, out) => ({ origin: V(rm * Math.cos(a), w / 2, rm * Math.sin(a)), xA: V(Math.cos(a), 0, Math.sin(a)), yA: V(0, 1, 0), outward: out });
+      return [end(0, V(0, 0, -1)), end(ang, V(-Math.sin(ang), 0, Math.cos(ang)))];
     }
     case "britches":
     case "ybranch":
