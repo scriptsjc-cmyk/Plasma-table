@@ -107,14 +107,14 @@ export function tableToHtml(tab) {
     `<tr><td>${r.x}</td><td>${r.endBot}</td><td>${r.endTop}</td><td>${r.midBot}</td><td>${r.midTop}</td></tr>`).join("");
   return `<article class="sheet-table">
     <h2>True-length table</h2>
-    <p>${tab.pieces}-piece ${tab.bend}° elbow · ${tab.basis} diameter ${tab.developedDia} mm
+    <p>${tab.pieces}-piece ${tab.bend}° ${tab.kind === "redelbow" ? "reducing elbow · big end" : "elbow ·"} ${tab.basis} diameter ${tab.developedDia} mm
       · wrap ${tab.wrap} mm (including ${tab.seam} mm seam at ${tab.seamAt}°)
       · CLR ${tab.clr} mm · thickness ${tab.thickness} mm.</p>
     <table><thead><tr><th>Gore</th><th>Wrap (mm)</th><th>Centreline (mm)</th><th>Throat (mm)</th><th>Back (mm)</th></tr></thead>
     <tbody>${rows}</tbody></table>
-    <h3>Triangulation (marking-out stations)</h3>
+${tri ? `<h3>Triangulation (marking-out stations)</h3>
     <table><thead><tr><th>Around (mm)</th><th>End square</th><th>End mitre</th><th>Mid throat side</th><th>Mid back side</th></tr></thead>
-    <tbody>${tri}</tbody></table>
+    <tbody>${tri}</tbody></table>` : ""}
     <p class="muted small">All lengths in millimetres. Mark the wrap along the developed circumference, then transfer the station heights.</p>
   </article>`;
 }

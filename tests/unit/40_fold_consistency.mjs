@@ -72,9 +72,17 @@ const sized = (id, extra, want, why) => {
 sized("foldubr", {}, (p) => [p.web, p.leg, p.len], "web × leg × width");
 sized("tube", {}, (p) => [p.d, p.d, p.len != null ? p.len : p.h], "Ø × Ø × length");
 sized("rectelbow", {}, (p) => [p.w, Math.max(10, p.r) + p.h, Math.max(10, p.r) + p.h], "cheek spacing w; 90° bend out to throat radius + duct height");
-// redelbow is cut as two end gores (one square end, one mitred end, α = bend / 4) and a square-ended cone: the only way they
-// join is gore – cone – gore, square end to square end, so the 3D is that run with the two mitres on its outer ends.
-sized("redelbow", {}, (p) => { const ta = Math.tan(((p.bend * Math.PI) / 180) / 4), L = Math.max(p.clr, p.d / 2 + 1) * ta + Math.max(p.clr, p.d2 / 2 + 1) * ta; return [p.d, p.d, L + p.h + ((p.d + p.d2) / 2) * ta]; }, "big gore + cone + small gore, mitres on the outer ends");
+// r15 7.5-redelbow (Josh 21 Nov): the reducing elbow is tapering gores (unit 56 checks the joints). It starts upright on its
+// big end, bends in the y–z plane: so it is exactly Ø d across x, its lowest ring is the round Ø d opening, and it has n gores.
+{
+  const s = sh("redelbow"), p = defaults(s), fs = solid(A.foldModel(s, p)), pts = fs.flatMap((f) => f.pts);
+  const xs = pts.map((q) => q[0]), y0 = Math.min(...pts.map((q) => q[1])), low = pts.filter((q) => Math.abs(q[1] - y0) < 1e-6);
+  const cx = low.reduce((a, q) => a + q[0], 0) / low.length, cz = low.reduce((a, q) => a + q[2], 0) / low.length;
+  const radErr = Math.max(...low.map((q) => Math.abs(Math.hypot(q[0] - cx, q[2] - cz) - p.d / 2)));
+  t.check(`redelbow: 3D is Ø ${p.d} across the bend plane, stands on a round Ø ${p.d} end, ${p.n} gores`,
+    Math.abs(Math.max(...xs) - Math.min(...xs) - p.d) < 0.05 && low.length >= 24 && radErr < 0.05 && new Set(fs.map((f) => f.gore)).size === p.n,
+    `x ${(Math.max(...xs) - Math.min(...xs)).toFixed(2)}, ${low.length} low points, radius off ${radErr.toFixed(3)}`);
+}
 // the offset rectangular transition's top opening sits ox along the width, as cut (rectangularTransition)
 {
   const s = sh("recttransoff"), p = { ...defaults(s), ox: 30 }, fs = solid(A.foldModel(s, p));

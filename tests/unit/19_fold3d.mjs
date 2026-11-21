@@ -300,6 +300,7 @@ t.check("machine guard window is cut in the 3D front", (() => {
 // Square-to-round and rectangular transitions now default to one connected
 // folding blank (or two halves if needed) with etch lines; hashes updated.
 // r15 5.2: the dustpan bottom's back edge was 1.5 × the back width (the back never fitted); fixed, hash updated.
+// r15 7.5-redelbow (Josh 21 Nov): the reducing elbow is now tapering gores (unit 56); hash updated.
 const goldPath = new URL("../data/existing-preset-flat.json", import.meta.url);
 const gold = JSON.parse(fs.readFileSync(goldPath, "utf8"));
 t.check("golden flat-pattern fixture is present", Array.isArray(gold.rows) && gold.rows.length > 50, String(gold.rows && gold.rows.length));

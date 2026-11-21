@@ -6,6 +6,7 @@ import {
 } from "./helpers.js";
 import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment } from "../duct.js";
 import { SHEET_PARAMS, sheetFrom, elbowTable } from "../sheetopts.js";
+import { reducingElbow, redElbowTable } from "../redelbow.js";
 import { assembleFlat, atOrigin, rollSector } from "../flat3d.js";
 import { displayThickness } from "../fold3d.js";
 
@@ -282,20 +283,13 @@ export const FAB_PRESETS = [
     (p) => elbowGores(p.d, p.bend, p.n || 3, p.clr > 0 ? p.clr : 1.5 * p.d, sheetFrom(p)),
     { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
   shape("redelbow", "Reducing elbow gores", "⌢", "sheetmetal", "reducing elbow",
-    "Reducing elbow: a cone-sector plus two mitred end gores (square pipe end, one mitre cut).",
-    [["d", "Big end Ø", 120], ["d2", "Small end Ø", 80], ["h", "Length along the cone", 80], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 180], ...SHEET_PARAMS],
+    "Reducing elbow: gores that taper from the big end Ø to the small end Ø as they turn (r15 7.5-redelbow). Each is a true cone development; the joints are flat mitres.",
+    [["d", "Big end Ø", 120], ["d2", "Small end Ø", 80], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 180], ["n", "Number of pieces", 4], ...SHEET_PARAMS],
     (p) => {
-      const c = coneSector(p.d, p.d2, p.h);
-      const clr = p.clr > 0 ? p.clr : 1.5 * p.d;
-      const g1 = mitreGore(p.d, p.bend, 3, clr, "end");
-      const g2 = mitreGore(p.d2, p.bend, 3, clr, "end");
-      const pieces = [];
-      if (c) pieces.push([c]);
-      if (g1) pieces.push([g1]);
-      if (g2) pieces.push([g2]);
-      return pieces.length ? packPieces(pieces).contours : [];
+      const e = reducingElbow(p);
+      return e.ok ? packPieces(e.pieces.map((pc) => [{ pts: pc.flat, closed: true }])).contours : [];
     },
-    { sheet: true, noResize: true, table: (p) => elbowTable(p.d, p.bend, p.n, p.clr, sheetFrom(p)) }),
+    { sheet: true, noResize: true, note: (p) => reducingElbow(p).reason, table: (p) => redElbowTable(p) }),
   shape("rectelbow", "Rectangular duct elbow", "⌜", "sheetmetal", "rectangular elbow duct",
     "Rectangular duct elbow: two cheek (side) plates and two throat/back wrappers.",
     [["w", "Duct width (cheeks spacing)", 150], ["h", "Duct height", 80], ["r", "Throat radius", 40], ["bend", "Bend angle (degrees)", 90]],
@@ -511,7 +505,7 @@ const FAB_NOTES = {
   elbow4: "Lobster-back elbows are cut as separate gores — they cannot be one connected folding blank.",
   elbow5: "Lobster-back elbows are cut as separate gores — they cannot be one connected folding blank.",
   elbow45: "Lobster-back elbows are cut as separate gores — they cannot be one connected folding blank.",
-  redelbow: "A reducing elbow is cut as a cone sector plus two mitred end gores — they cannot be one connected folding blank.",
+  redelbow: "A reducing elbow is cut as separate tapering gores — they cannot be one connected folding blank.",
   rectelbow: "A rectangular duct elbow is cut as two cheek plates plus throat and back wrappers — they cannot be one connected folding blank.",
   britches: "A britches piece is developed as separate pipe templates, not one folding blank.",
   ybranch: "A Y-branch is developed as separate saddle templates, not one folding blank.",

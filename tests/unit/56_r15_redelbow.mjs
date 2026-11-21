@@ -22,8 +22,8 @@ const segDist = (p, a, b) => { const ab = sub(b, a), u = Math.max(0, Math.min(1,
 const toPoly = (P, Q) => Math.min(...Q.slice(0, -1).map((q, i) => segDist(P, q, Q[i + 1])));
 const hausdorff = (P, Q) => Math.max(...P.map((p) => toPoly(p, Q)), ...Q.map((q) => toPoly(q, P)));
 const area2 = (pts) => Math.abs(pts.reduce((s, p, i) => { const q = pts[(i + 1) % pts.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
-// plane fit: normal from the three most spread points, then the worst distance
-const planeOf = (pts) => { const c = pts.reduce((s, p) => s.map((v, i) => v + p[i] / pts.length), [0, 0, 0]); const a = pts[0], b = pts[Math.floor(pts.length / 3)], d = pts[Math.floor((2 * pts.length) / 3)]; const n = unit(cross(sub(b, a), sub(d, a))); return { c, n, off: Math.max(...pts.map((p) => Math.abs(dot(sub(p, c), n)))) }; };
+// plane fit (a closed ring's repeated end point is dropped so the centre is not pulled towards it): normal from the three most spread points, then the worst distance
+const planeOf = (all) => { const pts = len(sub(all[0], all[all.length - 1])) < 1e-6 ? all.slice(0, -1) : all; const c = pts.reduce((s, p) => s.map((v, i) => v + p[i] / pts.length), [0, 0, 0]); const a = pts[0], b = pts[Math.floor(pts.length / 3)], d = pts[Math.floor((2 * pts.length) / 3)]; const n = unit(cross(sub(b, a), sub(d, a))); return { c, n, off: Math.max(...pts.map((p) => Math.abs(dot(sub(p, c), n)))) }; };
 
 // The flat piece's boundary, split into its runs: the module marks them (edge: "a" = big-end side, "b" = small-end side, "seam").
 const runs = (pc) => { const r = { a: [], b: [], seam: [] }; pc.flat.forEach((p, i) => r[pc.edge[i]].push(p)); return r; };

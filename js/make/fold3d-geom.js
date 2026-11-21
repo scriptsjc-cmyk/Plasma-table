@@ -4,6 +4,7 @@ import { segmentsFor, pipeSaddle, coneDevelopment } from "./duct.js";
 import { FOLD } from "./flat3d.js";
 import { jobThickness } from "./bends.js";
 import { V, add, sub, scl, dot, cross, mag, norm } from "./vec3.js";
+import { reducingElbow } from "./redelbow.js";
 
 export function face(w, h, holes = []) {
   return { w: Math.max(0, w), h: Math.max(0, h), holes, children: [] };
@@ -690,9 +691,7 @@ export function foldElbow(d, bendDeg, pieces, segs = 32, clr, d2) {
   // Leave mid-surface unshifted so endFrames (flanges) stay on the openings; thicken() sits the view.
   return { faces, panels: [{ w: Math.PI * (R0 + R1), h: totalL }] };
 }
-// r15 7.5: the reducing elbow from its cut pieces: the big end gore (one square end, one mitred end, α = bend / 4), the
-// square-ended cone, and the small end gore. Square end to square end is the only way they join, so the 3D is that run
-// along +Y with the two mitres on the outer ends (extrados on +X). (It used to bend a tapering 3-gore elbow that is not cut.)
+// The lobster-back elbows' (elbow2–5) flange frames still use these mitred-end sizes (with d2 = d there is no cone).
 export function redElbowDims(p) {
   const ta = Math.tan((((Number(p.bend) || 90) * Math.PI) / 180) / 4);
   const clr = Number(p.clr) > 0 ? Number(p.clr) : 1.5 * p.d, R = p.d / 2, r = (p.d2 || p.d) / 2;
@@ -700,21 +699,20 @@ export function redElbowDims(p) {
   const hc = cd && cd.Ro > cd.Ri + 1 && cd.Ro <= 2500 ? p.h : 0;          // the cut has no cone otherwise
   return { ta, R, r, hc, L1: Math.max(clr, R + 1) * ta, L2: Math.max(clr, r + 1) * ta };
 }
+// r15 7.5-redelbow (Josh 21 Nov): the reducing elbow is built from its cut gores (js/make/redelbow.js): each gore's
+// grid is its flat piece wrapped onto the cone and placed, so the 3D is exactly what is cut.
 export function foldRedElbow(p, segs = 48) {
-  const { ta, R, r, hc, L1, L2 } = redElbowDims(p), faces = [];
-  const band = (ra, rb, ya, yb, gore) => {
-    for (let i = 0; i < segs; i++) {
-      const a0 = (i * 2 * Math.PI) / segs, a1 = ((i + 1) * 2 * Math.PI) / segs;
-      const at = (rad, a, y) => V(rad * Math.cos(a), y(a, rad), rad * Math.sin(a));
-      const pts = [at(ra, a0, ya), at(ra, a1, ya), at(rb, a1, yb), at(rb, a0, yb)];
+  const e = reducingElbow(p), faces = [];
+  if (!e.ok) return { faces, panels: [] };
+  e.pieces.forEach((pc, k) => {
+    const g = pc.grid(segs, 4);
+    for (let i = 0; i < segs; i++) for (let j = 0; j < 4; j++) {
+      const pts = [g[i][j], g[i + 1][j], g[i + 1][j + 1], g[i][j + 1]];
       const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
-      faces.push({ pts, n, holes: [], w: (Math.PI * (ra + rb)) / segs, h: Math.abs(pts[3][1] - pts[0][1]), smooth: true, gore });
+      faces.push({ pts, n, holes: [], w: mag(sub(pts[1], pts[0])), h: mag(sub(pts[3], pts[0])), smooth: true, gore: k });
     }
-  };
-  band(R, R, (a, rad) => -(L1 + rad * ta * Math.cos(a)), () => 0, 0);
-  if (hc > 0) band(R, r, () => 0, () => hc, 1);
-  band(r, r, () => hc, (a, rad) => hc + L2 + rad * ta * Math.cos(a), 2);
-  return { faces, panels: [{ w: Math.PI * 2 * R, h: L1 }, ...(hc > 0 ? [{ w: Math.PI * (R + r), h: Math.hypot(hc, R - r) }] : []), { w: Math.PI * 2 * r, h: L2 }] };
+  });
+  return { faces, panels: e.pieces.map((pc) => ({ w: Math.max(...pc.flat.map((q) => q[0])), h: Math.max(...pc.flat.map((q) => q[1])) })) };
 }
 // r15 7.5: built from the cut pieces: two cheeks (sectors from the throat radius out by the duct height, 16 steps like the
 // cut) set the cheek spacing w apart, and the throat and back wrappers rolled between them. (It used to bend a w-deep,

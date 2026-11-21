@@ -181,6 +181,7 @@ const PRECACHE = [
   "js/make/presets/tabs-slots.js",
   "js/make/protools.js",
   "js/make/quickbar.js",
+  "js/make/redelbow.js",
   "js/make/shape-helpers.js",
   "js/make/shapeform.js",
   "js/make/shapes-fab.js",

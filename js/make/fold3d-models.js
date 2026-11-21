@@ -1,5 +1,6 @@
 // r15 8.5 (split from fold3d.js): which 3D each preset gets (FOLD_MODELS, flat3d FOLD), pipe-end flanges, foldModel.
 import { pipeEnds, flangeOn, flangeDims } from "./pipeflanges.js";
+import { reducingElbow } from "./redelbow.js";
 import { FOLD } from "./flat3d.js";
 import { assemble, attach, face, flangeFrame3, foldAngle, foldBritches, foldC, foldCuboid, foldElbow, foldFishmouth, foldFrustum, foldHopper, foldLiddedCross, foldOpenBox, foldOpenHem, foldPipeOnFlat, foldRectElbow, foldRedElbow, foldS2r, foldSaddleHole, foldScoop, foldTakeoff, foldTee, foldTube, foldU, foldYBranch, hole, holes, rectElbowDims, redElbowDims, takeoffCollarH } from "./fold3d-geom.js";
 import { V, add, scl, norm } from "./vec3.js";
@@ -181,13 +182,16 @@ function endFrames(id, p) {
     case "elbow2":
     case "elbow3":
     case "elbow4":
-    case "elbow5":
-    case "redelbow": {   // r15 7.5: the two mitred ends of the gore – cone – gore run (see foldRedElbow)
+    case "elbow5": {   // unchanged (r15 7.5): the two mitred ends from redElbowDims with one Ø
       const { ta, hc, L1, L2 } = redElbowDims(p), k = Math.hypot(1, ta);
       return [
         { origin: V(0, -L1, 0), xA: V(1 / k, -ta / k, 0), yA: V(0, 0, 1), outward: V(-ta / k, -1 / k, 0) },
         { origin: V(0, hc + L2, 0), xA: V(1 / k, ta / k, 0), yA: V(0, 0, 1), outward: V(-ta / k, 1 / k, 0) },
       ];
+    }
+    case "redelbow": {   // r15 7.5-redelbow (Josh 21 Nov): the big and small openings of the tapering gores
+      const e = reducingElbow(p);
+      return e.ok ? e.ends.map((f) => ({ origin: f.origin, xA: f.xA, yA: f.yA, outward: f.outward })) : [];
     }
     case "elbow45": {
       const bend = ((p.bend || 90) * Math.PI) / 180;
