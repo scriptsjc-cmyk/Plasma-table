@@ -22,7 +22,8 @@ t.check("the part's own bend thickness wins (bt 1.2)", F3.displayThickness({ bt:
   const fronts = th.faces.filter((f) => !f.edge && !f.ghost), backs = th.faces.filter((f) => f.edge && f.holes && f.w !== 0 || (f.edge && f.pts.length > 4));
   t.check("every face gets its thickness (a front and a back per face)", fronts.length === m.faces.length && th.faces.filter((f) => f.edge).length >= m.faces.length, JSON.stringify([fronts.length, m.faces.length]));
   const span = (i) => { const v = th.faces.flatMap((f) => f.pts.map((q) => q[i])); return Math.max(...v) - Math.min(...v); };
-  t.check("the U-bracket's outside width grows by the 2 mm sheet (web + 2 × 1 mm)", Math.abs(span(2) - (p.web + 2)) < 0.05 || Math.abs(span(0) - (p.web + 2)) < 0.05, JSON.stringify([span(0), span(1), span(2)]));
+  // r15 5.10 (Josh 21 Nov): the sheet lies on the inside of the bends, so the outside width is the web as drawn (it was web + 2 × 1 mm)
+  t.check("the U-bracket's outside width is the web as drawn (the 2 mm sheet lies inside the bends)", Math.abs(span(2) - p.web) < 0.05 || Math.abs(span(0) - p.web) < 0.05, JSON.stringify([p.web, span(0), span(1), span(2)]));
 }
 B.setBendContext({ thickness: () => null });
 
