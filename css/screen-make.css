@@ -1112,6 +1112,8 @@ body:not(.beginner) #btnSimpleSnap { display: none; }
 #btnSimpleSnap:focus-visible, #btnDragPan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .hovertip { position: fixed; z-index: var(--z-hovertip); max-width: 280px; padding: 6px 10px; background: var(--c-1a1a1a); color: var(--c-white); font-size: var(--fs-s); line-height: 1.35; border-radius: 6px; pointer-events: none; box-shadow: 0 4px 16px var(--black-25); }
 .makecheck-pick { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin: 8px 0; }
+.makecheck-job { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; font-weight: 650; }   /* r15 6.5 */
+.makecheck-job[hidden], .makecheck-pick[hidden] { display: none; }
 .makecheck-field { display: flex; flex-direction: column; gap: 6px; }
 .makecheck-lab { font-weight: 650; }
 .makecheck-chips button { min-height: 40px; padding: 6px 12px; }

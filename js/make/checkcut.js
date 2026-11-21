@@ -1,4 +1,5 @@
 // r8 item 13: Check cut on the Make header. Asks material and thickness, then runs the
+// (r15 6.5: when the job already has a material and thickness it checks for those straight away, with a Change link)
 // same cuttability check used on the cutting screen (holes too small, parts too close, etc.).
 // Thickness and material are clickable chips (same idea as the Cut screen), not a <select>:
 // a closed dropdown listed every size in the dialog's text, so clicking "3 mm" did nothing
@@ -95,15 +96,34 @@ function runCheck() {
     ${chk.groups.length ? renderGroups(chk.groups) : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${th} mm ${mat.toLowerCase()}.</p>`}`;
   out.innerHTML = html;
   bindGroupClicks(out, chk && chk.groups);
-  if (ask) ask.textContent = "Results for this drawing, at the material and thickness you picked. Click an issue to zoom to it.";
+  if (ask) ask.textContent = `Results for this drawing at ${mat.toLowerCase()} ${th} mm. Click an issue to zoom to it.`;
 }
 
+// r15 6.5: the job's material and thickness, if the cut chart has them
+function jobMaterial() {
+  const m = S.chart && (S.chart.materials || []).find((x) => x.name === S.material);
+  const th = Number(S.thickness);
+  return m && S.thickness != null && (m.rows || []).some((r) => Number(r.thickness_mm) === th) ? { mat: m.name, th } : null;
+}
+function showPick(on) {
+  const pick = $("makeCheckPick"), job = $("makeCheckJob");
+  if (pick) pick.hidden = !on;
+  if (job) job.hidden = on || !jobMaterial();
+}
 function openDlg() {
   const dlg = $("makeCheckDlg"); if (!dlg) return;
   fillPick();
   $("makeCheckOut").innerHTML = "";
-  $("makeCheckAsk").textContent = "Choose the material and thickness, then we'll check this drawing.";
+  const job = jobMaterial();
   dlg.classList.remove("hidden"); dlg.hidden = false;
+  if (job) {
+    $("makeCheckJobText").textContent = `Checked for the job's sheet: ${job.mat.toLowerCase()}, ${job.th} mm.`;
+    showPick(false);
+    runCheck();
+  } else {
+    showPick(true);
+    $("makeCheckAsk").textContent = "Choose the material and thickness, then we'll check this drawing.";
+  }
 }
 
 function closeDlg() {
@@ -115,6 +135,7 @@ export function bindCheckCut() {
   const btn = $("btnMakeCheckCut"); if (!btn) return;
   btn.onclick = openDlg;
   if ($("makeCheckGo")) $("makeCheckGo").onclick = runCheck;
+  if ($("makeCheckChange")) $("makeCheckChange").onclick = () => { fillPick(); showPick(true); $("makeCheckAsk").textContent = "Pick another material or thickness, then check again. It becomes the job's."; };
   if ($("makeCheckClose")) $("makeCheckClose").onclick = closeDlg;
   const dlg = $("makeCheckDlg");
   if (dlg) dlg.addEventListener("click", (e) => { if (e.target === dlg) closeDlg(); });
