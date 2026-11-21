@@ -68,6 +68,21 @@ try {
   await clickAt(50, 60); await page.keyboard.press("Enter"); await sleep(250);
   const three = await ev(page, () => { const s = window.plasmaTest.sketch; return { tool: s.tool, items: s.items.length, closed: s.items[0] && s.items[0].shape.cs[0].closed !== false }; });
   t.check("3.5: one more point and Enter closes it as a part", three.tool == null && three.items === 1 && three.closed, J(three));
+  // ---------------------------------------------------------------- 3.11 the circle array's default clears the part
+  for (const n of [4, 8]) {
+    await fresh();
+    await ev(page, () => { const s = window.plasmaTest.sketch; s.add("rect", true, { w: 80, h: 50 }); s.commit(); s.pick([s.items[0].id]); s.onSelect(); window.plasmaTest.runPro("polar"); });
+    await sleep(250);
+    await page.fill("#cad_n", String(n)); await page.click("#cadOk"); await sleep(300);
+    const pa = await ev(page, () => { const s = window.plasmaTest.sketch, hit = [];
+      // overlap = the real outlines cross or one sits inside another (copies are turned, so boxes alone would over-report)
+      const world = s.items.map((i) => s.worldCs(i)[0].pts);
+      const inside = (p, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c; } return c; };
+      for (let a = 0; a < world.length; a++) for (let b = a + 1; b < world.length; b++) if ((world[a].some((p) => inside(p, world[b])) || world[b].some((p) => inside(p, world[a])))) hit.push([a, b]);
+      return { n: s.items.length, hit, msgs: (window.__msgs || []).slice(-2) };
+    });
+    t.check(`3.11: Circular array with the defaults (${n} round, PCD 0 = auto) puts ${n} copies that don't overlap each other`, pa.n === n && pa.hit.length === 0 && !pa.msgs.some((m) => /overlap/i.test(m)), J(pa));
+  }
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("124 ran to the end", false, String(e && e.stack || e).slice(0, 400));
