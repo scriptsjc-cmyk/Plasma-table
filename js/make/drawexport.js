@@ -2,6 +2,7 @@
 import { S, sketch } from "../core/state.js";
 import { fitContour, contoursToDxf, contoursToSvg } from "../core/arcs.js";
 import { $, toast } from "../core/dom.js";
+import { showPop, hidePop } from "../ui/floatpop.js";
 
 export function currentDrawingContours() {
   if (!sketch || !Array.isArray(sketch.items)) return [];
@@ -39,14 +40,8 @@ export function exportDrawing(fmt) {
   return true;
 }
 
-export function closeMakeExportPop() {
-  const pop = $("makeExportPop"); if (!pop) return;
-  pop.classList.add("hidden"); pop.hidden = true;
-}
-export function openMakeExportPop() {
-  const pop = $("makeExportPop"); if (!pop) return;
-  pop.classList.remove("hidden"); pop.hidden = false;
-}
+export function closeMakeExportPop() { hidePop($("makeExportPop")); }
+export function openMakeExportPop() { showPop($("makeExportPop")); }
 
 export function bindDrawingExport() {
   const btn = $("btnMakeExport");

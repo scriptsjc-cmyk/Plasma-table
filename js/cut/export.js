@@ -8,6 +8,7 @@ import { S } from "../core/state.js";
 import { loadJob } from "./prepare.js";
 import { scoreMarkProblem } from "./checklist.js";
 import { lockText } from "../machine/access.js";
+import { showPop, hidePop } from "../ui/floatpop.js";
 
 function exportDialect() {
   const sel = $("exportDialect");
@@ -28,12 +29,12 @@ function fillExportDefaults() {
 }
 export function closeExportPop() {
   const pop = $("exportPop"); if (!pop) return;
-  pop.classList.add("hidden"); pop.hidden = true;
+  hidePop(pop);
 }
 export function openExportPop() {
   const pop = $("exportPop"); if (!pop) return;
   fillExportDefaults();
-  pop.classList.remove("hidden"); pop.hidden = false;
+  showPop(pop);
 }
 export function exportGcode() {
   if (!Acc.allowExportWithoutMachine() && !Acc.hasLinkedMachine()) {
@@ -81,7 +82,7 @@ export function bindExport() {
   if ($("exportN")) $("exportN").addEventListener("change", () => { $("exportN").dataset.touched = "1"; });
   document.addEventListener("click", (e) => {
     const pop = $("exportPop"); if (!pop || pop.classList.contains("hidden")) return;
-    if (e.target.closest("#exportPop") || e.target.closest("#btnExport") || e.target.closest("#btnExport3") || e.target.closest("#btnExport4")) return;
+    if (e.target.closest("#exportPop") || e.target.closest("#btnExport") || e.target.closest("#btnExport3") || e.target.closest("#btnExport4") || e.target.closest("#menuExportGcode")) return;
     closeExportPop();
   });
 }

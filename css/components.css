@@ -217,3 +217,10 @@ body #stepper#stepper.ul-moving li.cur { border-bottom-color: transparent; }
   #cadDialog .cadfields > label:has(textarea) { grid-column: 1 / -1; }
   #cadDialog .cadfields > :only-child { grid-column: 1 / -1; }
 }
+
+/* r15 4.x-extra (Josh 21 Nov): an export pop-up opened from a control hidden at this size floats under the header
+   (js/ui/floatpop.js). Below STOP (--z-stop) and the toast. */
+body > .exportpop.floating, body > #makeExportPop.floating, body > #exportPop.floating {
+  position: fixed; top: calc(var(--topbar-h, 56px) + 8px); right: 12px; left: auto; bottom: auto; margin: 0;
+  z-index: var(--z-popover); max-width: min(420px, calc(100vw - 24px)); max-height: calc(100dvh - var(--topbar-h, 56px) - 24px); overflow: auto;
+}
