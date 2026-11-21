@@ -757,10 +757,11 @@ export function foldUSaddle(wid, d, leg, segs = 12) {
   sitOnTable(faces);
   return { faces, panels: [{ w: W, h: Math.PI * R + 2 * leg }] };
 }
-export function foldHopper(a, b, a2, b2, h) {
+// ox / oy move the top opening as rectangularTransition does (cut y is 3D z). r15 7.5: the offset one used to ignore ox.
+export function foldHopper(a, b, a2, b2, h, ox = 0, oy = 0) {
   const faces = [];
   const bot = [[-a / 2, 0, -b / 2], [a / 2, 0, -b / 2], [a / 2, 0, b / 2], [-a / 2, 0, b / 2]];
-  const top = [[-a2 / 2, h, -b2 / 2], [a2 / 2, h, -b2 / 2], [a2 / 2, h, b2 / 2], [-a2 / 2, h, b2 / 2]];
+  const top = [[ox - a2 / 2, h, oy - b2 / 2], [ox + a2 / 2, h, oy - b2 / 2], [ox + a2 / 2, h, oy + b2 / 2], [ox - a2 / 2, h, oy + b2 / 2]];
   for (let i = 0; i < 4; i++) {
     const pts = [bot[i], bot[(i + 1) % 4], top[(i + 1) % 4], top[i]];
     const n = norm(cross(sub(pts[1], pts[0]), sub(pts[3], pts[0])));
@@ -900,7 +901,7 @@ export const FOLD_MODELS = {
   coneadapter: (p) => foldFrustum(p.d, p.d2, p.h),
   tube: (p) => foldTube(p.d, p.h),
   recttrans: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h),
-  recttransoff: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h),
+  recttransoff: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h, p.ox || 0, p.oy || 0),
   hopperrect: (p) => foldHopper(p.a, p.b, p.a2, p.b2, p.h),
   sqrpyramid: (p) => foldHopper(p.a, p.a, Math.max(4, p.a2), Math.max(4, p.a2), p.h),
   elbow2: (p) => foldElbow(p.d, p.bend, p.n || 2, 48, p.clr),
@@ -958,8 +959,9 @@ function existingLip(id, p, end) {
 function endFrames(id, p) {
   const h = Number(p && (p.h != null ? p.h : p.len)) || 0;
   const x = V(1, 0, 0), z = V(0, 0, 1), up = V(0, 1, 0), dn = V(0, -1, 0);
+  // r15 7.5: only the top opening is offset (foldS2r, foldHopper); the bottom stays on the origin (it was moved too)
   const pairY = (o2, ox = 0, oy = 0) => ([
-    { origin: V(ox, 0, oy), xA: x, yA: z, outward: dn },
+    { origin: V(0, 0, 0), xA: x, yA: z, outward: dn },
     { origin: V(ox, o2, oy), xA: x, yA: z, outward: up },
   ]);
   switch (id) {
@@ -973,8 +975,9 @@ function endFrames(id, p) {
     case "silocone":
     case "cyclonehop":
     case "coneadapter":
-    case "recttrans":
     case "recttransoff":
+      return pairY(h, p.ox || 0, p.oy || 0);
+    case "recttrans":
     case "hopperrect":
     case "hopflange":
     case "sqrpyramid":
