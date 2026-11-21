@@ -104,8 +104,10 @@ for (const [id, extra] of [["chimround", 8], ["roofjack", 6]]) {
 { // skylight curb: four pans, each an apron on the roof and an upstand against the curb
   const s = sh("skylightcurb"), p = defaults(s), fs = solid(A.foldModel(s, p));
   const aprons = fs.filter(horiz), ups = fs.filter(vert);
-  t.check("skylight curb: four aprons and four upstands", aprons.length === 4 && ups.length === 4, JSON.stringify([aprons.length, ups.length]));
-  t.check("skylight curb: the upstands stand on the curb's sides", ups.every((f) => Math.abs(yRange(f)[1] - p.up) < 1.5 && f.pts.every((q) => Math.abs(Math.abs(q[0]) - p.w / 2) < 1e-6 || Math.abs(Math.abs(q[2]) - p.d / 2) < 1e-6)));
+  // r15 5.9 (Josh 21 Nov): each upstand's ends wrap round the curb corners (4 upstands + 8 ends); the side pans lap one sheet (t) out and up
+  const tk = (await import("../../js/make/fold3d.js")).displayThickness(p);
+  t.check("skylight curb: four aprons and four upstands, each with both ends wrapped round a corner", aprons.length === 4 && ups.length === 12, JSON.stringify([aprons.length, ups.length]));
+  t.check("skylight curb: the upstands stand on the curb's sides (the side pans one sheet outside the head and sill)", ups.every((f) => Math.abs(yRange(f)[1] - yRange(f)[0] - p.up) < 1.5 && f.pts.every((q) => [p.w / 2, p.w / 2 + tk].some((v) => Math.abs(Math.abs(q[0]) - v) < 1e-6) || [p.d / 2, p.d / 2 + tk].some((v) => Math.abs(Math.abs(q[2]) - v) < 1e-6))));
 }
 { // dustpan: the bottom's back edge is the back's width (the flat pattern had it 1.5× too long), sides stand on the tapered edges
   const s = sh("dustpan"), p = defaults(s), cs = s.make(p);
