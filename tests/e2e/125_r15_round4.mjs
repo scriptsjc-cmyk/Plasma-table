@@ -424,6 +424,29 @@ try {
     t.check(`no page error (${prof} machine setup)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 4.23 also when Machine setup is opened from the Cut screen's Setup step
+  // (the Cut screen's own jog-card rules must not reach the Machine setup strip: the lamps vanished and the pad was re-laid)
+  for (const prof of ["d1366", "d1280x600"]) {
+    const page = await newPage(br, prof, { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    await demoToShape(page, { stay: "cut" });
+    await ev(page, () => { const T = window.plasmaTest; T.setAppMode && T.setAppMode("pro", { persist: false, autoFs: false }); T.goStep(2); });
+    await sleep(400);
+    await ev(page, () => document.getElementById("menuSetup").click());
+    await page.waitForFunction(() => { const cv = document.getElementById("setupBed"); return cv && cv.offsetParent; }, null, { timeout: 10000 });
+    await sleep(500);
+    const g = await ev(page, () => {
+      const w = document.querySelector("#setupBedWrap .jogwrap"); const r = (e) => e && e.getClientRects().length ? e.getBoundingClientRect() : null;
+      const xy = ["Y:1", "X:-1", "X:1", "Y:-1"].map((k) => { const [a, d] = k.split(":"); const b = r(w && w.querySelector(`.jog .j[data-axis="${a}"][data-dir="${d}"]`)); return b && [Math.round(b.left + b.width / 2), Math.round(b.top + b.height / 2)]; });
+      const lamps = [...(w ? w.querySelectorAll(".lamps .lamp") : [])].filter((l) => r(l) && r(l).height > 4).map((l) => l.textContent.trim());
+      return { step: document.body.dataset.step, xy, lamps };
+    });
+    const xs = new Set(g.xy.filter(Boolean).map((p) => p[0])), ys = new Set(g.xy.filter(Boolean).map((p) => p[1]));
+    t.check(`4.23 ${prof} (from Cut › Setup): the Machine setup lamps show (Floating head, Torch, E-stop)`, g.lamps.length === 3, J(g));
+    t.check(`4.23 ${prof} (from Cut › Setup): the X/Y arrows are still the 3 × 3 pad`, g.xy.every(Boolean) && xs.size === 3 && ys.size === 3, J(g));
+    t.check(`no page error (${prof} machine setup from Cut)`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
   // ---------------------------------------------------------------- 4.26 the app brings its own Barlow (OFL), so every buyer sees Josh's layout
   {
     const fs = await import("node:fs");
