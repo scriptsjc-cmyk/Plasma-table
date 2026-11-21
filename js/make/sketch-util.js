@@ -5,8 +5,8 @@ import { expandContour } from "../core/geom.js";
 export const KEY = "plasma.sketch", KEY_OPTS = "plasma.sketch.opts";
 export const MIN = 2;                               // smallest size (mm)
 const CUSTOM = {
-  id: "custom", name: "Joined part", icon: "⬟", uniform: true,
-  tip: "Shapes joined into one part. Its holes go with it. Resize it with the Size % box or a corner.",
+  id: "custom", name: "Outline", icon: "⬟", uniform: true,
+  tip: "A combined or drawn outline. Its holes and features go with it. Resize it with the Size % box or a corner.",
   params: [["scale", "Size %", 100]],
 };
 export const def = (type) => (type === "custom" ? CUSTOM : SHAPES.find((s) => s.id === type));

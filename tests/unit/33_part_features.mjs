@@ -138,4 +138,26 @@ for (const [hrot, hfx] of [[0, false], [90, false], [30, true]]) {
   }
 }
 
+// Join keeps the features of both parts as rows on the new "Outline" (plan 2.13)
+{
+  const jk = A.newSketch();
+  jk.add("rect", true, {}); const a = jk.items[0]; Object.assign(a.p, { w: 100, h: 60, r: 0 }); a.x = 0; a.y = 0;
+  jk.add("rect", true, {}); const b2 = jk.items[1]; Object.assign(b2.p, { w: 60, h: 100, r: 0 }); b2.x = 90; b2.y = 0; b2.rot = 90; b2._key = undefined;
+  a.feats = [{ ...F.newFeature("hole", 1, 100, 60), x: 20, y: 30, d: 10 }, { ...F.newFeature("slot", 2, 100, 60), x: 50, y: 30, len: 20, wid: 6, rot: 0 }];
+  b2.feats = [{ ...F.newFeature("hole", 1, 60, 100), x: 30, y: 20, d: 8 }, { ...F.newFeature("hole", 2, 60, 100), x: 30, y: 80, d: 8, link: 1 }];
+  a._key = b2._key = undefined;
+  const worldHoles = (sk) => sk.contours().filter((c) => c.feat).map((c) => mid(c.pts).map((v) => Math.round(v * 100) / 100)).sort().join(";");
+  const before = worldHoles(jk), pastLen = jk.past.length;
+  jk.pick([a.id, b2.id]); jk.join();
+  const o = jk.items[0];
+  t.check("join: makes one custom part named Outline", jk.items.length === 1 && o.type === "custom" && o.name === "Outline", J(jk.items.map((i) => [i.type, i.name])));
+  t.check("join: both parts' features are kept as rows (4), ids renumbered, the link follows", (o.feats || []).length === 4 && new Set(o.feats.map((f) => f.id)).size === 4 && o.feats[3].link === o.feats[2].id, J(o.feats));
+  t.check("join: the features cut in the same places", worldHoles(jk) === before, `${before}\n${worldHoles(jk)}`);
+  t.check("join: the outline itself has no baked-in feature holes", o.shape.cs.length === 1, o.shape.cs.length);
+  const slot = o.feats.find((f) => f.k === "slot");
+  t.check("join: the slot keeps its direction on the sheet", slot && slot.rot === 0, J(slot));
+  jk.undo();
+  t.check("join: one undo gives both parts back with their features", jk.items.length === 2 && (jk.items[0].feats || []).length === 2 && (jk.items[1].feats || []).length === 2 && jk.past.length === pastLen, J(jk.items.map((i) => (i.feats || []).length)));
+}
+
 process.exit(t.done() ? 1 : 0);

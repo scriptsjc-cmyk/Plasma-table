@@ -330,3 +330,27 @@ export function adoptableHoles(sk, host) {
   }
   return out;
 }
+
+// ---------------------------------------------------------------- Join keeps features (plan 2.13)
+// Re-measure each part's features in the new combined outline's frame: same place, same direction on the sheet.
+// Ids are renumbered (two parts may both have a feature 1); mirror links follow the new ids.
+export function carryFeatures(sk, fromParts, to) {
+  const out = []; let id = 0;
+  const axes = (it) => { const [o, x, y] = sk.partToWorld(it, [[0, 0], [1, 0], [0, 1]]); return o ? { o, x: [x[0] - o[0], x[1] - o[1]], y: [y[0] - o[0], y[1] - o[1]] } : null; };
+  for (const p of fromParts) {
+    const fs = p.feats || []; if (!fs.length) continue;
+    const a = axes(p); if (!a) continue;
+    const turn = (Math.atan2(a.x[1], a.x[0]) * 180) / Math.PI, flip = a.x[0] * a.y[1] - a.x[1] * a.y[0] < 0;
+    const ids = new Map();
+    for (const f of fs) ids.set(f.id, ++id);
+    for (const f of fs) {
+      const [w] = sk.partToWorld(p, [[f.x, f.y]]); const [q] = sk.worldToPart(to, [w]);
+      const g = { ...f, id: ids.get(f.id), x: exact(Math.round(q[0] * 1e4) / 1e4), y: exact(Math.round(q[1] * 1e4) / 1e4) };
+      for (const k of ["rot", "ang"]) if (k in g) g[k] = exact(((((flip ? 180 - g[k] : g[k]) + turn) % 360) + 360) % 360);
+      if (f.link) { if (ids.has(f.link)) g.link = ids.get(f.link); else delete g.link; }
+      if (g.k === "corner") continue;                     // the combined outline has its own corners
+      out.push(g);
+    }
+  }
+  return out;
+}

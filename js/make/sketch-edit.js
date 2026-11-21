@@ -5,7 +5,7 @@ import { fitContour } from "../core/arcs.js";
 import { nestUnitsSync, turnAngles, ringsBox } from "../cut/nest.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
-import { keepMatching, moveFeatureBy } from "./part-features.js";
+import { carryFeatures, keepMatching, moveFeatureBy } from "./part-features.js";
 
 export class EditMethods {
   // Turn 90 keeps each shape's bottom-left and, when width/height exist, swaps them
@@ -107,6 +107,13 @@ export class EditMethods {
       else parts.push(it);
     }
     if (!parts.length) { this.onMessage("Those are all holes – pick the part they sit on too."); return; }
+    // r15 2.13: features are not baked into the joined outline; they are carried over as rows (below)
+    const featParts = parts.filter((p) => p.feats && p.feats.length), stash = featParts.map((p) => p.feats);
+    for (const p of featParts) { delete p.feats; p._key = undefined; }
+    try { this.joinParts(list, parts, holeItems, keyways, explicit, featParts, stash); }
+    finally { featParts.forEach((p, i) => { if (!p.feats) p.feats = stash[i]; p._key = undefined; }); }
+  }
+  joinParts(list, parts, holeItems, keyways, explicit, featParts, stash) {
     const outers = [];
     const ownHoles = [];
     for (const p of parts) {
@@ -144,16 +151,19 @@ export class EditMethods {
     const allLoops = [...u.outers.map((pts) => ({ pts, closed: true })), ...kept];
     const b = bbox(allLoops);
     const local = (c) => { const f = fitContour(cleanContour(mapC(c, ([x, y]) => [x - b[0] + 1e-9, y - b[1] + 1e-9]))); f.pts = f.pts.map(([x, y]) => [r1(x), r1(y)]); if (f.circle) f.circle = { cx: r1(f.circle.cx), cy: r1(f.circle.cy), r: r1(f.circle.r) }; return f; };
+    featParts.forEach((p, k) => { p.feats = stash[k]; p._key = undefined; });   // back before the undo snapshot
     this.remember();
-    const it = { id: this.nextId++, type: "custom", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
+    const it = { id: this.nextId++, type: "custom", name: "Outline", p: { scale: 100 }, x: r1(b[0]), y: r1(b[1]), rot: 0, holes: {},
       shape: { cs: allLoops.map(local) } };
+    const carried = carryFeatures(this, featParts, it);
+    if (carried.length) it.feats = carried;
     const drop = new Set([...list.filter((i) => !stray.includes(i) || swallowedIn.includes(i)), ...swallowedIn]);
     this.items = this.items.filter((i) => !drop.has(i));
     this.items.push(it);
     this.pick([it.id]);
     this.commit(); this.onSelect();
     const notes = [];
-    notes.push(`Joined into one part${kept.length ? ` with ${kept.length} hole${kept.length > 1 ? "s" : ""}` : ""}.`);
+    notes.push(`Joined into one Outline${kept.length ? ` with ${kept.length} hole${kept.length > 1 ? "s" : ""}` : ""}${carried.length ? `; its ${carried.length} feature${carried.length > 1 ? "s" : ""} stay as rows` : ""}.`);
     if (holeWarn) notes.push("Overlapping holes were merged into one opening.");
     if (stray.length) notes.push(stray.length === 1 ? "One hole sits off the part, so it was left out." : stray.length + " holes sit off the part, so they were left out.");
     this.onMessage(notes.join(" "));
