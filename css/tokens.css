@@ -4,6 +4,8 @@
    Rules that must stay in cascade order against a rule in another file (same element, same property, overlapping media) sit
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
+/* r15 8.1: one cascade layer per stylesheet, in link order (later layers win). */
+@layer tokens, base, layout, components, signin-menu, make, cut, cut-part, cut-run, cut-setup, parts, setup, admin, yours;
 
 /* r15 4.26: the app brings its own Barlow (SIL Open Font Licence, fonts/OFL.txt), latin set, 400–700. Every buyer's computer then
    draws the same text widths as Josh's (it used to fall back to whatever system-ui is, e.g. DejaVu Sans on Linux). */
@@ -11,6 +13,7 @@
 @font-face { font-family: "Barlow"; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/barlow-latin-500-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "Barlow"; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/barlow-latin-600-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 @font-face { font-family: "Barlow"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/barlow-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@layer tokens {
 
 /* Porta Plazma CNC light CAD theme (Fusion / Onshape / SolidWorks inspired). */
 :root, [data-theme="light"] {
@@ -138,4 +141,4 @@
     --fs-lg: 15px;
   }
 }
-
+}
