@@ -41,7 +41,8 @@ for (const s of A.SHAPES) {
     const a2 = cl.reduce((x, c) => x + (depth(c) % 2 ? -1 : 1) * area2(c.pts), 0);
     const a3 = fs.reduce((x, f) => x + newell(f.pts) - (f.holes || []).reduce((y, r) => y + newell(r), 0), 0);
     if (!(a2 > 0) || Math.abs(a3 - a2) / a2 > 0.02) areaBad.push(`${s.id} ${(a3 / a2).toFixed(3)}`);
-    const h2 = cl.filter((c) => depth(c) % 2 === 1).length, h3 = fs.reduce((x, f) => x + (f.holes || []).length, 0);
+    // a model may draw a hole as cells left out of a rolled face and declare it (openings); it still has to match the cut
+    const h2 = cl.filter((c) => depth(c) % 2 === 1).length, h3 = fs.reduce((x, f) => x + (f.holes || []).length, 0) + (Number(m.openings) || 0);
     if (h2 !== h3) holeBad.push(`${s.id} cut ${h2} / 3D ${h3}`);
     const c0 = sig2(cs), f0 = sig3(m);
     for (const [k, , d, o] of s.params || []) {
