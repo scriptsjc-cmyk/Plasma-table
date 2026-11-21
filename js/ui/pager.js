@@ -1,5 +1,6 @@
 // Fit a list to its box by showing one page of tiles or rows, with no inner scroll.
 import { pageTurn } from "./transition.js";
+import { esc } from "../core/dom.js";
 export function pageSizeFor(el, { minW = 160, minH = 140, gap = 12, fallback = 8 } = {}) {
   if (!el) return fallback;
   const r = el.getBoundingClientRect();
@@ -23,7 +24,7 @@ export function paintPager(el, { page, pages }, label) {
   const p = page, n = pages;
   el.hidden = false;
   el.innerHTML = `<button type="button" class="pagebar-prev" data-page-dir="-1"${p <= 1 ? " disabled" : ""} aria-label="Previous page">‹</button>`
-    + `<span class="pagebar-status">${label || `Page ${p} of ${n}`}</span>`
+    + `<span class="pagebar-status">${esc(label || `Page ${p} of ${n}`)}</span>`
     + `<button type="button" class="pagebar-next" data-page-dir="1"${p >= n ? " disabled" : ""} aria-label="Next page">›</button>`;
 }
 

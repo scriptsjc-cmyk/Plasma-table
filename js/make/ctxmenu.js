@@ -1,6 +1,6 @@
 // Right-click context menu on the Make canvas (laptop CAD mouse).
 import { sketch } from "../core/state.js";
-import { $ } from "../core/dom.js";
+import { $, esc } from "../core/dom.js";
 import { paintLayers } from "./layers.js";
 
 const ITEMS = [
@@ -26,7 +26,7 @@ export function openCtxMenu(sx, sy, hit) {
     let label = item.label;
     if (item.id === "lock" && it) label = it.lock ? "Unlock" : "Lock";
     if (item.id === "hide" && it) label = it.hide ? "Show" : "Hide";
-    return `<button type="button" class="cadctx-item${off}" data-act="${item.id}" ${!it && item.id !== "props" ? "disabled" : ""}>${label}</button>`;
+    return `<button type="button" class="cadctx-item${off}" data-act="${item.id}" ${!it && item.id !== "props" ? "disabled" : ""}>${esc(label)}</button>`;
   }).join("");
   el.classList.remove("hidden");
   el.hidden = false;

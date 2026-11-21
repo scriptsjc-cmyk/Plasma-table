@@ -1,5 +1,5 @@
 // Size check after a DXF/SVG import: shows the size and asks before scaling (inches vs mm).
-import { $ } from "../core/dom.js";
+import { $, esc } from "../core/dom.js";
 import { H } from "../ui/host.js";
 import { currentSettings } from "../machine/settings.js";
 
@@ -42,7 +42,7 @@ export function askSize(design, unitsNote, done, opts = {}) {
   if ($("sizeAllRow")) {      // several files: one answer can cover the rest
     $("sizeAll").checked = false;
     $("sizeAllRow").classList.toggle("hidden", !(opts.left > 0));
-    if (opts.name) $("sizeText").innerHTML = `<b>${String(opts.name).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))}</b> is <b>${r1(sz.w)} × ${r1(sz.h)} mm</b>. Is that right?`;
+    if (opts.name) $("sizeText").innerHTML = `<b>${esc(opts.name)}</b> is <b>${r1(sz.w)} × ${r1(sz.h)} mm</b>. Is that right?`;
     if (opts.left > 0) $("sizeAllText").textContent = `Use the same answer for the other ${opts.left} file${opts.left === 1 ? "" : "s"} (apply to all)`;
   }
   dlg.classList.remove("hidden");

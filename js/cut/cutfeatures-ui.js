@@ -110,7 +110,7 @@ export function paintOrigin() {
   for (const b of $("origin9").querySelectorAll("button")) { const on = b.dataset.anchor === cur; b.classList.toggle("sel", on); b.setAttribute("aria-pressed", on ? "true" : "false"); }
   const a = cur ? anchorById(cur) : null;
   $("originNow").textContent = a ? `${a.label} of the job is at the start point.` : "Default: the job's bottom-left corner (or the sheet's corner) is at the start point.";
-  const help = $("originHelp"); if (help) { help.classList.toggle("hidden", !a); help.innerHTML = a ? `Move the torch over the <b>${a.label.toLowerCase()}</b> of the job, then press <b>Start here</b>.` : ""; }
+  const help = $("originHelp"); if (help) { help.classList.toggle("hidden", !a); help.innerHTML = a ? `Move the torch over the <b>${H.esc(a.label.toLowerCase())}</b> of the job, then press <b>Start here</b>.` : ""; }
   $("originDefault").classList.toggle("hidden", !a);
   paintSaved();
 }
@@ -155,7 +155,7 @@ async function recall(id) {
 }
 function bindOrigins() {
   const g = $("origin9");
-  g.innerHTML = ANCHORS.map((a) => `<button type="button" data-anchor="${a.id}" aria-label="${a.label}" title="${a.label}" aria-pressed="false"><i></i></button>`).join("");
+  g.innerHTML = ANCHORS.map((a) => `<button type="button" data-anchor="${a.id}" aria-label="${H.esc(a.label)}" title="${H.esc(a.label)}" aria-pressed="false"><i></i></button>`).join("");
   g.onclick = (e) => { const b = e.target.closest("button[data-anchor]"); if (b) setOrigin9(b.dataset.anchor); };
   $("originDefault").onclick = () => { if (originActive()) setOrigin9(origin9); };
   $("woSave").onclick = saveHere;
@@ -178,7 +178,7 @@ function bindCoupon() {
     H.toast(`Test coupon ready: ${COUPON.w} × ${COUPON.h} mm with a Ø${hole} mm hole, for ${String(S.material).toLowerCase()} ${t} mm. Set the start point, then Start.`);
   };
   const wrap = $("couponResult");
-  wrap.querySelector(".resbtns").innerHTML = RESULTS.map((r) => `<button type="button" data-res="${r.id}">${r.label}</button>`).join("");
+  wrap.querySelector(".resbtns").innerHTML = RESULTS.map((r) => `<button type="button" data-res="${r.id}">${H.esc(r.label)}</button>`).join("");
   wrap.querySelector(".resbtns").onclick = (e) => { const b = e.target.closest("button[data-res]"); if (!b) return; wrap.dataset.res = b.dataset.res; for (const x of wrap.querySelectorAll(".resbtns button")) x.classList.toggle("sel", x === b); $("cpSave").disabled = false; };
   $("cpSave").onclick = saveCouponResult;
   $("cpSkip").onclick = () => hideCouponResult();

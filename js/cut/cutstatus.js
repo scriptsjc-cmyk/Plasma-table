@@ -45,7 +45,7 @@ export function paintCutStatus() {
   btn.setAttribute("aria-expanded", pop && !pop.hidden ? "true" : "false");
   const label = bad ? `Check the cut: ${issues.length} warning${issues.length === 1 ? "" : "s"}` : "Check cut";
   // the label may be shortened with … when the header is crowded (r13: it gives way, the step tabs don't overlap); full text on hover
-  btn.innerHTML = `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label" title="${label}">${label}</span>`;
+  btn.innerHTML = `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
   btn.removeAttribute("title");
   if (pop) {
     const rows = issues.map((i) => {

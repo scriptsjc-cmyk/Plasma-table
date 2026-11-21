@@ -49,6 +49,8 @@ function codeOnly(e) { // drop string literals; keep only the ${} code of nested
   }
   return out;
 }
+// arrow-function parameter lists name values, they do not output them: (a, [id, label]) => … and x => …
+const stripParams = (e) => e.replace(/\(([^()]*)\)\s*=>/g, "() =>").replace(/\b[A-Za-z_$][\w$]*\s*=>/g, "=>");
 function stripTests(e) { // drop ternary tests:  test ? a : b  -> a : b  (top level only, approximate)
   return e.replace(/^[^?`]*\?(?!\?|\.)/, "");
 }
@@ -61,14 +63,15 @@ for (const f of files) {
     sinks++;
     for (const e of interps(src, m.index + m[0].length)) {
       interpCount++;
-      if (TEXT.test(stripTests(codeOnly(stripEsc(e))))) raw.push(`${path.relative(root, f)}:${src.slice(0, m.index).split("\n").length} \${${e.slice(0, 50)}}`);
+      if (TEXT.test(stripTests(stripParams(codeOnly(stripEsc(e)))))) raw.push(`${path.relative(root, f)}:${src.slice(0, m.index).split("\n").length} \${${e.slice(0, 50)}}`);
     }
   }
 }
 t.check(`the lint finds the HTML sinks (${sinks} sinks, ${interpCount} interpolations)`, sinks >= 100 && interpCount >= 200, `${sinks} / ${interpCount}`);
 t.check("no raw text field is put into HTML without an escape", raw.length === 0, raw.join("; "));
 // the lint itself: a raw name is caught, an escaped one and a literal ternary are not
-const probe = (e) => TEXT.test(stripTests(codeOnly(stripEsc(e))));
+const probe = (e) => TEXT.test(stripTests(stripParams(codeOnly(stripEsc(e)))));
 t.check("lint self-test: raw p.name, label and e.message are caught", probe("p.name") && probe("label") && probe("e.message") && probe("a.label.toLowerCase()"));
-t.check("lint self-test: esc(p.name), H.esc(o.name), a literal ternary and a title= literal pass", !probe("esc(p.name)") && !probe("H.esc(o.name)") && !probe('on ? "sel" : ""') && !probe(`m.practice ? "disabled title='x'" : ""`));
+t.check("lint self-test: esc(p.name), H.esc(o.name), a literal ternary and a title= literal pass", !probe("esc(p.name)") && !probe("H.esc(o.name)") && !probe('on ? "sel" : ""') && !probe(`m.practice ? "disabled title='x'" : ""`) && !probe("L.map(([id, label]) => `<b>${esc(label)}</b>`)"));
+t.check("lint self-test: a raw value inside a map callback is still caught", probe("L.map(([id, label]) => `<b>${label}</b>`)") && probe("L.map((r) => `<i>${r.name}</i>`)"));
 process.exit(t.done() ? 1 : 0);

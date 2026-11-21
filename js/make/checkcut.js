@@ -4,7 +4,7 @@
 // Thickness and material are clickable chips (same idea as the Cut screen), not a <select>:
 // a closed dropdown listed every size in the dialog's text, so clicking "3 mm" did nothing
 // and the check ran at the first size (1 mm).
-import { $ } from "../core/dom.js";
+import { $, esc } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
 import { checkDesign, machineLimits } from "../cut/check.js";
 import { kerfNow, leadNow } from "../cut/prepare.js";
@@ -31,7 +31,7 @@ function fillPick() {
   const materials = S.chart.materials || [];
   const curMat = materials.some((m) => m.name === S.material) ? S.material : (materials[0] && materials[0].name);
   mat.innerHTML = materials.map((m) =>
-    `<button type="button" role="option" data-mat="${m.name}" class="${m.name === curMat ? "sel" : ""}" aria-selected="${m.name === curMat ? "true" : "false"}">${m.name}</button>`).join("");
+    `<button type="button" role="option" data-mat="${esc(m.name)}" class="${m.name === curMat ? "sel" : ""}" aria-selected="${m.name === curMat ? "true" : "false"}">${esc(m.name)}</button>`).join("");
   const fillTh = (keep) => {
     const name = pickedMat();
     const m = materials.find((x) => x.name === name) || materials[0];
@@ -90,10 +90,10 @@ function runCheck() {
     slatPitch: (S.cfg && S.cfg.slat_pitch_mm) || 100,
   });
   let chk;
-  try { chk = checkDesign(cs, limits); } catch (e) { out.innerHTML = `<p class="warntext">${e.message}</p>`; return; }
+  try { chk = checkDesign(cs, limits); } catch (e) { out.innerHTML = `<p class="warntext">${esc(e.message)}</p>`; return; }
   const html = !chk ? "<p>Couldn't run the check.</p>" : `
-    <div class="cchead">Cut check <span>· ${mat.toLowerCase()} ${th} mm</span></div>
-    ${chk.groups.length ? renderGroups(chk.groups) : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${th} mm ${mat.toLowerCase()}.</p>`}`;
+    <div class="cchead">Cut check <span>· ${esc(mat.toLowerCase())} ${esc(th)} mm</span></div>
+    ${chk.groups.length ? renderGroups(chk.groups) : `<p class="ok">✓ Looks cuttable – nothing too small, thin or close for ${esc(th)} mm ${esc(mat.toLowerCase())}.</p>`}`;
   out.innerHTML = html;
   bindGroupClicks(out, chk && chk.groups);
   if (ask) ask.textContent = `Results for this drawing at ${mat.toLowerCase()} ${th} mm. Click an issue to zoom to it.`;
@@ -148,7 +148,7 @@ function renderGroups(groups) {
   const title = { error: "Must fix", warn: "Check these", info: "Notes", ok: "OK" };
   const used = new Set();
   let html = "";
-  const item = (g) => `<li class="${g.level || ""}" data-gi="${groups.indexOf(g)}"><b>${g.n || ""}</b><span>${g.text}</span> <button type="button" class="small showme">Show me</button></li>`;
+  const item = (g) => `<li class="${g.level || ""}" data-gi="${groups.indexOf(g)}"><b>${esc(g.n || "")}</b><span>${esc(g.text)}</span> <button type="button" class="small showme">Show me</button></li>`;
   for (const level of order) {
     const list = groups.filter((g) => (g.level || "info") === level);
     if (!list.length) continue;
