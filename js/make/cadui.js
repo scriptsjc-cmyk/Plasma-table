@@ -10,12 +10,14 @@ import { sketch } from "../core/state.js";
 import { renderQuickBar, focusToolSearch } from "./quickbar.js";
 import { bindShortcuts, openShortcutSheet, closeShortcutSheet } from "./shortcuts.js";
 import { initInspectorTabs } from "./inspector.js";
+import { bindFeatureList, renderFeatureList } from "./part-features-ui.js";
 
 export { isLaptopUi, syncLaptopUi, paintSidewaysHint, paintLayers };
 
 export function bindCadUi() {
   bindLaptopUi();
   initInspectorTabs();
+  bindFeatureList();
   bindLayers();
   bindCtxMenu();
   bindDrawHud();
@@ -25,9 +27,9 @@ export function bindCadUi() {
   bindShortcuts();
   if (sketch) {
     const prevSel = sketch.onSelect;
-    sketch.onSelect = (...a) => { try { if (prevSel) prevSel(...a); } finally { paintLayers(); paintSheetSize(); } };
+    sketch.onSelect = (...a) => { try { if (prevSel) prevSel(...a); } finally { paintLayers(); paintSheetSize(); renderFeatureList(); } };
     const prevCh = sketch.onChange;
-    sketch.onChange = (...a) => { try { if (prevCh) prevCh(...a); } finally { paintLayers(); paintSheetSize(); } };
+    sketch.onChange = (...a) => { try { if (prevCh) prevCh(...a); } finally { paintLayers(); paintSheetSize(); if (a[0]) renderFeatureList(); } };
   }
   syncLaptopUi();
   if (typeof renderQuickBar === "function") try { renderQuickBar(); } catch (e) { /* not ready */ }

@@ -2290,3 +2290,42 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   .mtdlg.is-pro .mt-pro label.check { font-size: var(--fs-s); line-height: 1.25; gap: 6px; align-self: center; }
   .mtdlg.is-pro .mt-pro label.check input[type="checkbox"] { width: 22px; height: 22px; min-width: 22px; min-height: 22px; }
 }
+
+/* r15 Round 2: the Features list (Features tab). Rows open in place; the list scrolls inside the panel so the
+   inspector itself never scrolls. Menus are small pop-overs inside the panel. */
+.featpanel { position: relative; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.feathead { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; }
+.feathead h3 { margin: 0; font-size: var(--fs-m); }
+.feathead #featAdd { min-height: 32px; padding: 0 12px; font-weight: 650; }
+.featpanel .feat-empty { margin: 0; }
+.featpanel .feat-empty[hidden] { display: none; }
+.featlist { list-style: none; margin: 0; padding: 0; min-height: 0; flex: 1 1 auto; overflow: auto; overscroll-behavior: contain; }
+.feat-row { border: 1px solid var(--line); border-radius: var(--r, 6px); background: var(--card); margin: 0 0 4px; }
+.feat-row.open { border-color: var(--accent); }
+.feat-row.off .feat-open { opacity: 0.55; }
+.feat-head { display: flex; align-items: center; gap: 2px; padding-right: 2px; }
+.feat-head .feat-open { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; min-height: 32px;
+  padding: 4px 6px; border: 0; background: none; color: var(--text); text-align: left; font-size: var(--fs-s); cursor: pointer; }
+.feat-head .feat-ico { flex: 0 0 auto; width: 1.4em; text-align: center; }
+.feat-head .feat-type { font-weight: 650; }
+.feat-head .feat-sum { color: var(--muted); overflow-wrap: anywhere; }
+.feat-head .feat-warn { flex: 0 0 auto; color: var(--warn-text); font-weight: 700; padding: 0 2px; cursor: help; }
+.feat-head .feat-eye,
+.feat-head .feat-more { flex: 0 0 auto; min-width: 32px; min-height: 32px; padding: 0 4px; border: 0; background: none; color: var(--text); font-size: var(--fs-s); }
+.feat-edit { padding: 4px 6px 6px; gap: 4px 8px; }
+.feat-edit label { font-size: var(--fs-xs); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.feat-edit input, .feat-edit select { min-width: 0; width: 100%; }   /* same height as the Size tab fields */
+.feat-edit input.bad { border-color: var(--stop); }
+.feat-why { margin: 0; padding: 0 6px 6px; color: var(--warn-text); }
+.featmenu { position: absolute; z-index: var(--z-panel-pop); display: flex; flex-direction: column; min-width: 180px; padding: 4px;
+  background: var(--card); border: 1px solid var(--line-strong, var(--line)); border-radius: var(--r, 6px); box-shadow: var(--shadow); }
+.featmenu.hidden { display: none; }
+.featmenu button { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 32px; padding: 0 8px;
+  border: 0; background: none; color: var(--text); text-align: left; font-size: var(--fs-s); }
+.featmenu button[hidden] { display: none; }
+.featmenu button:hover, .featmenu button:focus-visible { background: var(--well); }
+.featmenu kbd { font-size: var(--fs-xs); color: var(--muted); }
+body.pro-mode[data-screen="make"] #srcShape[data-insp="holes"] > .featpanel,
+body.advanced-mode[data-screen="make"] #srcShape[data-insp="holes"] > .featpanel { flex: 1 1 0; }
+.feat-row.feat-builtin { background: var(--well); }
+.feat-row.feat-builtin .feat-open { cursor: default; }

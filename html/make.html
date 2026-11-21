@@ -58,7 +58,7 @@
           <div class="insp-tabs" role="tablist" aria-label="Part inspector">
             <button type="button" role="tab" data-insp="part" aria-selected="true" class="on">Part</button>
             <button type="button" role="tab" data-insp="size" aria-selected="false">Size</button>
-            <button type="button" role="tab" data-insp="holes" aria-selected="false">Holes</button>
+            <button type="button" role="tab" data-insp="holes" aria-selected="false">Features</button>
             <button type="button" role="tab" data-insp="arrange" aria-selected="false">Arrange</button>
           </div>
           <p class="muted small skhelp beginner-help has-info insp-part"><span class="info-label">Click a shape to pick it.</span><button type="button" class="info-i" data-tip="Click a shape to pick it, drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them." aria-label="More about editing shapes"></button><span class="info-body"> drag to move, drag a corner to resize. Shift-click or drag a box round several to move, copy or join them.</span></p>
@@ -149,6 +149,20 @@
           <div id="proTools" class="protools hidden insp-arrange"></div>
           <h3 class="addtiles insp-part">Add a part</h3>
           <div id="shapeTiles" class="tiles small addtiles insp-part"></div>
+          <div id="featPanel" class="featpanel insp-holes">
+            <div class="feathead"><h3>Features</h3><button type="button" id="featAdd" class="small" aria-haspopup="menu" aria-expanded="false" aria-controls="featAddMenu" title="Add a hole, slot, pattern, cut-out, text or etch line to the picked part">+ Add</button></div>
+            <div id="featAddMenu" class="featmenu hidden" role="menu" aria-label="Add a feature"></div>
+            <p class="muted small feat-empty">Pick a part to see and add its features.</p>
+            <ul id="featList" class="featlist" aria-label="Features of the picked part"></ul>
+            <div id="featRowMenu" class="featmenu feat-menu hidden" role="menu" aria-label="Feature actions">
+              <button type="button" role="menuitem" data-fact="dup">Duplicate <kbd>Ctrl+D</kbd></button>
+              <button type="button" role="menuitem" data-fact="mirror">Mirror (linked)</button>
+              <button type="button" role="menuitem" data-fact="unlink">Unlink</button>
+              <button type="button" role="menuitem" data-fact="pattern">Pattern</button>
+              <button type="button" role="menuitem" data-fact="move">Move…</button>
+              <button type="button" role="menuitem" data-fact="del" class="danger">Delete <kbd>Del</kbd></button>
+            </div>
+          </div>
           <h3 class="addtiles insp-holes">Add holes <span class="muted small has-info"><span class="info-label">(pick a part first)</span><button type="button" class="info-i" data-tip="Pick a part first and the holes land in its middle." aria-label="More about adding holes"></button><span class="info-body"> and they land in its middle</span></span></h3>
           <div id="holeTiles" class="tiles small addtiles insp-holes"></div>
           <div id="shapeForm" class="shapeform insp-size"></div>

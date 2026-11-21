@@ -41,6 +41,7 @@ export function sanitizeFeature(f) {
   for (const [key, , d] of k.keys) out[key] = STRING_KEYS.has(key) ? String(f[key] ?? d).slice(0, 80) : clampKey(key, NUM(f[key], d));
   if (f.op === "score" || f.op === "mark" || f.op === "cut") out.op = f.op;
   if (f.hide) out.hide = true;
+  if (f.from === "centre") out.from = "centre";
   if (Number(f.link) > 0) out.link = Math.round(Number(f.link));
   return out;
 }
