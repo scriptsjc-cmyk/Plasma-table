@@ -72,4 +72,7 @@ const sized = (id, extra, want, why) => {
 sized("foldubr", {}, (p) => [p.web, p.leg, p.len], "web × leg × width");
 sized("tube", {}, (p) => [p.d, p.d, p.len != null ? p.len : p.h], "Ø × Ø × length");
 sized("rectelbow", {}, (p) => [p.w, Math.max(10, p.r) + p.h, Math.max(10, p.r) + p.h], "cheek spacing w; 90° bend out to throat radius + duct height");
+// redelbow is cut as two end gores (one square end, one mitred end, α = bend / 4) and a square-ended cone: the only way they
+// join is gore – cone – gore, square end to square end, so the 3D is that run with the two mitres on its outer ends.
+sized("redelbow", {}, (p) => { const ta = Math.tan(((p.bend * Math.PI) / 180) / 4), L = Math.max(p.clr, p.d / 2 + 1) * ta + Math.max(p.clr, p.d2 / 2 + 1) * ta; return [p.d, p.d, L + p.h + ((p.d + p.d2) / 2) * ta]; }, "big gore + cone + small gore, mitres on the outer ends");
 process.exit(t.done() ? 1 : 0);
