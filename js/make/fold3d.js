@@ -309,7 +309,7 @@ export function foldFrustum(d1, d2, h, segs = 72) {
   return { faces, panels: [{ w: Math.PI * ((d1 + d2) / 2), h: slant }] };
 }
 // r15 7.5: the round duct take-off from its cut pieces: the saddle collar (the cut saddle wrapped round the branch, its
-// shaped edge down on the main duct, longest at the sides across the duct), the tube blank on top of it, and the
+// shaped edge down on the main duct, longest at the sides), the tube blank on top of it, and the
 // flange ring (added with the pipe ends). The main duct is drawn as a ghost so its Ø shows. (It was the tube alone.)
 export function takeoffCollarH(p) { const s = pipeSaddle(p.d, Math.max(p.d2, p.d), 20); return s ? s.h : 0; }
 export function foldTakeoff(p) {
@@ -328,9 +328,10 @@ export function foldTakeoff(p) {
     }
   }
   for (const f of foldTube(d, p.len).faces) faces.push({ ...f, pts: f.pts.map((q) => V(q[0], q[1] + H, q[2])) });
-  // the main duct the take-off sits on (not cut here): axis along x, touching the collar's lowest points
+  // the main duct the take-off sits on (not cut here): it runs across the collar's sides (x = r·sinθ is across it), its
+  // axis √(R² − r²) below the collar's lowest points, so the shaped edge lies on it (r15 7.5-saddle)
   const yAxis = -Math.sqrt(Math.max(0, R * R - r * r)), L = Math.max(2.5 * d, D);
-  faces.push(...tubeFaces(D, V(-L / 2, yAxis, 0), V(1, 0, 0), L, 48, { ghost: true }));
+  faces.push(...tubeFaces(D, V(0, yAxis, -L / 2), V(0, 0, 1), L, 48, { ghost: true }));
   return { faces, panels: [{ w: Math.PI * d, h: H }, { w: Math.PI * d, h: p.len }] };
 }
 export function foldTube(d, h, segs = 72) {

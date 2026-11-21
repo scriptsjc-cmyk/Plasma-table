@@ -263,12 +263,14 @@ export function pipeSaddle(branchD, headerD, skirt = 20, n = 48) {
   const d = branchD, D = headerD;
   if (!(d >= 10 && D >= d && skirt >= 4)) return null;
   const r = d / 2, R = D / 2, w = Math.PI * d;
+  // r15 7.5-saddle (Josh 21 Nov): at θ round the branch (r·sinθ across the header) the header surface is √(R² − r²sin²θ)
+  // above its axis, so the branch is shortest on the crown line and longest at the sides. (This was R − √(…), the same
+  // curve upside down, which rocked on the header: up to 6.35 mm gap for 100 on 110.)
   const ys = [];
   for (let i = 0; i <= n; i++) {
     const th = -Math.PI + (2 * Math.PI * i) / n;
     const xOff = r * Math.sin(th);
-    const inside = R * R - xOff * xOff;
-    ys.push(inside > 0 ? (R - Math.sqrt(inside)) : 0);
+    ys.push(Math.sqrt(Math.max(0, R * R - xOff * xOff)));
   }
   const ymin = Math.min(...ys);
   const curve = ys.map((y, i) => [(w * i) / n, y - ymin]);
