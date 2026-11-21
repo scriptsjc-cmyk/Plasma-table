@@ -102,6 +102,37 @@ try {
     return { picked: s.sel.ids.includes(it && it.id), verts: it ? s.worldCs(it)[0].pts.length : 0, dots: dots.length, sq: sq.length, offClick: dots.filter((d) => !near(d)).length };
   }, clicked);
   t.check("3.12: a 5-click spline shows at most 5 dots, all on the clicked points, and no arc-middle squares", sp.picked && sp.dots >= 2 && sp.dots <= 5 && sp.offClick === 0 && sp.sq === 0, J(sp));
+  // ---------------------------------------------------------------- 3.6 the Rectangle / Circle buttons draw
+  const items = () => ev(page, () => { const s = window.plasmaTest.sketch; return { tool: s.tool, list: s.items.map((i) => { const b = s.boxOf(i); return { type: i.type, b: b.map((v) => Math.round(v * 10) / 10), w: i.p.w, h: i.p.h, d: i.p.d }; }) }; });
+  await fresh();
+  await page.click('#quickBar [data-qb="rect"]'); await sleep(200);
+  const r0 = await items();
+  t.check("3.6: the Rectangle button starts drawing (nothing dropped yet), and shows as on", r0.tool === "rect" && r0.list.length === 0 && await ev(page, () => document.querySelector('#quickBar [data-qb="rect"]').classList.contains("on")), J(r0));
+  await clickAt(10, 10);
+  { const [px, py] = await at(70, 40); await page.mouse.move(px, py, { steps: 4 }); await sleep(150); }
+  const live = await ev(page, () => ({ w: (document.getElementById("drawHudW") || {}).value, h: (document.getElementById("drawHudH") || {}).value }));
+  t.check("3.6: while drawing, the box shows the live width x height (60 x 30)", Number(live.w) === 60 && Number(live.h) === 30, J(live));
+  await clickAt(70, 40);
+  const r1 = await items();
+  t.check("3.6: click-click draws a 60 x 30 rectangle from corner to corner", r1.tool == null && r1.list.length === 1 && r1.list[0].type === "rect" && J(r1.list[0].b) === J([10, 10, 70, 40]), J(r1));
+  await fresh();
+  await page.click('#quickBar [data-qb="rect"]'); await sleep(150);
+  { const [ax, ay] = await at(0, 0), [bx, by] = await at(50, 20); await page.mouse.move(ax, ay); await page.mouse.down(); await page.mouse.move(bx, by, { steps: 6 }); await page.mouse.up(); await sleep(200); }
+  const r2 = await items();
+  t.check("3.6: press-drag-release draws a 50 x 20 rectangle", r2.tool == null && r2.list.length === 1 && J(r2.list[0].b) === J([0, 0, 50, 20]), J(r2));
+  await fresh();
+  await page.click('#quickBar [data-qb="disc"]'); await sleep(150);
+  await clickAt(50, 50); await clickAt(70, 50);
+  const r3 = await items();
+  t.check("3.6: the Circle button: click the centre, click the edge -> a 40 mm circle round that centre", r3.tool == null && r3.list.length === 1 && r3.list[0].type === "disc" && J(r3.list[0].b) === J([30, 30, 70, 70]), J(r3));
+  await fresh();
+  await page.dblclick('#quickBar [data-qb="rect"]'); await sleep(250);
+  const r4 = await items();
+  t.check("3.6: double-clicking the Rectangle button drops a standard rectangle and leaves drawing", r4.tool == null && r4.list.length === 1 && r4.list[0].type === "rect", J(r4));
+  await fresh();
+  await page.dblclick('#quickBar [data-qb="disc"]'); await sleep(250);
+  const r5 = await items();
+  t.check("3.6: double-clicking the Circle button drops a standard circle", r5.tool == null && r5.list.length === 1 && r5.list[0].type === "disc", J(r5));
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("124 ran to the end", false, String(e && e.stack || e).slice(0, 400));
