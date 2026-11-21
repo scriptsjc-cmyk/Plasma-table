@@ -248,13 +248,12 @@ export const FOLD_PRESETS = [
     "Right-angle gusset with a folded flange along each leg, developed as one piece.",
     [["a", "Bottom leg", 80], ["b", "Upright leg", 80], ["flange", "Flange width", 16]],
     (p) => {
+      // r15 1.6: developed as the triangle web (a × b, right angle at f, f) with an a × f flange below the bottom leg and a
+      // b × f flange left of the upright leg, a fold line along each leg, and the f × f corner left out so both flanges can fold.
       const f = p.flange;
-      const pts = [[0, 0], [p.a + f, 0], [p.a + f, f], [f, f], [f, p.b + f], [0, p.b + f]];
-      // triangle web is the area above the flanges? Actually: flanges are rectangles on the two legs of the triangle.
-      // Developed: triangle (a × b) with rectangles a×f and b×f attached to the legs.
-      const web = [[f, f], [p.a + f, f], [f, p.b + f]];
-      const outline = [[0, 0], [p.a + f, 0], [p.a + f, f], [f, p.b + f], [0, p.b + f]];
-      return [poly(outline)];
+      if (!(f > 0)) return [poly([[0, 0], [p.a, 0], [0, p.b]])];
+      const outline = [[f, 0], [p.a + f, 0], [p.a + f, f], [f, p.b + f], [0, p.b + f], [0, f], [f, f]];
+      return [poly(outline), bendLine(f, f, p.a + f, f), bendLine(f, f, f, p.b + f)];
     },
     { noResize: true, fold: (p) => {
       const f = p.flange;
