@@ -84,7 +84,6 @@ export function renderMaterials() {
     <div>Set the plasma to</div>
     <div class="big">${ampsNow()} A</div>
     <dl class="ampsdl">
-      <div><dt>Cut speed</dt><dd>${esc(String(feed))} mm/min${est(r.feed_source)}</dd></div>
       <div><dt>Pierce</dt><dd>${esc(String(delay))} s at ${esc(String(ph))} mm${est(r.pierce_delay_source || r.pierce_height_source)}</dd></div>
       <div><dt>Cut height</dt><dd>${esc(String(ch))} mm${est(r.cut_height_source)}</dd></div>
       <div><dt>Kerf</dt><dd>${esc(String(kerf))} mm${est(r.kerf_source)}</dd></div>

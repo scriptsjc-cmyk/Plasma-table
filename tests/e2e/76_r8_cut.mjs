@@ -75,6 +75,8 @@ for (const prof of ["d1440", "d1366"]) {
       chk3: chk3 && (chk3.textContent || "").trim(),
       showMachOnPart: vis(showMach),
       amps: amps && (amps.textContent || ""),
+      // r15 4.4: the cut speed is shown once, in its own Cut speed box (no longer repeated in the amps card)
+      speed: (document.getElementById("speedBox") || {}).textContent || "",
       setupTab: !!setupTab,
       dropSlim: drop && drop.classList.contains("drop-slim"),
       dropH: drop && Math.round(drop.getBoundingClientRect().height),
@@ -87,7 +89,7 @@ for (const prof of ["d1440", "d1366"]) {
   t.check(n("r9 item 5: Setup has no cut-check panel"), !part.chk3, part.chk3);
   t.check(n("item 5: Machine setup is not a Cut-row tab"), !part.setupTab);
   t.check(n("item 6: Show machine is not on step 1"), !part.showMachOnPart);
-  t.check(n("item 7: the amps card shows 60 A settings and a source"), /A/.test(part.amps) && /mm\/min/.test(part.amps) && /kerf/i.test(part.amps) && /PrimeWeld|CUT60|P-80|source|starting points/i.test(part.amps), (part.amps || "").slice(0, 400));
+  t.check(n("item 7: the amps card shows 60 A settings and a source (r15 4.4: the speed in mm/min is in the Cut speed box)"), /A/.test(part.amps) && /mm\/min/.test(part.speed) && /kerf/i.test(part.amps) && /PrimeWeld|CUT60|P-80|source|starting points/i.test(part.amps), (part.amps || "").slice(0, 400));
   t.check(n("item 11: Upload a file starts as a slim bar"), part.dropSlim && part.dropH < 120, JSON.stringify({ h: part.dropH, slim: part.dropSlim }));
   t.check(n("1366/1440: sticky Next does not cover a thickness button"), !part.covered, JSON.stringify({ thCount: part.thCount, covered: part.covered, next: part.nextLabel }));
 

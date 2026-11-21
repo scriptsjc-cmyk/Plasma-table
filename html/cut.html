@@ -45,13 +45,17 @@
               <div id="thicknesses" class="choice small"></div>
               <p id="matTip" class="mattip"></p>
               <div id="ampsCard" class="amps"></div>
-              <label class="check prominent"><input type="checkbox" id="dryRun"> Practice run – move only, torch stays off</label>
-              <p id="dryFirstNote" class="muted small hidden">Ticked for you because this is your first job: the table moves but the torch stays off. Untick it when you want to cut for real.</p>
             </div>
             <div class="s2b">
               <div id="cutCheck2" class="cutcheck"></div>
             </div>
           </div>
+          </div>
+          <!-- r15 4.5: Practice run and the cut options have their own card; on a laptop it sits in the left column under the
+               part choices (phones keep it after Material, as before) -->
+          <div class="run-col">
+              <label class="check prominent"><input type="checkbox" id="dryRun" role="switch"> Practice run – move only, torch stays off</label>
+              <p id="dryFirstNote" class="muted small has-info hidden"><span class="info-label">Ticked for you: this is your first job.</span><button type="button" class="info-i" data-tip="Ticked for you: this is your first job. The table moves but the torch stays off. Untick it when you want to cut for real." aria-label="More about the first-job practice run"></button><span class="info-body"> The table moves but the torch stays off. Untick it when you want to cut for real.</span></p>
           <div class="cutmore-row">
           <details class="speed" id="speedBox">
             <summary class="speedsum">Cut speed <b id="spValSum">0</b> mm/min</summary>

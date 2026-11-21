@@ -139,6 +139,10 @@ try {
     const lc = await box(page, "#pickPane > .part-col"), pv = await box(page, ".previewPane"), dr = await box(page, "#dryRun"), st = await box(page, "#btnStraight");
     t.check(`4.5 ${prof}: Practice run and the cut options are in the left column, below Straight cut`, lc && pv && dr && sp && ad && st && [dr, sp, ad].every((b) => b.r <= pv.l + 1 && b.t >= st.b - 1), J({ lc, pv, dr, sp, ad, st }));
     t.check(`4.5 ${prof}: nothing in the left column runs off the bottom`, [dr, sp, ad].every((b) => b && b.b <= innerHeightOf(prof)), J({ dr, sp, ad }));
+    // first job: the "Ticked for you…" note shows too; the card still fits without its own scroll bar
+    const fj = await ev(page, () => { const n = document.getElementById("dryFirstNote"); n.classList.remove("hidden"); const rc = document.querySelector("#pickPane > .run-col"); const r = rc.getBoundingClientRect();
+      const out = { sh: rc.scrollHeight, ch: rc.clientHeight, b: r.bottom, vh: innerHeight }; n.classList.add("hidden"); return out; });
+    t.check(`4.5 ${prof}: with the first-job note showing, the card fits (no inner scroll, on screen)`, fj.sh <= fj.ch + 2 && fj.b <= fj.vh, J(fj));
     t.check(`no page error (${prof} cut step 1)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
