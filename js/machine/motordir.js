@@ -151,6 +151,8 @@ export function parseDumpPins(text) {
 async function ask(line, timeout = 6000) {
   const g = gLink();
   if (!g || !g.ask) return { ok: false, lines: [], error: "Not connected." };
+  // Never while a job runs: the ask would wait in the queue behind the job and go out the moment it ends.
+  if (jobBusy()) return { ok: false, lines: [], error: "Not while a job is running." };
   return g.ask(line, { timeout });
 }
 
