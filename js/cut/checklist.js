@@ -4,7 +4,7 @@ import * as Setup from "./setup.js";
 import { S, sketch } from "../core/state.js";
 import { fit } from "./preview.js";
 import { row } from "./material.js";
-import { $ } from "../core/dom.js";
+import { $, esc } from "../core/dom.js";
 import { refresh } from "../core/hooks.js";
 import { isEtchOp, throughCutInEtch, etchHeightProblem, resolveEtch } from "./etch.js";
 import { currentSettings } from "../machine/settings.js";
@@ -113,9 +113,6 @@ export function blockers() {
   return b;
 }
 
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
 function isCornerBlocker(text) {
   return /sheet corner/i.test(text);
 }

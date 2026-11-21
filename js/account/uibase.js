@@ -1,12 +1,14 @@
 // Shared by the account dialogs: the host callbacks from app.js, dialog open/close, and the toast / esc helpers.
 import * as A from "./account.js";
+import { esc as coreEsc } from "../core/dom.js";
 
 export const $ = (id) => document.getElementById(id);
 export const $$ = (sel, root) => [...(root || document).querySelectorAll(sel)];
 export let host = null; // { toast, esc, applyMode, getDesign, loadDesign, fileName, refreshGate }
 let keepAsked = false;   // "Keep this drawing?" is waiting for an answer: it comes back whenever the other account dialogs close
 export function toast(msg, err) { if (host && host.toast) host.toast(msg, err); }
-export function esc(s) { return host && host.esc ? host.esc(s) : String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+// r15 8.3: the one escape helper is core/dom.js; null / undefined show as nothing here, as before
+export function esc(s) { return host && host.esc ? host.esc(s ?? "") : coreEsc(s ?? ""); }
 export function acctOverlayOpen() {
   return $$(".acctdlg").some((el) => !el.classList.contains("hidden"));
 }

@@ -2,7 +2,7 @@
 // Holes that sit in a part are listed under that part (not as peer "Hole #2" parts).
 // Dashed outlines on the drawing are those holes; they are still cut in the part.
 import { sketch } from "../core/state.js";
-import { $ } from "../core/dom.js";
+import { $, esc } from "../core/dom.js";
 import { shapeDef } from "./sketch-util.js";
 
 function itemName(it) {
@@ -74,9 +74,6 @@ function paintLayersHint(text) {
   el.hidden = !text;
 }
 
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
 
 export function openPartsList() {
   const el = $("layersPanel");

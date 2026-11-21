@@ -2,7 +2,7 @@
 // Saved in localStorage with the other "Make it yours" prefs (keyed by signed-in user when one is known).
 // The profiles table has no prefs column, so this is not synced to the cloud account row.
 import { getPrefs, savePrefs } from "../core/prefs.js";
-import { $ } from "../core/dom.js";
+import { $, esc } from "../core/dom.js";
 
 function refreshBar() {
   import("./quickbar.js").then((m) => { try { m.renderQuickBar(); } catch (e) { /* ignore */ } }).catch(() => {});
@@ -155,9 +155,6 @@ function onCustomClick(e) {
   refreshBar();
 }
 
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
 
 export function bindToolbarCustom() {
   const el = $("toolbarCustom");

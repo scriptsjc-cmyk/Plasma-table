@@ -5,7 +5,7 @@ import { textToContours, TEXT_FONTS, defaultWeight } from "./textshape.js";
 import { traceImage, toGray, grayHistogram, otsu } from "./trace.js";
 import { contoursToEditable } from "./editable.js";
 
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+import { esc } from "../core/dom.js";
 const $ = (id) => document.getElementById(id);
 // r15 3.10: a dialog opening clears any old message (same as clearToast in core/dom.js; this module stays free of the app core)
 const clearToast = () => { const t = $("toast"); if (t) t.classList.add("hidden"); };

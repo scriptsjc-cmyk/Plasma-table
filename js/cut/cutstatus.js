@@ -1,7 +1,7 @@
 // r8 items 4–5: the cut-status box next to the Cut tab. Yellow and pulsing when something is
 // wrong; calm when all is fine. Hover, focus or a tap shows the list. A setup problem (edges,
 // homing) offers a link to Machine setup in the main Menu.
-import { $ } from "../core/dom.js";
+import { $, esc } from "../core/dom.js";
 import { S } from "../core/state.js";
 import { blockers } from "./checklist.js";
 
@@ -45,14 +45,14 @@ export function paintCutStatus() {
   btn.setAttribute("aria-expanded", pop && !pop.hidden ? "true" : "false");
   const label = bad ? `Check the cut: ${issues.length} warning${issues.length === 1 ? "" : "s"}` : "Check cut";
   // the label may be shortened with … when the header is crowded (r13: it gives way, the step tabs don't overlap); full text on hover
-  btn.innerHTML = `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span>`;
+  btn.innerHTML = `<span class="cutstatus-dot" aria-hidden="true"></span><span class="cutstatus-label" title="${esc(label)}">${esc(label)}</span>`;
   btn.removeAttribute("title");
   if (pop) {
     const rows = issues.map((i) => {
       const link = i.kind === "setup"
         ? ` <button type="button" class="cutstatus-setup" data-goto="setup">Open Machine setup</button>`
         : "";
-      return `<li>${escapeHtml(i.text)}${link}</li>`;
+      return `<li>${esc(i.text)}${link}</li>`;
     }).join("");
     pop.innerHTML = bad
       ? `<p class="cutstatus-head">What's wrong</p><ul>${rows}</ul>`
@@ -60,9 +60,6 @@ export function paintCutStatus() {
   }
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
 
 // r15: on a laptop the pop-up opens over the bed drawing (below its top chips), not over the Part / Setup panels it
 // used to cover from the header; a phone (or no drawing on screen) keeps it under the button.
