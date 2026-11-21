@@ -5,7 +5,7 @@ import { fitContour } from "../core/arcs.js";
 import { nestUnitsSync, turnAngles, ringsBox } from "../cut/nest.js";
 import { variantKey, variantsFor } from "./variants.js";
 import { clickVerb } from "../ui/laptop.js";
-import { moveFeatureBy } from "./part-features.js";
+import { keepMatching, moveFeatureBy } from "./part-features.js";
 
 export class EditMethods {
   // Turn 90 keeps each shape's bottom-left and, when width/height exist, swaps them
@@ -166,6 +166,7 @@ export class EditMethods {
     this.remember();
     const p = {};
     for (const [k, , v] of d.params) p[k] = v;
+    keepMatching(p, it.p, spec.p);                                   // r15 P1-1: a version change keeps the values you typed
     Object.assign(p, spec.p || {});
     it.type = spec.id;
     it.p = d.fit ? d.fit(p, d.uniform ? Math.max(W, H) : W, H) : p;

@@ -89,4 +89,11 @@ it.feats = [bore, g];
 const g2 = A.designToGcode(sk.contours(), { kerf: 1.5, leadIn: 3 }).gcode;
 t.check("gcode: the features add 5 pierces", (g2.match(/M3\b/g) || []).length - (g1.match(/M3\b/g) || []).length === 5, `${(g1.match(/M3\b/g) || []).length} -> ${(g2.match(/M3\b/g) || []).length}`);
 
+// a version change keeps matching values (3D P1-1): rect R10 -> Corner holes keeps 200 x 150 R10
+const vk = A.newSketch(); vk.add("rect", true, {}); const vi = vk.items[0]; Object.assign(vi.p, { w: 200, h: 150, r: 10 }); vi.feats = [{ ...bore }]; vk.pick([vi.id]);
+vk.applyVariant(A.variantsFor("rect").find((v) => v.label === "Corner holes"));
+t.check("version: Corner holes keeps 200 x 150 R10 and the features", vi.type === "plate" && vi.p.w === 200 && vi.p.h === 150 && vi.p.r === 10 && vi.feats.length === 1, J({ type: vi.type, p: vi.p }));
+vk.applyVariant(A.variantsFor("plate").find((v) => v.id === "rect" && v.label === "Square corners"));
+t.check("version: a version that sets a value still sets it (Square corners -> R0)", vi.type === "rect" && vi.p.r === 0 && vi.p.w === 200, J(vi.p));
+
 process.exit(t.done() ? 1 : 0);

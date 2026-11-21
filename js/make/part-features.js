@@ -244,3 +244,8 @@ export function moveFeatureBy(it, fid, dx, dy) {
   syncLinks(it.feats, f, Number(it.p && it.p.w) || 0);
   return true;
 }
+// picking another version of a shape keeps every value the new version also has (3D P1-1), unless the version sets it
+export function keepMatching(newP, oldP, specP = {}) {
+  for (const k of Object.keys(newP)) if (!(k in specP) && oldP && Number.isFinite(Number(oldP[k])) && k in oldP) newP[k] = Number(oldP[k]);
+  return newP;
+}
