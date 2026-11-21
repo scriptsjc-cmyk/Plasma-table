@@ -1,85 +1,99 @@
-LAST_CHECKED_COMMIT: 71e68d5
+LAST_CHECKED_COMMIT: 191fd54
 # Porta Plazma: checker report
 
 Kept up to date automatically by Claude, the independent checker. The newest check is at the top, and older ones are summarised under History.
 **How it checks:** a fresh copy of the live code, on the practice table only (USB Connect is never pressed). The kit is `porta_check.py` on this branch, and items are matched against `combined-plan-r15.md`.
 
-## Check of 21 Nov 2026, 11:09 run (commit `71e68d5`, 16 commits since `bb5aadb`)
+## ✋ Decisions from Josh (21 Nov, 22:52)
+- **8.2: approved.** Do the option you and the checker both suggested: keep the JS moves, but drive them from **one table of where each control goes** (no `safeInsert`). Nothing should change on screen.
+- **Suite 55 section 11 (Space as STOP on Menu and Make): skip.** Buyers will have a physical E-stop and the on-screen STOP. Leave the app's Space behaviour as it is, don't change the test, and don't build anything for it. It stays a known finding; the checker won't raise it again.
+
+## Check of 21 Nov 2026, 22:40 UTC run (commit `191fd54`, 133 commits since `71e68d5`)
 
 ### Safety
-- **OK.** I tried to start a cut and then leave the cutting screen, by Menu and by the Part tab, at 1280 × 600. No job ran without STOP on screen. `112_r15_safety` passes 36/36.
-- The torch stays off in Practice. Nothing that touches STOP, the start confirm or the torch test changed in these commits.
+- **OK.** I started a cut and then tried to leave the cutting screen by Menu and by the Part tab at 1280 × 600. No job ran without STOP on screen. `112_r15_safety` passes 36/36, `20_demo_job_safety` 36/36 and `22_stop_overlay` 33/33.
+- **STOP stream (your question):** confirmed with my own test, described under Answers.
+- The torch stays off in Practice, and the start confirm is unchanged.
 
 ### Replies to Ready to check
-- ✅ **Round 1 (1.1–1.7)**, plus **7.1–7.4 in the gate**, **2.1, 2.3–2.5, 2.7–2.11, 2.13, 2.14, 2.16**, and **3.1, 3.3, 3.7, 3.8** @ bb5aadb. Still pass (unit tests, 112, 120, 121 and 122 are all green).
-- ✅ **2.12 Corners row.** On a gusset, + Add › Corners gives "R5 at all corners" and it stays a gusset. Fillet click mode on one corner gives "R6 at 1 corner". On a rectangle, + Add › Corners is the radius row (R = p.r). Fillet-clicking one corner of a rectangle adds an "R7 at 1 corner" row and leaves p.r at 0, which makes sense: one corner can't be a single radius.
-- ✅ **2.6 Pattern.** Checked on Text, Etch line and Rectangle cut-out, as well as the slot in 121. Each gives one row "… · 2 × 1, pitch …" and the copies are cut. No page errors at 1280 × 600 or 1536 × 730.
-- ✅ **2.2 Text row** now reads `"TEXT" 10 high at 100, 75`. The Etch line row still has no "at X, Y" ("40 long"), but the plan only asked for Text.
-- ✅ **2.18 Phone Features sheet** (iPhone 14). "Features (2)" opens a bottom sheet with the same rows and + Add. `123` passes 23/23. One small leftover is under New problems.
-- ✅ **3.9 Arrange tab at 1280 × 600.** Every button is on screen above Cut this part, and the X / Y labels don't overlap. `113` make-advanced-arrange passes at every size.
-- ✅ **4.14 Cut › Stopped at 1280 × 600.** Continue from cut, Set a new start point, Cut a different part and Download G-code are all on screen after stopping at cut 2 of 5.
-- ✅ **2.19 Size tab refit.** Typing 900 in the width zooms out to the same view as Fit, and 121 passes. Typing with pauses, nothing jumped.
-- ✅ **2.17 No features means G-code unchanged.** For all 345 shape and preset ids, each was put on a part and run through `designToGcode()` at `bb5aadb` and at `71e68d5`. All 339 that produce a part gave byte-identical G-code. The other 6 (`flange4`–`flange12`, `flangeblind`) give no part with default sizes on both commits.
-- ✅ **2.15 Ctrl+D / Delete on a Features row.** Delete on a focused row removes only that row (part count stays 1 at 1280 × 600 and 1536 × 730). Ctrl+D and its undo pass in 121.
+- ✅ **Rounds 1 and 2, plus 7.1–7.4** @ bb5aadb. Still pass (121 57/57, 122, 123 23/23).
+- ✅ **Round 3 (3.2, 3.4–3.6, 3.10–3.12).** 124 passes 67/67. My own sweep of every Make tool at 1536 × 730 is clean: each opens, its dialog fits, Escape closes it, and there are no page errors. That includes 3-point arc, Tangent arc and Spline from the new Arc ▾ menu.
+- ✅ **Round 4, apart from 4.10 and 4.17 below.** 125 passes 220/220. In my screenshots at all three sizes:
+  - 4.1–4.5: header above the panels, Practice run is a switch, Cut speed shows once, and the left column is balanced.
+  - 4.6–4.9: Setup text wraps, Layout and Check cut look like buttons, ↓ G-code has a label, and the Torch card has one i and one readout row.
+  - 4.11–4.14 and 4.25: one Practice · Ready pill, tabular readouts, and the Stopped actions are tidy.
+  - 4.15, 4.16, 4.18–4.22: versions in 2 columns, no duplicate Size box, the Arc ▾ rail button, plain tool names.
+  - 4.23 and 4.24: 3 × 3 jog pad and "Bed and home" inside its card.
+  - 4.26 Barlow: 113 passes 310/310 and 96_fits_screen 270/270. The 1440 × 800 "Lowest point / Floating head" overlap is gone.
+  - 4.x-extra and the two phone items are fixed too.
+  - Small note on 4.13: the demo hint is gone from Cutting and Stopped, but it still shows on Step 1 Part, because `js/ui/refresh.js:143` counts S.cur "1" as Setup. The plan says "Setup only". Your call.
+- ❌ **4.10 touch-off pill** (1280 × 600, 1366 × 640, 1536 × 730; Cut › Setup after Start here). The pill now clears the X beam, but it lies right across the gantry's vertical Y rail (the dark leg under the torch) at all three sizes.
+  - Cause: only the X beam is registered as a box (`js/cut/setup.js:219-220`), so the free-spot search at `js/cut/startmark.js:41` doesn't know about the leg. "Sheet corner (0, 0)" sits on the same leg.
+  - Fix idea: add the leg's screen box too, or start the pill to the right of the leg.
+- ❌ **4.17 X / Y chips** (Make, Advanced, Size tab, default Plate with holes). At 1280 × 600 the "X 0" chip sits on top of the bottom-left hole. At 1536 × 730 it touches that hole and the corner.
+  - Cause: Fit puts the part's bottom at the canvas bottom, so the chips take the "just inside" branch (`js/make/sketch-view.js:312-314`), and that is where the corner holes are.
+  - Fix idea: leave room under the part when fitting (~36 px of padding), or put the chips in the gutter left of or above the part.
+  - Test: at the three sizes, the chip boxes intersect neither the outline nor any hole's box.
+- ✅ **Round 5 (5.1–5.8), 5.9, 5.10.** Units 34–39 and 46 pass, and 126 passes 30/30.
+  - 5.1: the U-channel by hand (100 × 50 × 50, 2 mm, R = T, K 0.44) gives BD 3.4761 per bend, so a 193.048 mm strip, which matches unit 41.
+  - 3D sweep: 93 fold presets, and at zero thickness none are flagged on area, holes or overlapping cuts.
+- ✅ **Round 6 (6.1–6.5).** 127 passes 28/28. Checked on a 200 × 150 plate with 4 × Ø10 holes: all 4 holes are tagged `(PORTA-SLOW 60)` and the outline isn't; each hole pierces 0.43 mm from its centre and two arcs join the circle tangentially; every hole is cut before the outline.
+- ✅ **Round 7 (7.5–7.9).** Units 40–50 pass. The 7.8 re-run is done and its results are reported.
+- ✅ **Cut changes 7.5-saddle, s2roffset, 7.5-redelbow, 7.5-saddlehole.** Checked independently, see Answers.
+- ✅ **Round 8 part 1 (8.3, 8.4, 8.5, 8.6, 8.1 split).** Units 51–55 and 58 pass. index.html is 418 lines, fold3d.js is a 6-line barrel, and screen-cut.css is split into 4 files. Screenshots at the three sizes look the same as before, and the sw.js fix lets 59 pass 81/81.
 
-**Round 2 is verified done**, apart from your own live-site motor-mount run, which is still under Working on.
+**Rounds 3, 5, 6 and 7 are verified done.** Round 4 is done except 4.10 and 4.17.
 
 ### Answers to developer questions
-1. **2.17:** confirmed independently (method and result above).
-2. **Failures outside the gate:** all seen, and all were there before r15. The same suites at `f47ca41` and `71e68d5` fail one for one: 57 ×3; 52 item 21; 10 PRO-PERSIST (crashes after it); 41 item 11 ×3; 55 section 11 ×4; 53 s2r ×3; 58 "Nest to fit"; 71 and 83 crash; 85 C46, C48, C49; 96_fold3d ×3.
-   - **Note from Josh's chat:** the earlier 11:00 run reported 41 item 11 as a *regression* bisected to `55c3d71` (two extra failures: "one lock note on the bed screen" and "'Link a machine' is the green primary button"). This run found the same failures at `f47ca41`. The two runs disagree, so please run `node run-all.mjs 41` once on `75b7df1` and on HEAD and add the result under Questions; the next check will settle it.
-   - **One extra here:** `96_fits_screen` and `113_r15_fits` fail at **1440 × 800 machine-setup / machine-setup-edges** ("overlap-box: Lowest point. / Floating head"). This also fails at `f47ca41` and `bb5aadb` on this machine. It's font-dependent: the app uses `system-ui` (`css/tokens.css:77`), and this container's system font is wider than the CI runner's. A buyer with a wider system font would see the overlap, which is one more reason for 4.26.
+1. **STOP-STREAM (f9d612d).** I hooked every byte written to the demo controller with `performance.now()`, plus a capture listener on `window` (added before the app loads) for the STOP press. 4 jobs mid-cut with the torch lit: button, Space, button, Space.
+   - The first byte after the press was always "!", 0.2–2.7 ms after it.
+   - Zero job lines after the press; torch off, job "stopped".
+   - The last job line went out 22–118 ms *before* the press. Your change is sound.
+2. **Cut changes, checked on their own geometry:**
+   - **redelbow** at 5 sizes (200/120 n4, 150/100 n5, 300/150 60° n3, 100/60 45° n2, 250/200 n6): neighbouring gores meet within 0.08 mm (sample spacing), joint lengths match exactly, the ends are exactly π·d and π·d2, and the turn between the end openings is exactly the bend.
+   - **saddlehole** (100/110, 80/140, 50/200, 100/100, 150/160): every hole edge point, wrapped on the header, lies on the branch cylinder (error 1e-14 mm). `inside()` agrees with a brute-force test at 4,000 random points per size. 100 on 110 is 125.5 × 100.
+   - **Saddle template:** right way up (branch shortest on the crown, longest at the sides).
+3. **2.17:** all 339 presets through `designToGcode()` at `c31bd09` and `191fd54`: 332 byte-identical, exactly 7 differ (s2roffset, fishmouth, saddlehole, redelbow, takeoff, britches, teetemp), which are the intended cut changes. The 35 DXF/SVG weren't re-run this time.
+4. **Pre-existing failures:** re-ran 47 and 96_fold3d; they match your list (47 ×2, 96_fold3d ×1, the iPhone 14 picture). 40 can't run here (axe-core isn't installed). Two gate suites are flaky now; see New problems.
+5. **41 item 11 / the Space path:** accepted as Not a bug. Won't be reported again.
 
 ### New problems found (developer may fix without asking)
-1. **Phone, Make › Set the size (iPhone 14):** the help line reads "Type how big it should be. Type how big it should be, turn it…": the short label and the full tip both show. Cause: `setInfoText()` (`js/ui/hovertip.js:82`) with the short and full text from `js/make/shapeform.js:78-79`; the `.info-body` copy is visible on touch. The same happens on Cut › More cut options (`html/cut.html:70`).
-2. **Phone:** the "Turn your phone sideways" pill sits over the first Features row in the bottom sheet until it's dismissed (`js/ui/laptop.js:171`). It could hide while `#featSheet` is open.
+1. **e2e 92_r9_chrome is flaky at HEAD, and it's in the deploy gate.** It failed "item 2: Machine setup has no Cut / Check the cut row" in 3 of 7 runs at 191fd54, with tab still "cut" 300 ms after `menuSetup.click()`. It passed 4/4 on `c31bd09` and 4/4 on `8b0c852`, so this looks new in Round 8.
+   - Not reproducible in a smaller script: the tab normally flips to "setup" in 40–90 ms.
+   - Suspect: `js/ui/flow.js:186-189` (`showScreen("cut")`, then a dynamic `import("./nav.js").then(showTab("setup"))`). If `showScreen` is refused or something later calls `showTab("cut")` (`nav.js:89`), the setup tab is lost.
+   - Worth logging `showScreen`'s return value and `showTab` calls in the failing run.
+2. **e2e 122_loose_holes is flaky (test timing).** "(a) ran to the end: plasmaTest undefined" in about 1 of 3 runs. Cause: `tests/e2e/122_loose_holes.mjs:76` reloads, then waits a fixed 800 ms before `makeScreen()`. Waiting for `window.plasmaTest` instead fixes it without weakening anything.
+3. **Machine setup › Bed and home** (1280 × 600, 1366 × 640): the canvas labels "Controller 0,0 (power-up — home not set)" and "Torch X … Y … Z …" are drawn over the gantry and can't be read. Same kind of fix as 4.10.
+4. **120_every_tool** failed "1366x640 flangestd: its apply button can be clicked" once under load, then passed 602/602 alone. Flaky under load; just so you know.
 
 ### Got worse since last check
-- Nothing. Unit tests are 24,868 / 24,870 (up from 24,842); the only failure is the known C9-S2R.
+- 92_r9_chrome flakiness (above). Nothing else. Unit tests are 25,363 / 25,365; the only failure is the known C9-S2R.
 
 ### Prep for Next up
-**Round 3 remainder** (3.2, 3.4, 3.5, 3.6, 3.10, 3.11, 3.12): see the prep in the previous report (git history of this file, commit `89c6650`). File and line pointers are unchanged.
-
-**Round 4 (highest-value first):**
-- **4.3 Practice run box.** `html/cut.html:48` is a native checkbox sized to 44 px by `css/base.css:78` (`#dryRun`).
-  - Fix: use the same `button.switch` + `.switch-track` as Drag selects (`html/make.html:15`, `css/base.css:47-55`). Keep `#dryRun` as the real input (hidden, or with role="switch"), so `S.dryRun` and the tests keep working.
-  - Test: 1280 × 600, Cut step 1. `#dryRun`'s visible control is at least 40 × 24 with `role=switch`; a click toggles `aria-checked` and `S.dryRun`.
-- **4.4 Cut speed shown twice:** in the amps card (`js/cut/material.js:87`) and in the `#speedBox` summary (`css/screen-cut.css:2324`, shown on step 1).
-  - Fix: keep the `#speedBox` summary (which you can change); drop the dd from the card on step 1.
-  - Test: 1366 × 640, step 1: "Cut speed" appears exactly once in `#step1` (visible elements only).
-- **4.2 / 4.5 Right column slots.** At 1280 × 600, Cut speed and More cut options already sit above Next, so 4.2 is partly done. The left column is still half empty.
-  - Fix: move `#dryRun` + `.cutmore-row` (`html/cut.html:48-69`) into the left column, under Straight cut.
-  - Test: at 1280 × 600 / 1366 × 640 / 1536 × 730, Next is fully visible, nothing overlaps it, and `#advCut summary` sits above Next.
-- **4.9 Torch card.** At 1280 × 600 the second "i" icon covers the "Torch" lamp chip. The chips are in `<summary>` at `html/cut.html:167`.
-  - Fix: one readout row under the title, lamps E-stop · Head · Torch at 13 px or more, and a single info icon.
-  - Test: `.torch-chips .lamp` boxes don't intersect any `.info-i`; each lamp is at least 24 px high.
-- **4.11 / 4.25 One status.** The header torch pill is set in `js/ui/refresh.js:50-53` ("TORCH OFF", upper case) and again at `refresh.js:283`. Practice and Ready are separate pills (`index.html:139-141`).
-  - Fix: one pill, "● Practice · Ready · Torch off", built in `refresh.js`. Keep the ids (hidden) for the tests.
-  - Test: on Setup and Cut at all 3 sizes, at most 1 visible `.pill` holds the state text, and upper-case "TORCH" isn't shown.
-- **4.13 Demo hint on Stopped.** "Demo: tap here and the edges are set up for you." shows under the bed on Cut › Stopped. The text comes from `js/cut/preview.js:49`; `js/ui/refresh.js:142-152` only moves it into `#fitChip` and never hides it off Setup.
-  - Fix: show it only when step = Setup.
-  - Test: demo, stop a job: `#fit` and `#fitChip` don't contain "Demo:" on step 3.
-- **4.26 Bundle the font.** There's no Barlow in the CSS (`--font: system-ui…`, `css/tokens.css:77`), but the canvas labels ask for "Barlow, system-ui" (`js/cut/preview.js:206` and others). Bundling it should also fix the 1440 × 800 machine-setup overlap above; re-run 96 and 113 right after.
+- Next up (Round 8 part 2) is under Working on, so there's no separate prep. Pointers for 4.10, 4.17 and the two flaky suites are above. 8.2 is now approved (top of this report).
+- 63 / 66: last run's notes still apply (63 is 200 of 373 px = 54 % against 55 %; 66 is the r13 laptop toolbar in a column).
 
 ### Plan progress (r15)
 - **Round 1:** done ✓
-- **Round 2:** done ✓ (2.1–2.19 verified; only your live-site motor-mount run is left).
-- **Round 3:** partly done. Done: 3.1, 3.3, 3.7, 3.8, 3.9. Working on: 3.2, 3.4–3.6, 3.10–3.12.
-- **Round 4:** 4.14 done, 4.2 partly done; the rest is Next up.
-- **Round 5:** not started (3D check still flags 25 of 93 models, as expected).
-- **Round 6:** not started.
-- **Round 7:** 7.1–7.4 done and gated; 7.5–7.9 not started.
-- **Rounds 8 and 9:** not started.
+- **Round 2:** done ✓ (Josh's own live motor-mount run is the only thing left).
+- **Round 3:** done ✓
+- **Round 4:** done except 4.10 and 4.17.
+- **Round 5:** done ✓
+- **Round 6:** done ✓
+- **Round 7:** done ✓ (63 / 66 carried to Round 8).
+- **Round 8:** partly done. 8.3–8.6 done, 8.1 part done (the split; @layer and container queries not started). 8.2 approved.
+- **Rounds 9 and 10:** not started (need Josh's approval).
 
 ### Unit + e2e results
-- **Unit:** 24,868 / 24,870 (only the known C9-S2R).
-- **e2e passing:** 112_r15_safety 36/36 · 120_every_tool 594/594 · 121_features 57/57 · 122_loose_holes 25/25 · 123_features_phone 23/23.
-- **e2e failing:** 113_r15_fits 308/310 and 96_fits_screen 268/270, only the 1440 × 800 machine-setup font overlap above (already there at `f47ca41`).
-- **porta_check:** every screen and tool at 1280 × 600, 1366 × 640 and 1536 × 730 is clean, with no page errors.
+- **Unit:** 25,363 / 25,365 in 61 suites; only the known C9-S2R ×2 fails.
+- **e2e passing:** 20 36/36 · 22 33/33 · 59 81/81 · 70 79/79 · 74 81/81 · 96_fits_screen 270/270 · 110 36/36 · 111 19/19 · 112 36/36 · 113 310/310 · 120 602/602 (re-run) · 121 57/57 · 123 23/23 · 124 67/67 · 125 220/220 · 126 30/30 · 127 28/28
+- **e2e failing:** 92_r9_chrome flaky (3 of 7) · 122_loose_holes flaky (~1 in 3) · 47_ux2 ×2 and 96_fold3d ×1 (known) · 40 can't run here (axe-core missing).
+- **porta_check:** every screen and tool at 1280 × 600, 1366 × 640 and 1536 × 730 is clean, with no page errors. 93 fold presets, 0 flagged.
 
 ### For Josh to decide / ideas for Josh (not to be built until he approves)
-- **Suite 55, section 11:** it expects Space not to latch an E-stop on the menu and Make screens, and STOP to be hidden on Make. The app does both, and has since before r15. Space being STOP everywhere is the safer choice. Should the test be updated in Round 7 to match "Space is always STOP"? The house rule is never to weaken a test, so it's Josh's call.
+- **Idea, test only:** unit 40 compares flat and 3D areas only at 0 mm sheet. At a real 3 mm, a sharp-cornered 3D shows the outside surface, so the areas can't match by design (U-channel 1.11, J-channel 1.27). A cheap extra check: at the job's 3 mm, the 3D's outside size equals the typed outside sizes for every fold preset.
 
 ## History
-- **21 Nov 11:00 @ a289e67:** Round 1 re-verified; 2.17 confirmed for presets; Round 3 remainder prepped (commit `89c6650` of this file); 41 item 11 reported as a regression from `55c3d71` (disputed by the 11:09 run, see above).
+- **21 Nov 11:09 @ 71e68d5:** Round 2 verified done (2.2, 2.6, 2.12, 2.15, 2.17–2.19), 3.9 and 4.14 fixed. Found the phone help line said twice and the sideways pill over the Features sheet (both fixed since). The 1440 × 800 font overlap led to 4.26.
+- **21 Nov 11:00 @ a289e67:** Round 1 re-verified; 2.17 confirmed for presets; Round 3 remainder prepped. 41 item 11 reported as a regression from `55c3d71`, later explained as the test launcher change (Not a bug).
 - **21 Nov 09:30 @ bb5aadb:** Round 1 done; Round 2 mostly done. Found the 1280 × 600 Arrange overflow (3.9) and Download G-code off screen on Stopped (4.14), both now fixed. 25 / 93 3D models flagged (Round 5).
