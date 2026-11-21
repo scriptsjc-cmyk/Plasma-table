@@ -269,8 +269,17 @@ export function bindFeatureList() {
   host.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { closeMenus(); return; }
     const row = e.target.closest && e.target.closest(".feat-row");
-    if (!row || ["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+    if (!row) return;
     const fid = Number(row.dataset.fid);
+    // r15 2.15: Ctrl+D also works while typing in the open row (the typed value is applied first); Delete there still edits the text
+    if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D") && e.target.matches("[data-ff]")) {
+        e.preventDefault(); e.stopPropagation();
+        e.target.dispatchEvent(new Event("change", { bubbles: true }));
+        act(fid, "dup");
+      }
+      return;
+    }
     if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); e.stopPropagation(); act(fid, "del"); }
     else if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D")) { e.preventDefault(); e.stopPropagation(); act(fid, "dup"); }
   });

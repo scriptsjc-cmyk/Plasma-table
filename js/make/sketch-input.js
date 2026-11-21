@@ -606,7 +606,9 @@ export class InputMethods {
       if ([...document.querySelectorAll('[aria-modal="true"]')].some((el) => !el.classList.contains("hidden") && !el.hidden && el.getClientRects().length > 0)) return;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement && document.activeElement.tagName)) return;
       if (document.getElementById("drawHud") && !document.getElementById("drawHud").classList.contains("hidden") && document.getElementById("drawHud").contains(document.activeElement)) return;
-      if (document.activeElement.getAttribute("role") === "separator") return;      // the focused picture divider owns its arrow keys
+      if (document.activeElement.getAttribute("role") === "separator") return;
+      // r15 2.15: a focused Features row owns Delete / Ctrl+D (they act on the row, never on the whole part)
+      if (document.activeElement.closest && document.activeElement.closest("#featPanel")) return;      // the focused picture divider owns its arrow keys
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
       if (e.key === " ") { this.spaceDown = false; return; } // Space is STOP, never pan
