@@ -1,0 +1,267 @@
+<!-- Settings, the how-to guide and the version popover. Loaded into the shell at start-up. -->
+<template data-slot="help-version">
+<!-- version / release popover -->
+<div id="verPop" class="shapelib hidden" role="dialog" aria-modal="true">
+  <div class="shapelib-card slim">
+    <div class="shapelib-head">
+      <h2 id="verTitle">Versions</h2>
+      <button type="button" id="verClose">Close</button>
+    </div>
+    <div id="verBody" class="varrow wrap"></div>
+  </div>
+</div>
+</template>
+<template data-slot="settings">
+<!-- settings -->
+<div id="settingsDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="shapelib-card acctcard wide">
+    <div class="shapelib-head">
+      <h2 id="settingsTitle">Settings</h2>
+      <button type="button" class="acct-close" id="settingsClose">Close</button>
+    </div>
+    <p class="muted small setintro"><span class="beg-copy">The everyday settings for your table, each with a short explanation.</span><span class="pro-copy">Firmware tools (steps/mm, invert, raw $ settings) are under Firmware, after a warning. Those writes only go out when the machine is Idle and no job is running, and the current $$ list is backed up first.</span></p>
+    <div id="settingsTabs" class="settabs" role="tablist"></div>
+
+    <div class="setpane hidden yourspane" data-setpane="yours">
+      <h3>Make it yours</h3>
+      <p class="muted small">These choices stay on this device, and each signed-in account on this browser keeps its own. They are not uploaded to the account (the server has nowhere to keep them yet).</p>
+      <div class="yours-grid">
+        <label>Theme
+          <select id="yoursTheme">
+            <option value="auto">Match the device</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+        <label>Accent colour
+          <select id="yoursAccent">
+            <option value="blue">Blue</option>
+            <option value="teal">Teal</option>
+            <option value="green">Green</option>
+            <option value="purple">Purple</option>
+            <option value="navy">Navy</option>
+          </select>
+        </label>
+        <label>Toolbar
+          <select id="yoursToolbar">
+            <option value="bottom">Bottom of the picture</option>
+            <option value="top">Top of the picture</option>
+            <option value="left">Left of the picture</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="yoursHideHeader"> Hide the header on Make and Cut (a faint logo in the corner brings it back; STOP stays visible on Cut)</label>
+        <label>Toolbar button size
+          <select id="yoursButtons">
+            <option value="compact">Compact</option>
+            <option value="normal">Normal</option>
+            <option value="large">Large</option>
+          </select>
+        </label>
+        <label>Units
+          <select id="yoursUnits">
+            <option value="mm">Millimetres</option>
+            <option value="inch">Inches (display only)</option>
+          </select>
+        </label>
+        <label class="check"><input id="yoursGrid" type="checkbox"> Show the grid</label>
+        <label>Grid size
+          <select id="yoursGridSize">
+            <option value="0">Auto</option>
+            <option value="1">1 mm</option>
+            <option value="2">2 mm</option>
+            <option value="5">5 mm</option>
+            <option value="10">10 mm</option>
+            <option value="20">20 mm</option>
+            <option value="50">50 mm</option>
+          </select>
+        </label>
+        <label class="check"><input id="yoursSnap" type="checkbox"> Snap to the grid</label>
+        <label class="check"><input id="yoursWheelZoom" type="checkbox"> Wheel zooms (instead of pan)</label>
+        <label>Canvas background
+          <select id="yoursCanvas">
+            <option value="default">Default</option>
+            <option value="white">White</option>
+            <option value="paper">Paper</option>
+            <option value="grey">Grey</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
+      </div>
+      <div class="row wrap yours-actions"><button type="button" id="yoursReset" class="secondary">Reset to defaults</button></div>
+    </div>
+
+    <div class="setpane" data-setpane="machine">
+      <h3>Machine and axes</h3>
+      <p class="muted small">Bed size is the travel the torch may use. To reverse a motor, use Machine setup → Motor direction (Stock or Reversed).</p>
+      <div class="grid3">
+        <label>Bed X (mm)<input id="setBedX" type="number" min="50" step="1" inputmode="decimal"></label>
+        <label>Bed Y (mm)<input id="setBedY" type="number" min="50" step="1" inputmode="decimal"></label>
+        <label>Bed Z (mm)<input id="setBedZ" type="number" min="10" step="1" inputmode="decimal"></label>
+      </div>
+      <p id="setFirmwareHint" class="muted small"></p>
+    </div>
+
+    <div class="setpane hidden" data-setpane="speeds">
+      <h3>Speeds and acceleration</h3>
+      <p class="muted small">Maximum rates (mm/min) and acceleration (mm/s²). These are the controller limits, not the cut speed for a material — that lives under More cut options on the cutting screen.</p>
+      <div class="grid3">
+        <label>X max rate<input id="setRateX" type="number" min="1" step="10" inputmode="decimal"></label>
+        <label>Y max rate<input id="setRateY" type="number" min="1" step="10" inputmode="decimal"></label>
+        <label>Z max rate<input id="setRateZ" type="number" min="1" step="10" inputmode="decimal"></label>
+        <label>X acceleration<input id="setAccX" type="number" min="1" step="10" inputmode="decimal"></label>
+        <label>Y acceleration<input id="setAccY" type="number" min="1" step="10" inputmode="decimal"></label>
+        <label>Z acceleration<input id="setAccZ" type="number" min="1" step="10" inputmode="decimal"></label>
+      </div>
+    </div>
+
+    <div class="setpane hidden" data-setpane="torch">
+      <h3>Torch and THC</h3>
+      <p class="muted small">Pierce height is how high the torch sits while the arc starts. Cut height is the running height. THC (torch height control by voltage) is only used if the controller has it.</p>
+      <div class="grid3">
+        <label>Pierce height (mm)<input id="setPierceH" type="number" min="0" step="0.1" inputmode="decimal"></label>
+        <label>Cut height (mm)<input id="setCutH" type="number" min="0" step="0.1" inputmode="decimal"></label>
+        <label>Pierce delay (s)<input id="setPierceD" type="number" min="0" step="0.05" inputmode="decimal"></label>
+        <label>THC voltage (V)<input id="setThcV" type="number" min="0" step="0.1" inputmode="decimal"></label>
+      </div>
+      <label class="check"><input id="setThcOn" type="checkbox"> THC on (if supported)</label>
+      <p id="setThcNote" class="muted small"></p>
+      <label>Cutter type
+        <select id="setCutterKind">
+          <option value="touch-start">Touch-start (Reboot 60A — current cutter)</option>
+          <option value="pilot-arc">Pilot arc (Andeli CUT-65DS)</option>
+          <option value="hf">High frequency (HF)</option>
+        </select>
+      </label>
+      <p class="muted small">Josh’s current Reboot 60A is touch-start. The Andeli CUT-65DS is a pilot-arc cutter. This does not change pierce or cut numbers.</p>
+    </div>
+
+    <div class="setpane hidden" data-setpane="pierce">
+      <h3>Pierce and cut</h3>
+      <p class="muted small">These same values appear on the cutting screen under More cut options and are written into the G-code for each pierce. The selected material preset fills them automatically.</p>
+      <p class="muted">Pierce height, cut height and delay are on Torch &amp; THC. Cut speed is under More cut options on the cutting screen.</p>
+      <div class="row wrap">
+        <button type="button" id="btnPierceJump" class="secondary">Open Torch &amp; THC</button>
+        <button type="button" id="btnPierceSpeed" class="secondary">Open cut speed</button>
+      </div>
+    </div>
+
+    <div class="setpane hidden" data-setpane="etch">
+      <h3>Etch / mark</h3>
+      <p class="muted small">Score and Mark lines, fold marks, and etched text run as a first pass, before any cuts. They must never cut through the sheet. Choose whether that pass is a light plasma etch (low current, high speed, no pierce delay) or a scribe / marker tool. Turn the cutter to its lowest amps for a plasma etch; the job can pause so you can set the dial.</p>
+      <p class="muted small" id="setCutterEtchNote"></p>
+      <div class="row wrap">
+        <label class="check"><input type="radio" name="setEtchTool" value="plasma" checked> Plasma etch</label>
+        <label class="check"><input type="radio" name="setEtchTool" value="scribe"> Scribe / marker tool</label>
+      </div>
+      <div id="setEtchPlasmaFields">
+        <p class="muted small">Leave current or speed blank to use a safe estimate (lower current, faster feed, no pierce delay). Etch height defaults to cut height + 1.5 mm — a starting point, test on scrap. The run is blocked if etch height is at or below cut height. Turn the cutter to its lowest amps before the etch pass.</p>
+        <div class="grid3">
+          <label>Etch current (A)<input id="setEtchAmps" type="number" min="5" max="200" step="1" inputmode="decimal" placeholder="lowest amps"></label>
+          <label>Etch speed (mm/min)<input id="setEtchFeed" type="number" min="50" max="30000" step="10" inputmode="decimal" placeholder="high (from estimate)"></label>
+          <label>Etch height (mm)<input id="setEtchHeight" type="number" min="0" max="25" step="0.1" inputmode="decimal" placeholder="cut height + 1.5"></label>
+        </div>
+        <p class="muted small">Etch height is a starting point, test on scrap.</p>
+      </div>
+      <div id="setEtchScribeFields" class="hidden">
+        <p class="muted small">The tool-on and tool-off M-codes are sent as written. They cannot be the torch codes M3 / M5. An optional XY offset is added to every etch move (for a marker that sits beside the torch).</p>
+        <div class="grid3">
+          <label>Tool on<input id="setScribeOn" type="text" value="M8" maxlength="5" spellcheck="false"></label>
+          <label>Tool off<input id="setScribeOff" type="text" value="M9" maxlength="5" spellcheck="false"></label>
+          <label>Offset X (mm)<input id="setScribeOffX" type="number" min="-50" max="50" step="0.1" inputmode="decimal" placeholder="0"></label>
+          <label>Offset Y (mm)<input id="setScribeOffY" type="number" min="-50" max="50" step="0.1" inputmode="decimal" placeholder="0"></label>
+        </div>
+      </div>
+      <label class="check" id="setEtchPauseWrap"><input id="setEtchPause" type="checkbox" checked> Pause before and after plasma etch so you can set the current on the unit</label>
+      <p class="muted small" id="setEtchPauseNote">The cut stops with the torch off. The cutting screen tells you the etch and cut currents to set, then Resume continues. Turn this off if you set the current some other way. Scribe / marker is not paused.</p>
+    </div>
+
+    <div class="setpane hidden" data-setpane="materials">
+      <h3>Material library</h3>
+      <p class="muted small">Admin-published presets are the defaults. Anything you save here stays on this device and overrides the default for that material and thickness. The Cut flow uses the selected preset.</p>
+      <div id="setMatList"></div>
+      <form id="formSetPreset" class="col">
+        <div class="grid2">
+          <label>Material<input id="setPreMat" required placeholder="Mild steel"></label>
+          <label>Thickness (mm)<input id="setPreThk" required type="number" min="0.1" step="0.1" inputmode="decimal"></label>
+        </div>
+        <div class="grid3">
+          <label>Amps<input id="setPreAmps" type="number" min="0" step="1" inputmode="decimal"></label>
+          <label>Speed (mm/min)<input id="setPreSpeed" type="number" min="0" step="10" inputmode="decimal"></label>
+          <label>Kerf (mm)<input id="setPreKerf" type="number" min="0" step="0.1" inputmode="decimal"></label>
+          <label>Pierce delay (s)<input id="setPreDelay" type="number" min="0" step="0.05" inputmode="decimal"></label>
+          <label>Pierce height (mm)<input id="setPreHeight" type="number" min="0" step="0.1" inputmode="decimal"></label>
+        </div>
+        <button type="submit" class="go">Save preset on this device</button>
+      </form>
+    </div>
+
+    <div class="setpane hidden" data-setpane="homing">
+      <h3>Homing and limits</h3>
+      <p class="muted small">Use the Setup tab wizard to find home and teach the bed edges (crash protection). Pro firmware tools can change $20–$27 and $130–$132. Soft limits need a homing cycle and a correct bed size.</p>
+    </div>
+
+    <div class="setpane hidden" data-setpane="io">
+      <h3>I/O</h3>
+      <p class="muted small">Live readout of the torch relay, probe/ohmic, limits and e-stop. Press a switch on the machine to confirm the wiring. The same lamps are on the Setup tab.</p>
+      <div id="setIoLive" class="lamps grid"></div>
+    </div>
+
+    <div class="setpane hidden" data-setpane="units">
+      <h3>Units and G-code dialect</h3>
+      <p class="muted small">The table and drawings are in millimetres. You can still export a file for Mach3, FluidNC or GRBL. Mach3 files have no $ commands, M3/M5 for the torch, G4 P in seconds, and are wrapped in %.</p>
+      <label>Display units
+        <select id="setUnits"><option value="mm">Millimetres</option><option value="inch">Inches (display only)</option></select>
+      </label>
+      <label>Default download dialect
+        <select id="setDialect">
+          <option value="grbl">GRBL / grblHAL</option>
+          <option value="fluidnc">FluidNC</option>
+          <option value="mach3">Mach3</option>
+        </select>
+      </label>
+      <label class="check"><input id="setLineNo" type="checkbox"> Include line numbers in downloads</label>
+      <label class="check pro-only"><input id="setSizeCheck" type="checkbox" checked> Ask “is this the right size?” after opening a DXF or SVG</label>
+    </div>
+
+    <div class="setpane hidden" data-setpane="about">
+      <h3>About</h3>
+      <img src="logo.svg" alt="Porta Plazma CNC" class="aboutmark">
+      <p id="aboutVer" class="aboutver"></p>
+      <p class="muted small">The version and commit tell you which release this browser is running. If it differs from what you expect, press Check for a new version.</p>
+      <div class="row wrap"><button type="button" id="btnCheckVer">Check for a new version</button><button type="button" id="btnAboutReload">Reload now</button></div>
+      <p id="aboutNote" class="muted small"></p>
+    </div>
+
+    <div class="setpane hidden" data-setpane="backup">
+      <h3>Backup and restore</h3>
+      <p class="muted small">Save the app settings and your material presets, and (when connected) the controller $ list. Restore validates a $ backup before sending anything.</p>
+      <div class="row wrap">
+        <button type="button" id="btnAppBackup">Download app settings</button>
+        <button type="button" id="btnAppRestore">Restore app settings</button>
+        <input id="appRestoreFile" type="file" accept=".json,application/json" class="hidden" aria-label="Restore app settings file">
+      </div>
+    </div>
+
+    <div class="setpane hidden" data-setpane="firmware">
+      <h3>Firmware (Pro)</h3>
+      <div id="setFirmwareHost"></div>
+    </div>
+
+    <div class="row setsave"><button type="button" id="btnSaveSettings" class="go">Save settings</button></div>
+  </div>
+</div>
+
+<!-- how-to guide -->
+<div id="howtoDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+  <div class="shapelib-card acctcard wide">
+    <div class="shapelib-head">
+      <h2 id="howtoTitle">How to use</h2>
+      <button type="button" class="acct-close" id="howtoClose">Close</button>
+    </div>
+    <div class="howto-grid">
+      <nav id="howtoNav" class="howto-nav" aria-label="Guide sections"></nav>
+      <div id="howtoBody" class="howto-body"></div>
+    </div>
+  </div>
+</div>
+</template>

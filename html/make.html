@@ -240,3 +240,196 @@
   </div>
 </div>
 </template>
+<template data-slot="make-entry">
+<!-- number pad (value entry) -->
+<div id="numPad" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="numPadLabel">
+  <div class="numpad-card">
+    <div class="numpad-label" id="numPadLabel">Size (mm)</div>
+    <div class="numpad-value" id="numPadValue" inputmode="decimal"></div>
+    <div class="numpad-keys" id="numPadKeys"></div>
+    <div class="numpad-row">
+      <button type="button" id="numPadCancel">Cancel</button>
+      <button type="button" id="numPadEnter" class="go">Enter</button>
+    </div>
+  </div>
+</div>
+<!-- CAD size fields dialog -->
+<div id="cadDialog" class="numpad hidden" role="dialog" aria-modal="true">
+  <div class="numpad-card">
+    <h3 id="cadTitle">Options</h3>
+    <div id="cadFields" class="cadfields"></div>
+    <div class="numpad-row">
+      <button type="button" id="cadCancel">Cancel</button>
+      <button type="button" id="cadOk" class="go">Apply</button>
+    </div>
+  </div>
+</div>
+<!-- floating tool bar -->
+<div id="toolBar" class="toolbar hidden">
+  <button type="button" id="toolArc">Arc</button>
+  <button type="button" id="toolFinish" class="go">Close outline</button>
+  <button type="button" id="toolCancel">Cancel</button>
+</div>
+</template>
+<template data-slot="make-phone">
+<!-- phone Make-a-part: a compact tool bar and on-demand bottom sheets -->
+<nav id="phoneBar" class="phonebar hidden" hidden aria-label="Drawing tools">
+  <button type="button" data-ph="select" title="Select">Pointer</button>
+  <button type="button" data-ph="line" title="Draw a line or outline">Line</button>
+  <button type="button" data-ph="rect" title="Rectangle">Rectangle</button>
+  <button type="button" data-ph="disc" title="Circle">Circle</button>
+  <button type="button" data-ph="measure" title="Measure">Measure</button>
+  <button type="button" data-ph="undo" title="Undo">Undo</button>
+  <button type="button" data-ph="more" title="More tools" aria-expanded="false">More</button>
+</nav>
+<div id="featSheet" class="feat-sheet hidden" hidden role="dialog" aria-labelledby="featSheetTitle">
+  <div class="feat-sheet-head"><b id="featSheetTitle">Features</b><button type="button" id="featSheetClose" class="small">Close</button></div>
+  <div id="featSheetBody"></div>
+</div>
+<div id="phoneSheet" class="phonesheet hidden" hidden role="dialog" aria-label="Shape options">
+  <button type="button" class="phonesheet-handle" id="phoneSheetClose" aria-label="Close"></button>
+  <div id="phoneSheetBody"></div>
+</div>
+<div id="drawSizeDlg" class="safedlg hidden" hidden role="dialog" aria-modal="true" aria-labelledby="drawSizeTitle">
+  <div class="safedlg-card">
+    <h2 id="drawSizeTitle">Size</h2>
+    <p id="drawSizeBody" class="muted"></p>
+    <div class="grid2" id="drawSizeFields"></div>
+    <div class="row safedlg-actions">
+      <button type="button" id="drawSizeCancel">Cancel</button>
+      <button type="button" id="drawSizeOk" class="go">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Customise toolbar: add / remove / reorder Advanced tools; does not sit over the canvas until opened. -->
+<div id="toolbarCustom" class="toolbarcustom hidden" hidden role="dialog" aria-modal="true" aria-labelledby="tcTitle" aria-hidden="true">
+  <div class="tc-card">
+    <div class="tc-head">
+      <h2 id="tcTitle">Customise toolbar</h2>
+      <button type="button" id="tcReset" class="small">Reset to default</button>
+      <button type="button" id="tcClose" class="small" aria-label="Close">✕</button>
+    </div>
+    <p class="muted small tc-note">Pick which drawing tools appear in the Advanced toolbar, and in which order. Undo, Redo, Fit and Delete stay in the Make a part header. Your choices are saved on this device for the signed-in account.</p>
+    <div class="tc-cols">
+      <section class="tc-col" aria-labelledby="tcMineTitle">
+        <h3 id="tcMineTitle">Your toolbar</h3>
+        <ul id="tcMine" class="tc-list"></ul>
+      </section>
+      <section class="tc-col" aria-labelledby="tcCatTitle">
+        <h3 id="tcCatTitle">Catalogue</h3>
+        <div id="tcCatalog" class="tc-catalog"></div>
+      </section>
+    </div>
+  </div>
+</div>
+<!-- dimension typing (replaces the on-screen calculator pad) -->
+<div id="drawHud" class="drawhud hidden" hidden aria-label="Type while drawing"></div>
+<div id="cadCtxMenu" class="cadctx hidden" hidden role="menu" aria-label="Drawing menu"></div>
+<div id="sidewaysHint" class="sideways-hint hidden" hidden role="status" aria-live="polite">
+  <span>Turn your phone sideways for more room</span>
+  <button type="button" id="sidewaysHintDismiss" class="small" aria-label="Dismiss">✕</button>
+</div>
+<div id="dimEdit" class="dimedit hidden" hidden>
+  <label id="dimEditLabel" for="dimEditInput">Size (mm)</label>
+  <input id="dimEditInput" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done">
+  <!-- the phone's decimal keypad has no + - x / ( ) and no Return key, so these sit under the box on touch screens -->
+  <div id="dimOps" class="dimops" role="group" aria-label="Maths keys">
+    <button type="button" data-op="+" aria-label="plus">+</button><button type="button" data-op="-" aria-label="minus">−</button><button type="button" data-op="*" aria-label="times">×</button><button type="button" data-op="/" aria-label="divide">÷</button><button type="button" data-op="(" aria-label="open bracket">(</button><button type="button" data-op=")" aria-label="close bracket">)</button><button type="button" id="dimOk" class="go" aria-label="Apply">OK</button>
+  </div>
+  <p class="muted small">Enter applies · Esc cancels · Tab next · arrows nudge · maths like 100/2</p>
+</div>
+
+<!-- full-screen shape editor chrome -->
+<div id="fsBar" class="fsbar hidden" hidden>
+  <button type="button" id="fsDone" class="go">Done</button>
+  <button type="button" id="fsSave" title="Save this part to your account">Save</button>
+  <span class="muted small">Esc also exits. The part stays on the canvas.</span>
+</div>
+</template>
+<template data-slot="make-files">
+<!-- import DXF / SVG files -->
+<div id="importDlg" class="shapelib acctdlg impdlg hidden" role="dialog" aria-modal="true" aria-labelledby="impTitle">
+  <div class="shapelib-card">
+    <div class="shapelib-head"><h2 id="impTitle">Import DXF / SVG</h2><button type="button" id="impCancel">Cancel</button></div>
+    <p class="muted small impintro">Pick up to 20 DXF or SVG drawings. Each one is saved as a part (named after the file) in the folder below. A file that can't be read is skipped and the rest still import. Only closed outlines can be cut: loose lines that don't join up into a shape are reported next to the file.</p>
+    <div class="impmeta">
+      <label>Folder <input id="impFolder" list="impFolderList" maxlength="60" autocomplete="off"></label>
+      <datalist id="impFolderList"></datalist>
+      <label id="impDrop" class="drop impdrop"><input id="impFiles" type="file" accept=".dxf,.svg" multiple><b>Choose DXF or SVG files</b><span class="muted">or drop them here (up to 20)</span></label>
+    </div>
+    <p id="impNote" class="muted small"></p>
+    <div id="impAll" class="row hidden unitall"><span class="small">Size check for all files:</span>
+      <button type="button" class="small" data-all="1">All are mm</button><button type="button" class="small" data-all="25.4">All were inches (× 25.4)</button><button type="button" class="small" data-all="0.03937">All ÷ 25.4</button></div>
+    <div id="impList" class="implist"></div>
+    <progress id="impBar" class="hidden" value="0" max="1"></progress>
+    <p id="impSummary" class="hidden okchip"></p>
+    <div class="row"><button type="button" id="impGo" class="xl go grow" disabled>Import</button></div>
+  </div>
+</div>
+
+<!-- resize a part -->
+<div id="resizeDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="resizeTitle">
+  <div class="numpad-card sizecard">
+    <h3 id="resizeTitle">Exact width and height</h3>
+    <p id="resizeNow" class="muted small"></p>
+    <div class="grid2">
+      <label>Width (mm)<input id="rsW" type="number" min="2" step="any" inputmode="decimal"></label>
+      <label>Height (mm)<input id="rsH" type="number" min="2" step="any" inputmode="decimal"></label>
+    </div>
+    <label class="check"><input type="checkbox" id="rsKeep" checked> Keep proportions</label>
+    <p class="muted small">Untick it to stretch the part. A stretched arc keeps its sweep angle, so a circle turns into a rounded curve, not a true circle.</p>
+    <div class="row"><button type="button" id="rsCancel" class="xl grow">Cancel</button><button type="button" id="rsOk" class="xl go grow">Resize</button></div>
+  </div>
+</div>
+
+<!-- set a part size -->
+<div id="sizeDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="sizeTitle">
+  <div class="numpad-card sizecard">
+    <h3 id="sizeTitle">Check the size</h3>
+    <p id="sizeText" class="sizetext"></p>
+    <p id="sizeUnits" class="muted small"></p>
+    <label id="sizeAllRow" class="check small hidden"><input type="checkbox" id="sizeAll"> <span id="sizeAllText">Same answer for the other files</span></label>
+    <div class="col">
+      <button type="button" id="sizeYes" class="xl go">Yes, that's right</button>
+      <button type="button" id="sizeInch" class="xl">It was inches (× 25.4)</button>
+      <button type="button" id="sizeMm" class="xl">It was mm, shown as inches (÷ 25.4)</button>
+      <div class="row sizescale">
+        <label class="grow">Scale so it is
+          <span class="row" style="margin-top:0"><input id="sizeTo" type="number" min="1" step="any" inputmode="decimal" placeholder="mm"><select id="sizeAxis" aria-label="Wide or tall"><option value="w">mm wide</option><option value="h">mm tall</option></select></span>
+        </label>
+        <button type="button" id="sizeScale" class="small">Scale to this</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- import: ask what to do with the file -->
+<div id="importAskDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="importAskTitle">
+  <div class="numpad-card">
+    <h3 id="importAskTitle">Add to the sheet, or replace?</h3>
+    <p id="importAskText" class="muted small">You already have a drawing open.</p>
+    <div class="col">
+      <button type="button" id="importAskAdd" class="xl go">Add to the sheet</button>
+      <button type="button" id="importAskReplace" class="xl">Replace what is open</button>
+      <button type="button" id="importAskCancel" class="small">Cancel</button>
+    </div>
+  </div>
+</div>
+<!-- straighten a wobbly line -->
+<div id="straightDlg" class="numpad hidden" role="dialog" aria-modal="true" aria-labelledby="straightTitle">
+  <div class="numpad-card">
+    <h3 id="straightTitle">Straight cut</h3>
+    <p class="muted small">Cut one straight line, no drawing needed. Pick the direction and length, then set the start point in the next steps (jog the torch there and press Start here).</p>
+    <div class="grid2">
+      <label>Direction
+        <select id="stDir"><option value="x">Along X (left to right)</option><option value="y">Along Y (front to back)</option></select>
+      </label>
+      <label>Length (mm)<input id="stLen" type="number" min="1" step="any" inputmode="decimal" value="300"></label>
+      <label>Start X (mm, optional)<input id="stX" type="number" step="any" inputmode="decimal" placeholder="Auto (use torch spot)"></label>
+      <label>Start Y (mm, optional)<input id="stY" type="number" step="any" inputmode="decimal" placeholder="Auto (use torch spot)"></label>
+    </div>
+    <p class="muted small" id="stNote">Typed start: measured from the machine's home corner. It needs the machine homed and moves nothing, it only sets the start point.</p>
+    <div class="numpad-row"><button type="button" id="stCancel">Cancel</button><button type="button" id="stOk" class="go">Make the cut</button></div>
+  </div>
+</div>
+</template>

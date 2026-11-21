@@ -1,5 +1,5 @@
 // Load each main-menu area's HTML (Make a part, Go to cutting, Your parts,
-// Machine setup) before the app starts. There is no build step: the files are
+// Machine setup, plus the account and settings dialogs) before the app starts. There is no build step: the files are
 // fetched at run time and listed in the service-worker precache, so the app
 // still works offline and on GitHub Pages.
 const PARTIALS = [
@@ -7,6 +7,8 @@ const PARTIALS = [
   "html/cut.html",
   "html/setup.html",
   "html/parts.html",
+  "html/account.html",
+  "html/settings.html",
 ];
 
 function fillSlot(id, nodes) {
