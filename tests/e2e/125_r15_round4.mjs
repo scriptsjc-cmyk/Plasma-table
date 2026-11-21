@@ -63,6 +63,47 @@ try {
     t.check("no page error (phone)", !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 4.x-extra (Josh 21 Nov): the ☰ menu's Export DXF / SVG and
+  // Download G-code open a pop-up you can see and use on a laptop (it opened inside a hidden header wrapper / cut-screen row)
+  for (const prof of ["d1536x730", "d1280x600"]) {
+    const page = await newPage(br, prof, { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    const popState = (id, btnId) => ev(page, ([id, btnId]) => {
+      const p = document.getElementById(id), b = document.getElementById(btnId);
+      const r = p && p.getBoundingClientRect(), br = b && b.getBoundingClientRect();
+      const hit = br && br.width > 0 ? document.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2) : null;
+      const top = document.querySelector(".topbar"), tb = top ? top.getBoundingClientRect().bottom : 0;
+      return { open: !!p && !p.classList.contains("hidden"), vis: !!p && p.getClientRects().length > 0 && r.width > 0, onScreen: !!r && r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && r.top >= 0,
+        belowHeader: !!r && r.top >= tb - 1, btnHit: !!(hit && b && (hit === b || b.contains(hit))) };
+    }, [id, btnId]);
+    const viaMenu = async (item) => {
+      await page.click("#btnTopMenu"); await sleep(250);
+      await page.click("#" + item); await sleep(400);
+    };
+    await ev(page, () => { const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { persist: false, autoFs: false });
+      const s = T.sketch; s.clear(); s.add("rect", true, { w: 80, h: 50 }); s.commit(); s.draw(); });
+    await sleep(300);
+    await viaMenu("menuExportDxf");
+    const dx = await popState("makeExportPop", "makeExpDxf");
+    t.check(`4.x-extra ${prof} Make: ☰ › Export DXF / SVG shows the Save the drawing pop-up, on screen under the header, DXF clickable`, dx.open && dx.vis && dx.onScreen && dx.belowHeader && dx.btnHit, J(dx));
+    if (dx.vis) { await page.click("#makeExpCancel"); await sleep(300); }
+    const dx2 = await popState("makeExportPop", "makeExpDxf");
+    t.check(`4.x-extra ${prof} Make: its Cancel closes it`, !dx2.open, J(dx2));
+    await viaMenu("menuExportGcode");
+    const gc = await ev(page, () => ({ gate: (() => { const g = document.getElementById("gateDlg"); return !!g && !g.classList.contains("hidden"); })() }));
+    const gp = await popState("exportPop", "exportGo");
+    t.check(`4.x-extra ${prof} Make: ☰ › Download G-code shows Save G-code as (or the link-a-machine prompt), on screen and usable`, gc.gate || (gp.open && gp.vis && gp.onScreen && gp.btnHit), J({ gc, gp }));
+    await ev(page, () => { const c = document.getElementById("exportCancel"); if (c && c.getClientRects().length) c.click(); const g = document.querySelector("#gateDlg .acct-close"); if (g && g.getClientRects().length) g.click(); }); await sleep(300);
+    // the cutting screen's own Download G-code (what e2e 47 presses on step 1)
+    await ev(page, () => window.plasmaTest.sendToCutting()); await page.waitForFunction(() => window.plasmaTest.screen() === "cut");
+    await ev(page, () => window.plasmaTest.goStep(1)); await sleep(400);
+    await ev(page, () => document.getElementById("btnExport").click()); await sleep(400);
+    const g1 = await popState("exportPop", "exportGo");
+    const gate1 = await ev(page, () => { const g = document.getElementById("gateDlg"); return !!g && !g.classList.contains("hidden"); });
+    t.check(`4.x-extra ${prof} Cut step 1: Download G-code shows Save G-code as (or the link prompt), on screen and usable`, gate1 || (g1.open && g1.vis && g1.onScreen && g1.btnHit), J({ g1, gate1 }));
+    t.check(`no page error (${prof})`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("125 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
