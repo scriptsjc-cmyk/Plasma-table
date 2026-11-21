@@ -100,6 +100,36 @@ try {
     t.check("no page error (5.5)", !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 5.6 fold lines are easy to see, even on narrow strips
+  {
+    const page = await newPage(br, "d1440", { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    for (const mode of ["beginner", "pro"]) {
+      for (const id of ["signbr", "foldshelf", "pipeustrap"]) {
+        const r = await ev(page, async ([id, mode]) => {
+          const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode(mode, { persist: false, autoFs: false });
+          const s = T.sketch; s.clear(); s.add(id, true); s.commit(); s.pick([]); s.fitView(); s.draw();
+          await new Promise((r) => setTimeout(r, 250));
+          const dpr = window.devicePixelRatio || 1, ctx = s.cv.getContext("2d"), out = [];
+          for (const c of s.contoursOf(s.items[0]).filter((c) => c.role === "bend")) {
+            const [ax, ay] = s.toScreen(...c.pts[0]), [bx, by] = s.toScreen(...c.pts[1]);
+            const L = Math.hypot(bx - ax, by - ay); let strong = 0, n = 0, minL = 255;
+            for (let t = 0.05; t <= 0.95; t += 1 / L) {
+              const x = Math.round((ax + (bx - ax) * t) * dpr), y = Math.round((ay + (by - ay) * t) * dpr);
+              let best = 255;
+              for (let dy = -2; dy <= 2; dy++) { const d = ctx.getImageData(x, y + dy, 1, 1).data; const lum = 0.299 * d[0] + 0.587 * d[1] + 0.114 * d[2]; if (d[0] > d[2] + 40) best = Math.min(best, lum); }
+              n++; if (best < 125) strong++; minL = Math.min(minL, best);
+            }
+            out.push({ cover: Math.round((strong / Math.max(1, n)) * 100) / 100, minL: Math.round(minL) });
+          }
+          return out;
+        }, [id, mode]);
+        t.check(`5.6 ${mode === "pro" ? "Advanced" : "Simple"}: the ${id} fold lines are dark and mostly drawn (not pale)`, r.length > 0 && r.every((x) => x.cover >= 0.7 && x.minL <= 120), J(r));
+      }
+    }
+    t.check("no page error (5.6)", !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("126 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }

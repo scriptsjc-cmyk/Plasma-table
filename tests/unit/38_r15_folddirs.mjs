@@ -24,7 +24,9 @@ t.check("the bend allowance keeps the fold directions", (() => { const s = sh("f
   t.check("Z-bracket 3D: one leg at the bottom, one at the top", flats.length === 2 && Math.abs(flats[1] - flats[0] - p.web) < 1e-6, JSON.stringify(flats));
   const F = await import("../../js/make/flat3d.js");
   const flipped = F.foldPattern(s.makeFlat(p).map((c) => (c.role === "bend" ? { ...c, dir: "up" } : c)), [], { root: [p.len / 2, p.a / 2] });
-  const fl2 = flipped.faces.filter((f) => Math.abs(f.n[1]) > 0.99);
-  t.check("…and folding both lines up would give a U instead (so the direction is used)", fl2.length === 1);
+  const zr = (f) => [Math.min(...f.pts.map((q) => q[2])), Math.max(...f.pts.map((q) => q[2]))];
+  const overlap = (fs) => { const [a, b] = fs.map(zr); return Math.min(a[1], b[1]) - Math.max(a[0], b[0]) > 1; };
+  const legsZ = m.faces.filter((f) => Math.abs(f.n[1]) > 0.99), legsU = flipped.faces.filter((f) => Math.abs(f.n[1]) > 0.99);
+  t.check("…the Z's legs point away from each other; folding both lines up would lap them (so the direction is used)", legsZ.length === 2 && !overlap(legsZ) && legsU.length === 2 && overlap(legsU));
 }
 process.exit(t.done() ? 1 : 0);
