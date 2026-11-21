@@ -287,6 +287,18 @@ for (const [size, prof] of SIZES.filter(([sz]) => !ONLY.length || ONLY.includes(
     await sleep(300);
     await check(page, size, "machine-setup-" + tab, stopSamples);
   }
+  // r15: new console lines arrive while the Controller tab is open; the log must follow them (newest line in view)
+  const added = await ev(page, async () => {
+    const lg = document.querySelector("#setupView #log");
+    if (!lg || !lg.getClientRects().length) return { shown: false };
+    const c = await import(window.__J.console);
+    const n = lg.children.length;
+    for (let i = 1; i <= 25; i++) c.log("ok  (test line " + i + ")");
+    return { shown: true, added: lg.children.length - n };
+  });
+  t.check(`${size} machine-setup-controller: the console log is shown and new lines were logged`, added.shown && added.added > 0, JSON.stringify(added));
+  await sleep(200);
+  await check(page, size, "machine-setup-controller-new-lines", stopSamples);
   // Signed out (not an admin), the Controller tab explains itself instead of showing an empty panel.
   await ev(page, async () => { try { await window.plasmaTest.account.signOut(); } catch (e) {} window.plasmaTest.refresh(); });
   await ev(page, () => { const T = window.plasmaTest; T.showScreen("cut", { force: true }); const tab = document.querySelector('.tab[data-tab="setup"], #btnBarSetup'); if (tab) tab.click(); });

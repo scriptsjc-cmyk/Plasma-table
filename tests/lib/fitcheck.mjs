@@ -14,6 +14,7 @@ export const fitProblems = () => {
   const onCanvas = el => !!(el.closest && el.closest("#preview, #previewPane, .previewPane, .previewDock, #sketch, .cvwrap, .canvas-wrap, .bedwrap"));
   const isFlyout = el => !!(el.closest && el.closest("#toast, .toast, .popover, .tip, .hovertip, .info-pop, .info-tip, [role=tooltip], #connMenu, #topMenu, .menu-pop, .qb-pop, #qbMorePop, .speed, details.speed, details.sheetsize"));
   const panelOf = el => el.closest && el.closest(".card, .panel, [id$=Card], .mat-col, .sheet-col, .part-col, .setup-col, .torch-col, #srcShape, .insp, .inspector");
+  const isLog = el => el.id === "log" && !!el.closest("#setupView");
   const modal = [...document.querySelectorAll("[role=dialog], dialog, .shapelib, .presetbrowser, .acctdlg, .numpad, .impdlg")].find((el) => {
     if (el.id === "howtoDlg" || el.id === "settingsDlg") return false;
     if (el.classList.contains("hidden")) return false;
@@ -31,7 +32,8 @@ export const fitProblems = () => {
   for (const el of document.querySelectorAll("body *")) {
     if (!shown(el) || exempt(el) || !scope(el)) continue;
     const s = getComputedStyle(el);
-    if (/(auto|scroll)/.test(s.overflowY) && isBox(el, s, el.getBoundingClientRect()) && el.scrollHeight > el.clientHeight + 2) out.push("scrolls: " + (el.id || el.className));
+    // r15: the controller console log is the one box that may scroll; it has its own stricter check below instead
+    if (/(auto|scroll)/.test(s.overflowY) && !isLog(el) && isBox(el, s, el.getBoundingClientRect()) && el.scrollHeight > el.clientHeight + 2) out.push("scrolls: " + (el.id || el.className));
     if (/^(BUTTON|INPUT|SELECT|A)$/.test(el.tagName)) {
       const r = el.getBoundingClientRect();
       if (r.bottom > innerHeight + 1 || r.right > innerWidth + 1) out.push("off-screen: " + (el.id || el.textContent.trim().slice(0, 30)));
@@ -58,6 +60,27 @@ export const fitProblems = () => {
           }
         }
       }
+    }
+  }
+  // r15: the controller log (#setupView #log) may scroll, but only on these terms: its newest line is fully in view
+  // (it follows new lines to the bottom), it never clips sideways, and it covers nothing outside itself.
+  const lg = document.querySelector("#setupView #log");
+  if (lg && shown(lg) && !exempt(lg) && scope(lg)) {
+    const r = lg.getBoundingClientRect(), top = r.top + lg.clientTop, bottom = top + lg.clientHeight;
+    const last = [...lg.children].reverse().find(shown);
+    if (last) {
+      const lr = last.getBoundingClientRect();
+      if (lr.top < top - 1 || lr.bottom > bottom + 1) out.push("log: newest line not fully in view (" + (last.textContent || "").trim().slice(0, 30) + ")");
+    }
+    if (lg.scrollWidth > lg.clientWidth + 2 && getComputedStyle(lg).overflowX !== "visible") out.push("log: lines cut off sideways");
+    if (r.bottom > innerHeight + 1) out.push("log: runs off the bottom of the screen");
+    for (const o of document.querySelectorAll("body *")) {
+      if (lg.contains(o) || o.contains(lg) || !shown(o) || exempt(o)) continue;
+      const own = /^(BUTTON|INPUT|SELECT|TEXTAREA|A|LABEL)$/.test(o.tagName) || [...o.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!own) continue;
+      const b = o.getBoundingClientRect();
+      const ox = Math.min(r.right, b.right) - Math.max(r.left, b.left), oy = Math.min(r.bottom, b.bottom) - Math.max(r.top, b.top);
+      if (ox > 4 && oy > 4) out.push("log covers: " + label(o));
     }
   }
   const ctl = [...document.querySelectorAll("button, input, select")].filter(e => shown(e) && !exempt(e) && scope(e) && !e.closest("dialog:not([open])"));
