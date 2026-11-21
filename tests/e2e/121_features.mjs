@@ -276,6 +276,23 @@ try {
   await ev(page, () => { const b = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (b) b.click(); }); await sleep(200);
   t.check("corners: clicking a corner on the drawing adds 'R6 at 1 corner' (that corner) and keeps the gusset", c4.type === "gusset" && J((c4.f || []).map((f) => [f.k, f.kind, f.r, f.at])) === J([["corner", "round", 6, [1]]]) && (await rows()).some((r) => /R6 at 1 corner/.test(r.sum)), J(c4));
   await ev(page, () => window.plasmaTest.sketch.endFilletPick());
+  // r15 2.15: Ctrl+D duplicates the open row (even while typing in its fields), Delete removes a focused row; each is one undo step
+  await ev(page, () => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect", true, { w: 200, h: 150 }); const g = s.items[0];
+    g.feats = [{ id: 1, k: "hole", x: 50, y: 75, d: 10 }]; g._key = undefined; s.commit(); s.pick([g.id]); s.onSelect();
+    const b = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (b) b.click(); });
+  await sleep(250);
+  await page.click('#featList .feat-row[data-fid="1"] .feat-open'); await sleep(250);
+  const inField = await ev(page, () => { const a = document.activeElement; return !!(a && a.closest && a.closest('.feat-row[data-fid="1"] .feat-edit') && a.matches("input, select")); });
+  await page.keyboard.press("Control+d"); await sleep(250);
+  const afterDup = await feats();
+  t.check("2.15: Ctrl+D with the open row's field focused duplicates that row", inField && afterDup.length === 2 && afterDup.every((f) => f.k === "hole" && f.d === 10), J({ inField, afterDup }));
+  await ev(page, () => window.plasmaTest.sketch.undo()); await sleep(200);
+  t.check("2.15: one undo removes the duplicate", (await feats()).length === 1, J(await feats()));
+  await ev(page, () => { const b = document.querySelector('#featList .feat-row[data-fid="1"] .feat-open'); if (b) b.focus(); });
+  await page.keyboard.press("Delete"); await sleep(250);
+  const afterDel = await feats();
+  await ev(page, () => window.plasmaTest.sketch.undo()); await sleep(200);
+  t.check("2.15: Delete on a focused row removes it, and one undo brings it back", afterDel.length === 0 && (await feats()).length === 1, J({ afterDel, now: await feats() }));
   // r15 2.19 (Josh t543u): typing a bigger size in the Size tab zooms the view to fit the part again, like Fit (no blur needed)
   await ev(page, () => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect", true, { w: 80, h: 50 }); s.commit(); s.pick([s.items[0].id]); s.onSelect(); s.fitView();
     const b = document.querySelector('#srcShape .insp-tabs [data-insp="size"]'); if (b) b.click(); });
