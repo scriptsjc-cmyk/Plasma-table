@@ -37,7 +37,7 @@ const SPEC = {
   arctan: { act: "mode", clicks: (b) => [[(b.A[0] + b.A[2]) / 2, b.A[3]], [b.A[0] - 40, b.A[3] + 40]] },
   spline: { act: "mode", setup: "empty", clicks: (b) => [[b.C[0] - 60, b.C[1]], [b.C[0] - 20, b.C[1] + 30], [b.C[0] + 20, b.C[1]], [b.C[0] + 60, b.C[1] + 30]], finish: "dblclick" },
   curvepoints: { act: "dialog", dlg: "cadDialog", fill: { "#cad_list": "0,0\n40,30\n80,0\n120,30" } },
-  edge: { act: "panel", dlg: "edgePanel", clicks: (b) => [[(b.A[0] + b.A[2]) / 2, b.A[1]]], fill: { "#edgeLen": "90" }, go: "#edgeLenApply" },
+  edge: { act: "panel", dlg: "edgePanel", setup: "notched", clicks: (b) => [[(b.A[0] + b.A[2]) / 2, b.A[1]]], fill: { "#edgeLen": "90" }, go: "#edgeLenApply" },
   measure: { act: "mode", effect: "measure", clicks: (b) => [[b.A[0], b.A[1]], [b.A[2], b.A[1]]] },
   text: { act: "dialog", dlg: "textDlg", go: "#mtAdd" },
   trace: { act: "dialog", dlg: "traceDlg", picture: "#trFile", go: "#trAdd" },
@@ -112,7 +112,7 @@ const boxes = (page) => ev(page, () => {
   const s = window.plasmaTest.sketch, it = s.items.filter((i) => !s.isHole(i));
   const hs = s.items.filter((i) => s.isHole(i)).map((h) => s.boxOf(h));
   const c = (b) => b && [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
-  const open = it.find((i) => i.type === "custom" && i.closed === false);
+  const open = it.find((i) => (s.contoursOf(i) || []).some((c) => c.closed === false));
   let Lend = null;
   if (open) { const b = s.boxOf(open); Lend = [b[2] - 0.5, (b[1] + b[3]) / 2]; }
   const r = s.cv.getBoundingClientRect();
