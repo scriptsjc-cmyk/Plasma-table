@@ -159,13 +159,16 @@ try {
         const hidden = r.width <= 1 || r.height <= 1 || cs.opacity === "0" || cs.clipPath !== "none" && cs.clipPath !== "";
         return vis(i) && !hidden && cs.appearance !== "none";
       }).map((i) => i.id || i.type);
+      // the switches are switch-shaped (wider than tall), not round dots or square boxes
+      const notSwitch = [...(dlg ? dlg.querySelectorAll('input[type="checkbox"]') : [])].filter((i) => vis(i)).filter((i) => { const r = i.getBoundingClientRect(); return !(r.width >= 1.4 * r.height && getComputedStyle(i).appearance === "none"); }).map((i) => i.id);
       const t = document.getElementById("toast");
-      return { open: vis(dlg), ok: ok ? ok.textContent.trim() : null, cancelLeft: !!(ro && rn && rn.right <= ro.left + 1), natives, toast: !t.classList.contains("hidden") && t.textContent === "an old message",
+      return { open: vis(dlg), notSwitch, ok: ok ? ok.textContent.trim() : null, cancelLeft: !!(ro && rn && rn.right <= ro.left + 1), natives, toast: !t.classList.contains("hidden") && t.textContent === "an old message",
         current: dlg ? /current behaviour/i.test(dlg.textContent) : false, recommended: dlg ? /Automatic \(recommended\)/.test(dlg.innerHTML) : false };
     }, [id, okSel, cancelSel]);
     t.check(`3.10 ${name}: the main button names the action (${okRe.source.replace(/[\^$]/g, "")}), not "Do it"`, d.open && okRe.test(d.ok || "") && d.ok !== "Do it", J(d));
     t.check(`3.10 ${name}: Cancel is on the left of the main button`, d.open && d.cancelLeft, J(d));
     t.check(`3.10 ${name}: no native checkbox or file button shows (the app's own switch / file button)`, d.open && d.natives.length === 0, J(d));
+    t.check(`3.10 ${name}: every on/off choice is drawn as the app's switch (wider than tall)`, d.open && d.notSwitch.length === 0, J(d));
     t.check(`3.10 ${name}: an old toast is cleared when the dialog opens`, d.open && !d.toast, J(d));
     if (/array/.test(name)) {
       // the count on the button follows the "How many" field (it remembers the last value, so read it, then change it)
