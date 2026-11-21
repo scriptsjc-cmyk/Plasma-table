@@ -99,19 +99,22 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
   if (clash) warnings.push("Some parts are closer together than the lead-in – a pierce may mark a neighbouring part. Space them further apart or shorten the lead-in.");
   for (const o of open) cuts.push({ depth: 99, start: o.pts[0], lead: o.pts[0], path: o.pts.slice(1).map((p) => ["G1", p]), outline: o.pts, open: true, key: o._k });
 
-  // order: deepest first, then nearest-next
+  // order: deepest first, then nearest-next (r15 6.4: then a 2-opt pass per depth, so holes still come before outlines)
   const order = [];
   let pos = [0, 0];
   const byDepth = [...new Set(cuts.map((c) => c.depth))].sort((a, b) => b - a);
   for (const depth of byDepth) {
     const left = cuts.filter((c) => c.depth === depth && !skipSet.has(c.key));
+    const group = [], from = pos;
     while (left.length) {
       let bi = 0, bd = Infinity;
       left.forEach((c, i) => { const dd = Math.hypot(c.lead[0] - pos[0], c.lead[1] - pos[1]); if (dd < bd) { bd = dd; bi = i; } });
       const c = left.splice(bi, 1)[0];
-      order.push(c);
+      group.push(c);
       pos = c.start;
     }
+    if (tidyOrder !== false && group.length > 2) { twoOpt(group, from); pos = group[group.length - 1].start; }
+    order.push(...group);
   }
   const autoOrder = order.map((c) => c.key);
   if (Array.isArray(wantOrder) && wantOrder.length) {
@@ -219,6 +222,42 @@ export function designToGcode(contoursIn, { kerf = 1.5, leadIn = 3, name = "desi
     cutInfo: info,            // per cut, in cutting order (design coordinates; add `shift` to get job coordinates)
     autoOrder,                // the automatic order (cut keys), for "back to automatic"
   };
+}
+
+// r15 6.4: 2-opt on a run of cuts (travel = from each cut's end, its start point, to the next one's pierce). Reverses a
+// stretch whenever that shortens the travel; it only ever accepts an improvement, so it is never worse than nearest-next.
+// A cut is entered at its pierce and left at its start, so travel isn't symmetric: the reversed stretch is costed with
+// prefix sums of the backward steps. A fixed amount of work (not a clock), so the same drawing always gives the same G-code.
+function twoOpt(seq, from) {
+  const n = seq.length;
+  if (n < 3 || n > 1500) return;
+  const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const endOf = (i) => (i < 0 ? from : seq[i].start);
+  let F = [], R = [];                                          // prefix sums: forward steps k->k+1, backward steps k+1->k
+  const sums = () => {
+    F = [0]; R = [0];
+    for (let k = 0; k < n - 1; k++) { F.push(F[k] + d(seq[k].start, seq[k + 1].lead)); R.push(R[k] + d(seq[k + 1].start, seq[k].lead)); }
+  };
+  sums();
+  let work = 0;
+  const LIMIT = 3e7;
+  for (let pass = 0, improved = true; improved && pass < 50 && work < LIMIT; pass++) {
+    improved = false;
+    for (let i = 0; i < n - 1 && work < LIMIT; i++) {
+      const before = endOf(i - 1);
+      for (let j = i + 1; j < n; j++) {
+        work++;
+        const after = j + 1 < n ? seq[j + 1].lead : null;
+        const old = d(before, seq[i].lead) + (F[j] - F[i]) + (after ? d(seq[j].start, after) : 0);
+        const rev = d(before, seq[j].lead) + (R[j] - R[i]) + (after ? d(seq[i].start, after) : 0);
+        if (rev < old - 1e-6) {
+          for (let x = i, y = j; x < y; x++, y--) { const t = seq[x]; seq[x] = seq[y]; seq[y] = t; }
+          sums(); work += n; improved = true;
+          break;                                               // seq[i] changed: carry on from the next i
+        }
+      }
+    }
+  }
 }
 
 // r15 6.2: spiral lead-in for a round hole of (kerfed) radius r, joining the circle at angle `ang`. Two anticlockwise
