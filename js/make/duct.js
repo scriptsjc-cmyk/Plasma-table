@@ -82,26 +82,31 @@ function developSide3(p0, p1, mid, rightArc, leftArc) {
   if (!mid2 || !Number.isFinite(mid2[0])) return null;
   if (mid2[1] < -1e-6) mid2 = placeByDistances(b0, dist3(p0, mid), b1, dist3(p1, mid), -1);
   if (!mid2 || mid2[1] < -1e-6) return null;
-  const placeFan = (corner2, corner3, prev2, prev3, q, preferUp) => {
-    let p = placeByDistances(corner2, dist3(corner3, q), prev2, dist3(prev3, q), preferUp);
-    if (!p || !Number.isFinite(p[0])) p = placeByDistances(corner2, dist3(corner3, q), prev2, dist3(prev3, q), -preferUp);
-    return p;
+  // r15 7.5: each fan triangle (corner, previous round point, next round point) is laid on the far side of the line
+  // corner → previous point from the triangle before it, so the fan opens out. A fixed "up" preference laid some of it
+  // back over the panel, and the offset patterns came out about a third too small.
+  const sideOf = (a, b, c) => Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]));
+  const placeFan = (corner2, corner3, prev2, prev3, q, away) => {
+    const cands = [1, -1].map((sd) => placeByDistances(corner2, dist3(corner3, q), prev2, dist3(prev3, q), sd)).filter((c) => c && Number.isFinite(c[0]));
+    if (!cands.length) return null;
+    const avoid = sideOf(corner2, prev2, away);
+    return cands.find((c) => sideOf(corner2, prev2, c) !== avoid) || cands[0];
   };
   const right = [];
-  let prev2 = mid2, prev3 = mid;
+  let prev2 = mid2, prev3 = mid, away = b0;
   for (const q of rightArc) {
-    const p = placeFan(b1, p1, prev2, prev3, q, 1);
+    const p = placeFan(b1, p1, prev2, prev3, q, away);
     if (!p || !Number.isFinite(p[0])) return null;
     right.push(p);
-    prev2 = p; prev3 = q;
+    away = prev2; prev2 = p; prev3 = q;
   }
   const left = [];
-  prev2 = mid2; prev3 = mid;
+  prev2 = mid2; prev3 = mid; away = b1;
   for (const q of leftArc) {
-    const p = placeFan(b0, p0, prev2, prev3, q, 1);
+    const p = placeFan(b0, p0, prev2, prev3, q, away);
     if (!p || !Number.isFinite(p[0])) return null;
     left.push(p);
-    prev2 = p; prev3 = q;
+    away = prev2; prev2 = p; prev3 = q;
   }
   const pts = [b0, b1, ...right.slice().reverse(), mid2, ...left];
   let area = 0;
