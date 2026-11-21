@@ -143,31 +143,37 @@ try {
     ["add text", () => window.plasmaTest.openMakeTool("text"), "textDlg", "#mtAdd", "#mtCancel", /Add to my drawing/],
     ["trace", () => window.plasmaTest.openMakeTool("trace"), "traceDlg", "#trAdd", "#trCancel", /Add to my drawing/],
     ["resize", async () => (await import(new URL("js/make/files.js", location.href).href)).openResize(), "resizeDlg", "#rsOk", "#rsCancel", /Resize/],
+    // on the cutting screen (the part is sent there first)
+    // Add parts has Close at the top like the other big dialogs and no Cancel; its file picker must be the app's own button
+    // (the saved-part rows are a pick list, not on/off choices, so they keep their tick boxes)
+    ["add parts", () => window.plasmaTest.Setup.openAdd(), "addPartsDlg", "#addOk", null, /Add to the sheet/, true],
   ];
-  for (const [name, open, id, okSel, cancelSel, okRe] of DLG) {
+  for (const [name, open, id, okSel, cancelSel, okRe, onCut] of DLG) {
     await fresh();
     await ev(page, () => { const s = window.plasmaTest.sketch; s.add("rect", true, { w: 80, h: 50 }); s.commit(); s.pick([s.items[0].id]); s.onSelect(); });
+    if (onCut) { await ev(page, () => window.plasmaTest.sendToCutting()); await page.waitForFunction(() => window.plasmaTest.screen() === "cut"); await sleep(400); }
     await ev(page, () => { const t = document.getElementById("toast"); t.textContent = "an old message"; t.className = "toast"; });
     await ev(page, open);
     await sleep(300);
     const d = await ev(page, ([id, okSel, cancelSel]) => {
-      const dlg = document.getElementById(id), ok = dlg && dlg.querySelector(okSel), no = dlg && dlg.querySelector(cancelSel);
+      const dlg = document.getElementById(id), ok = dlg && dlg.querySelector(okSel), no = dlg && cancelSel && dlg.querySelector(cancelSel);
       const vis = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
-      const ro = ok && ok.getBoundingClientRect(), rn = no && no.getBoundingClientRect();
-      const natives = [...(dlg ? dlg.querySelectorAll('input[type="checkbox"], input[type="file"]') : [])].filter((i) => {
+      const ro = ok && ok.getBoundingClientRect(), rn = no && no.getBoundingClientRect(), noCancel = !cancelSel;
+      const natives = [...(dlg ? dlg.querySelectorAll('input[type="checkbox"], input[type="file"]') : [])].filter((i) => !i.closest(".savedrow")).filter((i) => {
         const cs = getComputedStyle(i), r = i.getBoundingClientRect();
         const hidden = r.width <= 1 || r.height <= 1 || cs.opacity === "0" || cs.clipPath !== "none" && cs.clipPath !== "";
         return vis(i) && !hidden && cs.appearance !== "none";
       }).map((i) => i.id || i.type);
       // the switches are switch-shaped (wider than tall), not round dots or square boxes
-      const notSwitch = [...(dlg ? dlg.querySelectorAll('input[type="checkbox"]') : [])].filter((i) => vis(i)).filter((i) => { const r = i.getBoundingClientRect(); return !(r.width >= 1.4 * r.height && getComputedStyle(i).appearance === "none"); }).map((i) => i.id);
+      const notSwitch = [...(dlg ? dlg.querySelectorAll('input[type="checkbox"]') : [])].filter((i) => vis(i) && !i.closest(".savedrow")).filter((i) => { const r = i.getBoundingClientRect(); return !(r.width >= 1.4 * r.height && getComputedStyle(i).appearance === "none"); }).map((i) => i.id);
       const t = document.getElementById("toast");
-      return { open: vis(dlg), notSwitch, ok: ok ? ok.textContent.trim() : null, cancelLeft: !!(ro && rn && rn.right <= ro.left + 1), natives, toast: !t.classList.contains("hidden") && t.textContent === "an old message",
+      return { open: vis(dlg), notSwitch, ok: ok ? ok.textContent.trim() : null, cancelLeft: noCancel || !!(ro && rn && rn.right <= ro.left + 1), files: dlg ? dlg.querySelectorAll('input[type="file"]').length : 0, fileBtn: !!(dlg && [...dlg.querySelectorAll(".file-btn")].some(vis)), natives, toast: !t.classList.contains("hidden") && t.textContent === "an old message",
         current: dlg ? /current behaviour/i.test(dlg.textContent) : false, recommended: dlg ? /Automatic \(recommended\)/.test(dlg.innerHTML) : false };
     }, [id, okSel, cancelSel]);
     t.check(`3.10 ${name}: the main button names the action (${okRe.source.replace(/[\^$]/g, "")}), not "Do it"`, d.open && okRe.test(d.ok || "") && d.ok !== "Do it", J(d));
     t.check(`3.10 ${name}: Cancel is on the left of the main button`, d.open && d.cancelLeft, J(d));
     t.check(`3.10 ${name}: no native checkbox or file button shows (the app's own switch / file button)`, d.open && d.natives.length === 0, J(d));
+    if (d.files) t.check(`3.10 ${name}: picking a file uses the app's own button`, d.fileBtn, J(d));
     t.check(`3.10 ${name}: every on/off choice is drawn as the app's switch (wider than tall)`, d.open && d.notSwitch.length === 0, J(d));
     t.check(`3.10 ${name}: an old toast is cleared when the dialog opens`, d.open && !d.toast, J(d));
     if (/array/.test(name)) {
@@ -177,8 +183,23 @@ try {
       t.check(`3.10 ${name}: the button's count follows the How many field`, live.before[1].includes(" " + live.before[0] + " ") && / 6 /.test(live.after), J(live));
     }
     if (name === "cut control") t.check("3.10 cut control: says 'Automatic (recommended)', not 'current behaviour'", d.recommended && !d.current, J(d));
-    await ev(page, () => { for (const id of ["cadCancel", "mtCancel", "trCancel", "rsCancel"]) { const b = document.getElementById(id); if (b && b.getClientRects().length) b.click(); } });
+    await ev(page, () => { for (const id of ["cadCancel", "mtCancel", "trCancel", "rsCancel", "makeExpCancel", "exportCancel", "addCancel"]) { const b = document.getElementById(id); if (b && b.getClientRects().length) b.click(); } });
     await sleep(500);
+  }
+  // the two save pop-ups (Save the drawing, Save G-code as) and the Edit edge panel can't be opened as-is in this test (a
+  // laptop with no linked machine), so check their button order in the page: Cancel comes first, as in every other dialog
+  const order = await ev(page, () => [["makeExpCancel", "makeExpDxf"], ["exportCancel", "exportGo"], ["edgeCancel", "edgeDone"]].map(([c, o]) => {
+    const a = document.getElementById(c), b = document.getElementById(o);
+    return [c, !!(a && b && a.parentNode === b.parentNode && (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING))]; }));
+  t.check("3.10 Save the drawing / Save G-code as / Edit edge: Cancel comes before the main button", order.every(([, ok]) => ok), J(order));
+  // the Fillet / Chamfer dialogs' help text names their button, not "Do it" (with and without a clicked corner)
+  for (const a of ["fillet", "chamfer"]) {
+    await fresh();
+    await ev(page, () => { const s = window.plasmaTest.sketch; s.add("rect", true, { w: 80, h: 50 }); s.commit(); s.pick([s.items[0].id]); s.onSelect(); });
+    await ev(page, async (a) => (await import(new URL("js/make/quickbar.js", location.href).href)).quickAction(a), a); await sleep(300);
+    const txt = await ev(page, () => { const d = document.getElementById("cadDialog"); return { open: d.getClientRects().length > 0, text: d.textContent, ok: document.getElementById("cadOk").textContent }; });
+    t.check(`3.10 ${a}: the dialog never says "Do it" (button and help text)`, txt.open && !/Do it/.test(txt.text) && /^(Fillet|Chamfer)$/.test(txt.ok), J({ ok: txt.ok, text: txt.text.slice(0, 300) }));
+    await ev(page, () => document.getElementById("cadCancel").click()); await sleep(300);
   }
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
