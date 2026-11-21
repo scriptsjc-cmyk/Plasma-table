@@ -81,6 +81,25 @@ try {
     t.check("no page error (5.2–5.4)", !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 5.5 fold direction marks on the flat pattern
+  {
+    const page = await newPage(br, "d1440", { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    const labels = (id) => ev(page, async (id) => {
+      const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { persist: false, autoFs: false });
+      const s = T.sketch; s.clear(); s.add(id, true); s.commit(); s.pick([s.items[0].id]); s.onSelect(); s.fitView(); s.draw();
+      await new Promise((r) => setTimeout(r, 200));
+      return (s.foldLabels || []).map((l) => l.text);
+    }, id);
+    const z = await labels("foldzbr");
+    t.check("5.5 the Z-bracket's two fold lines are marked ▲ Up and ▼ Down on the drawing", z.length === 2 && z.includes("▲ Up") && z.includes("▼ Down"), J(z));
+    const rc = await labels("ridgecap");
+    t.check("5.5 the ridge cap's folds say 45°", rc.length === 2 && rc.every((x) => /45°/.test(x)), J(rc));
+    const tr = await labels("s2r");
+    t.check("5.5 a triangulated transition (many fold lines) is not covered in marks", tr.length === 0, J(tr));
+    t.check("no page error (5.5)", !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("126 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
