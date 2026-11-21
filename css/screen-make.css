@@ -2278,3 +2278,15 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   /* while an edge is being edited the "1 part selected…" line says nothing new; the Edit edge panel takes its room */
   body[data-screen="make"] #srcShape:has(> #edgePanel:not(.hidden)) > #makeSelStatus { display: none; }
 }
+
+/* r15 7.3: Add text / Trace a picture on a short laptop screen (1366 x 640): the card stays under the top bar, and the
+   Pro fields sit three to a row in a wider controls column, so nothing scrolls or runs off the bottom. */
+@media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+  .mtdlg .shapelib-card { max-height: calc(100dvh - var(--topbar-h, 56px) - 16px); }
+  .mtdlg.is-pro .mt-cols { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .mtdlg.is-pro .mt-pro .grid2 { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; align-items: end; }
+  .mtdlg.is-pro .mt-ctl { gap: 6px; }
+  .mtdlg.is-pro textarea { min-height: 48px; }
+  .mtdlg.is-pro .mt-pro label.check { font-size: var(--fs-s); line-height: 1.25; gap: 6px; align-self: center; }
+  .mtdlg.is-pro .mt-pro label.check input[type="checkbox"] { width: 22px; height: 22px; min-width: 22px; min-height: 22px; }
+}
