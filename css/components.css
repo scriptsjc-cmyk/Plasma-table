@@ -176,6 +176,12 @@ button.info-i:active:not(:disabled) { transform: none; filter: none; }
   }
 }
 
+/* r15 (checker N1): on touch screens the full tip shows under the short label; where the tip re-words the label (.info-full,
+   set in js/ui/hovertip.js) show the tip only, so the line is not read twice. Laptops keep the short label + "i". */
+@media not all and (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .has-info.info-full > .info-label { display: none; }
+}
+
 /* r13 section 2: transitions. js/ui/transition.js adds .tx-* for a moment after a screen, step or tab change; popovers and the
    header menu ease in from CSS alone. Opacity and transform only, so nothing around them moves; 0.15 s or less. Nothing animates
    while a job runs or is paused (body.running-job / .job-live) or with reduced motion. STOP is never given a .tx-* class. */

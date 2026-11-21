@@ -5,7 +5,7 @@ import { $, esc, toast } from "../core/dom.js";
 import { cmd } from "../machine/access.js";
 import { loadJob } from "../core/hooks.js";
 import { syncCutPrefsToAccount } from "../core/prefs.js";
-import { setInfoText } from "../ui/hovertip.js";
+import { setInfoText, markAllInfoFull } from "../ui/hovertip.js";
 
 const MAT_TIPS = {
   "Mild steel": "Mild steel: the easiest to get right. Start at the recommended speed and adjust 10% at a time.",
@@ -93,6 +93,7 @@ export function renderMaterials() {
     </dl>
     <p class="ampssrc muted small has-info"><span class="info-label">Kerf ${esc(String(kerf))} mm · Air ${esc(String(air))} bar</span><button type="button" class="info-i" data-tip="${esc(ampsMore)}" aria-label="More about amps, air and kerf"></button><span class="info-body"> ${esc(ampsMore)}</span></p>
     ${r.note ? `<div class="ampsnote">⚠ ${esc(r.note)}</div>` : ""}`;
+  markAllInfoFull($("ampsCard"));   // r15 (checker N1): the kerf / air line re-words its tip, so a phone shows the tip only
   try { localStorage.setItem("plasma.material", JSON.stringify({ m: S.material, t: S.thickness })); } catch (e) { /* ignore */ }
   try { syncCutPrefsToAccount(); } catch (e) { /* ignore */ }
   renderSpeed();
@@ -161,6 +162,7 @@ function renderSpeed() {
     const full = note.replace(/<[^>]+>/g, "");
     setInfoText(sp, short, full, "More about the recommended cut speed");
     sp.className = "spnote has-info" + (off ? " warn" : "");
+    markAllInfoFull(sp.parentNode || document);   // className above reset .info-full
   }
   let warn = $("spWarn");
   if (!warn && $("speedBox")) {

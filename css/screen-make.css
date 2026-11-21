@@ -2389,3 +2389,6 @@ body.running-job #featSheet, body.job-live #featSheet { display: none; }
 /* r15 3.2: the type-while-drawing box docked over the top of the side panel on a laptop (left / top / width set by drawhud.js) */
 .drawhud.docked { bottom: auto; transform: none; max-width: none; box-sizing: border-box; padding: 8px 10px; gap: 6px 8px; }
 .drawhud.docked input { width: 72px; }
+
+/* r15 (checker N2): the "Turn your phone sideways" pill never sits over the Features bottom sheet while it is open */
+body:has(#featSheet:not([hidden])) #sidewaysHint { display: none; }

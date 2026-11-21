@@ -96,9 +96,26 @@ export function setInfoText(el, shortLabel, fullText, ariaLabel) {
   body.className = "info-body";
   body.textContent = tip.startsWith(short) ? tip.slice(short.length) : (short ? " " + tip : tip);
   el.replaceChildren(lab, btn, body);
+  markInfoFull(el);
+}
+
+// r15 (checker N1): where the full tip is not a continuation of the short label but a re-wording of it ("Type how big it
+// should be." + "Type how big it should be, turn it…"), a phone that shows both reads the same thing twice. Mark those lines
+// .info-full; on touch screens CSS then shows only the full tip (the short label stays for the laptop, where the tip is hidden).
+const infoWords = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").split(/\s+/).filter(Boolean);
+export function markInfoFull(el) {
+  if (!el || !el.querySelector) return;
+  const lab = el.querySelector(":scope > .info-label"), body = el.querySelector(":scope > .info-body");
+  const a = infoWords(lab && lab.textContent), b = infoWords(body && body.textContent);
+  const n = Math.min(4, a.length);
+  el.classList.toggle("info-full", n >= 2 && b.length >= n && a.slice(0, n).join(" ") === b.slice(0, n).join(" "));
+}
+export function markAllInfoFull(root = document) {
+  for (const el of root.querySelectorAll(".has-info")) markInfoFull(el);
 }
 
 export function bindHoverTips() {
+  markAllInfoFull();
   document.addEventListener("pointerover", (e) => {
     const el = e.target && e.target.closest && e.target.closest(SELECTOR);
     if (!el) return;
