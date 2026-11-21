@@ -316,3 +316,8 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
 }
 /* r15 4.26: a bold term in the edge steps stays on one line (with Barlow, "Floating head" could break across two) */
 #setupView .wizard li b { white-space: nowrap; }
+/* r15 4.23: opened from Cut › Setup the body still says data-step 3, and the Cut jog card's rule hid these lamps
+   (screen-cut.css "[data-step=3] .jogwrap .lamps.mini"); the Machine setup strip always shows them (Simple keeps its own choice) */
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.laptop-ui:not(.beginner) #setupBedWrap .jogmount .jogwrap > .lamps.mini { display: flex; }
+}
