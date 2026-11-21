@@ -87,6 +87,44 @@ try {
     t.check("no page error (6.3)", !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 6.5 Check cut in Make uses the job's material and thickness
+  {
+    const page = await newPage(br, "d1440", { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    const open = (mat, th) => ev(page, async ([mat, th]) => {
+      const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { persist: false, autoFs: false });
+      T.S.material = mat; T.S.thickness = th;
+      const s = T.sketch; s.clear(); s.add("plate", true); s.items[0].p.hole = 3; s.commit(); s.pick([s.items[0].id]); s.onSelect();
+      document.getElementById("makeCheckClose").click();
+      document.getElementById("btnMakeCheckCut").click();
+      await new Promise((r) => setTimeout(r, 250));
+      const vis = (id) => { const e = document.getElementById(id); return !!(e && !e.hidden && e.getClientRects().length); };
+      const job = document.getElementById("makeCheckJob");
+      return { pick: vis("makeCheckPick"), job: vis("makeCheckJob") ? job.textContent : "", change: vis("makeCheckChange"), out: document.getElementById("makeCheckOut").textContent };
+    }, [mat, th]);
+    const a = await open("Mild steel", 3);
+    t.check("6.5 with a job material set, Check cut doesn't ask again: no material / thickness picker", !a.pick, J(a));
+    t.check("6.5 it says which material it checked for, with a Change link", /mild steel/i.test(a.job) && /3 mm/.test(a.job) && a.change, J(a));
+    t.check("6.5 the results are there straight away, for 3 mm", /3 mm/.test(a.out) && a.out.length > 20, J(a.out));
+    const ch = await ev(page, async () => {
+      document.getElementById("makeCheckChange").click();
+      await new Promise((r) => setTimeout(r, 150));
+      const pick = document.getElementById("makeCheckPick"), sel = document.querySelector("#makeCheckTh [data-th].sel"), m = document.querySelector("#makeCheckMat [data-mat].sel");
+      return { pick: !!(pick && !pick.hidden && pick.getClientRects().length), th: sel && sel.dataset.th, mat: m && m.dataset.mat };
+    });
+    t.check("6.5 Change opens the picker on the job's material and thickness", ch.pick && ch.th === "3" && ch.mat === "Mild steel", J(ch));
+    const b = await ev(page, async () => {
+      document.querySelector('#makeCheckTh [data-th="6"]').click(); document.getElementById("makeCheckGo").click();
+      await new Promise((r) => setTimeout(r, 200));
+      return { out: document.getElementById("makeCheckOut").textContent, th: window.plasmaTest.S.thickness };
+    });
+    t.check("6.5 a changed thickness is checked and becomes the job's", /6 mm/.test(b.out) && Number(b.th) === 6, J(b));
+    const c = await open(null, null);
+    t.check("6.5 with no job material yet, it asks as before (picker shown, no results until you check)", c.pick && !c.job && c.out.trim() === "", J(c));
+    await ev(page, () => document.getElementById("makeCheckClose").click());
+    t.check("no page error (6.5)", !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("127 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
