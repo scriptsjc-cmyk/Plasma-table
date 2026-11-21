@@ -164,6 +164,7 @@ export class ViewMethods {
     const isEtch = (op) => op === "score" || op === "mark";
     const trace = (c, close) => { c.pts.forEach((p, i) => { const [X, Y] = S(p[0], p[1]); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }); if (close !== false && c.closed !== false) ctx.closePath(); };
     const hiddenOps = this.hiddenLayers;
+    const foldCol = themeColor("--cad-fold", "#A0610A");       // r15 5.6: the score amber, darker (fold lines read at a glance)
     const foldMarks = [];
     this.foldLabels = [];                                  // r15 5.5: the up / down marks drawn on fold lines (read by tests)
     for (const it of this.order()) {
@@ -201,9 +202,23 @@ export class ViewMethods {
         ctx.lineWidth = on ? 2.2 : 1.8;
         ctx.stroke(); ctx.setLineDash([]);
       };
+      // r15 5.6: fold lines stand out on any part, narrow strips too: a light halo under a darker, longer-dashed line
+      const foldStroke = (list) => {
+        if (!list.length) return;
+        ctx.beginPath();
+        for (const c of list) trace(c, false);
+        ctx.setLineDash([]); ctx.strokeStyle = C.canvas; ctx.lineWidth = on ? 4.6 : 4.2; ctx.globalAlpha = 0.85; ctx.stroke(); ctx.globalAlpha = 1;
+        ctx.setLineDash([12, 3]);
+        ctx.strokeStyle = bad ? C.danger : foldCol;
+        ctx.lineWidth = on ? 2.6 : 2.3;
+        ctx.stroke(); ctx.setLineDash([]);
+      };
+      const isFoldLine = (c) => c.role === "bend" && c.closed === false;
       if (itemEtch) etchStroke(cs.filter((c) => !(hiddenOps && hiddenOps.has(it.op))), it.op);
       else {
-        etchStroke(etchCs.filter((c) => (c.op || "score") === "score"), "score");
+        const scoreCs = etchCs.filter((c) => (c.op || "score") === "score");
+        etchStroke(scoreCs.filter((c) => !isFoldLine(c)), "score");
+        foldStroke(scoreCs.filter(isFoldLine));
         etchStroke(etchCs.filter((c) => c.op === "mark"), "mark");
       }
       if (onMake && !itemEtch && !(hiddenOps && hiddenOps.has("score"))) {
@@ -231,7 +246,7 @@ export class ViewMethods {
         if (L < ctx.measureText(text).width + 24) continue;
         let nx = -(by - ay) / L, ny = (bx - ax) / L;
         if (ny > 0 || (Math.abs(ny) < 1e-6 && nx < 0)) { nx = -nx; ny = -ny; }      // above the line (or to its right)
-        const x = (ax + bx) / 2 + nx * 9, y = (ay + by) / 2 + ny * 9;
+        const x = (ax + bx) / 2 + nx * 12, y = (ay + by) / 2 + ny * 12;   // clear of the line and its halo
         ctx.strokeStyle = C.canvas; ctx.lineWidth = 3.5; ctx.strokeText(text, x, y);
         ctx.fillStyle = scoreText; ctx.fillText(text, x, y);
         this.foldLabels.push({ text, x, y, id: it.id });

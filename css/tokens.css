@@ -64,6 +64,8 @@
   --cad-danger: #C42B1C;
   --cad-edge: #C05621;
   --cad-score: #c27c0e;
+  --cad-fold: #A0610A;       /* r15 5.6: fold lines, the score amber made darker so they read at a glance */
+  --cad-score-text: #8A5508; /* r15 5.5: Up / Down marks on fold lines (AA on the drawing) */
   --cad-mark: #6a4fc9;
 
   /* r13 fixed palette: colours that stay the same in both themes (white text on red, black masks, badge colours).
@@ -122,7 +124,7 @@
   --cad-part-fill: #2c3a49; --cad-part-sel: #26385a; --cad-hole: #121920;
   --cad-part-line: #c9d1d9; --cad-sel: #7aa2f0; --cad-lock: #e3a73c; --cad-dim: #4f9cf0;
   --cad-guide: #e3a73c; --cad-label: #c5d0dc; --cad-tag-text: #fff; --cad-danger: #e0342b;
-  --cad-edge: #e07a3c; --cad-score: #e0a040; --cad-mark: #b49cff;
+  --cad-edge: #e07a3c; --cad-score: #e0a040; --cad-mark: #b49cff; --cad-fold: #f0b050; --cad-score-text: #f3c27a;
   --accent-text: #9CC7FF;
 }
 
