@@ -1,6 +1,6 @@
 // r15 8.5 (split from fold3d.js): the 3D builders - faces, folds, rolled and pipe parts - and thickening for the view.
 // The flat pattern from shape.make() is still what gets cut. This only builds the folded result.
-import { segmentsFor, pipeSaddle, coneDevelopment } from "./duct.js";
+import { segmentsFor, pipeSaddle, coneDevelopment, saddleHole } from "./duct.js";
 import { FOLD } from "./flat3d.js";
 import { jobThickness } from "./bends.js";
 import { V, add, sub, scl, dot, cross, mag, norm } from "./vec3.js";
@@ -439,9 +439,12 @@ export function foldFishmouth(d, d2, skirt, segs = 48) {
 // r15 7.5: the wrap exactly as cut (πd × len, the round hole of the branch Ø in its middle) rolled onto the header. Away
 // from the hole one facet per step round; round the hole small cells, kept when their middle is outside the cut circle,
 // so the hole is the cut hole's size. The hole is declared as an opening (its edge is the cells left out).
+// r15 7.5-saddlehole (Josh 21 Nov): the wrap's hole is the cut's true saddle hole (saddleHole): the wrap is rolled from the
+// flat and only the cells inside that hole are left out.
 export function foldSaddleHole(d, len, branch, segs = 96) {
-  const R = Math.max(4, d / 2), r = Math.max(2, branch / 2), w = Math.PI * d, L = Math.max(1, len);
-  const hole = 2 * r + 8 <= Math.min(w, L);                 // the cut has no hole otherwise
+  const R = Math.max(4, d / 2), w = Math.PI * d, L = Math.max(1, len), sh = saddleHole(d, branch);
+  const hole = !!sh && sh.wide + 8 <= w && 2 * sh.r + 8 <= L;   // the cut has no hole otherwise
+  const r = sh ? sh.r : Math.max(2, branch / 2), half = sh ? sh.wide / 2 : r;
   const s0 = w / 2, yc = L / 2, faces = [];
   // flat (s along the wrap, y along the pipe) → header along +Y, the hole's middle (s = w/2) facing +X
   const P = (sv, y) => { const th = (sv / w) * 2 * Math.PI - Math.PI; return V(R * Math.cos(th), y, R * Math.sin(th)); };
@@ -450,16 +453,15 @@ export function foldSaddleHole(d, len, branch, segs = 96) {
     const out = norm(V(pts[0][0] + pts[1][0], 0, pts[0][2] + pts[1][2]));
     faces.push(dot(n, out) >= 0 ? { pts, n, holes: [], w: sb - sa, h: yb - ya, smooth: true } : { pts: pts.slice().reverse(), n: scl(n, -1), holes: [], w: sb - sa, h: yb - ya, smooth: true });
   };
-  const ds = w / segs, rows = Math.max(12, Math.ceil((2 * r) / 3));
+  const ds = w / segs, rows = Math.max(24, Math.ceil((2 * r) / 1.5));
   for (let i = 0; i < segs; i++) {
     const sa = i * ds, sb = sa + ds;
-    if (!hole || sb <= s0 - r || sa >= s0 + r) { quad(sa, sb, 0, L); continue; }
-    const subs = 2, dy = (2 * r) / rows;
+    if (!hole || sb <= s0 - half || sa >= s0 + half) { quad(sa, sb, 0, L); continue; }
+    const subs = 4, dy = (2 * r) / rows;
     quad(sa, sb, 0, yc - r); quad(sa, sb, yc + r, L);
     for (let k = 0; k < subs; k++) for (let j = 0; j < rows; j++) {
       const a0 = sa + (k * ds) / subs, a1 = a0 + ds / subs, y0 = yc - r + j * dy, y1 = y0 + dy;
-      const cs = (a0 + a1) / 2 - s0, cy = (y0 + y1) / 2 - yc;
-      if (cs * cs + cy * cy >= r * r) quad(a0, a1, y0, y1);
+      if (!sh.inside((a0 + a1) / 2 - s0, (y0 + y1) / 2 - yc)) quad(a0, a1, y0, y1);
     }
   }
   // ghost branch on the +X side, sitting in the hole

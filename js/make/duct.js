@@ -527,3 +527,16 @@ export function s2rPanels(A, B, D, H, ox = 0, oy = 0) {
   return t.offset ? [t.A, t.B, t.A2, t.B2] : [t.A, t.B, t.A, t.B];
 }
 
+// r15 7.5-saddlehole (Josh 21 Nov): the hole a branch (Ø bd) makes in a header (Ø hd), axes crossing at 90°, on the
+// unrolled header: s round the header from the hole's middle, y along it. A header point is inside the branch when
+// (R·sin(s/R))² + y² < r², so the edge is s = R·asin((r/R)·sinθ), y = r·cosθ: 2r long and 2R·asin(r/R) wide.
+// null when the branch is bigger than the header. inside(s, y) tells whether a wrap point is cut away.
+export function saddleHole(hd, bd) {
+  const R = (Number(hd) || 0) / 2, r = (Number(bd) || 0) / 2;
+  if (!(R > 0 && r > 0) || r > R + 1e-9) return null;
+  const k = Math.min(1, r / R), wide = 2 * R * Math.asin(k);
+  const n = 4 * Math.ceil(Math.max(96, (2 * wide + 2 * r) / 1.5) / 4);   // a multiple of 4: the sides (θ = ±90°) are points
+  const pts = [];
+  for (let i = 0; i < n; i++) { const th = (2 * Math.PI * i) / n; pts.push([R * Math.asin(Math.max(-1, Math.min(1, k * Math.sin(th)))), r * Math.cos(th)]); }
+  return { pts, r, R, wide, inside: (sv, y) => Math.abs(sv) < R * Math.PI / 2 && (R * Math.sin(sv / R)) ** 2 + y * y < r * r };
+}

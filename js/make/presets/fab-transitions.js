@@ -4,7 +4,7 @@ import {
   clamp, pos, shape, poly, shiftToOrigin, signedArea, selfIntersects, dedupe, boltHoles,
   SPLIT_PARAM, FAN_PARAM, s2rBlank, rectTransBlank, transitionBlank, withTopLip, boxBlank, wantsSplit,
 } from "./helpers.js";
-import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment } from "../duct.js";
+import { squareToRound, offsetRoundToRound, rectangularTransition, pipeSaddle, pipeOnFlat, coneDevelopment, saddleHole } from "../duct.js";
 import { SHEET_PARAMS, sheetFrom, elbowTable } from "../sheetopts.js";
 import { reducingElbow, redElbowTable } from "../redelbow.js";
 import { assembleFlat, atOrigin, rollSector } from "../flat3d.js";
@@ -249,14 +249,14 @@ export const FAB_PRESETS = [
     },
     { template: true, noResize: true }),
   shape("saddlehole", "Saddle hole in a wrap", "◌", "sheetmetal", "saddle hole header wrap",
-    "A rectangular wrap for the header pipe with the saddle hole cut out (the hole the branch sits in).",
+    "A rectangular wrap for the header pipe with the saddle hole cut out: the true shape where the branch meets the header (r15 7.5-saddlehole).",
     [["d", "Header pipe Ø", 120], ["len", "Wrap length along the pipe", 160], ["branch", "Branch pipe Ø", 70]],
     (p) => {
-      const w = Math.PI * p.d, h = p.len, r = p.branch / 2;
-      if (2 * r + 8 > Math.min(w, h)) return [rectContour(w, h)];
-      return [rectContour(w, h), circleContour(w / 2, h / 2, r)];
+      const w = Math.PI * p.d, h = p.len, hole = saddleHole(p.d, p.branch);
+      if (!hole || hole.wide + 8 > w || 2 * hole.r + 8 > h) return [rectContour(w, h)];
+      return [rectContour(w, h), { pts: hole.pts.map(([x, y]) => [w / 2 + x, h / 2 + y]), closed: true }];
     },
-    { noResize: true }),
+    { noResize: true, note: (p) => (Number(p.branch) > Number(p.d) ? "The branch is bigger than the header pipe, so it cannot sit in it: no hole is cut." : "") }),
   shape("elbow2", "2-piece 90° elbow", "⌢", "sheetmetal", "two piece elbow mitre",
     "Two mitred gores for a 90° elbow (one square end and one mitre cut on each piece). Type the centreline radius and the number of pieces.",
     [["d", "Pipe Ø", 100], ["bend", "Bend angle (degrees)", 90], ["clr", "Centreline radius (CLR)", 150], ["n", "Number of pieces", 2], ...SHEET_PARAMS],
