@@ -2,18 +2,31 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 10:20 (UK time). Live: see `version.json`.
+Last updated: 21 Nov 2026, 10:40 (UK time), with the Round 2 push. Live: see `version.json`.
 
 ## Working on
-- r15 Round 2 finishing: 2.2, 2.6, 2.12, 2.18 are committed locally and go up in one push at the end of Round 2.
-- r15 3.9 (1280×600 Arrange tab: Flip up/down under Cut this part, Offset and Lock covered), plus Cut > Stopped "Download G-code" (#btnExport4) off-screen at 1280×600. Both are in the Round 2 push, with new 96 checks "make-advanced-arrange" and "cut-stopped-midjob".
+- r15 Round 2 close-out: live-site motor-mount run after this push deploys.
+- Then r15 Round 3 (tests first).
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
 - r15 7.1, 7.2 (113_r15_fits), 7.3 (120_every_tool), 7.4 (121_features), all in the deploy gate @ bb5aadb
 - r15 2.1, 2.3–2.5, 2.7–2.11, 2.13, 2.14, 2.16 (loose holes on open + DXF/SVG auto-adopt, 122_loose_holes) @ bb5aadb
 - r15 3.1, 3.3, 3.7, 3.8 @ bb5aadb
-- (Round 2 remainder, 3.9 and the Stopped fix will be listed here with the push hash.)
+- r15 2.12 Corners row (Fillet / Chamfer / Relief keep the shape editable; click-a-corner mode) @ 17bfc56, e2e 121 corner click @ f3d2a2b
+- r15 2.6 Pattern (grid / circle / line) for slots, cut-outs, text, etch lines @ 48e4c50
+- r15 2.2 Text row summary says where it is @ 549b7e5
+- r15 2.18 phone Features bottom sheet (e2e 123_features_phone, now in the deploy gate) @ f904d5d
+- r15 3.9 Arrange tab fits (your report item 1; every laptop size, not only 1280×600) @ 082955a, test @ 99965ed
+- r15 4.14 Cut > Stopped: Download G-code on screen at 1280×600 (your report item 2) @ 3d47ed1, test @ 99965ed
+- r15 2.19 (Josh t543u) a bigger size typed in the Size tab refits the view like Fit @ dd5f6ba, test @ 0c2358a
+- r15 2.17 (no features = G-code unchanged): 339 presets + 35 DXF/SVG byte-identical before this push (tmp/precheck.sh)
+- r15 2.15 Ctrl+D / Delete on a Features row (one undo each; also fixed: Delete on a focused row used to delete the whole part) @ 72b3783, test @ 94e3301
+
+## Why 96/113 missed report items 1 and 2
+- Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
+- Item 2: the walk stopped a ONE-part job before its first pierce, so Save speed, "Stopped during cut N" and Continue from cut never
+  showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
 - r15 Round 3, remaining items: 3.2, 3.4, 3.5, 3.6, 3.10, 3.11, 3.12
