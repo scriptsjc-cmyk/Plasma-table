@@ -939,7 +939,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .previewPane { grid-column: var(--s4-bed, 1); grid-row: 1; order: 0; max-height: none; }
   body.app-shell[data-screen="cut"][data-step="4"] .cutgrid > .stepPane { grid-column: var(--s4-run, 2); grid-row: 1; order: 0; min-height: 0; overflow: auto; }
   body[data-screen="cut"] #running:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 16px; align-content: start;
-    grid-template-areas: "title speed" "nums speed" "prog speed" "info speed" "pos speed" "torch speed" "live live" "note note" "ctl ctl" "help help"; }
+    grid-template-areas: "title speed" "nums speed" "prog speed" "info speed" "pos speed" "torch speed" "live live" "note note" "ctl help"; }   /* r15 1.2: the safety sentence sits beside Pause, never cut off at the bottom */
   #running > #runTitle { grid-area: title; margin: 0; }
   #running > .runnums { grid-area: nums; margin: 0; }
   #running > .progress { grid-area: prog; margin: 0; }
@@ -962,7 +962,7 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   #running > #lpNote { grid-area: note; margin: 0; }
   #running > #lpNote:empty { display: none; }
   #running > .runctl { grid-area: ctl; position: sticky; bottom: 0; z-index: 2; margin: 0; padding: 4px 0; background: var(--card); }
-  #running > #runHelp { grid-area: help; margin: 0; font-size: var(--fs-xs); line-height: 1.35; }
+  #running > #runHelp { grid-area: help; align-self: center; margin: 0; font-size: var(--fs-xs); line-height: 1.35; }
 
   /* STOP stays the biggest: no other cutting-screen button is wider than 300px or taller than 56px */
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button,
@@ -970,6 +970,13 @@ body.short-land .dimedit label { margin-bottom: 2px; }
   body[data-screen="cut"][data-step="3"] #cutView .stepPane button.xl, body[data-screen="cut"][data-step="4"] #cutView .stepPane button.xl { min-height: 48px; max-height: 56px; }
   body[data-screen="cut"][data-step="3"] #cutView #btnTrace { min-height: 44px; padding: 4px 10px; font-size: var(--fs-s); }
   body[data-screen="cut"][data-step="4"] .runctl #btnPause { flex: 0 1 240px; min-height: 56px; }   /* 240 x 56 stays smaller than the fixed 168 x 88 STOP */
+}
+/* r15 1.2: short laptop screens (1280 x 600): slightly tighter rows and speed buttons, so the whole run panel and its
+   safety sentence fit without being cut off */
+@media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"] #running:not(.hidden) { row-gap: 4px; }
+  body[data-screen="cut"] #running > #liveSpeedBox p { margin-top: 2px; }
+  body[data-screen="cut"] #running > #liveSpeedBox .row button { min-height: 40px; }
 }
 
 
