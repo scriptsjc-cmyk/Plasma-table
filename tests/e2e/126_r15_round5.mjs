@@ -130,6 +130,38 @@ try {
     t.check("no page error (5.6)", !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- 5.7 3D viewer: job thickness, dimensions, Unfold slider
+  {
+    const page = await newPage(br, "d1440", { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    const put = (id) => ev(page, async (id) => {
+      const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode("pro", { persist: false, autoFs: false });
+      const s = T.sketch; s.clear(); s.add(id, true); s.commit(); s.pick([s.items[0].id]); s.onSelect(); T.renderShapeForm && T.renderShapeForm();
+      await new Promise((r) => setTimeout(r, 450));
+      const host = document.getElementById("fold3dHost"), cv = host && host.querySelector("canvas.fold3d");
+      const sl = host && host.querySelector(".fold3d-unfold input[type=range]");
+      return { thick: host && host._model && host._model.thick, dims: (cv && cv._dims || []).map((d) => d.text), slider: !!(sl && sl.getClientRects().length), val: sl && sl.value };
+    }, id);
+    await ev(page, () => { window.plasmaTest.S.thickness = 6; });
+    const a = await put("foldubr");
+    t.check("5.7 the 3D is drawn at the job's sheet thickness (6 mm)", a.thick === 6, J(a));
+    t.check("5.7 the 3D shows its three sizes in mm", a.dims.length === 3 && a.dims.every((x) => / mm$/.test(x)), J(a));
+    t.check("5.7 a folded part has an Unfold slider, starting folded", a.slider && a.val === "100", J(a));
+    const flat = await ev(page, async () => {
+      const sl = document.querySelector("#fold3dHost .fold3d-unfold input[type=range]");
+      sl.value = "0"; sl.dispatchEvent(new Event("input", { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 200));
+      const m = document.getElementById("fold3dHost")._model, fs = m.faces.filter((f) => !f.edge && !f.ghost), n0 = fs[0].n;
+      return fs.every((f) => Math.abs(Math.abs(f.n[0] * n0[0] + f.n[1] * n0[1] + f.n[2] * n0[2]) - 1) < 1e-6);
+    });
+    t.check("5.7 Unfold to 0 lays the part flat", flat === true);
+    const c = await put("cone");
+    t.check("5.7 a rolled cone has no Unfold slider", !c.slider, J(c));
+    const b = await put("foldubr");
+    t.check("5.7 a new part starts folded again", b.slider && b.val === "100", J(b));
+    t.check("no page error (5.7)", !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
 } catch (e) {
   t.check("126 ran to the end", false, String(e && e.stack || e).slice(0, 400));
 }
