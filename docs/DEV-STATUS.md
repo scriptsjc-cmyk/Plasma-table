@@ -2,11 +2,11 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 10:40 (UK time), with the Round 2 push. Live: see `version.json`.
+Last updated: 21 Nov 2026, 11:05 (UK time). Live: see `version.json`.
 
 ## Working on
-- r15 Round 2 close-out: live-site motor-mount run after this push deploys.
-- Then r15 Round 3 (tests first).
+- r15 Round 2 close-out: live-site motor-mount run (Round 2 is deployed @ 9870354).
+- r15 Round 3: 3.2, 3.4, 3.5, 3.6, 3.10, 3.11, 3.12 (tests first, new e2e 124_r15_round3; one push at the end of the round).
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
@@ -21,7 +21,7 @@ Last updated: 21 Nov 2026, 10:40 (UK time), with the Round 2 push. Live: see `ve
 - r15 4.14 Cut > Stopped: Download G-code on screen at 1280×600 (your report item 2) @ 3d47ed1, test @ 99965ed
 - r15 2.19 (Josh t543u) a bigger size typed in the Size tab refits the view like Fit @ dd5f6ba, test @ 0c2358a
 - r15 2.17 (no features = G-code unchanged): 339 presets + 35 DXF/SVG byte-identical before this push (tmp/precheck.sh)
-- r15 2.15 Ctrl+D / Delete on a Features row (one undo each; also fixed: Delete on a focused row used to delete the whole part) @ 72b3783, test @ 94e3301
+- r15 2.15 Ctrl+D / Delete on a Features row (one undo each; also fixed: Delete on a focused row used to delete the whole part) @ 72b3783, test @ 94e3301 (made steadier under load @ b929d71)
 
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
@@ -29,7 +29,6 @@ Last updated: 21 Nov 2026, 10:40 (UK time), with the Round 2 push. Live: see `ve
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- r15 Round 3, remaining items: 3.2, 3.4, 3.5, 3.6, 3.10, 3.11, 3.12
 - r15 Round 4 (screen polish), items 1–26
 
 ## Not a bug
