@@ -169,6 +169,7 @@ for (const [hrot, hfx] of [[0, false], [90, false], [30, true]]) {
   t.check("pattern: Make a pattern on a slot keeps it ONE slot row with a 2-copy grid, the original unmoved", g && g.k === "slot" && g.x === 40 && g.y === 30 && g.pat && g.pat.t === "grid" && g.pat.cols === 2 && g.pat.rows === 1 && F.featureContours(g).length === 2, J(g));
   F.setFeatureValue(g, "pcols", 3, fr); F.setFeatureValue(g, "ppx", 40, fr);
   t.check("pattern: 3 across at pitch 40 -> slots at X 40, 80, 120 (exact)", J(centres(g)) === J([[40, 30], [80, 30], [120, 30]]), J(centres(g)));
+  t.check("summary: a text row says where it is, like every other row", F.featureSummary({ ...F.newFeature("text", 7, 200, 150), text: "PORTA 01", h: 12, x: 100, y: 20 }) === '"PORTA 01" 12 high at 100, 20');
   t.check("pattern: the row says so", /3 × 1/.test(F.featureSummary(g)) && /pitch 40/.test(F.featureSummary(g)), F.featureSummary(g));
   // round a centre: a rectangle cut-out 4 times round the part centre
   const rc = { ...F.newFeature("rect", 2, 200, 150), x: 100, y: 115, w: 20, h: 10, r: 0, rot: 0 };

@@ -357,7 +357,7 @@ function featureSummaryOne(f) {
     case "edge": return `${f.n} × Ø${n(f.d)}, pitch ${n(f.pitch)}`;
     case "rect": return `${n(f.w)} × ${n(f.h)}${f.r ? ` R${n(f.r)}` : ""} at ${n(f.x)}, ${n(f.y)}`;
     case "shape": return `${f.shape === "drawn" ? "drawn shape" : f.shape} ${n(f.w)} × ${n(f.h)} at ${n(f.x)}, ${n(f.y)}`;
-    case "text": return `"${f.text}" ${n(f.h)} high`;
+    case "text": return `"${f.text}" ${n(f.h)} high at ${n(f.x)}, ${n(f.y)}`;
     case "etch": return `${n(f.len)} long${f.rot ? `, ${n(f.rot)}°` : ""}`;
     case "corner": {
       if (f.at == null) return `R${n(f.r)}`;
