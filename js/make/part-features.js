@@ -170,9 +170,9 @@ export function featureIssues(feats, outline, thickness = 3) {
   const res = new Map(), add = (id, m) => { if (!res.has(id)) res.set(id, []); if (!res.get(id).includes(m)) res.get(id).push(m); };
   const live = (feats || []).filter((f) => !f.hide && f.k !== "corner");
   const shapes = live.map((f) => ({ f, cs: featureContours(f).filter((c) => c.closed !== false) }));
-  const gap = Math.max(1, t);
+  const gap = 1.5 * t;                                 // plan 2.10: keep 1.5 x thickness of metal to the outline
   for (const { f, cs: fc } of shapes) {
-    if (isHoleFeature(f) && f.d < 1.5 * t) add(f.id, `Hole Ø${f.d} is smaller than 1.5 × thickness (${exact(1.5 * t)} mm), so it may not cut cleanly.`);
+    if (isHoleFeature(f) && f.d < 1.5 * t) add(f.id, `Hole Ø${f.d} is smaller than 1.5 × thickness (${exact(1.5 * t)} mm), so it may not cut cleanly. Drill it instead?`);
     if (!outline || !outline.length) continue;
     const allPts = featureContours(f).flatMap((c) => c.pts);
     if (allPts.some((p) => !pointInPoly(p, outline)) || fc.some((c) => polysCross(c.pts, outline))) add(f.id, "Part of this is outside the part.");

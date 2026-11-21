@@ -57,10 +57,10 @@ stray.d = 2; iss = F.featureIssues([bore, stray], outline, 3);
 t.check("check: Ø2 in 3 mm plate is under 1.5 x thickness", (iss.get(11) || []).some((m) => /1\.5/.test(m)), J([...iss]));
 stray.d = 10; stray.x = 3; iss = F.featureIssues([stray], outline, 3);
 t.check("check: a hole past the edge is outside the part", (iss.get(11) || []).some((m) => /outside/i.test(m)), J([...iss]));
-stray.x = 8; iss = F.featureIssues([stray], outline, 3);
-t.check("check: 3 mm of metal to the edge is fine", !(iss.get(11) || []).length, J([...iss]));
-stray.x = 6.5; iss = F.featureIssues([stray], outline, 3);
-t.check("check: 1.5 mm of metal to the edge is too close", (iss.get(11) || []).some((m) => /close/i.test(m)), J([...iss]));
+stray.x = 9.5; iss = F.featureIssues([stray], outline, 3);
+t.check("check: 4.5 mm (1.5 x 3 mm) of metal to the edge is fine", !(iss.get(11) || []).length, J([...iss]));
+stray.x = 9; iss = F.featureIssues([stray], outline, 3);
+t.check("check: 4 mm of metal to the edge in 3 mm plate is too close (< 1.5 x thickness)", (iss.get(11) || []).some((m) => /close/i.test(m)), J([...iss]));
 
 // text and etch: etched, one feature
 const tx = { ...F.newFeature("text", 12, 200, 150), text: "PORTA 01", h: 10, y: 20 };
