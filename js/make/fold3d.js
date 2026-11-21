@@ -1296,9 +1296,10 @@ function projector(faces, cam, w, h, pad = 10) {
   return { xy, s, ox, oy };
 }
 
-function projectFaces(faces, cam, w, h, pad = 10) {
+// frame: the faces the view is fitted to (default: these faces). r15 7.5: ghosts are drawn in the part's frame.
+function projectFaces(faces, cam, w, h, pad = 10, frame = faces) {
   attachSmoothNormals(faces);
-  const { xy } = projector(faces, cam, w, h, pad);
+  const { xy } = projector(frame, cam, w, h, pad);
   const out = faces.map((f) => {
     const qs = f.pts.map((p) => rotCam(p, cam));
     const depth = qs.reduce((a, p) => a + p[2], 0) / qs.length;
@@ -1373,8 +1374,8 @@ function drawGroundShadow(ctx, faces, cam, w, h, pad) {
   ctx.restore();
 }
 
-function drawSharpEdges(ctx, faces, cam, w, h, pad, strokeW, ghostPass = false) {
-  const { xy } = projector(faces, cam, w, h, pad);
+function drawSharpEdges(ctx, faces, cam, w, h, pad, strokeW, ghostPass = false, frame = faces) {
+  const { xy } = projector(frame, cam, w, h, pad);
   ctx.save();
   ctx.strokeStyle = ghostPass ? "rgba(70, 90, 110, 0.55)" : EDGE;
   ctx.lineWidth = ghostPass ? strokeW * 0.8 : strokeW;
@@ -1421,13 +1422,16 @@ export function drawFoldCanvas(cv, model, cam = DEFAULT_CAM) {
   const pad = Math.max(16, Math.round(Math.min(w, h) * 0.06));
   const solidFaces = model.faces.filter((f) => !f.ghost);
   const ghostFaces = model.faces.filter((f) => f.ghost);
-  drawGroundShadow(ctx, solidFaces.length ? solidFaces : model.faces, cam, w, h, pad);
+  // r15 7.5: one frame for the whole picture, fitted to the part; the ghost (context) parts used to be fitted on their own,
+  // so they were drawn at another size and place (the take-off looked as if it hung under its duct)
+  const frame = solidFaces.length ? solidFaces : model.faces;
+  drawGroundShadow(ctx, frame, cam, w, h, pad);
   if (ghostFaces.length) {
     ctx.save();
     ctx.globalAlpha = 0.32;
-    for (const p of projectFaces(ghostFaces, cam, w, h, pad)) fillShaded(ctx, p.path, p.holes, p.lits, p.back, p.src);
+    for (const p of projectFaces(ghostFaces, cam, w, h, pad, frame)) fillShaded(ctx, p.path, p.holes, p.lits, p.back, p.src);
     ctx.restore();
-    drawSharpEdges(ctx, ghostFaces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280), true);
+    drawSharpEdges(ctx, ghostFaces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280), true, frame);
   }
   const polys = projectFaces(solidFaces.length ? solidFaces : model.faces, cam, w, h, pad);
   for (const p of polys) fillShaded(ctx, p.path, p.holes, p.lits, p.back, p.src);
