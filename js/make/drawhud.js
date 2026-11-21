@@ -221,6 +221,8 @@ function onHudKey(e) {
     if (sketch && sketch.tool === "draw" && sketch.drawPts && sketch.drawPts.length >= 3) {
       sketch.finishDraw(); closeDrawHud(); return;
     }
+    // r15 3.5: an empty box on a two-point line: say what to do instead of silently doing nothing
+    if (sketch && sketch.tool === "draw" && sketch.drawPts && sketch.drawPts.length === 2 && !((($("drawHudLen") || {}).value || "").trim())) { sketch.finishDraw(); return; }
     applyHudPoint(); return;
   }
   if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cancelDrawHud(); return; }

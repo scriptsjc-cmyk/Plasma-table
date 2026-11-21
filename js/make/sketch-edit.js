@@ -1,5 +1,5 @@
 // Sketch: the commands that change the picked shapes (turn, mirror, align, join, arrays, offset, subtract, nest, resize, ...).
-import { MIN, cleanContour, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
+import { MIN, cleanContour, clone, def, distToEdge, mapC, r1, rot, unionBox, wholeSet, TWO_POINT_HINT } from "./sketch-util.js";
 import { assessOffset, bbox, bulgeMidpoint, classifyContainment, differenceOutlines, offsetLoop, pointInPoly, polysCross, selfIntersects, signedArea, unionMany, unionOutlines } from "../core/geom.js";
 import { fitContour } from "../core/arcs.js";
 import { nestUnitsSync, turnAngles, ringsBox } from "../cut/nest.js";
@@ -771,7 +771,7 @@ export class EditMethods {
   }
 
   finishDraw() {
-    if (this.drawPts.length < 3) { this.onMessage(clickVerb() + " at least three points, then Close."); return; }
+    if (this.drawPts.length < 3) { this.onMessage(this.drawPts.length === 2 ? TWO_POINT_HINT : clickVerb() + " at least three points, then Close."); return; }
     const pts = this.drawPts.map((p) => [r1(p[0]), r1(p[1])]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
     const srcB = (this.drawBulges || []).slice();
     const uniq = [], ub = [];

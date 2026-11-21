@@ -92,3 +92,6 @@ export const unionBox = (bs) => bs.reduce((u, b) => [Math.min(u[0], b[0]), Math.
 export function mixin(target, ...parts) {
   for (const P of parts) for (const k of Object.getOwnPropertyNames(P.prototype)) { if (k !== "constructor") Object.defineProperty(target.prototype, k, Object.getOwnPropertyDescriptor(P.prototype, k)); }
 }
+
+// r15 3.5: what to do with a two-point line (Enter, Close or double-click on it)
+export const TWO_POINT_HINT = "Add one more point to close it into a part, or press Etch line to keep it as a mark (not cut through).";

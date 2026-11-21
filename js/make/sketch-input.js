@@ -1,6 +1,6 @@
 // Sketch: mouse, touch and keyboard (picking, dragging, snapping guides, resize handles, pan and zoom).
 import { getPrefs } from "../core/prefs.js";
-import { boxOverlap, clone, r1, unionBox, wholeSet } from "./sketch-util.js";
+import { boxOverlap, clone, r1, unionBox, wholeSet, TWO_POINT_HINT } from "./sketch-util.js";
 import { screenBoxToWorld, shiftView } from "../cut/bedview.js";
 import { detectCircle, pointInPoly, bulgeRadius } from "../core/geom.js";
 import { snapWorld, constraintOf, applyConstraints } from "./snaps.js";
@@ -623,7 +623,10 @@ export class InputMethods {
       // drawing shortcuts: never steal Space (pan on Make, STOP on Cut). Ignore when typing (checked above).
       if (this.tool === "draw" && this.drawPts && this.drawPts.length) {
         if (e.key === "Backspace") { stop(); (this.popDrawPoint ? this.popDrawPoint() : this.drawPts.pop()); afterDrawPoint(); this.draw(); return; }
+        // r15 3.4: Enter finishes an etch line as an open mark (never closes it into a cut); 3.5: a two-point line says what to do
+        if (e.key === "Enter" && this.drawEtch && this.drawPts.length >= 2) { stop(); this.finishOpenDraw && this.finishOpenDraw(); closeDrawHud(); return; }
         if (e.key === "Enter" && this.drawPts.length >= 3) { stop(); this.finishDraw && this.finishDraw(); closeDrawHud(); return; }
+        if (e.key === "Enter") { stop(); this.onMessage(TWO_POINT_HINT); return; }
         if (k === "a") { stop(); this.drawArc = !this.drawArc; this.onMessage(this.drawArc ? "Next segment will be a curve. Press A again for a straight line." : "Next segment will be a straight line."); return; }
       }
       if (this.tool === "spline" && this.drawPts && this.drawPts.length) {
