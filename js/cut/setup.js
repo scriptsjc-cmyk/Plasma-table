@@ -503,6 +503,7 @@ async function paintSaved() {
 export function openAdd() {
   pending = []; paintAdd(); paintSaved();
   $("addFiles").value = "";
+  { const t = $("toast"); if (t) t.classList.add("hidden"); }   // r15 3.10: an old message never sits over a dialog that opens
   $("addPartsDlg").classList.remove("hidden");
 }
 // a file chosen while a drawing is already open (Pro): open Add parts with it already read and size-checked
@@ -597,6 +598,7 @@ function bind() {
   // add-parts dialog
   $("addCancel").onclick = closeAdd;
   $("addPartsDlg").addEventListener("click", (e) => { if (e.target === $("addPartsDlg")) closeAdd(); });
+  $("addPick").onclick = () => $("addFiles").click();   // r15 3.10: the app's own file button
   $("addFiles").addEventListener("change", async (e) => {
     const from = pending.length;
     const notes = await readFiles([...e.target.files]); paintAdd();

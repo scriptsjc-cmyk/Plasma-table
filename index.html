@@ -304,8 +304,8 @@
           <label class="check"><input type="checkbox" id="exportN"> Line numbers (N10, N20…)</label>
           <p class="muted small" id="exportHint">Mach3: no $ commands, M3/M5 torch, G4 P in seconds, file wrapped in %.</p>
           <div class="row wrap exportpop-actions">
-            <button type="button" id="exportGo" class="accent">Download</button>
             <button type="button" id="exportCancel">Cancel</button>
+            <button type="button" id="exportGo" class="accent">Download</button>
           </div>
           <p class="muted small">Or save the drawing (design geometry, not the kerfed path):</p>
           <div class="row wrap exportpop-actions">
@@ -849,7 +849,7 @@
   <div class="shapelib-card slim">
     <div class="shapelib-head"><h2 id="addTitle">Add parts to the sheet</h2><button type="button" id="addCancel">Close</button></div>
     <h3>Drawing files <span class="muted small">(pick as many DXF or SVG files as you like)</span></h3>
-    <input id="addFiles" type="file" accept=".dxf,.svg,image/svg+xml" multiple>
+    <div class="filepick"><input id="addFiles" type="file" hidden accept=".dxf,.svg,image/svg+xml" multiple><button type="button" id="addPick" class="file-btn">Choose drawing files…</button></div>
     <h3>Your saved parts</h3>
     <div id="addSaved" class="addsaved"></div>
     <h3>Chosen <span class="muted small">(set how many of each)</span></h3>

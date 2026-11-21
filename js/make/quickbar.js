@@ -395,8 +395,8 @@ export function quickAction(a) {
         ] },
         { id: "inside", label: "All inside corners", type: "checkbox", value: false },
         { note: hasCorner
-          ? "Do it applies to the corner you clicked. Tick All inside corners to do every inside corner at once. A relief cut is only for inside corners."
-          : "Choose Round corner (smooth radius) or Relief cut (a circle into the inside corner so a square corner can sit in). Then Do it and click the corners, or tick All inside corners." },
+          ? "Fillet applies to the corner you clicked. Tick All inside corners to do every inside corner at once. A relief cut is only for inside corners."
+          : "Choose Round corner (smooth radius) or Relief cut (a circle into the inside corner so a square corner can sit in). Then press Fillet and click the corners, or tick All inside corners." },
       ], (v) => {
         if (!(v.r > 0)) { toast(v.mode === "relief" ? "Enter a diameter." : "Enter a radius.", true); return; }
         const relief = v.mode === "relief";
@@ -437,8 +437,8 @@ export function quickAction(a) {
         { id: "ang", label: "Angle (degrees)", value: prev.angle || 45 },
         { id: "all", label: "All corners", type: "checkbox", value: false },
         { note: hasCorner
-          ? "Do it applies to the corner you clicked. Tick All corners to chamfer every sharp corner. The default 45° trims both edges equally on a square corner."
-          : "Type a distance and an angle (45° is a true 45° on a square corner), then Do it and click the corners, or tick All corners." },
+          ? "Chamfer applies to the corner you clicked. Tick All corners to chamfer every sharp corner. The default 45° trims both edges equally on a square corner."
+          : "Type a distance and an angle (45° is a true 45° on a square corner), then press Chamfer and click the corners, or tick All corners." },
       ], (v) => {
         if (!(v.d > 0)) { toast("Enter a distance.", true); return; }
         const ang = v.ang > 0 ? v.ang : 45;

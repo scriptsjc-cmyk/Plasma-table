@@ -21,9 +21,9 @@
         <p id="makeExportTitle" class="exportpop-title">Save the drawing</p>
         <p class="muted small has-info"><span class="info-label">This is the design geometry.</span><button type="button" class="info-i" data-tip="This is the design geometry, not the kerfed toolpath. Arcs stay as arcs." aria-label="More about the exported drawing"></button><span class="info-body"> not the kerfed toolpath. Arcs stay as arcs.</span></p>
         <div class="row wrap exportpop-actions">
+          <button type="button" id="makeExpCancel">Cancel</button>
           <button type="button" id="makeExpDxf" class="accent">DXF (R12)</button>
           <button type="button" id="makeExpSvg">SVG</button>
-          <button type="button" id="makeExpCancel">Cancel</button>
         </div>
       </div>
     </span>
@@ -76,8 +76,8 @@
             <div class="edgehead">
               <h3>Edit edge</h3>
               <div class="row">
-                <button type="button" id="edgeDone" class="small go">Done</button>
                 <button type="button" id="edgeCancel" class="small">Cancel</button>
+                <button type="button" id="edgeDone" class="small go">Done</button>
               </div>
             </div>
             <p class="muted small" id="edgeHint">Click an edge to change it, or drag a corner. Double-click an edge to add a corner; Delete removes one.</p>
