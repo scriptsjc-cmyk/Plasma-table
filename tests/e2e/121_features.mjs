@@ -276,6 +276,22 @@ try {
   await ev(page, () => { const b = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (b) b.click(); }); await sleep(200);
   t.check("corners: clicking a corner on the drawing adds 'R6 at 1 corner' (that corner) and keeps the gusset", c4.type === "gusset" && J((c4.f || []).map((f) => [f.k, f.kind, f.r, f.at])) === J([["corner", "round", 6, [1]]]) && (await rows()).some((r) => /R6 at 1 corner/.test(r.sum)), J(c4));
   await ev(page, () => window.plasmaTest.sketch.endFilletPick());
+  // r15 2.19 (Josh t543u): typing a bigger size in the Size tab zooms the view to fit the part again, like Fit (no blur needed)
+  await ev(page, () => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect", true, { w: 80, h: 50 }); s.commit(); s.pick([s.items[0].id]); s.onSelect(); s.fitView();
+    const b = document.querySelector('#srcShape .insp-tabs [data-insp="size"]'); if (b) b.click(); });
+  await sleep(300);
+  const s0 = await ev(page, () => window.plasmaTest.sketch.view.s);
+  const wIn = page.locator('#shapeForm input[data-p="w"]').first();
+  await wIn.click(); await page.keyboard.press("Control+A"); await page.keyboard.type("900", { delay: 60 }); await sleep(900);
+  const rf = await ev(page, () => {
+    const s = window.plasmaTest.sketch, it = s.items[0], b = s.boxOf(it), [w, h] = s.size();
+    const pts = [[b[0], b[1]], [b[2], b[3]]].map(([x, y]) => s.toScreen(x, y));
+    const inView = pts.every(([x, y]) => x >= 0 && y >= 0 && x <= w && y <= h);
+    const sNow = s.view.s, keep = { ...s.view }; s.fitView(); const sFit = s.view.s; s.view = keep; s.draw();
+    return { w: it.p.w, inView, sNow, sFit, focused: document.activeElement && document.activeElement.dataset.p };
+  });
+  t.check("2.19: typing a bigger width (900) zooms the view out to fit the whole part, the same as Fit, while still typing",
+    rf.w === 900 && rf.inView && rf.sNow < s0 && Math.abs(rf.sNow - rf.sFit) < 1e-6 && rf.focused === "w", J({ s0, ...rf }));
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("121 ran to the end", false, String(e && e.stack || e).slice(0, 400));
