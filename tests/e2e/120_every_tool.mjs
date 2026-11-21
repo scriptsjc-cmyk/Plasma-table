@@ -28,7 +28,9 @@ const DIALOGS = ["cadDialog", "presetBrowser", "shapeLib", "verPop", "resizeDlg"
 //   effect: items (default) | view | snap | measure | cam
 const SPEC = {
   presets: { act: "dialog", dlg: "presetBrowser", go: "#pbGrid button, #pbGrid [data-preset], #pbGrid .pb-card" },
-  rect: { act: "instant" }, disc: { act: "instant" }, triangle: { act: "instant" }, slot: { act: "instant" }, sector: { act: "instant" },
+  // r15 3.6: Rectangle / Circle draw on the drawing (two corners; centre then edge) - a double-click on the button drops a standard one
+  rect: { act: "mode", setup: "empty", clicks: (b) => [[b.C[0] - 40, b.C[1] - 20], [b.C[0] + 40, b.C[1] + 20]] },
+  disc: { act: "mode", setup: "empty", clicks: (b) => [[b.C[0], b.C[1]], [b.C[0] + 30, b.C[1]]] }, triangle: { act: "instant" }, slot: { act: "instant" }, sector: { act: "instant" },
   lib: { act: "dialog", dlg: "shapeLib", go: "#libGrid button, #libGrid [data-shape]" },
   hole: { act: "instant" }, slothole: { act: "instant" }, boltcircle: { act: "instant" },
   draw: { act: "mode", setup: "empty", clicks: (b) => [[b.C[0] - 40, b.C[1] - 20], [b.C[0] + 40, b.C[1] - 20], [b.C[0] + 40, b.C[1] + 20]], finishBtn: "#toolFinish" },

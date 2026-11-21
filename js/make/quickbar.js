@@ -283,12 +283,28 @@ function bindQbRoving() {
   });
 }
 
+let lastRD = null;
 export function quickAction(a) {
   switch (a) {
     case "presets": openPresetBrowser(); break;
     case "more": toggleMore(); return;
     case "customise": openToolbarCustom(); toggleMore(false); break;
-    case "rect": case "disc": case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
+    // r15 3.6: the Rectangle / Circle buttons draw, like the R / C keys (click-click or drag); a double-click drops a standard one
+    case "rect": case "disc": {
+      // the bar re-renders on the first click, so a double-click is two clicks on the same button within 450 ms
+      const now = Date.now(), dbl = lastRD && lastRD.a === a && now - lastRD.t < 450;
+      lastRD = dbl ? null : { a, t: now };
+      if (dbl) { sketch.setTool(null); sketch.add(a); break; }
+      if (sketch.tool === a) sketch.setTool(null);
+      else {
+        sketch.setTool(a);
+        toast(a === "rect" ? "Click two corners, or drag. Type the width and height if you like. Double-click the button for a standard one."
+          : "Click the centre, then the edge, or drag. Type the diameter if you like. Double-click the button for a standard one.");
+      }
+      if (sketch.onSelect) sketch.onSelect();
+      break;
+    }
+    case "triangle": case "slot": case "sector": case "hole": case "slothole": case "boltcircle":
       if (shapeDef(a)) sketch.add(a); else toast("That shape isn't available.", true); break;
     case "lib": openLibrary(); break;
     case "text": case "trace": openMakeTool(a); break;

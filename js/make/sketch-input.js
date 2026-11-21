@@ -260,11 +260,11 @@ export class InputMethods {
         if (Math.abs(px) > this.maxMm || Math.abs(py) > this.maxMm) { this.onMessage("That point is off the table."); return; }
         if (this.tool === "rect") {
           if (this.drawDraft && this.drawDraft.kind === "rect") { commitRectDisc(); return; }
-          startRectAt(px, py); this.draw(); return;
+          startRectAt(px, py); this.rdDown = { sx, sy, id: e.pointerId }; this.draw(); return;
         }
         if (this.tool === "disc") {
           if (this.drawDraft && this.drawDraft.kind === "disc") { commitRectDisc(); return; }
-          startDiscAt(px, py); this.draw(); return;
+          startDiscAt(px, py); this.rdDown = { sx, sy, id: e.pointerId }; this.draw(); return;
         }
         const last = this.drawPts[this.drawPts.length - 1];
         if (last) {
@@ -494,6 +494,12 @@ export class InputMethods {
     const end = (e) => {
       if (!this.active) return;
       this.pointers.delete(e.pointerId);
+      // r15 3.6: press-drag-release draws a rectangle / circle (a click without moving waits for the second click)
+      const rd = this.rdDown; this.rdDown = null;
+      if (rd && rd.id === e.pointerId && (this.tool === "rect" || this.tool === "disc") && this.drawDraft) {
+        const r = this.cv.getBoundingClientRect();
+        if (Math.hypot(e.clientX - r.left - rd.sx, e.clientY - r.top - rd.sy) > 6) { commitRectDisc(); return; }
+      }
       const d = this.drag;
       if (!d) return;
       if (d.kind === "pinch") { if (this.pointers.size === 0) this.drag = null; return; }
