@@ -401,9 +401,10 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-group,
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .scrollrow-fade,
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .scrollrow-more { display: none !important; }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button,
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar.quickbar button,
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left):not(.phone-ui) .cutgrid.with-qb #quickBar button {
+  /* rail buttons only: the ⋯ More panel (r15) sizes its own */
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button:not(#qbMorePop button),
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left) .cutgrid.with-qb #quickBar.quickbar button:not(#qbMorePop button),
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui):not(.yours-toolbar-left):not(.phone-ui) .cutgrid.with-qb #quickBar button:not(#qbMorePop button) {
     box-sizing: border-box;
     width: 100% !important;
     min-width: 0 !important;
@@ -497,7 +498,9 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
    button rules must not reach into it (the rail's own group-heading rules now match only #quickBar > .qb-group). */
 .qb-more-list { column-gap: 8px; }
 .qb-more-list > * { break-inside: avoid; }
-.qb-more-list > .qb-group { break-after: avoid; }
+.qb-more-list > .qb-more-grp.is-long, .qb-more-list.is-tight > .qb-more-grp { break-inside: auto; }   /* a long group, or any group when the panel is tight for room, may continue in the next column */
+.qb-more-list .qb-group { break-after: avoid; }
+.qb-more-list button { break-inside: avoid; }
 @media (min-width: 900px) and (hover: hover) and (pointer: fine) {
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop.qb-more {
     flex-direction: column;
@@ -505,13 +508,28 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
     padding: 8px;
     min-width: 0;
   }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list > .qb-group {
+  /* r15 3.3: the search box is always open in the panel (on the rail it stays a 🔍 that opens on click) */
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-search { display: flex; align-items: center; gap: 4px; width: 100%; max-width: none; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-search > button { flex: none; width: 36px; min-width: 36px; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-search input {
+    display: block;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    min-height: 32px;
+    opacity: 1;
+    pointer-events: auto;
+    padding: 4px 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list .qb-group {
     display: block;
     margin: 6px 2px 2px;
     border: 0;
   }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list > .qb-group:first-child { margin-top: 0; }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list > button {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-grp:first-child > .qb-group { margin-top: 0; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list button {
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -523,12 +541,20 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
     margin: 0 0 4px;
     text-align: left;
   }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list > button i { flex: none; width: 20px; text-align: center; font-style: normal; }
-  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list > button span {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list button i { flex: none; width: 20px; text-align: center; font-style: normal; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list button span {
     display: inline;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+/* r15 3.3: on a short laptop screen the panel's rows are a little tighter, so every tool fits over the drawing */
+@media (min-width: 900px) and (max-height: 700px) and (hover: hover) and (pointer: fine) {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list button { height: 28px; min-height: 28px; margin-bottom: 1px; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list .qb-group { margin: 2px 2px 1px; line-height: 1.2; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop.qb-more { gap: 4px; padding: 6px 8px; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-search > button,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-search input { height: 28px; min-height: 28px; }
 }

@@ -67,20 +67,32 @@ export function placeMorePop() {
   const rail = document.getElementById("quickBarWrap") || $("quickBar");
   if (!pop || !list || !rail || pop.classList.contains("hidden")) return;
   const laptop = matchMedia("(min-width: 900px) and (hover: hover) and (pointer: fine)").matches && !document.body.classList.contains("phone-ui");
-  const clear = () => { for (const k of ["position", "left", "top", "bottom", "width", "maxHeight", "overflow"]) pop.style[k] = ""; list.style.columnCount = ""; };
+  const clear = () => { for (const k of ["position", "left", "top", "bottom", "width", "maxHeight", "overflow"]) pop.style[k] = ""; list.style.columnCount = ""; list.classList.remove("is-tight"); };
   if (!laptop) { clear(); return; }
   const rr = rail.getBoundingClientRect(), pane = rail.closest(".cutgrid") || rail.parentElement;
   const pr = pane ? pane.getBoundingClientRect() : rr;
   const top = Math.max(8, Math.round(pr.top)), left = Math.round(rr.right + 6);
   const availH = Math.max(160, Math.min(window.innerHeight, pr.bottom || window.innerHeight) - top - 8);
-  const availW = Math.max(MORE_COL_W, window.innerWidth - left - 8);
+  // keep it over the drawing if the tools fit there, so the inspector beside it stays usable; else use the window
+  const pv = document.querySelector('[data-screen="make"] .previewPane'), pvr = pv && pv.getBoundingClientRect();
+  const fitIn = (maxCols) => {
+    for (let cols = 1; cols <= maxCols; cols++) {
+      list.style.columnCount = String(cols);
+      pop.style.width = (cols * MORE_COL_W + (cols - 1) * 8 + 18) + "px";
+      if (pop.scrollHeight <= pop.clientHeight + 1) return true;
+    }
+    return false;
+  };
+  const colsIn = (right) => Math.max(1, Math.floor((Math.max(MORE_COL_W, right - left - 8) + 8) / (MORE_COL_W + 8)));
   Object.assign(pop.style, { position: "fixed", left: left + "px", top: top + "px", bottom: "auto", maxHeight: availH + "px", overflow: "hidden" });
-  const maxCols = Math.max(1, Math.floor(availW / (MORE_COL_W + 8)));
-  for (let cols = 1; cols <= maxCols; cols++) {
-    list.style.columnCount = String(cols);
-    pop.style.width = (cols * MORE_COL_W + (cols - 1) * 8 + 18) + "px";
-    if (pop.scrollHeight <= pop.clientHeight + 1) return;
+  list.classList.remove("is-tight");
+  if (pvr && pvr.width > MORE_COL_W) {
+    if (fitIn(colsIn(pvr.right))) return;
+    list.classList.add("is-tight");   // groups may continue in the next column: packs tighter
+    if (fitIn(colsIn(pvr.right))) return;
+    list.classList.remove("is-tight");
   }
+  if (fitIn(colsIn(window.innerWidth))) return;
   pop.style.overflow = "auto";   // a window too small for every tool even in columns: let it scroll rather than cut tools off
 }
 if (typeof window !== "undefined") window.addEventListener("resize", () => { if (moreOpen) placeMorePop(); });
@@ -184,10 +196,9 @@ export function renderQuickBar() {
   const searchHtml = `<div class="qb-search"><button type="button" id="qbSearchBtn" class="qb-search-btn" aria-label="Search tools" title="Search tools (Ctrl+K or /)">🔍</button><input id="qbSearch" type="search" placeholder="Search tools" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`;
   const parts = [searchHtml];
   const chosen = getToolIds();
-  const chosenSet = new Set(chosen);
   const grouped = [];
   for (const grp of TOOL_GROUPS) {
-    const items = grp.items.filter(([id, , lab]) => chosenSet.has(id) && (!q || matchesQuery(lab + " " + id + " " + grp.g + " " + (TOOL_SYNONYMS[id] || ""), q)));
+    const items = grp.items.filter(([id, , lab]) => !q || matchesQuery(lab + " " + id + " " + grp.g + " " + (TOOL_SYNONYMS[id] || ""), q));   // r15: search finds every tool
     if (items.length) grouped.push({ g: grp.g, items });
   }
   const infoOf = (id) => toolInfo(id) || { icon: "", label: id, group: "Tools" };
@@ -202,7 +213,9 @@ export function renderQuickBar() {
     parts.push(B("customise", "⚙", "Customise toolbar"));
   } else {
     const primary = chosen.filter((id) => PRIMARY_TOOL_IDS.includes(id));
-    const overflow = chosen.filter((id) => !PRIMARY_TOOL_IDS.includes(id));
+    // r15 (3.3): More lists every tool that is not on the rail (Ungroup, Align right, Distribute, Hole distance… were
+    // in no place you could click unless you customised the toolbar first)
+    const onRail = new Set(primary);
     // Draw · Edit · Arrange, split by thin dividers (r13 #11)
     let lastRail = null;
     for (const id of primary) {
@@ -212,13 +225,12 @@ export function renderQuickBar() {
       addId(id);
     }
     parts.push(`<button type="button" data-qb="more" class="qb-more-btn${moreOpen ? " on" : ""}" aria-expanded="${moreOpen ? "true" : "false"}" aria-controls="qbMorePop" title="More tools" aria-label="More tools"><i>⋯</i><span>More</span></button>`);
+    // one block per tool group, so a short group never splits across the panel's columns (a long one may)
     const extra = [];
-    let lastG = null;
-    for (const id of overflow) {
-      const n = infoOf(id);
-      const g = n.group || "Tools";
-      if (g !== lastG) { extra.push(`<div class="qb-group" role="heading" aria-level="3">${esc(g)}</div>`); lastG = g; }
-      extra.push(B(id, n.icon, n.label));
+    for (const grp of TOOL_GROUPS) {
+      const ids = grp.items.map((it) => it[0]).filter((id) => !onRail.has(id));
+      if (!ids.length) continue;
+      extra.push(`<div class="qb-more-grp${ids.length > 8 ? " is-long" : ""}"><div class="qb-group" role="heading" aria-level="3">${esc(grp.g)}</div>${ids.map((id) => { const n = infoOf(id); return B(id, n.icon, n.label); }).join("")}</div>`);
     }
     extra.push(B("customise", "⚙", "Customise toolbar"));
     parts.push(`<div id="qbMorePop" class="qb-more${moreOpen ? " is-open" : " hidden"}" role="menu" aria-hidden="${moreOpen ? "false" : "true"}">${searchHtml.replace('id="qbSearch"', 'id="qbMoreSearch"').replace('id="qbSearchBtn"', 'id="qbMoreSearchBtn"')}<div class="qb-more-list">${extra.join("")}</div></div>`);
