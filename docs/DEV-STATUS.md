@@ -2,10 +2,11 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 21:35 (UK time). This push is r15 Round 8 part 1 (8.3, 8.4, 8.5, 8.6) and Josh's 21 Nov decisions: r15 7.5-redelbow and 7.5-saddlehole (CUT CHANGES), s2roffset kept. Round 7 is live. Live: see `version.json`.
+Last updated: 21 Nov 2026, 21:58 (UK time). Live: r15 Round 8 part 1 (8.3–8.6, part of 8.1) and Josh's 21 Nov decisions: r15 7.5-redelbow and 7.5-saddlehole (CUT CHANGES), s2roffset kept. See `version.json`.
 
 ## Working on
-- Round 8 part 2: 8.1 (CSS @layer, screen-cut.css split, container queries) and the pre-existing failures list.
+- Round 8 part 2: the rest of 8.1 (CSS @layer, container queries for the three columns) and the pre-existing failures list. @layer
+  changes which rule wins between files (a later layer beats a more specific earlier rule), so it needs a file-by-file visual check.
 - 8.2 is waiting on a design question (For Josh to decide).
 
 ## Ready to check
@@ -192,6 +193,10 @@ Last updated: 21 Nov 2026, 21:35 (UK time). This push is r15 Round 8 part 1 (8.3
     are dustpan, s2roffset, fishmouth, takeoff, britches, teetemp from Rounds 5 / 7)
   - Screenshots: briefs r8-redelbow-cut / -3d, r8-saddlehole-cut / -3d (100 on 110)
   - Full gate passed (78 suites) at 2c53c79 before the push (120_every_tool passed on its retry)
+  - 8.1 (part) screen-cut.css (3,258 lines) split in rule order into screen-cut.css + screen-cut-part / -run / -setup.css, linked one
+    after another @ 7bce453 / a05e377 (unit 58: the same rules in the same order). Visual: identical apart from a timing flake in my snap
+    tool at iPhone 14 landscape (a fold-out caught open or closed; the same diffs show up without the split). Full gate passed (79
+    suites) at a05e377 before the push
 
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
