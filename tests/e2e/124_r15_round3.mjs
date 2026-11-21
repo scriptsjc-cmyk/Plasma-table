@@ -83,6 +83,25 @@ try {
     });
     t.check(`3.11: Circular array with the defaults (${n} round, PCD 0 = auto) puts ${n} copies that don't overlap each other`, pa.n === n && pa.hit.length === 0 && !pa.msgs.some((m) => /overlap/i.test(m)), J(pa));
   }
+  // ---------------------------------------------------------------- 3.12 a spline shows only the points that were clicked
+  await fresh();
+  await ev(page, () => window.plasmaTest.sketch.setTool("spline"));
+  const clicked = [[10, 10], [40, 40], [70, 15], [100, 45], [130, 10]];
+  for (const [x, y] of clicked) await clickAt(x, y);
+  await page.keyboard.press("Enter"); await sleep(300);
+  const sp = await ev(page, (clicked) => {
+    const s = window.plasmaTest.sketch, it = s.items[0];
+    // count the handles the drawing paints for the picked curve: vertex dots (arc r 4.5-8) and arc-middle squares (8 x 8)
+    const P = CanvasRenderingContext2D.prototype, oa = P.arc, or = P.rect; const dots = [], sq = [];
+    P.arc = function (x, y, r, ...a) { if (r >= 4.4 && r <= 8.1 && this.canvas === s.cv) dots.push([x, y]); return oa.call(this, x, y, r, ...a); };
+    P.rect = function (x, y, w, h) { if (w === 8 && h === 8 && this.canvas === s.cv) sq.push([x, y]); return or.call(this, x, y, w, h); };
+    try { s.draw(); } finally { P.arc = oa; P.rect = or; }
+    const scr = clicked.map(([x, y]) => s.toScreen(x, y));
+    const dpr = s.cv.width / s.cv.getBoundingClientRect().width || 1;
+    const near = (d) => scr.some(([x, y]) => Math.hypot(d[0] / (dpr || 1) - x, d[1] / (dpr || 1) - y) < 6 || Math.hypot(d[0] - x, d[1] - y) < 6);
+    return { picked: s.sel.ids.includes(it && it.id), verts: it ? s.worldCs(it)[0].pts.length : 0, dots: dots.length, sq: sq.length, offClick: dots.filter((d) => !near(d)).length };
+  }, clicked);
+  t.check("3.12: a 5-click spline shows at most 5 dots, all on the clicked points, and no arc-middle squares", sp.picked && sp.dots >= 2 && sp.dots <= 5 && sp.offClick === 0 && sp.sq === 0, J(sp));
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("124 ran to the end", false, String(e && e.stack || e).slice(0, 400));
