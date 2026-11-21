@@ -481,7 +481,10 @@ export class EditMethods {
     const box = this.pickedBox();
     const pcdN = Number(pcd);
     if (Number.isFinite(pcdN) && (pcdN > this.maxMm || pcdN < 0)) { this.onMessage("That bolt-circle is bigger than the table."); return; }
-    let R = Number.isFinite(pcdN) && pcdN > 0 ? pcdN / 2 : Math.max(box[2] - box[0], box[3] - box[1]) / 2 + 10;
+    // r15 3.11: "0 = auto" spaces the copies so they clear each other by 10 mm whichever way they turn (the part's diagonal
+    // fits between neighbours); it used to be half the part + 10 mm, which stacked the copies on top of each other.
+    const diag = Math.hypot(box[2] - box[0], box[3] - box[1]);
+    let R = Number.isFinite(pcdN) && pcdN > 0 ? pcdN / 2 : Math.max(diag / 2 + 10, (diag + 10) / (2 * Math.sin(Math.PI / n)));
     if (!(R <= this.maxMm)) { this.onMessage("That bolt-circle is bigger than the table."); return; }
     const mode = (pivot && pivot.mode) || (typeof pivot === "string" ? pivot : null);
     if (mode === "click" && !(pivot && Number.isFinite(Number(pivot.x)))) { this.startPolarPick(n, pcd); return; }
