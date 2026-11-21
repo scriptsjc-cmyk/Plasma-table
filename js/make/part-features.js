@@ -2,6 +2,7 @@
 // A feature is a small record kept on the sketch item (it.feats) and measured from the part's bottom-left corner,
 // exactly as typed. Before anything is cut, features are flattened to ordinary contours (sketch-geom contoursOf),
 // so cam.js and the G-code never see them. A part with no features is cut exactly as before.
+import { smallHoleRule, drillMark } from "./holerule.js";
 import { TOL, bulgeMidpoint, expandContour, pointInPoly, polysCross, signedArea } from "../core/geom.js";
 import { textToContours } from "./textshape.js";
 
@@ -20,6 +21,8 @@ export const FEATURE_KINDS = {
 export const CUTOUT_SHAPES = ["triangle", "hexagon", "diamond"];
 export const CORNER_KINDS = ["round", "chamfer", "relief"];
 export const FEATURE_OPS = [["cut", "Cut"], ["score", "Etch"], ["mark", "Mark"]];
+// r15 6.3: a hole (or pattern of holes) can also be marked for drilling: an etched cross at each centre, not cut
+export const featureOps = (f) => (f && isHoleFeature(f) ? [...FEATURE_OPS, ["drill", "Mark for drilling"]] : FEATURE_OPS);
 const STRING_KEYS = new Set(["shape", "text", "op", "from"]);
 const INT_KEYS = new Set(["n", "cols", "rows"]);
 const NUM = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : d);
@@ -40,7 +43,7 @@ export function sanitizeFeature(f) {
   const out = { id: Math.round(NUM(f.id, 0)), k: f.k, x: exact(NUM(f.x, 0)), y: exact(NUM(f.y, 0)) };
   if (!(out.id > 0)) return null;
   for (const [key, , d] of k.keys) out[key] = STRING_KEYS.has(key) ? String(f[key] ?? d).slice(0, 80) : clampKey(key, NUM(f[key], d));
-  if (f.op === "score" || f.op === "mark" || f.op === "cut") out.op = f.op;
+  if (f.op === "score" || f.op === "mark" || f.op === "cut" || (f.op === "drill" && isHoleFeature(f))) out.op = f.op;
   if (f.hide) out.hide = true;
   if (f.from === "centre") out.from = "centre";
   if (f.k === "hole" && f.arcs && Number(f.arcs.n) >= 2) out.arcs = { n: Math.max(2, Math.min(64, Math.round(Number(f.arcs.n)))), a0: exact(NUM(f.arcs.a0, 0)), b: Math.abs(NUM(f.arcs.b, 0)), cw: !!f.arcs.cw };
@@ -85,7 +88,7 @@ export function setFeatureValue(f, key, raw, fr) {
     f.pat[pk] = PAT_INT.has(pk) ? Math.max(1, Math.min(64, Math.round(v))) : exact(v);
     return true;
   }
-  if (key === "op") { if (!["cut", "score", "mark"].includes(raw)) return false; f.op = raw; return true; }
+  if (key === "op") { if (!["cut", "score", "mark"].includes(raw) && !(raw === "drill" && isHoleFeature(f))) return false; f.op = raw; return true; }
   if (f.k === "corner" && f.at != null) {
     if (key === "kind") { if (!CORNER_KINDS.includes(raw)) return false; f.kind = raw; if (raw === "chamfer" && !(f.ang > 0)) f.ang = 45; if (raw !== "chamfer") delete f.ang; return true; }
     if (key === "at") { if (raw !== "all" && raw !== "inside") return false; f.at = raw; return true; }
@@ -213,6 +216,7 @@ export function patternCopies(f) {
 }
 export function featureContours(f) { return patternCopies(f).flat(); }
 function singleContours(f) {
+  if (f.op === "drill" && isHoleFeature(f)) return holeCentres(f).flatMap(([x, y]) => drillMark(x, y, f.d));   // r15 6.3
   const op = f.op && f.op !== "cut" ? f.op : null;
   const tag = (c) => (op ? { ...c, op } : c);
   if (f.k === "hole" && f.arcs) return [tag(drawnCircle(f.x, f.y, f.d / 2, f.arcs))];
@@ -316,7 +320,8 @@ export function featureIssues(feats, outline, thickness = 3) {
   const shapes = live.map((f) => ({ f, cs: featureContours(f).filter((c) => c.closed !== false) }));
   const gap = 1.5 * t;                                 // plan 2.10: keep 1.5 x thickness of metal to the outline
   for (const { f, cs: fc } of shapes) {
-    if (isHoleFeature(f) && f.d < 1.5 * t) add(f.id, `Hole Ø${f.d} is smaller than 1.5 × thickness (${exact(1.5 * t)} mm), so it may not cut cleanly. Drill it instead?`);
+    const small = isHoleFeature(f) && f.op !== "drill" ? smallHoleRule(f.d, t) : null;   // r15 6.3: the one small-hole rule
+    if (small) add(f.id, small.text);
     if (!outline || !outline.length) continue;
     const allPts = featureContours(f).flatMap((c) => c.pts);
     if (allPts.some((p) => !pointInPoly(p, outline)) || fc.some((c) => polysCross(c.pts, outline))) add(f.id, "Part of this is outside the part.");
@@ -488,6 +493,7 @@ function looseToFeature(sk, host, o, id) {
     }
   }
   if (o.op === "score" || o.op === "mark") f.op = o.op;
+  if (Array.isArray(o.drill) && o.drill.length && isHoleFeature(f)) f.op = "drill";      // r15 6.3: a loose hole marked for drilling stays marked
   return f;
 }
 // the loose hole items inside host that can become its features: [{ item, feat }]

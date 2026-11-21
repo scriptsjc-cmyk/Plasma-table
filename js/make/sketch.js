@@ -81,6 +81,7 @@ export class Sketch {
     if (it.hide) out.hide = true;
     if (it.name) out.name = String(it.name).slice(0, 80);
     if (it.op === "score" || it.op === "mark") out.op = it.op;
+    if (Array.isArray(it.drill)) { const ks = [...new Set(it.drill.filter((k) => d.params.some((q) => q[0] === k)))]; if (ks.length) out.drill = ks; }   // r15 6.3
     if (Array.isArray(it.feats) && it.feats.length) { const fs = it.feats.map(sanitizeFeature).filter(Boolean); if (fs.length) out.feats = fs; }
     if (it.type === "custom") {
       const cs = it.shape && Array.isArray(it.shape.cs) ? it.shape.cs : null;

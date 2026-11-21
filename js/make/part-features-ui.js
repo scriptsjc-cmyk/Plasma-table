@@ -4,7 +4,7 @@
 // The model lives in part-features.js; the sketch flattens features to plain contours before anything is cut.
 import { $, esc, toast } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
-import { CUTOUT_SHAPES, FEATURE_KINDS, PATTERNABLE, adoptableHoles, FEATURE_OPS, exact, featureIssues, featureSummary, mirrored, newFeature, patternOf, setFeatureValue, syncLinks } from "./part-features.js";
+import { CUTOUT_SHAPES, FEATURE_KINDS, PATTERNABLE, adoptableHoles, featureOps, isHoleFeature, exact, featureIssues, featureSummary, mirrored, newFeature, patternOf, setFeatureValue, syncLinks } from "./part-features.js";
 
 const ADD_ORDER = [["hole", "Hole"], ["slot", "Slot"], ["bolt", "Bolt circle"], ["grid", "Grid of holes"], ["edge", "Holes in a line"],
   ["rect", "Rectangle cut-out"], ["shape", "Shape cut-out"], ["text", "Text"], ["etch", "Etch line"], ["corner", "Corners"]];
@@ -79,7 +79,7 @@ function editor(f, fr) {
   if (f.k === "corner" && f.at != null) return cornerEditor(f);
   const pos = f.k === "corner" ? "" : `${field(f, "x", fromCentre(f) ? "X from centre" : "X (by centre)", fr)}${field(f, "y", fromCentre(f) ? "Y from centre" : "Y (by centre)", fr)}
       <label title="Corner = the part's bottom-left corner; Centre = the middle of the part">Measured from<select data-ff="from"><option value="corner"${fromCentre(f) ? "" : " selected"}>Corner</option><option value="centre"${fromCentre(f) ? " selected" : ""}>Centre</option></select></label>`;
-  const op = f.k === "corner" ? "" : `<label>How it's made<select data-ff="op">${FEATURE_OPS.map(([v, l]) => `<option value="${v}"${(f.op || "cut") === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
+  const op = f.k === "corner" ? "" : `<label>How it's made<select data-ff="op">${featureOps(f).map(([v, l]) => `<option value="${v}"${(f.op || "cut") === v ? " selected" : ""}>${l}</option>`).join("")}</select></label>`;
   return `<div class="feat-edit grid2">${k.keys.map(([key, label]) => field(f, key, label, fr)).join("")}${pos}${op}${PATTERNABLE.has(f.k) ? patternFields(f) : ""}</div>`;
 }
 function rowHtml(f, fr, issues) {
@@ -91,7 +91,7 @@ function rowHtml(f, fr, issues) {
       ${warn ? `<span class="feat-warn" role="img" aria-label="${esc(warn.join(" "))}" title="${esc(warn.join(" "))}">⚠</span>` : ""}
       <button type="button" class="feat-eye" aria-pressed="${!f.hide}" title="${f.hide ? "Hidden: not cut. Click to show" : "Shown. Click to hide (it won't be cut)"}" aria-label="${f.hide ? "Show" : "Hide"} ${esc(k.label)}">${f.hide ? "◌" : "👁"}</button>
       <button type="button" class="feat-more" aria-haspopup="menu" aria-label="More for ${esc(k.label)}" title="Duplicate, mirror, pattern, move, delete">⋯</button>
-    </div>${open ? editor(f, fr) : ""}${open && warn ? `<p class="feat-why small">${esc(warn.join(" "))}</p>` : ""}
+    </div>${open ? editor(f, fr) : ""}${open && warn ? `<p class="feat-why small">${esc(warn.join(" "))}${isHoleFeature(f) && warn.some((m) => /1\.5 × thickness/.test(m)) ? ` <button type="button" class="small" data-fdrill="${f.id}">Mark for drilling</button>` : ""}</p>` : ""}
   </li>`;
 }
 
@@ -258,6 +258,7 @@ export function bindFeatureList() {
       m.querySelector('[data-fact="pattern"]').hidden = !(f && (f.k === "hole" || (PATTERNABLE.has(f.k) && !f.pat)));
       menuFor = fid; placeMenu(m, t.closest(".feat-more")); return;
     }
+    if (t.closest("[data-fdrill]")) { setValue(fid, "op", "drill"); return; }     // r15 6.3: the small-hole alternative
     if (t.closest(".feat-eye")) { change((it) => { const f = it.feats.find((x) => x.id === fid); if (!f) return false; if (f.hide) delete f.hide; else f.hide = true; }); return; }
     if (t.closest(".feat-open")) { closeMenus(); openId = openId === fid ? null : fid; renderFeatureList(); if (openId != null) focusFirst(); }
   });

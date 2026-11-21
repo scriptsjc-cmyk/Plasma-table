@@ -5,6 +5,7 @@ import { def, mapC, r1, rot, unionBox, wholeSet } from "./sketch-util.js";
 import { makeShape } from "./shapes.js";
 import { bendKey } from "./bends.js";
 import { applyCorners, cornerRows, flattenFeatures } from "./part-features.js";
+import { applyDrill } from "./holerule.js";
 
 export class GeomMethods {
   baseContours(it) {
@@ -74,7 +75,7 @@ export class GeomMethods {
   }
   contoursOf(it) {
     const sd = def(it.type), bk = sd && sd.bendAllowance ? bendKey() : 0;     // r15 5.1: a folded part follows the job's sheet
-    const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0, it.feats || 0, bk]);
+    const key = JSON.stringify([it.type, it.p, it.holes, it.rot, it.fx, it.fy, it.x, it.y, it.type === "custom" ? it.shape.cs : 0, it.feats || 0, bk, it.drill || 0]);
     if (it._key === key) return it._cs;
     let cs;
     try { cs = this.baseContours(it); } catch (e) { cs = []; }
@@ -82,6 +83,8 @@ export class GeomMethods {
     if (cs.length) {
       const hs = this.holeStart(it);
       cs = cs.map((c, i) => (i >= hs && it.holes && it.holes[i] ? mapC(c, ([x, y]) => [x + it.holes[i][0], y + it.holes[i][1]]) : c));
+      // r15 6.3: a hole-size field marked for drilling: its holes are etched crosses, not cut
+      if (Array.isArray(it.drill) && it.drill.length) cs = applyDrill(cs, it.drill.map((k) => it.p[k]), sd && sd.hole ? 0 : hs);
       let corners = 0;
       if (it.feats && it.feats.length && !wholeSet(it.type)) {
         const o = bbox([cs[0]]); cs = cs.concat(flattenFeatures(it.feats, o[0], o[1]));   // r15 Round 2: features flatten to plain contours

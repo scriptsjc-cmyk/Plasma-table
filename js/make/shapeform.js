@@ -21,6 +21,7 @@ import { flangeShapeKeys } from "./flange-tables.js";
 import { tableToHtml, openSheetTable } from "./sheetopts.js";
 import { setInfoText } from "../ui/hovertip.js";
 import { maybeOpenSizeTab } from "./inspector.js";
+import { smallHoleRule, isHoleSizeParam } from "./holerule.js";
 
 let editBefore = null;
 const QUICK_PARTS = ["rect", "plate", "disc", "ring", "flange", "triangle", "gusset", "slot"];
@@ -124,6 +125,22 @@ function beginnerPartsHtml() {
 // Version chips use a short name so it fits the chip; the full name is the tooltip (r13 #10).
 const SHORT_VARIANT = { "Square corners": "Square", "Rounded rectangle": "Rounded rect.", "Corner + centre hole": "Corner + centre", "Corner + centre holes": "Corner + centre" };
 function shortVariantLabel(label) { return SHORT_VARIANT[label] || label; }
+// r15 6.3: under a hole-size field, the small-hole rule live (same check as the Features rows), with Mark for drilling
+const sheetT = () => { const t = Number(S.thickness); return Number.isFinite(t) && t > 0 ? t : 3; };
+export function holeNoteHtml(it, sh, k) {
+  const param = sh && (sh.params || []).find((q) => q[0] === k);
+  if (!param || !isHoleSizeParam(sh, param)) return "";
+  if (Array.isArray(it.drill) && it.drill.includes(k)) return `<p class="holerule small" data-hr="${esc(k)}" role="status">✚ Marked for drilling: an etched cross at each of these holes' centres. <button type="button" class="small quiet" data-undrill="${esc(k)}">Cut it instead</button></p>`;
+  const r = smallHoleRule(it.p[k], sheetT());
+  return r ? `<p class="holerule warntext small" data-hr="${esc(k)}" role="status">⚠ ${esc(r.text)} <button type="button" class="small" data-drill="${esc(k)}">Mark for drilling</button></p>` : "";
+}
+function refreshHoleNote(inp, it) {
+  const k = inp.dataset.p, sh = shapeDef(it.type), lab = inp.closest("label"); if (!lab) return;
+  const old = lab.parentElement && lab.parentElement.querySelector(`.holerule[data-hr="${CSS.escape(k)}"]`);
+  const html = holeNoteHtml(it, sh, k);
+  if (old) { if (html) old.outerHTML = html; else old.remove(); }
+  else if (html) lab.insertAdjacentHTML("afterend", html);
+}
 function paramField(it, param) {
   const [k, label, , meta] = param;
   const val = it.p[k];
@@ -131,7 +148,7 @@ function paramField(it, param) {
     const opts = (meta.options || []).map((o) => `<option value="${esc(String(o.v))}"${String(o.v) === String(val) ? " selected" : ""}>${esc(o.l)}</option>`).join("");
     return `<label><span class="plabel" title="${esc(label)}">${esc(label)}</span><select data-p="${esc(k)}" data-psel="1">${opts}</select></label>`;
   }
-  return `<label><span class="plabel" title="${esc(label)}">${esc(label)}</span><input type="number" step="any" min="0" inputmode="decimal" data-p="${esc(k)}" value="${esc(String(val))}"></label>`;
+  return `<label><span class="plabel" title="${esc(label)}">${esc(label)}</span><input type="number" step="any" min="0" inputmode="decimal" data-p="${esc(k)}" value="${esc(String(val))}"></label>${holeNoteHtml(it, shapeDef(it.type), k)}`;
 }
 function extraFormHtml(it, sh) {
   let html = "";
@@ -323,6 +340,7 @@ export function bindShapeForm() {
       if (["n", "cols", "rows"].includes(k) && (v < 0 || v > 64)) return;
       if (v > (sketch.maxMm || 2600) * 4) return;
       it.p[k] = v;
+      refreshHoleNote(i, it);
     }
     sketch.save(); sketch.draw(); useShapeSoon();
     if (i.dataset.p) refitSoon();
@@ -374,6 +392,9 @@ export function bindShapeForm() {
     if (editBefore && editBefore !== sketch.snapshot()) { sketch.past.push(editBefore); sketch.future = []; }
     editBefore = sketch.snapshot(); renderShapeForm();
   });
+  // r15 6.3: pressing Mark for drilling / Cut it instead mustn't blur the size field first (its change re-renders the form
+  // and the click would land on a button that is gone)
+  $("shapeForm").addEventListener("mousedown", (e) => { if (e.target.closest("[data-drill],[data-undrill]")) e.preventDefault(); });
   $("shapeForm").addEventListener("click", (e) => {
     const v = e.target.closest("[data-var]");
     if (v) {
@@ -386,6 +407,20 @@ export function bindShapeForm() {
     if (bp) { sketch.pick([Number(bp.dataset.bpart)]); sketch.draw(); renderShapeForm(); return; }
     const p = e.target.closest("[data-pro]");
     if (p) { runPro(p.dataset.pro); return; }
+    const dr = e.target.closest("[data-drill],[data-undrill]");
+    if (dr) {                                    // r15 6.3: Mark for drilling / Cut it instead, one undo step
+      const it = sketch.selected(); if (!it || it.lock) return;
+      const k = dr.dataset.drill || dr.dataset.undrill, before = sketch.snapshot();
+      const set = new Set(it.drill || []);
+      if (dr.dataset.drill) set.add(k); else set.delete(k);
+      if (set.size) it.drill = [...set]; else delete it.drill;
+      if (editBefore && editBefore !== before) sketch.past.push(editBefore);     // the size typed just before is its own undo step
+      sketch.past.push(before); sketch.future = [];
+      it._key = undefined;
+      sketch.save(); sketch.draw(); useShapeSoon(); editBefore = sketch.snapshot(); renderShapeForm();
+      toast(dr.dataset.drill ? "Marked for drilling: each of these holes is an etched cross now, not cut. Drill them after cutting." : "These holes are cut again.");
+      return;
+    }
     const bs = e.target.closest("[data-bend-save]");
     if (bs) {
       const th = String(Number(bs.dataset.bendTh)), v = Number(bs.dataset.bendSave);

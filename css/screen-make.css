@@ -2422,3 +2422,7 @@ body[data-screen="make"] #btnSelectMenu, body[data-screen="make"] #btnSnapMenu {
 .fold3d-unfold { display: flex; align-items: center; gap: 8px; padding: 4px 8px 0; font-size: var(--fs-s); color: var(--muted); }
 .fold3d-unfold[hidden] { display: none; }
 .fold3d-unfold input { flex: 1 1 auto; min-width: 0; accent-color: var(--accent); }
+
+/* r15 6.3: small-hole rule under a hole-size field (spans the form's row) */
+.shapeform .holerule, #shapeForm .holerule { grid-column: 1 / -1; margin: -2px 0 4px; line-height: 1.35; }
+.shapeform .holerule button, #shapeForm .holerule button { margin-left: 4px; }
