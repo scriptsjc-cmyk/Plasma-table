@@ -220,6 +220,10 @@ try {
     t.check(`4.9 ${prof}: X / Y / Z is one readout row across the card (same widths, tabular numbers, 15 px+), nothing beside it`,
       tc.pos.length === 3 && tc.pos.every((p) => p.h >= 28 && p.fs >= 15 && /tabular-nums/.test(p.tab) && Math.abs(p.w - tc.pos[0].w) <= 1) && tc.rowW >= 0.75 * (tc.cardW - 24) && tc.beside.length === 0, J(tc));
     t.check(`4.9 ${prof}: the Torch card has no inner scroll`, tc.scr.length === 0, J(tc.scr));
+    const sh = await ev(page, () => { const z = document.getElementById("btnZero").getBoundingClientRect(); let ok = z.height >= 32; const bad = [];
+      for (let e = document.getElementById("btnZero").parentElement; e && e !== document.body; e = e.parentElement) { const c = getComputedStyle(e); if (c.overflowY !== "visible" || c.overflowX !== "visible") { const r = e.getBoundingClientRect(); if (z.top < r.top - 1 || z.bottom > r.bottom + 1) { ok = false; bad.push(e.id || e.className); } } }
+      return { ok, bad, z: [z.top, z.bottom], vh: innerHeight }; });
+    t.check(`4.9 ${prof}: Start here is whole in the Torch card (not clipped at its bottom)`, sh.ok && sh.z[1] <= sh.vh, J(sh));
     // 4.10 the touch-off tag on the bed is off the gantry's X beam
     await ev(page, () => { const c = document.getElementById("showMach"); if (c && !c.checked) c.click(); }); await sleep(500);
     const tg = await ev(page, () => { const cv = document.querySelector("#cutView canvas#preview") || document.getElementById("preview"); const m = cv && cv._mach, boxes = (cv && cv._labelBoxes) || [];

@@ -214,6 +214,9 @@ function markMach(sk, m) {
     y: m.T.y.slice(),
     beam: { x0: m.T.x[0] - 40, x1: m.T.x[1] + 110, y0: m.T.y[0] - 20 - MACH.beamH, h: MACH.beamH },
   };
+  // r15 4.10: the X beam (and the cable chain along it) on screen, so the canvas labels can keep off the rail
+  const b = sk.cv._mach.beam, ys = [m.Y(b.y0 - 34), m.Y(b.y0 + b.h)], xs = [m.X(b.x0), m.X(b.x1)];
+  sk.cv._mach.beamPx = { l: Math.min(...xs), r: Math.max(...xs), t: Math.min(...ys), b: Math.max(...ys), rail: true };
 }
 function drawBg(sk, ctx, S, C, w, h) {
   const cv = ctx.canvas;
@@ -224,6 +227,7 @@ function drawBg(sk, ctx, S, C, w, h) {
     // Gantry under the parts so it never covers them or steals a drag at the sheet corner.
     drawGantry(ctx, m.T, m.X, m.Y, m.sc, { sheet: true });
     markMach(sk, m);
+    if (sk.cv && sk.cv._mach && sk.cv._mach.beamPx) boxesAdd(cv, { ...sk.cv._mach.beamPx });
   } else if (sk.cv && sk.cv._mach) {
     sk.cv._mach = null;
   }
@@ -295,7 +299,7 @@ function drawBg(sk, ctx, S, C, w, h) {
   }
 }
 function drawTop(sk, ctx, S, C) {
-  drawAxisHints(ctx, S);
+  drawAxisHints(ctx, S, { boxes: true });
   const a = last, gap = a.gap ?? gapMm();
   for (const u of a.units) {
     const [X, Y] = S((u.box[0] + u.box[2]) / 2, (u.box[1] + u.box[3]) / 2);

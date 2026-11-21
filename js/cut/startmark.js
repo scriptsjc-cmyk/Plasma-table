@@ -38,8 +38,8 @@ export function drawStartMark(sk, ctx, S, prep, units) {
   const [cw] = sk.size(), px = Math.max(tw / 2 + 2, Math.min(cw - tw / 2 - 2, x));   // tag() keeps the pill inside the canvas the same way
   const pill = (cy) => ({ l: px - tw / 2, r: px + tw / 2, t: cy - 14, b: cy + 14 });
   const clear = (cy) => !boxesOf(cv).some((o) => boxesHit(o, pill(cy), 2));
-  let cy = [y + 24, y - 24, y + 52, y + 80, y - 52].find(clear);
+  let cy = [y + 24, y - 24, y + 52, y + 80, y - 52, y + 108, y + 136].find(clear);   // r15 4.10: the X beam is a box too, so the tag steps off the rail
   if (cy == null) cy = y + 24;
   const r = sk.tag(ctx, text, x, cy, GO);
-  if (r) boxesAdd(cv, { l: r.x, r: r.x + r.w, t: r.y, b: r.y + r.h });
+  if (r) boxesAdd(cv, { l: r.x, r: r.x + r.w, t: r.y, b: r.y + r.h, startTag: true });
 }

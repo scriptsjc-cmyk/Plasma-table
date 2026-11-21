@@ -3148,3 +3148,73 @@ body.running-job #dryRun[role="switch"], body.job-live #dryRun[role="switch"] { 
   body[data-screen="cut"][data-step="1"] #pickPane > .run-col .cutmore-row { gap: 4px; }
   body[data-screen="cut"][data-step="1"] #pickPane > .run-col label.check.prominent { min-height: 32px; line-height: 1.2; }
 }
+
+/* ---- r15 4.6–4.9: Setup polish on a laptop ---- */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  /* 4.6 the strip under the bed: the fit note may take two lines and the job size / time stack, so nothing is cut off */
+  body[data-screen="cut"][data-step="3"] .previewDock > #fit {
+    flex: 1 1 0; max-width: none; min-width: 0; white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2;
+  }
+  body[data-screen="cut"][data-step="3"] .previewDock > #fit:has(#fitFixBtn) #fitFixBtn { min-height: 26px; padding: 0 8px; }
+  body[data-screen="cut"][data-step="3"] #jobCard dl { flex-direction: column; align-items: flex-end; gap: 0; }
+  body[data-screen="cut"][data-step="3"] #jobCard dd { line-height: 1.25; }
+  body[data-screen="cut"][data-step="3"] #kerfNote { flex: none; }
+  body[data-screen="cut"][data-step="3"] .previewDock > #fit:empty + * { margin-left: auto; }
+  /* …and a Before you cut line wraps instead of ending in "…" */
+  body[data-screen="cut"][data-step="3"] #beforeCut li { white-space: normal; align-items: flex-start; }
+  body[data-screen="cut"][data-step="3"] #beforeCut .beforecut-text { white-space: normal; overflow: visible; text-overflow: clip; }
+  body[data-screen="cut"][data-step="3"] #beforeCut li:has(.beforecut-link) { align-items: center; }
+
+  /* 4.7 Layout and Check cut are buttons, so they look like the app's secondary button */
+  body.app-shell[data-screen="cut"] #btnLayout,
+  body.app-shell[data-screen="cut"][data-tab="cut"] #btnLayout,
+  body[data-screen="cut"][data-step="3"] #beforeCut .beforecut-link {
+    background: var(--well); border: 1px solid var(--line-strong); color: var(--text); font-weight: 650;
+    text-decoration: none; border-radius: var(--r); min-height: 32px; padding: 4px 12px;
+  }
+  body[data-screen="cut"][data-step="3"] #beforeCut .beforecut-link { color: inherit; white-space: nowrap; }
+  body.app-shell[data-screen="cut"] #btnLayout:hover:not(:disabled),
+  body[data-screen="cut"][data-step="3"] #beforeCut .beforecut-link:hover { background: var(--accent-weak); border-color: var(--accent); }
+  body.app-shell[data-screen="cut"] #btnLayout[aria-pressed="true"] { background: var(--accent-weak); border-color: var(--accent); }
+
+  /* 4.8 Download G-code: the download icon and the word "G-code" (its full name stays the tooltip / accessible name) */
+  body[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnExport3,
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnExport3 {
+    width: auto; min-width: 44px; max-width: none; padding: 0 12px; gap: 6px;
+  }
+  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-label {
+    display: inline; position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: nowrap; font-size: var(--fs-s); font-weight: 650;
+  }
+  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-verb { display: none; }
+  body.app-shell[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav #btnStart,
+  body[data-screen="cut"][data-step="3"] .nav #btnStart { width: calc(100% - 128px); }
+
+  /* 4.9 Torch card: one "i" (the keyboard tip is in it), bigger lamps, and X / Y / Z as one readout row across the card */
+  body[data-screen="cut"][data-step="3"] #zeroCard .keyhint { display: none; }
+  body[data-screen="cut"][data-step="3"] #zeroCard .torch-chips .lamp { font-size: var(--fs-s); min-height: 24px; padding: 2px 9px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap { grid-template-rows: auto auto 1fr; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap .small-pos {
+    grid-column: 1 / -1; grid-row: 1; height: 32px; min-height: 32px; max-height: 32px; gap: 6px;
+  }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos > div { height: 32px; padding: 0 6px; align-items: center; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos span { font-size: var(--fs-s); }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos b { font-size: var(--fs-m); font-variant-numeric: tabular-nums; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog { grid-row: 2 / -1; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .steps { grid-row: 2; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .j,
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home { min-height: 32px; height: 32px; }
+}
+/* r15 4.9: on a short laptop screen the readout row and the pad are a little shorter, so Start here stays whole */
+@media (min-width: 1200px) and (min-height: 560px) and (max-height: 700px) and (hover: hover) and (pointer: fine) {
+  body[data-screen="cut"][data-step="3"] .jogwrap,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap { row-gap: 4px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos,
+  body.beginner[data-screen="cut"][data-step="3"] .jogwrap .small-pos,
+  body[data-screen="cut"][data-step="3"] .jogwrap .pos > div { height: 28px; min-height: 28px; max-height: 28px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog { gap: 3px; }
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .j,
+  body[data-screen="cut"][data-step="3"] .jogwrap .jog .do-home { min-height: 30px; height: 30px; }
+  body[data-screen="cut"][data-step="3"] .zerobody { row-gap: 4px; }
+}

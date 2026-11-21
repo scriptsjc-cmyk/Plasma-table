@@ -137,8 +137,8 @@ export function placeSetupColumns() {
     if (!row) { restore(trace, "trace"); restore(goStart, "goStart"); }
     refitForChips();
     const wrap = $("zeroCard") && $("zeroCard").querySelector(".jogwrap");
-    const zsum = $("zeroCard") && $("zeroCard").querySelector("summary");
-    if (zsum && hint && hint.parentNode !== zsum) zsum.appendChild(hint);
+    // r15 4.9: the keyboard tip is in the Torch title's one "i" now, so the hint stays where it was (hidden here)
+    if (hint) restore(hint, "hint");
     if (back) back.textContent = "← Back to part";
   } else {
     restore(hint, "hint"); restore(link, "link"); restore(disc, "disc");

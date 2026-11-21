@@ -7,6 +7,7 @@
 // Down = +Y (toward the operator); Left/Right = −X/+X. The board Y pin is
 // gpio.23:low so machine +Y physically moves toward the operator. This is a
 // view/jog mapping only. Generated G-code XY is unchanged.
+import { boxesAdd, textBox } from "../ui/labelboxes.js";
 import { isLaptopUi } from "../ui/laptop.js";
 import { screen } from "../ui/flow.js";
 import { S } from "../core/state.js";
@@ -93,7 +94,7 @@ function arrow(ctx, x0, y0, x1, y1) {
 }
 
 // Tiny upright +X / +Y hints in machine space, so the flipped view is not ambiguous.
-export function drawAxisHints(ctx, toScreen) {
+export function drawAxisHints(ctx, toScreen, opts = {}) {
   if (!bedViewRotated() || !toScreen) return;
   const [ox, oy] = toScreen(0, 0);
   const [ux, uy] = toScreen(1, 0);
@@ -109,9 +110,11 @@ export function drawAxisHints(ctx, toScreen) {
   ctx.textAlign = xx < ox ? "right" : "left";
   ctx.textBaseline = "middle";
   ctx.fillText("+X", xx + (xx < ox ? -6 : 6), xy);
+  if (opts.boxes) boxesAdd(ctx.canvas, textBox(ctx, "+X", xx + (xx < ox ? -6 : 6), xy));   // r15 4.10: on Setup, later labels (the touch-off tag) keep off the axis names
   ctx.textAlign = "center";
   ctx.textBaseline = yy > oy ? "top" : "bottom";
   ctx.fillText("+Y", yx, yy + (yy > oy ? 5 : -5));
+  if (opts.boxes) boxesAdd(ctx.canvas, textBox(ctx, "+Y", yx, yy + (yy > oy ? 5 : -5)));
   ctx.restore();
   if (ctx.canvas) ctx.canvas.dataset.axes = "on";
 }
