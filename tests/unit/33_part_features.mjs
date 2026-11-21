@@ -7,7 +7,7 @@ import { mod } from "../lib/site.mjs";
 const t = new T("33_part_features");
 const A = await load();
 const F = await mod("part-features");
-const J = (x) => JSON.stringify(x).slice(0, 400);
+const J = (x) => String(JSON.stringify(x)).slice(0, 400);
 const box = (pts) => pts.reduce((a, [x, y]) => [Math.min(a[0], x), Math.min(a[1], y), Math.max(a[2], x), Math.max(a[3], y)], [Infinity, Infinity, -Infinity, -Infinity]);
 const mid = (pts) => { const b = box(pts); return [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]; };
 
@@ -158,6 +158,23 @@ for (const [hrot, hfx] of [[0, false], [90, false], [30, true]]) {
   t.check("join: the slot keeps its direction on the sheet", slot && slot.rot === 0, J(slot));
   jk.undo();
   t.check("join: one undo gives both parts back with their features", jk.items.length === 2 && (jk.items[0].feats || []).length === 2 && (jk.items[1].feats || []).length === 2 && jk.past.length === pastLen, J(jk.items.map((i) => (i.feats || []).length)));
+}
+
+// DXF / SVG imports: circles inside the only outline open as Hole rows (plan 2.16); anything else stays in the outline
+{
+  const b = Math.tan(Math.PI / 8), circ = (cx, cy, r) => ({ pts: [[cx + r, cy], [cx, cy + r], [cx - r, cy], [cx, cy - r]], bulges: [b, b, b, b] });
+  const poly = (cx, cy, r, n) => ({ pts: Array.from({ length: n }, (_, i) => [cx + r * Math.cos((2 * Math.PI * i) / n), cy + r * Math.sin((2 * Math.PI * i) / n)]) });
+  const R = 10, rr = Math.tan(Math.PI / 8);
+  const rounded = { pts: [[R, 0], [200 - R, 0], [200, R], [200, 150 - R], [200 - R, 150], [R, 150], [0, 150 - R], [0, R]], bulges: [0, rr, 0, rr, 0, rr, 0, rr] };
+  const ik = A.newSketch();
+  ik.importParts([{ x: 0, y: 0, cs: [rounded, circ(20, 20, 4.25), poly(100, 75, 30, 64), circ(197, 75, 6), { pts: [[50, 120], [70, 120], [60, 135]] }] }], true, { adoptHoles: true });
+  const it = ik.items[0];
+  t.check("import: circles inside a rounded outline become Hole rows with exact centres", J((it.feats || []).map((f) => [f.k, f.x, f.y, f.d])) === J([["hole", 20, 20, 8.5], ["hole", 100, 75, 60]]), J(it.feats));
+  t.check("import: a circle crossing the edge and a triangle stay in the outline", it.shape.cs.length === 3, it.shape.cs.length);
+  const plain = A.newSketch(); plain.importParts([{ x: 0, y: 0, cs: [rounded, circ(20, 20, 4.25)] }], true);
+  t.check("import: without adoptHoles (other tools) nothing changes", !plain.items[0].feats && plain.items[0].shape.cs.length === 2);
+  const two = A.newSketch(); two.importParts([{ x: 0, y: 0, cs: [{ pts: [[0, 0], [50, 0], [50, 50], [0, 50]] }, { pts: [[100, 0], [150, 0], [150, 50], [100, 50]] }, circ(25, 25, 5)] }], true, { adoptHoles: true });
+  t.check("import: a part with two outlines keeps its circles (rows are measured from one outline)", !two.items[0].feats, J(two.items[0].feats));
 }
 
 process.exit(t.done() ? 1 : 0);

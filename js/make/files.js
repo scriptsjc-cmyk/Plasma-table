@@ -123,7 +123,7 @@ export async function editDrawing() {
   const e = contoursToEditable(d.contours);
   if (!e) { toast("There is nothing in this drawing the editor can use.", true); return; }
   if (sketch.items.length && !(await askConfirm({ title: "Replace the shapes already on the maker?", body: "The shape maker already has shapes on it. Replace them with this drawing? (Undo brings them back.)", ok: "Replace", cancel: "Cancel" }))) return;
-  sketch.importParts(e.parts, true);
+  sketch.importParts(e.parts, true, { adoptHoles: true });
   S.currentPart = null;
   S.fileName = String(d.name || "Imported drawing").replace(/\.[^.]+$/, "");
   if ($("partName")) $("partName").value = S.fileName;
@@ -159,7 +159,7 @@ export async function importIntoMake(list, opts = {}) {
     const contours = (scale && scale !== 1) ? scaleContours(r.contours, scale) : r.contours;
     const e = contoursToEditable(contours);
     if (!e || !e.parts || !e.parts.length) { toast("There is nothing in “" + name + "” the editor can use.", true); return 0; }
-    const n = sketch.importParts(e.parts, replace);
+    const n = sketch.importParts(e.parts, replace, { adoptHoles: true });
     replace = false; // further files append
     S.currentPart = null;
     S.fileName = String(name || "Imported drawing").replace(/\.[^.]+$/, "");

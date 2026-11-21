@@ -2,7 +2,7 @@
 // A feature is a small record kept on the sketch item (it.feats) and measured from the part's bottom-left corner,
 // exactly as typed. Before anything is cut, features are flattened to ordinary contours (sketch-geom contoursOf),
 // so cam.js and the G-code never see them. A part with no features is cut exactly as before.
-import { TOL, pointInPoly, polysCross } from "../core/geom.js";
+import { TOL, expandContour, pointInPoly, polysCross } from "../core/geom.js";
 import { textToContours } from "./textshape.js";
 
 export const FEATURE_KINDS = {
@@ -270,8 +270,9 @@ export function drawFeatureHandles(sk, ctx, S, C, it) {
 
 // ---------------------------------------------------------------- loose holes -> features (plan 2.16)
 // A separate hole / slot / bolt circle / grid / row item sitting fully inside a part can become one feature row of
-// that part. Only offered when the rebuilt feature cuts the same holes (centres within 0.05 mm, same sizes).
-const tidy = (v) => { const a = Math.round(v * 10) / 10; return exact(Math.abs(v - a) < 0.03 ? a : Math.round(v * 100) / 100); };
+// that part. Only offered when the rebuilt feature cuts the same holes (centres within 0.05 mm, same sizes). Centres are
+// kept to 0.01 mm.
+const tidy = (v) => exact(Math.round(v * 100) / 100);       // 0.01 mm: never moves a hole by more than 0.005
 const tidyAng = (a) => tidy(((a % 360) + 360) % 360);
 function looseToFeature(sk, host, o, id) {
   const cs = sk.contoursOf(o); if (!cs.length) return null;
@@ -282,7 +283,11 @@ function looseToFeature(sk, host, o, id) {
   const ang = (a, b) => (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
   const p = o.p || {};
   let f = null;
-  if (o.type === "hole" && centres.length === 1) f = { k: "hole", x: tidy(centres[0][0]), y: tidy(centres[0][1]), d: exact(p.d) };
+  if (o.type === "hole" && centres.length === 1) {
+    // a hole item's box is its circle's box, so its true centre is the box corner + the radius (the drawn polygon can sit 0.02 off)
+    const [c] = P([[o.x + p.d / 2, o.y + p.d / 2]]);
+    f = { k: "hole", x: tidy(c[0]), y: tidy(c[1]), d: exact(p.d) };
+  }
   else if (o.type === "slothole" && cs.length === 1) {
     const b = cs[0].pts.reduce((a, [x, y]) => [Math.min(a[0], x), Math.min(a[1], y), Math.max(a[2], x), Math.max(a[3], y)], [Infinity, Infinity, -Infinity, -Infinity]);
     const [c] = P([[(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]]);
@@ -353,4 +358,47 @@ export function carryFeatures(sk, fromParts, to) {
     }
   }
   return out;
+}
+
+// ---------------------------------------------------------------- DXF / SVG imports: circles inside the outline -> Hole rows (plan 2.16)
+// A closed loop that is a true circle (equal-bulge arcs round one centre, or a fine polygon on one circle) and sits inside
+// the part's only outline becomes a Hole feature with the drawing's exact centre and size; it is dropped from the outline.
+function loopCircle(c) {
+  const pts = c.pts || [], n = pts.length, bs = c.bulges || [];
+  if (c.closed === false || c.op || c.role || n < 2) return null;
+  const cx = pts.reduce((s, p) => s + p[0], 0) / n, cy = pts.reduce((s, p) => s + p[1], 0) / n;
+  const rs = pts.map((p) => Math.hypot(p[0] - cx, p[1] - cy)), r = rs.reduce((s, v) => s + v, 0) / n;
+  if (!(r > 0.05) || rs.some((v) => Math.abs(v - r) > 1e-6 * Math.max(1, r))) return null;
+  const b0 = Number(bs[0]) || 0;
+  if (Math.abs(b0) > 1e-9) {                                   // arcs: all the same bulge and together a full turn
+    if (bs.length < n || bs.slice(0, n).some((b) => Math.abs((Number(b) || 0) - b0) > 1e-6)) return null;
+    if (Math.abs(n * 4 * Math.atan(Math.abs(b0)) - 2 * Math.PI) > 1e-3) return null;
+  } else if (n < 16 || bs.some((b) => Math.abs(Number(b) || 0) > 1e-9)) return null;
+  return { cx, cy, r };
+}
+export function adoptCircleHoles(it) {
+  if (!it || it.type !== "custom" || !it.shape || !Array.isArray(it.shape.cs)) return 0;
+  const cs = it.shape.cs, out = cs[0];
+  if (!out || out.closed === false || out.op || out.role || out.pts.length < 3) return 0;
+  // only a part with one outline: any other closed loop lying wholly outside it is a second outline -> leave the part alone
+  if (cs.slice(1).some((c) => c.closed !== false && !c.op && !c.role && c.pts.every((p) => !pointInPoly(p, out.pts)))) return 0;
+  const k = (it.p && it.p.scale ? it.p.scale : 100) / 100;
+  if (Math.abs(k - 1) > 1e-9) return 0;
+  // features are measured from the outline's own box, the same expanded outline the sketch uses (sketch-geom baseContours)
+  const ex = expandContour(out);
+  let x0 = Infinity, y0 = Infinity;
+  for (const [x, y] of ex.pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); }
+  let id = Math.max(0, ...(it.feats || []).map((f) => f.id));
+  const feats = [], keep = [];
+  for (const c of cs) {
+    const ci = c !== out && loopCircle(c);
+    if (ci && pointInPoly([ci.cx, ci.cy], ex.pts) && !polysCross(circleAt(ci.cx, ci.cy, ci.r).pts, ex.pts)) {
+      feats.push({ id: ++id, k: "hole", x: exact(ci.cx - x0), y: exact(ci.cy - y0), d: exact(2 * ci.r) });
+    } else keep.push(c);
+  }
+  if (!feats.length) return 0;
+  it.shape.cs = keep;
+  it.feats = [...(it.feats || []), ...feats];
+  it._key = undefined;
+  return feats.length;
 }

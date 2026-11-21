@@ -15,7 +15,7 @@ import { InputMethods } from "./sketch-input.js";
 import { TrimMethods } from "./sketch-trim.js";
 import { Stage6Methods } from "./sketch-stage6.js";
 import { installLayoutLock } from "./sketch-lock.js";
-import { sanitizeFeature } from "./part-features.js";
+import { adoptCircleHoles, sanitizeFeature } from "./part-features.js";
 import { clickVerb } from "../ui/laptop.js";
 export { LAYOUT_LOCK_MSG } from "./sketch-lock.js";
 
@@ -184,7 +184,7 @@ export class Sketch {
     if (!quiet) { this.ensureVisible(); this.commit(); this.onSelect(); } else this.save();
   }
   // an imported drawing turned into editable geometry (see editable.js): one custom part per outline, at its real place
-  importParts(parts, replace = false) {
+  importParts(parts, replace = false, { adoptHoles = false } = {}) {
     if (!parts || !parts.length) return 0;
     this.remember();
     if (replace) { this.items = []; this.nextId = 1; this.edgeSel = null; }
@@ -197,6 +197,7 @@ export class Sketch {
       }) } };
       if (op === "score" || op === "mark") it.op = op;
       if (name) it.name = String(name).slice(0, 80);
+      if (adoptHoles) adoptCircleHoles(it);                   // r15 2.16: a drawing's circles inside the outline open as Hole rows
       this.items.push(it); return it;
     });
     this.pick([]); this.commit(); this.onSelect(); this.fitView();
