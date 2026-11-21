@@ -59,7 +59,7 @@ button.switch[aria-checked="true"] .switch-track::after { transform: translateX(
 /* r15 3.10: tick boxes inside the tool dialogs look like the app's own switches (still real checkboxes underneath,
    so .checked, labels and keyboard all work as before) */
 #cadDialog input[type="checkbox"], .mtdlg input[type="checkbox"], #resizeDlg input[type="checkbox"] {
-  appearance: none; -webkit-appearance: none; margin: 0; flex: none; width: 40px; height: 24px; border-radius: 999px;
+  appearance: none; -webkit-appearance: none; margin: 0; flex: none; width: 40px; height: 24px; min-width: 40px; min-height: 24px; border-radius: 999px;
   border: 0; cursor: pointer; background: var(--c-white) radial-gradient(circle at 12px 12px, var(--c-white) 9px, transparent 10px) no-repeat;
   background-color: var(--line-strong); box-shadow: inset 0 0 0 1px var(--shade-25);
   transition: background-color var(--motion) var(--ease), background-position var(--motion) var(--ease); background-position: 0 0; }

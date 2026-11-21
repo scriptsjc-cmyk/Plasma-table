@@ -2288,7 +2288,8 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   .mtdlg.is-pro .mt-ctl { gap: 6px; }
   .mtdlg.is-pro textarea { min-height: 48px; }
   .mtdlg.is-pro .mt-pro label.check { font-size: var(--fs-s); line-height: 1.25; gap: 6px; align-self: center; }
-  .mtdlg.is-pro .mt-pro label.check input[type="checkbox"] { width: 22px; height: 22px; min-width: 22px; min-height: 22px; }
+  /* r15 3.10: the compact Advanced text dialog keeps the switch shape (was a 22 px box) */
+  .mtdlg.is-pro .mt-pro label.check input[type="checkbox"] { width: 40px; height: 24px; min-width: 40px; min-height: 24px; }
 }
 
 /* r15 Round 2: the Features list (Features tab). Rows open in place; the list scrolls inside the panel so the
