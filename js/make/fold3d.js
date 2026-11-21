@@ -3,6 +3,8 @@
 // No external library: painter's-algorithm polygons on canvas (and the same projection as SVG thumbs).
 import { segmentsFor } from "./duct.js";
 import { pipeEnds, flangeOn, flangeDims } from "./pipeflanges.js";
+import { FOLD } from "./flat3d.js";
+import { jobThickness } from "./bends.js";
 
 const V = (x, y, z) => [x, y, z];
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -63,7 +65,8 @@ function poseFace(face, o, xA, yA, out) {
     let foldAxis = cross(away, n);
     foldAxis = mag(foldAxis) < 1e-9 ? edgeDir : norm(foldAxis);
     const cX = edgeDir;
-    const cY = rotAxis(away, foldAxis, ch.angle || 0);
+    if (ch.angle) FOLD.used = true;
+    const cY = rotAxis(away, foldAxis, (ch.angle || 0) * FOLD.t);   // r15 5.7: the Unfold slider scales every fold
     poseFace(ch.face, hingeO, cX, cY, out);
   }
 }
@@ -221,7 +224,13 @@ export function foldCuboid(l, w, h) {
   return assemble(bot);
 }
 
+// r15 5.7: the 3D is drawn at the sheet the part is cut from: its own bend thickness, else the job's, else its own
+// thickness field, else 3 mm.
 export function displayThickness(p) {
+  const bt = Number(p && p.bt);
+  if (Number.isFinite(bt) && bt > 0.05) return bt;
+  const job = jobThickness();
+  if (job > 0.05) return job;
   const t = Number(p && (p.thick != null ? p.thick : p.t));
   return (Number.isFinite(t) && t > 0.05) ? t : 3;
 }
@@ -274,7 +283,10 @@ export function thicken(model, t) {
   return { faces, panels: model.panels, thick: t };
 }
 function viewModel(model, p) {
-  return model ? thicken(model, displayThickness(p)) : null;
+  if (!model) return null;
+  const v = thicken(model, displayThickness(p));
+  if (v && v !== model) { v.base = model; v.unfoldable = model.unfoldable; }
+  return v;
 }
 export function foldFrustum(d1, d2, h, segs = 72) {
   const faces = [], R = d1 / 2, r = d2 / 2;
@@ -1041,12 +1053,71 @@ export function addPipeFlanges3d(sh, model, p) {
 export function isFoldPart(sh) {
   return !!(sh && (typeof sh.fold === "function" || FOLD_MODELS[sh.id]));
 }
-export function foldModel(sh, p) {
+// opts.fold: how far to fold (1 folded, the default; 0 flat) for the Unfold slider (r15 5.7)
+export function foldModel(sh, p, opts = {}) {
   if (!sh) return null;
+  const t = Number(opts && opts.fold);
+  FOLD.t = Number.isFinite(t) ? Math.max(0, Math.min(1, t)) : 1;
+  FOLD.used = false;
   try {
     const mid = typeof sh.fold === "function" ? sh.fold(p) : (FOLD_MODELS[sh.id] ? FOLD_MODELS[sh.id](p) : null);
-    return mid ? addPipeFlanges3d(sh, mid, p) : null;
-  } catch (e) { return null; }
+    const m = mid ? addPipeFlanges3d(sh, mid, p) : null;
+    if (m) m.unfoldable = FOLD.used;
+    return m;
+  } catch (e) { return null; } finally { FOLD.t = 1; FOLD.used = false; }
+}
+
+// r15 5.7: the part's overall sizes and where to label them on the 3D view
+export function modelDims(model) {
+  const fs = ((model && model.faces) || []).filter((f) => !f.ghost);
+  if (!fs.length) return { x: 0, y: 0, z: 0, box: null };
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const f of fs) for (const q of f.pts) for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], q[i]); hi[i] = Math.max(hi[i], q[i]); }
+  return { x: hi[0] - lo[0], y: hi[1] - lo[1], z: hi[2] - lo[2], box: [lo, hi] };
+}
+const mmText = (v) => `${Math.round(v * 10) / 10} mm`;
+export function dimLabels(model, cam, w, h, pad = Math.max(16, Math.round(Math.min(w, h) * 0.06)), sizes) {
+  const d = modelDims(model);
+  if (!d.box) return [];
+  const sz = sizes || d, [lo, hi] = d.box;
+  const fs = model.faces.filter((f) => !f.ghost);
+  const { xy } = projector(fs.length ? fs : model.faces, cam, w, h, pad);
+  const depth = (p) => rotCam(p, cam)[2];
+  // bottom corners; the edges along x and z nearest the viewer, and the upright at the left-most bottom corner
+  const zNear = depth(V((lo[0] + hi[0]) / 2, lo[1], hi[2])) > depth(V((lo[0] + hi[0]) / 2, lo[1], lo[2])) ? hi[2] : lo[2];
+  const xNear = depth(V(hi[0], lo[1], (lo[2] + hi[2]) / 2)) > depth(V(lo[0], lo[1], (lo[2] + hi[2]) / 2)) ? hi[0] : lo[0];
+  const corners = [V(lo[0], lo[1], lo[2]), V(hi[0], lo[1], lo[2]), V(lo[0], lo[1], hi[2]), V(hi[0], lo[1], hi[2])];
+  const left = corners.reduce((a, b) => (xy(b)[0] < xy(a)[0] ? b : a));
+  const edges = [
+    { a: V(lo[0], lo[1], zNear), b: V(hi[0], lo[1], zNear), v: sz.x },
+    { a: V(xNear, lo[1], lo[2]), b: V(xNear, lo[1], hi[2]), v: sz.z },
+    { a: left, b: V(left[0], hi[1], left[2]), v: sz.y },
+  ];
+  const c = xy(V((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2));
+  return edges.filter((e) => e.v > 0.05).map((e) => {
+    const A = xy(e.a), B = xy(e.b), m = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+    let ox = m[0] - c[0], oy = m[1] - c[1];
+    const L = Math.hypot(ox, oy) || 1;
+    ox /= L; oy /= L;
+    return { text: mmText(e.v), x: m[0] + ox * 16, y: m[1] + oy * 16, a: [A[0] + ox * 7, A[1] + oy * 7], b: [B[0] + ox * 7, B[1] + oy * 7] };
+  });
+}
+function drawDims(ctx, cv, model, cam, w, h, pad) {
+  const base = model.base || model, d = modelDims(base);
+  const labels = dimLabels(model, cam, w, h, pad, d);
+  cv._dims = labels;
+  if (w < 220 || !labels.length) return;
+  ctx.save();
+  ctx.strokeStyle = "rgba(43, 49, 56, 0.7)";   // neutral ink: blue means "the template you cut" ctx.lineWidth = 1;
+  ctx.font = "600 11px Barlow, system-ui"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (const l of labels) {
+    ctx.beginPath(); ctx.moveTo(l.a[0], l.a[1]); ctx.lineTo(l.b[0], l.b[1]); ctx.stroke();
+    const tw = ctx.measureText(l.text).width + 8;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+    ctx.fillRect(l.x - tw / 2, l.y - 8, tw, 16);
+    ctx.fillStyle = "#2b3138"; ctx.fillText(l.text, l.x, l.y);
+  }
+  ctx.restore();
 }
 
 // ------------------------------------------------------------------ projection / drawing
@@ -1310,6 +1381,7 @@ export function drawFoldCanvas(cv, model, cam = DEFAULT_CAM) {
   const polys = projectFaces(solidFaces.length ? solidFaces : model.faces, cam, w, h, pad);
   for (const p of polys) fillShaded(ctx, p.path, p.holes, p.lits, p.back, p.src);
   drawSharpEdges(ctx, solidFaces.length ? solidFaces : model.faces, cam, w, h, pad, Math.max(0.9, Math.min(w, h) / 280));
+  drawDims(ctx, cv, model, cam, w, h, pad);              // r15 5.7
 }
 
 export function foldThumbSvg(model, w = 96, h = 72, cam = DEFAULT_CAM) {
@@ -1397,7 +1469,12 @@ function openFoldLightbox(host) {
 
 export function mountFoldView(host, sh, params) {
   if (!host) return;
-  const mid = foldModel(sh, params);
+  const full = foldModel(sh, params);
+  const key0 = sh && sh.id;
+  if (host._foldKey !== key0) { host._foldKey = key0; host._fold = 1; }   // a new part starts folded
+  host._sh = sh; host._params = params;
+  const amt = full && full.unfoldable ? (host._fold != null ? host._fold : 1) : 1;
+  const mid = amt < 1 ? foldModel(sh, params, { fold: amt }) : full;
   const model = viewModel(mid, params);
   if (!model || !model.faces.length) { host.replaceChildren(); host.hidden = true; return; }
   host.hidden = false;
@@ -1408,7 +1485,7 @@ export function mountFoldView(host, sh, params) {
   if (!canvas) {
     const thumb = foldThumbSvg(model, 56, 40);
     const open = phone ? (phoneFold.open ? " open" : "") : " open";
-    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="720" height="480" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><button type="button" class="fold3d-expand">Expand</button><p class="fold3d-cap"></p></div></details>`;
+    host.innerHTML = `<details class="fold3d-box"${open}><summary class="fold3d-sum"><span class="fold3d-sum-label">Folded view</span><span class="fold3d-mini">${thumb}</span></summary><div class="fold3d-wrap"><canvas class="fold3d" width="720" height="480" aria-label="Folded 3D view, drag to turn. The drawing is the flat pattern you cut."></canvas><button type="button" class="fold3d-expand">Expand</button><label class="fold3d-unfold" hidden><span>Unfold</span><input type="range" min="0" max="100" step="1" value="100" aria-label="Unfold: 0 is flat, 100 is folded"></label><p class="fold3d-cap"></p></div></details>`;
     canvas = host.querySelector("canvas.fold3d");
     bindOrbit(canvas);
     const box = host.querySelector("details.fold3d-box");
@@ -1418,6 +1495,14 @@ export function mountFoldView(host, sh, params) {
     });
     const exp = host.querySelector(".fold3d-expand");
     if (exp) exp.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openFoldLightbox(host); });
+    const sl = host.querySelector(".fold3d-unfold input");
+    if (sl) sl.addEventListener("input", () => {
+      host._fold = Math.max(0, Math.min(1, Number(sl.value) / 100));
+      const m = viewModel(foldModel(host._sh, host._params, { fold: host._fold }), host._params);
+      if (!m) return;
+      host._model = m;
+      drawFoldCanvas(canvas, m, orbit);
+    });
     if (typeof ResizeObserver !== "undefined" && !host._foldRo) {
       host._foldRo = new ResizeObserver(() => {
         if (host._model) {
@@ -1434,6 +1519,12 @@ export function mountFoldView(host, sh, params) {
   }
   drawFoldCanvas(canvas, model, orbit);
   host._model = model;
+  const unf = host.querySelector(".fold3d-unfold");
+  if (unf) {
+    unf.hidden = !(full && full.unfoldable);
+    const inp = unf.querySelector("input");
+    if (inp) inp.value = String(Math.round(amt * 100));
+  }
   // r15 5.4: a pipe template says what the colours are
   const cap = host.querySelector(".fold3d-cap");
   if (cap) cap.textContent = sh && sh.template

@@ -110,6 +110,9 @@ try {
           const T = window.plasmaTest; T.showScreen("make", { force: true }); T.setAppMode(mode, { persist: false, autoFs: false });
           const s = T.sketch; s.clear(); s.add(id, true); s.commit(); s.pick([]); s.fitView(); s.draw();
           await new Promise((r) => setTimeout(r, 250));
+          // the first mode switch can relayout the canvas after the draw; redraw once it has settled, then sample
+          s.fitView(); s.draw();
+          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
           const dpr = window.devicePixelRatio || 1, ctx = s.cv.getContext("2d"), out = [];
           for (const c of s.contoursOf(s.items[0]).filter((c) => c.role === "bend")) {
             const [ax, ay] = s.toScreen(...c.pts[0]), [bx, by] = s.toScreen(...c.pts[1]);

@@ -2418,3 +2418,7 @@ body[data-screen="make"] #btnSelectMenu, body[data-screen="make"] #btnSnapMenu {
 .qb-arcpop button i { font-style: normal; width: 20px; text-align: center; }
 .qb-arcpop button kbd { margin-left: auto; }
 #quickBar .qb-arc-btn i small { font-size: var(--fs-xs); margin-left: 1px; vertical-align: top; }
+/* r15 5.7: Unfold slider under the folded view (flat at 0, folded at 100) */
+.fold3d-unfold { display: flex; align-items: center; gap: 8px; padding: 4px 8px 0; font-size: var(--fs-s); color: var(--muted); }
+.fold3d-unfold[hidden] { display: none; }
+.fold3d-unfold input { flex: 1 1 auto; min-width: 0; accent-color: var(--accent); }

@@ -12,6 +12,8 @@ const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a
 const norm = (a) => scl(a, 1 / (Math.hypot(a[0], a[1], a[2]) || 1));
 const EPS = 1e-7;
 
+// r15 5.7: how far the folds are made (1 folded, 0 flat) while a model is built, and whether any fold was used
+export const FOLD = { t: 1, used: false };
 export const FLAT_POSE = { o: [0, 0, 0], ax: [1, 0, 0], ay: [0, 0, -1] };   // lying on the table, flat y going away
 const isBend = (c) => c && c.role === "bend" && c.pts && c.pts.length === 2;
 const isClosed = (c) => c && c.closed !== false && c.role !== "bend" && c.pts && c.pts.length >= 3;
@@ -133,7 +135,8 @@ function hingeT(h, child) {
   const c = centroid(child.pts);
   if (dot(v, [c[0] - P[0], c[1] - P[1], 0]) < 0) v = scl(v, -1);
   const k = cross(v, [0, 0, 1]);
-  const R = rodrigues(norm(k), (h.deg * Math.PI / 180) * h.dir);
+  FOLD.used = true;
+  const R = rodrigues(norm(k), (h.deg * Math.PI / 180) * h.dir * FOLD.t);
   return { R, t: sub(P, mulV(R, P)) };
 }
 
