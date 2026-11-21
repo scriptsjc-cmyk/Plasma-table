@@ -201,3 +201,13 @@ body #stepper#stepper.ul-moving li.cur { border-bottom-color: transparent; }
 .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px 16px;
   text-align: center; color: var(--muted); font-size: var(--fs-m); border: 1px dashed var(--line-strong); border-radius: var(--r); background: var(--well); }
 .empty-state .empty-title { color: var(--text); font-weight: 650; }
+
+/* r15 7.3: on a laptop the CAD dialog lays its fields two to a row (notes, ticks and text boxes across both), so long
+   ones such as Cut control fit a 1366 x 640 screen with Cancel / Do it in view. */
+@media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+  #cadDialog .cadfields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; align-items: end; }
+  #cadDialog .cadfields > p,
+  #cadDialog .cadfields > label.check,
+  #cadDialog .cadfields > label:has(textarea) { grid-column: 1 / -1; }
+  #cadDialog .cadfields > :only-child { grid-column: 1 / -1; }
+}
