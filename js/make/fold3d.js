@@ -85,11 +85,17 @@ export function assemble(root, parts) {
   const panels = faces.map((f) => ({ w: f.w, h: f.h }));
   return { faces, panels };
 }
+// r15 7.5: each point moves once, holes with their faces. (Faces and their edge caps share point arrays, so a shared point
+// was moved two or three times, and holes were left where they were: harmless only when the shift was 0.)
 function sitOnTable(faces) {
   let y0 = Infinity;
   for (const f of faces) for (const p of f.pts) y0 = Math.min(y0, p[1]);
   if (Number.isFinite(y0) && Math.abs(y0) > 1e-9) {
-    for (const f of faces) for (const p of f.pts) p[1] -= y0;
+    const done = new Set();
+    for (const f of faces) for (const ring of [f.pts, ...(f.holes || [])]) for (const p of ring) {
+      if (!Array.isArray(p) || done.has(p)) continue;
+      done.add(p); p[1] -= y0;
+    }
   }
 }
 

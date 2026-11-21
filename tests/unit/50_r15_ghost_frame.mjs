@@ -43,7 +43,8 @@ t.check("a ghost face on the same points as a solid face is drawn on the same pi
   const solid = (mm) => mm.faces.filter((f) => !f.ghost), ghost = (mm) => mm.faces.filter((f) => f.ghost);
   const lift = Math.min(...ghost(th).flatMap((f) => f.pts.map((q) => q[1]))) - Math.min(...ghost(m).flatMap((f) => f.pts.map((q) => q[1])));
   const sLift = Math.min(...solid(th).flatMap((f) => f.pts.map((q) => q[1]))) - Math.min(...solid(m).flatMap((f) => f.pts.map((q) => q[1])));
-  t.check("take-off thickened at 3 mm: the part keeps its height (within the sheet)", Math.abs(ext(solid(th)) - ext(solid(m))) <= 3.01, `${ext(solid(m)).toFixed(1)} → ${ext(solid(th)).toFixed(1)} mm`);
+  const tMax = Math.max(3, ...solid(m).map((f) => Number(f.thk) || 0));   // the flange ring has its own 8 mm thickness
+  t.check("take-off thickened at 3 mm: the part keeps its height (within the thickest sheet, here the 8 mm flange)", Math.abs(ext(solid(th)) - ext(solid(m))) <= tMax + 0.01, `${ext(solid(m)).toFixed(1)} → ${ext(solid(th)).toFixed(1)} mm`);
   t.check("take-off thickened: the part and its ghost duct move up together", Math.abs(lift - sLift) <= 3.01, `ghost +${lift.toFixed(1)}, part +${sLift.toFixed(1)}`);
 }
 { // a plate with a hole, standing below the table: after thickening the hole is still in the middle of the plate
