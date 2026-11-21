@@ -4,6 +4,7 @@ import "../lib/env.mjs";
 import fs from "node:fs";
 import { mod, readJs, SITE } from "../lib/site.mjs";
 import { T } from "../lib/t.mjs";
+import { assemblePage } from "../lib/partials.mjs"; // r15 8.4: dialogs live in html/ partials
 
 const cloud = await mod("cloud");
 const machines = await mod("machines");
@@ -105,7 +106,7 @@ try {
   ck("overwriteCodeWarning explains a replace of an existing serial", /already saved/.test(machines.overwriteCodeWarning("Pt-test1", ["PT-TEST", "PT-TEST1"])) && /stop working/.test(machines.overwriteCodeWarning("PT-TEST1", ["PT-TEST1"])));
 
   ck("the claim hint says the serial box is optional and a mismatch looks unrecognised", /serial box is optional/i.test(home) && /unrecognised code/i.test(home));
-  ck("a failed claim is also shown as an alert in the dialog", /claimError/.test(home) && /role="alert"/.test(fs.readFileSync(SITE + "index.html", "utf8")));
+  ck("a failed claim is also shown as an alert in the dialog", /claimError/.test(home) && /id="claimDlg"[\s\S]*?role="alert"/.test(assemblePage().html));
   ck("spaces and missing dashes in a claim code are normalised to XXXX-XXXX", machines.machineSavedMessage("PT-TEST", "8b2p92jf") === "Machine saved: PT-TEST, code 8B2P-92JF" && machines.machineSavedMessage("PT-TEST", "8B2P 92JF") === "Machine saved: PT-TEST, code 8B2P-92JF");
   ck("a claim reply with no error field is not labelled as an unrecognised code", /Couldn.t link right now/.test(mach));
 } finally {
