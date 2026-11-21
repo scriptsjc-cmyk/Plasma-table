@@ -231,6 +231,8 @@ async function init() {
   // keep STOP (in the top bar) above every dialog and keep dialogs from covering the bar
   const fitBar = () => { const b = document.querySelector(".topbar"); if (b) document.documentElement.style.setProperty("--topbar-h", Math.ceil(b.getBoundingClientRect().height) + "px"); };
   fitBar(); window.addEventListener("resize", fitBar); window.addEventListener("orientationchange", () => setTimeout(fitBar, 200));
+  // r15 4.26: when the bundled Barlow has loaded (it swaps in), measure the bar again and redraw the pictures with it
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitBar(); window.dispatchEvent(new Event("resize")); try { if (sketch && sketch.active) sketch.draw(); } catch (e) { /* ignore */ } });
   const travel = machine.travel_mm || { x: 1300, y: 800 };
   sketch.maxMm = 2 * Math.max(Number(travel.x) || 1300, Number(travel.y) || 800);
   const localTestHost = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);

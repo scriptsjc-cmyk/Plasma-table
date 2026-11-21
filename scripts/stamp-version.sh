@@ -24,6 +24,7 @@ LIST=$( { echo "./"; echo index.html; echo manifest.json; echo version.json
           find html -type f -name '*.html' 2>/dev/null | LC_ALL=C sort          # main-menu HTML partials (loaded at start-up, no build step)
           find css -type f -name '*.css' 2>/dev/null | LC_ALL=C sort            # every stylesheet, in any sub-folder
           find js -type f -name '*.js' | LC_ALL=C sort                          # every module, in any sub-folder (js/core, js/make, js/cut, ...)
+          find fonts -type f -name '*.woff2' 2>/dev/null | LC_ALL=C sort        # r15 4.26: the bundled Barlow, so text looks the same offline
           ls config/machine.json config/cut_chart.json config/grblhal_settings.txt config/fluidnc-plasma.yaml 2>/dev/null; } | awk 'NF && !seen[$0]++ { printf "  \"%s\",\n", $0 }' )
 awk -v list="$LIST" '
   /\/\* precache:start \*\//    { print; print list; skip = 1; next }

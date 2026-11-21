@@ -5,6 +5,13 @@
    in the later file, so a few rules here belong to a neighbouring area. Do not reorder rules within or across files without
    re-checking the cascade. */
 
+/* r15 4.26: the app brings its own Barlow (SIL Open Font Licence, fonts/OFL.txt), latin set, 400–700. Every buyer's computer then
+   draws the same text widths as Josh's (it used to fall back to whatever system-ui is, e.g. DejaVu Sans on Linux). */
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/barlow-latin-400-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/barlow-latin-500-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/barlow-latin-600-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/barlow-latin-700-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
 /* Porta Plazma CNC light CAD theme (Fusion / Onshape / SolidWorks inspired). */
 :root, [data-theme="light"] {
   /* chrome */
@@ -74,7 +81,7 @@
   --shade-08: rgba(16, 24, 40, .08); --shade-12: rgba(16, 24, 40, .12); --shade-14: rgba(16, 24, 40, .14); --shade-16: rgba(16, 24, 40, .16);
   --shade-18: rgba(16, 24, 40, .18); --shade-20: rgba(16, 24, 40, .2); --shade-25: rgba(16, 24, 40, .25); --shade-28: rgba(16, 24, 40, .28);
   --stop-glow-00: rgba(224, 52, 43, 0); --stop-glow-55: rgba(224, 52, 43, .55); --stop-tint-12: rgba(196, 43, 28, .12); --warn-glow-25: rgba(192, 86, 0, .25);
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font: Barlow, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --cond: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   /* r13 type scale: five text sizes, plus named sizes for the big readouts. Every font-size in the CSS uses one of these.
      --fs-sm / --fs-md / --fs-lg / --fs-2xl are the older names and point at the same steps. */

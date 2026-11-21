@@ -314,3 +314,5 @@ body.laptop-ui #setupView .setup-tabs [data-setup-tab].on {
   body.laptop-ui #setupBedWrap > h2 + .jogmount + #setupBed,
   body.laptop-ui #setupBed { order: 2; border-top: 0; border-radius: 0 0 var(--r) var(--r); }
 }
+/* r15 4.26: a bold term in the edge steps stays on one line (with Barlow, "Floating head" could break across two) */
+#setupView .wizard li b { white-space: nowrap; }
