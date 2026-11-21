@@ -10,6 +10,7 @@ const br = await launch();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const ev = (page, f, a) => page.evaluate(f, a);
 const J = (x) => JSON.stringify(x).slice(0, 600);
+const innerHeightOf = (prof) => Number(prof.split("x")[1]);
 
 // every visible help line (.has-info): the visible words must not repeat the opening of the line
 const dupHelp = (page) => ev(page, () => {
@@ -102,6 +103,43 @@ try {
     const gate1 = await ev(page, () => { const g = document.getElementById("gateDlg"); return !!g && !g.classList.contains("hidden"); });
     t.check(`4.x-extra ${prof} Cut step 1: Download G-code shows Save G-code as (or the link prompt), on screen and usable`, gate1 || (g1.open && g1.vis && g1.onScreen && g1.btnHit), J({ g1, gate1 }));
     t.check(`no page error (${prof})`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
+  // ---------------------------------------------------------------- 4.1–4.5 Get to cutting, step 1 Part (laptop)
+  const box = (page, sel) => ev(page, (sel) => { const e = document.querySelector(sel); if (!e || !e.getClientRects().length) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; }, sel);
+  const meets = (a, b) => !!(a && b && a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1);
+  for (const prof of ["d1280x600", "d1366x640", "d1536x730"]) {
+    const page = await newPage(br, prof, { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    await ev(page, () => { const T = window.plasmaTest; T.showScreen("make", { force: true }); const s = T.sketch; s.clear(); s.add("rect", true, { w: 120, h: 80 }); s.commit(); T.sendToCutting(); });
+    await page.waitForFunction(() => window.plasmaTest.screen() === "cut");
+    await ev(page, () => window.plasmaTest.goStep(1)); await sleep(500);
+    // 4.1 header never sits on the panels: not connected, and in Practice (Practice + Ready + Torch off pills)
+    for (const state of ["not connected", "practice"]) {
+      if (state === "practice") { await ev(page, () => window.plasmaTest.goStep(3)); await sleep(300); await page.click("#btnDemo").catch(() => {}); await sleep(900); await ev(page, () => window.plasmaTest.goStep(1)); await sleep(500); }
+      const hb = await box(page, ".topbar"), cols = await ev(page, () => ["#pickPane > .part-col", "#pickPane > .mat-col", ".previewPane"].map((q) => { const e = document.querySelector(q); return e && e.getClientRects().length ? e.getBoundingClientRect().top : null; }));
+      t.check(`4.1 ${prof} ${state}: the header ends above every step-1 panel`, hb && cols.every((top) => top == null || top >= hb.b - 1), J({ hb, cols }));
+    }
+    // 4.2 Cut speed and More cut options are on screen, above Next and not under anything
+    const nx = await box(page, "#next1"), sp = await box(page, "#speedBox > summary"), ad = await box(page, "#advCut > summary");
+    const hits = await ev(page, () => ["#speedBox > summary", "#advCut > summary"].map((q) => { const e = document.querySelector(q); if (!e || !e.getClientRects().length) return false; const r = e.getBoundingClientRect(); const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!h && (h === e || e.contains(h)); }));
+    t.check(`4.2 ${prof}: Cut speed and More cut options are visible, not under Next, and clickable`, sp && ad && nx && !meets(sp, nx) && !meets(ad, nx) && sp.b <= innerHeightOf(prof) && ad.b <= innerHeightOf(prof) && hits.every(Boolean), J({ sp, ad, nx, hits }));
+    // 4.3 Practice run is the app's switch
+    const pr = await ev(page, () => { const i = document.getElementById("dryRun"), r = i.getBoundingClientRect(), cs = getComputedStyle(i); return { role: i.getAttribute("role"), w: r.width, h: r.height, ap: cs.appearance, checked: i.checked }; });
+    t.check(`4.3 ${prof}: Practice run is a switch (role=switch, wider than tall, not a 44 px box)`, pr.role === "switch" && pr.ap === "none" && pr.w >= 40 && pr.h >= 22 && pr.w >= 1.4 * pr.h, J(pr));
+    const before = await ev(page, () => document.getElementById("dryRun").checked);
+    await page.click("#dryRun"); await sleep(300);
+    const after = await ev(page, () => ({ c: document.getElementById("dryRun").checked, job: !!(window.plasmaTest.S.prepared && window.plasmaTest.S.prepared.dry_run) }));
+    t.check(`4.3 ${prof}: clicking the switch turns Practice run over (the prepared job follows)`, after.c === !before && after.job === after.c, J({ before, after }));
+    await page.click("#dryRun"); await sleep(150);
+    // 4.4 Cut speed is shown once on step 1
+    const cs = await ev(page, () => [...document.querySelectorAll(".step[data-step='1'] *, #pickPane *")].filter((e) => e.getClientRects().length && getComputedStyle(e).visibility !== "hidden" && [...e.childNodes].some((n) => n.nodeType === 3 && /Cut speed/i.test(n.textContent))).map((e) => e.textContent.trim().slice(0, 40)));
+    t.check(`4.4 ${prof}: "Cut speed" is shown once on step 1`, new Set(cs).size === 1 && cs.length === 1, J(cs));
+    // 4.5 Practice run, Cut speed and More cut options sit in the left column, under the part choices
+    const lc = await box(page, "#pickPane > .part-col"), pv = await box(page, ".previewPane"), dr = await box(page, "#dryRun"), st = await box(page, "#btnStraight");
+    t.check(`4.5 ${prof}: Practice run and the cut options are in the left column, below Straight cut`, lc && pv && dr && sp && ad && st && [dr, sp, ad].every((b) => b.r <= pv.l + 1 && b.t >= st.b - 1), J({ lc, pv, dr, sp, ad, st }));
+    t.check(`4.5 ${prof}: nothing in the left column runs off the bottom`, [dr, sp, ad].every((b) => b && b.b <= innerHeightOf(prof)), J({ dr, sp, ad }));
+    t.check(`no page error (${prof} cut step 1)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
 } catch (e) {
