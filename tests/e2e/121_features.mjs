@@ -188,6 +188,24 @@ try {
   await ev(page, () => { window.plasmaTest.sketch.undo(); });
   const pu = await ev(page, () => window.plasmaTest.sketch.items[0].type);
   t.check("undo: one step undoes the version change", pu === "rect", pu);
+  // ---------------------------------------------------------------- loose holes are offered into the part (plan 2.16)
+  const nBefore = (await feats()).length;
+  await ev(page, () => {
+    const s = window.plasmaTest.sketch, host = s.items[0];
+    s.add("hole", true, {}); const h = s.items[s.items.length - 1]; h.p.d = 12; h.x = host.x + 150; h.y = host.y + 30; h._key = undefined;
+    s.pick([host.id]); s.commit();
+    const b = document.querySelector('#srcShape .insp-tabs [data-insp="holes"]'); if (b) b.click();
+  });
+  await sleep(250);
+  const offer = await ev(page, () => { const b = document.querySelector("#featPanel .feat-adopt"); return b && !b.hidden && b.getClientRects().length ? b.textContent.replace(/\s+/g, " ").trim() : null; });
+  t.check("adopt: a loose hole inside the part is offered (Put it into this part)", /1 loose hole/.test(offer || "") && /put it into this part/i.test(offer || ""), offer);
+  if (offer) await page.click("#featAdopt");
+  await sleep(250);
+  const ad = await ev(page, () => ({ n: window.plasmaTest.sketch.items.length, feats: (window.plasmaTest.sketch.items[0].feats || []).map((f) => [f.k, f.x, f.y, f.d]) }));
+  t.check("adopt: one click makes it a Hole row at its place and removes the loose item", ad.n === 1 && ad.feats.length === nBefore + 1 && J(ad.feats[ad.feats.length - 1]) === J(["hole", 156, 36, 12]), J(ad));
+  await ev(page, () => window.plasmaTest.sketch.undo());
+  const un = await ev(page, () => ({ n: window.plasmaTest.sketch.items.length, f: (window.plasmaTest.sketch.items[0].feats || []).length }));
+  t.check("adopt: one undo puts the loose hole back", un.n === 2 && un.f === nBefore, J(un));
   t.check("no page error", !page.errors.length, J(page.errors.slice(0, 3)));
 } catch (e) {
   t.check("121 ran to the end", false, String(e && e.stack || e).slice(0, 400));

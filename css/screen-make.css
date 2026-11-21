@@ -2329,3 +2329,7 @@ body.pro-mode[data-screen="make"] #srcShape[data-insp="holes"] > .featpanel,
 body.advanced-mode[data-screen="make"] #srcShape[data-insp="holes"] > .featpanel { flex: 1 1 0; }
 .feat-row.feat-builtin { background: var(--well); }
 .feat-row.feat-builtin .feat-open { cursor: default; }
+.featpanel .feat-adopt { margin: 0; padding: 6px 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; border-radius: var(--r, 6px);
+  background: var(--warn-bg); color: var(--warn-text); flex: 0 0 auto; }
+.featpanel .feat-adopt[hidden] { display: none; }
+.featpanel .feat-adopt button { min-height: 32px; }

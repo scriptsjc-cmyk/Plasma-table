@@ -4,7 +4,7 @@
 // The model lives in part-features.js; the sketch flattens features to plain contours before anything is cut.
 import { $, esc, toast } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
-import { CUTOUT_SHAPES, FEATURE_KINDS, FEATURE_OPS, exact, featureIssues, featureSummary, mirrored, newFeature, patternOf, setFeatureValue, syncLinks } from "./part-features.js";
+import { CUTOUT_SHAPES, FEATURE_KINDS, adoptableHoles, FEATURE_OPS, exact, featureIssues, featureSummary, mirrored, newFeature, patternOf, setFeatureValue, syncLinks } from "./part-features.js";
 
 const ADD_ORDER = [["hole", "Hole"], ["slot", "Slot"], ["bolt", "Bolt circle"], ["grid", "Grid of holes"], ["edge", "Holes in a line"],
   ["rect", "Rectangle cut-out"], ["shape", "Shape cut-out"], ["text", "Text"], ["etch", "Etch line"], ["corner", "Corners"]];
@@ -85,6 +85,10 @@ export function renderFeatureList() {
   const feats = it.feats || [], fr = frame(it);
   if (openId != null && !feats.some((f) => f.id === openId)) openId = null;
   const builtin = shapeHoleRows(it);
+  const adopt = adoptableHoles(sketch, it), banner = host.querySelector(".feat-adopt");
+  banner.hidden = !adopt.length;
+  if (adopt.length) banner.querySelector("span").textContent = `${adopt.length} loose ${adopt.length === 1 ? "hole sits" : "holes sit"} inside this part.`;
+  banner.querySelector("button").textContent = adopt.length === 1 ? "Put it into this part" : `Put ${adopt.length} loose holes into this part`;
   empty.hidden = feats.length > 0 || !!builtin; empty.textContent = "No features yet. + Add puts one in the middle of the part.";
   const issues = featureIssues(feats, fr.outline, thickness());
   const sig = feats.map((f) => `${f.id}:${f.k}:${f.id === openId}`).join(",") + "|" + builtin;
@@ -174,6 +178,18 @@ function setValue(fid, key, raw, inp) {
   else if (inp) inp.classList.remove("bad");
 }
 
+// plan 2.16: loose hole items inside the part become its feature rows (one undo step)
+function adoptLoose() {
+  const it = part(); if (!it) return;
+  const list = adoptableHoles(sketch, it); if (!list.length) return;
+  const gone = new Set(list.map((x) => x.item.id));
+  change((p) => {
+    p.feats.push(...list.map((x) => x.feat));
+    sketch.items = sketch.items.filter((o) => !gone.has(o.id));
+  });
+  toast(`${list.length} loose ${list.length === 1 ? "hole is" : "holes are"} now features of this part (Undo puts ${list.length === 1 ? "it" : "them"} back).`);
+}
+
 function act(fid, what) {
   closeMenus();
   if (what === "move") { openId = fid; renderFeatureList(); requestAnimationFrame(() => { const i = document.querySelector(`#featList .feat-row[data-fid="${fid}"] [data-ff="x"]`); if (i) { i.focus(); i.select && i.select(); } }); return; }
@@ -208,6 +224,7 @@ export function bindFeatureList() {
       return;
     }
     const a = t.closest("[data-fadd]"); if (a) { addFeature(a.dataset.fadd); return; }
+    if (t.closest("#featAdopt")) { adoptLoose(); return; }
     const fa = t.closest("[data-fact]"); if (fa) { if (menuFor != null) act(menuFor, fa.dataset.fact); return; }
     const row = t.closest(".feat-row"); if (!row) return;
     const fid = Number(row.dataset.fid);
