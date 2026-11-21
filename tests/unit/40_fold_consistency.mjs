@@ -82,4 +82,12 @@ sized("redelbow", {}, (p) => { const ta = Math.tan(((p.bend * Math.PI) / 180) / 
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
   t.check("recttransoff: the 3D top opening is offset by ox (30 mm) and is a2 wide", Math.abs(cx - 30) < 0.05 && Math.abs(Math.max(...xs) - Math.min(...xs) - p.a2) < 0.05, `centre ${cx.toFixed(2)}, width ${(Math.max(...xs) - Math.min(...xs)).toFixed(2)}`);
 }
+// the hopper's top flange in 3D is the cut lip (strips trimmed where the cut trims them), joined blank and separate pieces
+for (const split of [0, 1]) {
+  const s = sh("hopflange"), p = { ...defaults(s), split }, cut = (q) => s.make(q).filter((c) => c.closed !== false && c.role !== "bend" && c.op !== "mark").reduce((x, c) => x + area2(c.pts), 0);
+  const lipCut = cut(p) - cut({ ...p, lip: 0 });
+  const fs = solid(A.foldModel(s, p)), top = Math.max(...fs.flatMap((f) => f.pts.map((q) => q[1])));
+  const lip3 = fs.filter((f) => f.pts.every((q) => Math.abs(q[1] - top) < 1e-6)).reduce((x, f) => x + newell(f.pts), 0);
+  t.check(`hopflange (${split ? "separate pieces" : "one blank"}): the 3D top flange is the cut lip (${lipCut.toFixed(0)} mm²)`, Math.abs(lip3 - lipCut) / lipCut < 0.005, `3D ${lip3.toFixed(0)} mm²`);
+}
 process.exit(t.done() ? 1 : 0);
