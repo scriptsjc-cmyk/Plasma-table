@@ -54,7 +54,9 @@ async function makeScreen(page) {
     const pastBefore = await ev(page, () => window.plasmaTest.sketch.past.length);
     await page.click("#looseYes"); await sleep(300);
     let m = await model(page);
-    t.check("Yes: the three loose items become feature rows of the plate", m.n === 1 && J(m.feats) === J([["hole", 20, 20], ["hole", 180, 130], ["bolt", 100, 75]]), J(m));
+    // the bolt circle item's box starts at (70, 45): 4 x Ø6 on 60 PCD at 45° -> centre 70 + 30·cos45 + 3 = 94.213 each way
+    const bc = 70 + 30 * Math.SQRT1_2 + 3;
+    t.check("Yes: the three loose items become feature rows of the plate", m.n === 1 && J(m.feats.slice(0, 2)) === J([["hole", 20, 20], ["hole", 180, 130]]) && m.feats[2] && m.feats[2][0] === "bolt" && Math.abs(m.feats[2][1] - bc) <= 0.03 && Math.abs(m.feats[2][2] - (bc - 25)) <= 0.03, J({ m, bc }));
     t.check("Yes: the prompt goes away", !(await offer(page)));
     t.check("Yes: it is one undo step", (await ev(page, () => window.plasmaTest.sketch.past.length)) === pastBefore + 1);
     await ev(page, () => window.plasmaTest.sketch.undo()); await sleep(200);
