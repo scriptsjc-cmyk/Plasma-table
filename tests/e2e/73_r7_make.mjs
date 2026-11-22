@@ -94,7 +94,17 @@ for (const [w, h, tag] of [[1440, 900, "1440x900"], [1366, 768, "1366x768"]]) {
     const wrap = fit && (fit.scrollWidth - fit.clientWidth > 1);
     return { undo: vis("skUndo"), redo: vis("skRedo"), fit: vis("skFit"), all: vis("skAll"), clear: vis("skClear"), fitWrap: !!wrap };
   })()`);
-  ck(`${tag}: Advanced hides Undo, Redo and Fit on the form, keeps Pick all and Clear`, !sk.undo && !sk.redo && !sk.fit && sk.all && sk.clear, sk);
+  // r12 4.3 + r13 1.4 (approved): on a laptop Pick all and Clear moved from the form into the header's "Select ▾" menu
+  const selMenu = await ev(page, `(async () => {
+    const vis = (id) => { const el = document.getElementById(id); if (!el) return false; const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return cs.display !== "none" && !el.hidden && r.width > 0 && r.height > 0; };
+    const btn = document.getElementById("btnSelectMenu"); if (!btn || !vis("btnSelectMenu")) return { menu: false };
+    btn.click(); await new Promise((r) => setTimeout(r, 200));
+    const pop = document.getElementById("makeSelectPop");
+    const res = { menu: true, all: vis("skAll") && !!(pop && pop.contains(document.getElementById("skAll"))), clear: vis("skClear") && !!(pop && pop.contains(document.getElementById("skClear"))) };
+    btn.click(); await new Promise((r) => setTimeout(r, 150));
+    return res;
+  })()`);
+  ck(`${tag}: Advanced hides Undo, Redo and Fit on the form, keeps Pick all and Clear`, !sk.undo && !sk.redo && !sk.fit && (sk.all && sk.clear || selMenu.menu && selMenu.all && selMenu.clear), { sk, selMenu });
   ck(`${tag}: Zoom to fit does not wrap`, !sk.fitWrap, sk);
 
   // J2 sheet size

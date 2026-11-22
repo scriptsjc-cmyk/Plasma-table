@@ -32,7 +32,20 @@ await page.evaluate(() => {
   sk.pick([it.id]);
   sk.fitView && sk.fitView();
   sk.draw();
+  // commit like a real edit, so the app knows there is a part (Advanced shows the size form and Cut this part only then)
+  sk.commit && sk.commit();
+  sk.onSelect && sk.onSelect();
   if (T.renderQuickBar) T.renderQuickBar();
+});
+await new Promise((r) => setTimeout(r, 400));
+// r12 4.2 (approved): on a laptop Save to account / Download G-code moved from the row under the canvas into the ☰ menu
+const laptopMenu = await page.evaluate(async () => {
+  if (!document.body.classList.contains("laptop-ui")) return null;
+  const vis = (id) => { const el = document.getElementById(id); if (!el) return false; const b = el.getBoundingClientRect(); return getComputedStyle(el).display !== "none" && b.width > 8 && b.height > 8; };
+  document.getElementById("btnTopMenu").click(); await new Promise((r) => setTimeout(r, 250));
+  const res = { save: vis("menuSavePart"), download: vis("menuExportGcode") };
+  document.getElementById("btnTopMenu").click(); await new Promise((r) => setTimeout(r, 150));
+  return res;
 });
 
 const layout = await page.evaluate(() => {
@@ -90,8 +103,8 @@ const layout = await page.evaluate(() => {
 const compactRail = layout.qbW > 0 && layout.qbW < 200;
 const oneRow = layout.qbH > 0 && layout.qbH <= 72;
 t.check("C46: tools are a left rail or a single row, and do not cover Save / Download",
-  layout.saveVisible && layout.exportVisible && !layout.overlapSave && (compactRail || oneRow),
-  JSON.stringify({ qbW: layout.qbW, qbH: layout.qbH, compactRail, oneRow, overlapSave: layout.overlapSave, save: layout.save }), "C46-LAYOUT");
+  (laptopMenu ? laptopMenu.save && laptopMenu.download : layout.saveVisible && layout.exportVisible) && !layout.overlapSave && (compactRail || oneRow),
+  JSON.stringify({ qbW: layout.qbW, qbH: layout.qbH, compactRail, oneRow, overlapSave: layout.overlapSave, save: layout.save, laptopMenu }), "C46-LAYOUT");
 t.check("C46: most-used tools stay visible and the rest are under More, including Rotate about and Cut control",
   layout.hasMore && layout.hasDraw && layout.hasRotpt && layout.hasCutctl,
   (layout.ids || []).join(","), "C46-LAYOUT");
@@ -99,7 +112,8 @@ t.check("C47: Draw / Measure / Auto-arrange / Snap to points are not duplicated 
   !layout.pro.includes("draw") && !layout.pro.includes("measure") && !layout.pro.includes("nest") && !layout.pro.includes("points") && !layout.headerSnap,
   JSON.stringify({ pro: layout.pro, headerSnap: layout.headerSnap }), "C47-HOME");
 t.check("C48: Cut this part is in the panel footer, not floating over the fields",
-  layout.nextInNav && layout.navPos === "static" && !layout.coversField,
+  // r12 3.7 / 4.3 (approved): Cut this part is a fixed row at the bottom of the inspector (sticky), never over a field
+  layout.nextInNav && ["static", "sticky"].includes(layout.navPos) && !layout.coversField && !!(layout.next && layout.next.w > 8 && layout.next.h > 8),
   JSON.stringify({ navPos: layout.navPos, coversField: layout.coversField, next: layout.next }), "C48-FOOTER");
 
 await page.evaluate(() => { window.plasmaTest.openShortcutSheet && window.plasmaTest.openShortcutSheet(); });

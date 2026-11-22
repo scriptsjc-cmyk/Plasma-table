@@ -60,14 +60,17 @@ await ev(page, () => {
 await sleep(250);
 
 const vis = await ev(page, () => {
-  const check = ((document.getElementById("checkHint") || {}).innerText || "") + " " + ((document.getElementById("checkZero") || {}).innerText || "") + " " + ((document.getElementById("checklist") || {}).innerText || "");
+  // r12 3.3 (approved): on a short laptop the hint's sentence is in its "i" tip (label hidden), so read the tip as well
+  const hintTip = ((document.querySelector("#checkHint .info-i") || { getAttribute: () => "" }).getAttribute("data-tip") || "");
+  const hintI = document.querySelector("#checkHint .info-i"), hintIVis = !!(hintI && hintI.getClientRects().length);
+  const check = (hintIVis ? hintTip + " " : "") + ((document.getElementById("checkHint") || {}).innerText || "") + " " + ((document.getElementById("checkZero") || {}).innerText || "") + " " + ((document.getElementById("checklist") || {}).innerText || "");
   const kerf = document.getElementById("kerfNote");
   const kcs = kerf && getComputedStyle(kerf);
   const play = document.getElementById("playRow");
   const pcs = play && getComputedStyle(play);
   const playShown = !!(play && pcs.display !== "none" && !play.classList.contains("hidden") && play.getBoundingClientRect().height > 0);
   return {
-    touch: /touch off/i.test(check),
+    touch: /touch(es)? off/i.test(check),   // r11 Before you cut checklist (996d8e7) words it "The first pierce touches off the sheet."
     kerf: !!(kerf && /half a kerf/i.test(kerf.textContent) && kcs.display !== "none" && !kerf.classList.contains("hidden")),
     playShown,
     playDisplay: pcs && pcs.display,

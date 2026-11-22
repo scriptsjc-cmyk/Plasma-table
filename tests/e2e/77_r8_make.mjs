@@ -306,10 +306,15 @@ for (const prof of ["d1440", "d1366"]) {
   t.check(n("item 16: Advanced does not show the Simple Snap explainer button"), !pro.simpleSnap, JSON.stringify(pro));
   t.check(n("item 13: Check cut stays in Advanced"), pro.check);
 
+  // r12 3.3 / 4.3 (approved): on a laptop the inspector is tabbed and the drawing-sheet box is collapsed to fit; the finished-size
+  // note lives in it on the Size tab, so open those first (on a phone / tablet nothing is collapsed and these clicks do nothing)
+  await ev(page, () => { const tab = document.querySelector('#srcShape .insp-tabs [data-insp="size"]'); if (tab && tab.getClientRects().length) tab.click(); const d = document.getElementById("sheetSizeBox"); if (d && d.getClientRects().length && !d.open) d.open = true; });
+  await new Promise((r) => setTimeout(r, 200));
   const proTips = await ev(page, () => {
     const vis = (b) => { if (!b) return false; const r = b.getBoundingClientRect(), cs = getComputedStyle(b); return cs.display !== "none" && r.width > 8 && r.height > 8; };
     const sizes = [...document.querySelectorAll("button.info-i")].find((b) => /cut width is allowed/i.test(b.getAttribute("data-tip") || ""));
-    return { sizes: vis(sizes), tip: (sizes && sizes.getAttribute("data-tip")) || "" };
+    const sk = window.plasmaTest.sketch, src = document.getElementById("srcShape"), d = document.getElementById("sheetSizeBox");
+    return { sizes: vis(sizes), tip: (sizes && sizes.getAttribute("data-tip")) || "", parts: sk.items.length, picked: (sk.sel && sk.sel.ids || []).length, tab: src && src.dataset.insp, sheetOpen: !!(d && d.open), sheetShown: vis(d) };
   });
   t.check(n("Advanced Make puts the finished-size note behind an information icon"), proTips.sizes && /cut width is allowed/i.test(proTips.tip), JSON.stringify(proTips));
   t.check(n("item 10: Advanced is not full-screen"), !pro.fs);

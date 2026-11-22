@@ -112,7 +112,10 @@ const exp = await page.evaluate(() => {
 });
 t.check("C34: Export drawing pop lists DXF and SVG", exp.btn && exp.pop && exp.dxfBtn && exp.svgBtn, JSON.stringify(exp), "C34-UI");
 
-await page.click("#btnMakeExport");
+// r12 3.2 / 4.2 and r15 4.x-extra (Josh 21 Nov): on a laptop Export DXF / SVG is in the ☰ menu (the header button is hidden there)
+if (await page.locator("#btnMakeExport").isVisible()) await page.click("#btnMakeExport");
+else { await page.click("#btnTopMenu"); await page.click("#menuExportDxf"); }
+await page.waitForTimeout(200);
 const popOpen = await page.evaluate(() => {
   const p = document.getElementById("makeExportPop");
   return p && !p.classList.contains("hidden") && !p.hidden;

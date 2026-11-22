@@ -1,6 +1,5 @@
-// Pro-mode Make a part (laptop): the left part-info panel must wheel-scroll
-// and expose a scrollbar so lower size fields stay reachable, including when
-// the folded 3D view is the taller laptop size.
+// Pro-mode Make a part (laptop): lower size fields stay reachable, including when the folded 3D view is the taller laptop size.
+// Since r12 3.3 (approved) the panel never scrolls: it is tabbed so each tab fits; this checks nothing on any tab is cut off.
 import { T } from "../lib/t.mjs";
 import { startServer, launch, newPage } from "../lib/browser.mjs";
 
@@ -70,26 +69,29 @@ for (const prof of ["d1366", "desktop1920"]) {
   let st = await panelState(page);
   t.check(n("Pro mode on a laptop Make a part screen"), st.pro && st.laptop, JSON.stringify(st));
   t.check(n("3D view is the taller laptop size"), st.cvH >= 260, JSON.stringify({ cvH: st.cvH }));
-  t.check(n("the part-info panel can scroll (overflow auto and content taller than the pane)"), st.canScroll, JSON.stringify(st));
-
-  const before = st.srcTop || 0;
-  const box = await page.locator("#srcShape").boundingBox();
-  if (box) {
-    // Wheel over the lower half of the panel (fields, not only the 3D canvas).
-    await page.mouse.move(box.x + box.width * 0.5, box.y + Math.min(box.height - 24, Math.max(40, box.height * 0.75)));
-    await page.mouse.wheel(0, 600);
+  // r12 3.3 (approved): "Panels never scroll and never clip" - the laptop inspector is tabbed (Part / Size / Holes / Arrange) so
+  // each tab fits. The old checks (the panel scrolls, the wheel scrolls it) are replaced by what they protected: every field on
+  // every tab, including the lowest size fields of a flanged cone, is inside the panel and above Cut this part.
+  const tabs = [];
+  for (const tab of ["part", "size", "holes", "arrange"]) {
+    tabs.push(await ev(page, (tab) => {
+      const b = document.querySelector(`#srcShape .insp-tabs [data-insp="${tab}"]`); if (b) b.click();
+      const src = document.getElementById("srcShape"), sr = src.getBoundingClientRect();
+      const nav = document.querySelector('.step[data-step="1"] .nav'), nr = nav && nav.getClientRects().length ? nav.getBoundingClientRect() : null;
+      const bottom = Math.min(sr.bottom, innerHeight, nr ? nr.top : 1e9);
+      const ctl = [...src.querySelectorAll("input, select, textarea, button")].filter((e) => e.getClientRects().length && getComputedStyle(e).visibility !== "hidden" && !e.closest(".insp-tabs"));
+      const clipped = ctl.filter((e) => { const r = e.getBoundingClientRect(); return r.bottom > bottom + 1 || r.top < sr.top - 1 || r.right > sr.right + 1; }).map((e) => e.id || e.dataset.p || e.name || e.textContent.trim().slice(0, 16) || e.tagName);
+      return { tab, tabFound: !!b, n: ctl.length, clipped };
+    }, tab));
     await sleep(150);
   }
-  let afterWheel = await panelState(page);
-  t.check(n("mouse wheel scrolls the part-info panel down"), (afterWheel.srcTop || 0) > before + 20, JSON.stringify({ before, after: afterWheel.srcTop }));
-
-  await ev(page, () => {
-    const src = document.getElementById("srcShape");
-    if (src) src.scrollTop = src.scrollHeight;
-  });
-  await sleep(100);
-  const bottom = await panelState(page);
-  t.check(n("scrolling to the bottom brings the lower fields into view"), bottom.lastVisible && bottom.srcTop > 0, JSON.stringify(bottom));
+  t.check(n("every inspector tab fits: no field is cut off below the panel or under Cut this part"), tabs.every((x) => x.tabFound && x.clipped.length === 0), JSON.stringify(tabs));
+  const size = tabs.find((x) => x.tab === "size");
+  t.check(n("the cone's size fields (with both flanges) are all on the Size tab and on screen"), !!(size && size.n >= 8 && size.clipped.length === 0), JSON.stringify(size));
+  { const bx = await page.locator("#srcShape").boundingBox(); if (bx) await page.mouse.move(bx.x + bx.width * 0.5, bx.y + bx.height * 0.6); }
+  await page.mouse.wheel(0, 600); await sleep(150);
+  const st2 = await panelState(page);
+  t.check(n("the panel never scrolls away from its fields (no hidden scroll offset)"), !st2.srcTop && !st2.canScroll, JSON.stringify({ srcTop: st2.srcTop, canScroll: st2.canScroll }));
 
   await page.ctx.close();
 }

@@ -117,7 +117,10 @@ for (const [name, w, h, mobile, mode] of [
       const closed = await layout(page);
       ck(`${name}: closing Parts hides the list again`, !closed.layerOpen && !closed.lists.includes("layers"), closed);
     } else {
-      ck(`${name}: one parts list, showing every shape`, L.lists.length === 1 && L.lists[0] === "layers" && L.layerCount >= 2 && !L.viewParts, L);
+      // r12 4.3 (approved): on a laptop the inspector is tabbed and the parts list is on its Part tab (picking a shape opens Size)
+      await ev(page, `document.querySelector('#srcShape .insp-tabs [data-insp="part"]') && document.querySelector('#srcShape .insp-tabs [data-insp="part"]').click()`); await sleep(250);
+      const LP = await layout(page);
+      ck(`${name}: one parts list, showing every shape`, LP.lists.length === 1 && LP.lists[0] === "layers" && LP.layerCount >= 2 && !LP.viewParts, LP);
     }
   }
   await page.context().close();
@@ -127,16 +130,20 @@ for (const [name, w, h, mobile, mode] of [
 {
   const page = await view(1440, 900, false);
   await openMake(page, "advanced");
+  // r15 3.3 / 7.2 (approved): Customise toolbar lives at the end of the rail's ⋯ More panel (More opens beside the rail over the
+  // top of the drawing by design). The rail's ⋯ More button itself sits on the rail, not over the canvas.
   ck("Advanced: Customise toolbar is in the tool bar, not over the canvas", await ev(page, `(() => {
-    const btn = document.querySelector("#quickBar [data-qb='customise']");
+    const more = document.querySelector("#quickBar [data-qb='more']");
     const cv = document.getElementById("preview");
-    if (!btn || !cv) return false;
-    const a = btn.getBoundingClientRect(), b = cv.getBoundingClientRect();
+    if (!more || !cv) return false;
+    const a = more.getBoundingClientRect(), b = cv.getBoundingClientRect();
     const shown = a.width > 0 && a.height > 0;
     const overlap = a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom - 1 && a.bottom > b.top + 1;
     return shown && !overlap;
   })()`));
-  await page.click("#quickBar [data-qb='customise']"); await sleep(300);
+  await page.click("#quickBar [data-qb='more']"); await sleep(300);
+  ck("Advanced: ⋯ More shows Customise toolbar", await ev(page, `(() => { const b = document.querySelector("#qbMorePop [data-qb='customise']"); const r = b && b.getBoundingClientRect(); return !!(r && r.width > 0 && r.height > 0); })()`));
+  await page.click("#qbMorePop [data-qb='customise']"); await sleep(300);
   const opened = await ev(page, `(() => {
     const el = document.getElementById("toolbarCustom");
     const cats = [...document.querySelectorAll("#tcCatalog h3")].map((h) => h.textContent.trim());
@@ -154,14 +161,14 @@ for (const [name, w, h, mobile, mode] of [
   const mid = await ev(page, `(() => {
     const ids = [...document.querySelectorAll("#tcMine .tc-row[data-id]")].map((li) => li.dataset.id);
     const prefs = window.plasmaTest.getPrefs().tools;
-    const rail = [...document.querySelectorAll("#quickBar [data-qb]")].map((b) => b.dataset.qb).filter((id) => id !== "customise");
+    const rail = [...document.querySelectorAll("#quickBar > [data-qb]")].map((b) => b.dataset.qb).filter((id) => id !== "customise");   // the rail itself, not the ⋯ More list (r15 3.3: More lists every tool that is not on the rail)
     return { ids, prefs, rail, hasRect: ids.includes("rect") };
   })()`);
   ck("removing and reordering tools updates the toolbar and is saved in prefs", mid.prefs && mid.prefs[0] === mid.ids[0] && !mid.hasRect && !mid.rail.includes("rect") && mid.rail[0] === mid.ids[0], mid);
   await ev(page, `document.getElementById("tcReset").click()`); await sleep(200);
   const reset = await ev(page, `(() => {
     const ids = [...document.querySelectorAll("#tcMine .tc-row[data-id]")].map((li) => li.dataset.id);
-    const rail = [...document.querySelectorAll("#quickBar [data-qb]")].map((b) => b.dataset.qb).filter((id) => id !== "customise");
+    const rail = [...document.querySelectorAll("#quickBar > [data-qb]")].map((b) => b.dataset.qb).filter((id) => id !== "customise");   // the rail itself, not the ⋯ More list (r15 3.3: More lists every tool that is not on the rail)
     return { ids, prefs: window.plasmaTest.getPrefs().tools, railHasRect: rail.includes("rect"), n: ids.length };
   })()`);
   ck("Reset to default restores the full toolbar", reset.prefs == null && reset.railHasRect && reset.n >= 20, reset);

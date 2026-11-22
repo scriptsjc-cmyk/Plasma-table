@@ -42,7 +42,10 @@ const view = async (w, h, q = "?test=1&turn=0", mobile = w < 900) => {
   })()`);
   ck("laptop Advanced: body has laptop-ui and is not full screen", lay.laptop && !lay.fs, lay);
   ck("laptop Advanced: tools wrap under the picture, canvas, roomy right properties", lay.qb && lay.step && lay.form && lay.order && lay.qbW >= 400 && lay.stepW >= 280 && lay.cvW >= 400, lay);
-  ck("laptop Advanced: parts list is visible", lay.layers, lay);
+  // r12 4.3 (Josh-approved): the laptop inspector is tabbed Part / Size / Holes / Arrange, and the parts list lives on the Part tab
+  // (picking a shape opens Size). Open the Part tab, then the list must be on screen.
+  const partsTab = await T(page, `(() => { const b = document.querySelector('#srcShape .insp-tabs [data-insp="part"]'); if (b) b.click(); const el = document.getElementById("layersPanel"); const r = el && el.getBoundingClientRect(); return !!(b && el && getComputedStyle(el).display !== "none" && r.width > 4 && r.height > 4); })()`);
+  ck("laptop Advanced: parts list is visible", partsTab, { before: lay.layers, onPartTab: partsTab });
   ck("tool buttons show keyboard hints", lay.rawHint, lay);
 
   const keys = await T(page, `(() => {
@@ -172,14 +175,27 @@ const view = async (w, h, q = "?test=1&turn=0", mobile = w < 900) => {
   ck("right-click context menu offers delete and lock", menu2.shown && menu2.hasDel && menu2.hasLock, menu2);
 
   await page.click("#btnPresetParts"); await sleep(300);
-  const pb = await T(page, `(() => {
+  // r12 4.6 (Josh-approved): the browser shows one page of cards that fit, with "Page x of N" buttons, so "many parts" is
+  // counted across every page of All, and the cone is found with the search box (it is not on the first page).
+  const pb = await T(page, `(async () => {
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const el = document.getElementById("presetBrowser");
-    const tiles = [...document.querySelectorAll("#pbGrid [data-shape]")].map((b) => b.dataset.shape);
     const cats = [...document.querySelectorAll("#pbCats [data-pbcat]")].map((b) => b.textContent.trim());
     const shown = el && el.classList.contains("is-open") && !el.classList.contains("hidden");
-    return { shown, n: tiles.length, hasCone: tiles.includes("conesteep") || tiles.includes("coneecc") || tiles.includes("cone"), cats, search: !!document.getElementById("pbSearch") };
+    const all = document.querySelector('#pbCats [data-pbcat="all"]'); if (all) { all.click(); await wait(250); }
+    const seen = new Set(); let pages = 0;
+    for (let i = 0; i < 60; i++) {
+      document.querySelectorAll("#pbGrid [data-shape]").forEach((b) => seen.add(b.dataset.shape)); pages++;
+      const next = document.querySelector("#pbPage .pagebar-next");
+      if (!next || next.disabled) break;
+      next.click(); await wait(120);
+    }
+    const q = document.getElementById("pbSearch");
+    if (q) { q.value = "cone"; q.dispatchEvent(new Event("input", { bubbles: true })); await wait(300); }
+    const found = [...document.querySelectorAll("#pbGrid [data-shape]")].map((b) => b.dataset.shape);
+    return { shown, n: seen.size, pages, perPage: Math.ceil(seen.size / Math.max(1, pages)), hasCone: found.some((id) => /cone/.test(id)), found: found.slice(0, 8), cats, search: !!q };
   })()`);
-  ck("Preset parts opens a roomy browser with categories, search and many parts", pb.shown && pb.n >= 100 && pb.search && pb.cats.length >= 5, pb);
+  ck("Preset parts opens a roomy browser with categories, search and many parts", pb.shown && pb.n >= 100 && pb.pages >= 2 && pb.search && pb.cats.length >= 5, pb);
   ck("the browser includes a fabrication cone / reducer", pb.hasCone, pb);
 
   await T(page, `document.getElementById("pbClose").click()`); await sleep(250);
