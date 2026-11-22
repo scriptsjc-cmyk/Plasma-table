@@ -223,6 +223,10 @@ export function prefsKey(userId) {
 
 let current = defaultPrefs();
 let currentKey = PREFS_KEY;
+// r15 Round 8: the cut panel saves speeds / material during start-up, before Make it yours calls loadPrefs(). Until the
+// first load, read what is stored first, so that save merges into it instead of writing the defaults over every pref.
+let loaded = false;
+function ensureLoaded() { if (!loaded) loadPrefs(idFromKey(currentKey) || undefined); }
 let savedHook = null;
 export function setPrefsSavedHook(fn) { savedHook = typeof fn === "function" ? fn : null; }
 function idFromKey(key) {
@@ -235,9 +239,10 @@ function persist(userId) {
   }
 }
 
-export function getPrefs() { return { ...current }; }
+export function getPrefs() { ensureLoaded(); return { ...current }; }
 
 export function syncCutPrefsToAccount(userId) {
+  ensureLoaded();
   let speeds = {}, material = null, cutPresets = [];
   try { speeds = JSON.parse(localStorage.getItem("plasma.speeds") || "{}") || {}; } catch (e) { speeds = {}; }
   try { material = JSON.parse(localStorage.getItem("plasma.material") || "null"); } catch (e) { material = null; }
@@ -247,6 +252,7 @@ export function syncCutPrefsToAccount(userId) {
 
 
 export function loadPrefs(userId) {
+  loaded = true;
   currentKey = prefsKey(userId);
   try {
     const raw = JSON.parse(localStorage.getItem(currentKey) || "null");
@@ -257,6 +263,7 @@ export function loadPrefs(userId) {
 }
 
 export function savePrefs(partial, userId) {
+  ensureLoaded();
   if (userId !== undefined) currentKey = prefsKey(userId);
   current = sanitizePrefs({ ...current, ...(isObj(partial) ? partial : {}), updatedAt: Date.now() });
   persist(userId);
