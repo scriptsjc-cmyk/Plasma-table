@@ -2,6 +2,7 @@
 import { sketch } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { evalExpr } from "../core/expr.js";
+import { parseTypedSize } from "./typedsize.js";
 
 let fields = [];
 let focusI = 0;
@@ -21,6 +22,12 @@ export function closeDrawHud() {
   if (sketch) { sketch.drawDraft = null; sketch.draw(); }
 }
 
+// "120 x 80" in one box: both sizes (a single number is just the width here)
+function pairIn(el) {
+  const raw = String((el && el.value) || "");
+  if (!/\d\s*(?:[xX×*,]|\bby\b)\s*[\d.(]/.test(raw)) return null;
+  return parseTypedSize("rect", raw);
+}
 function num(el, fallback) {
   const v = evalExpr(el && el.value);
   return Number.isFinite(v) ? v : fallback;
@@ -80,11 +87,12 @@ export function commitRectDisc(opts = {}) {
   const d = sketch.drawDraft;
   const fromHud = !!opts.fromHud;
   if (d.kind === "rect") {
-    const w = Math.abs(fromHud ? num($("drawHudW"), d.w) : d.w);
-    const h = Math.abs(fromHud ? num($("drawHudH"), d.h) : d.h);
-    if (w < 2 || h < 2) return false;
-    const x = Math.min(d.x, d.x + (d.w >= 0 ? w : -w));
-    const y = Math.min(d.y, d.y + (d.h >= 0 ? h : -h));
+    const both = fromHud ? pairIn($("drawHudW")) : null;          // r15 10.7: "120 × 80" typed in the width box
+    const w = both ? both.w : Math.abs(fromHud ? num($("drawHudW"), d.w) : d.w);
+    const h = both ? both.h : Math.abs(fromHud ? num($("drawHudH"), d.h) : d.h);
+    if (w < 2 || h < 2) { if (d.typed) sketch.onMessage("Type a size such as 120 x 80, then Enter."); return false; }
+    const x = d.typed ? d.ox - w / 2 : Math.min(d.x, d.x + (d.w >= 0 ? w : -w));
+    const y = d.typed ? d.oy - h / 2 : Math.min(d.y, d.y + (d.h >= 0 ? h : -h));
     // add() places at a default; then move to the typed corner
     sketch.add("rect", true, { w, h });
     const it = sketch.selected() || sketch.items[sketch.items.length - 1];
@@ -94,8 +102,9 @@ export function commitRectDisc(opts = {}) {
     return true;
   }
   if (d.kind === "disc") {
-    const dia = Math.abs(fromHud ? num($("drawHudD"), d.d) : d.d);
-    if (dia < 2) return false;
+    const typedD = fromHud ? parseTypedSize("disc", ($("drawHudD") || {}).value) : null;     // r15 10.7: Ø40, R20, 40
+    const dia = typedD ? typedD.d : Math.abs(fromHud ? num($("drawHudD"), d.d) : d.d);
+    if (dia < 2) { if (d.typed) sketch.onMessage("Type a size such as Ø40 or R20, then Enter."); return false; }
     sketch.add("disc", true, { d: dia });
     const it = sketch.selected() || sketch.items[sketch.items.length - 1];
     if (it) { it.x = d.cx - dia / 2; it.y = d.cy - dia / 2; sketch.commit(); sketch.onSelect(); }
@@ -216,11 +225,14 @@ function onHudInput() {
     sketch.drawDraft = { kind: "line", len: num($("drawHudLen"), 0), ang: num($("drawHudAng"), 0), x: a[0] + len * Math.cos(ang), y: a[1] + len * Math.sin(ang) };
     sketch.draw();
   } else if (sketch.tool === "rect" && sketch.drawDraft) {
-    sketch.drawDraft.w = num($("drawHudW"), sketch.drawDraft.w);
-    sketch.drawDraft.h = num($("drawHudH"), sketch.drawDraft.h);
+    const d = sketch.drawDraft, both = pairIn($("drawHudW"));
+    d.w = both ? both.w : num($("drawHudW"), d.w);
+    d.h = both ? both.h : num($("drawHudH"), d.h);
+    if (d.typed) { d.x = d.ox - Math.abs(d.w) / 2; d.y = d.oy - Math.abs(d.h) / 2; }
     sketch.draw();
   } else if (sketch.tool === "disc" && sketch.drawDraft) {
-    sketch.drawDraft.d = num($("drawHudD"), sketch.drawDraft.d);
+    const t = parseTypedSize("disc", ($("drawHudD") || {}).value);
+    sketch.drawDraft.d = t ? t.d : num($("drawHudD"), sketch.drawDraft.d);
     sketch.draw();
   }
 }
@@ -273,6 +285,25 @@ export function startDiscAt(wx, wy) {
   paintDrawHud();
   focusHud("drawHudD");
   if (sketch.onMessage) sketch.onMessage("Move to set the size, then click again or press Enter. Or type the diameter.");
+}
+
+// r15 10.7: a number typed with Rectangle / Circle picked (before any click) opens the box with it; Enter places the shape
+// centred on the middle of the view.
+export function typeSizeStart(key) {
+  if (!sketch || !(sketch.tool === "rect" || sketch.tool === "disc") || sketch.drawDraft) return false;
+  const [vw, vh] = sketch.size();
+  const [cx, cy] = sketch.toWorld(vw / 2, vh / 2);
+  const ox = Math.round(cx), oy = Math.round(cy);
+  sketch.drawDraft = sketch.tool === "rect" ? { kind: "rect", x: ox, y: oy, w: 0, h: 0, ox, oy, typed: true } : { kind: "disc", cx: ox, cy: oy, d: 0, typed: true };
+  paintDrawHud();
+  const id = sketch.tool === "rect" ? "drawHudW" : "drawHudD", el = $(id);
+  if (!el) return false;
+  el.value = String(key || "");
+  focusI = Math.max(0, fields.indexOf(id));
+  el.focus({ preventScroll: true });
+  try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) { /* type=text only */ }
+  if (sketch.onMessage) sketch.onMessage(sketch.tool === "rect" ? "Type the size, e.g. 120 x 80 (or Tab to the height), then Enter." : "Type the size, e.g. Ø40 or R20, then Enter.");
+  return true;
 }
 
 export function afterDrawPoint() {

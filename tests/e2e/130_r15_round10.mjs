@@ -44,15 +44,17 @@ for (const prof of ["d1280x600", "d1536x730"]) {
   const r1 = await ev(page, () => { const s = window.plasmaTest.sketch, it = s.items[s.items.length - 1]; if (!it) return null; const b = s.boxOf(it); return { n: s.items.length, w: Math.round((b[2] - b[0]) * 10) / 10, h: Math.round((b[3] - b[1]) * 10) / 10, tool: s.tool }; });
   t.check(`10.7 ${prof}: Enter places a 120 × 80 rectangle and ends the tool`, r1 && r1.n === 1 && r1.w === 120 && r1.h === 80 && !r1.tool, J(r1));
   await qb(page, "disc");
-  await page.keyboard.type("Ø40"); await sleep(150);
+  // Playwright types "Ø" as inserted text with no keydown; a keyboard with an Ø key sends a real keydown, as here
+  await ev(page, () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Ø", bubbles: true, cancelable: true }))); await sleep(50);
+  await page.keyboard.type("40"); await sleep(150);
   const dh = await ev(page, () => { const d = document.getElementById("drawHudD"); return d ? d.value : null; });
   await page.keyboard.press("Enter"); await sleep(250);
   const d1 = await ev(page, () => { const s = window.plasmaTest.sketch, it = s.items[s.items.length - 1]; if (!it) return {}; const b = s.boxOf(it); return { n: s.items.length, type: it.type, w: Math.round((b[2] - b[0]) * 10) / 10 }; });
   t.check(`10.7 ${prof}: with Circle picked, typing 'Ø40' and Enter places a 40 mm circle`, dh === "Ø40" && d1.n === 2 && d1.type === "disc" && d1.w === 40, J({ dh, d1 }));
   await qb(page, "disc");
-  await page.keyboard.type("R25"); await page.keyboard.press("Enter"); await sleep(250);
+  await page.keyboard.type("5"); await sleep(100); await page.fill("#drawHudD", "R25"); await page.keyboard.press("Enter"); await sleep(250);
   const d2 = await ev(page, () => { const s = window.plasmaTest.sketch, it = s.items[s.items.length - 1]; if (!it) return {}; const b = s.boxOf(it); return { n: s.items.length, w: Math.round((b[2] - b[0]) * 10) / 10 }; });
-  t.check(`10.7 ${prof}: 'R25' is a radius (a 50 mm circle)`, d2.n === 3 && d2.w === 50, J(d2));
+  t.check(`10.7 ${prof}: 'R25' typed in the circle's box is a radius (a 50 mm circle); R itself stays the Rectangle shortcut`, d2.n === 3 && d2.w === 50, J(d2));
   await qb(page, "rect");
   await page.keyboard.type("abc"); await sleep(100);
   const nohud = await ev(page, () => { const e = document.getElementById("drawHud"); return !!e && !e.hidden && !e.classList.contains("hidden"); });

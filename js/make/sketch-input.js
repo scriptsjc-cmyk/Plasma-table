@@ -4,7 +4,7 @@ import { boxOverlap, clone, r1, unionBox, wholeSet, TWO_POINT_HINT } from "./ske
 import { screenBoxToWorld, shiftView } from "../cut/bedview.js";
 import { detectCircle, pointInPoly, bulgeRadius } from "../core/geom.js";
 import { snapWorld, constraintOf, applyConstraints } from "./snaps.js";
-import { afterDrawPoint, startRectAt, startDiscAt, paintDrawHud, commitRectDisc, closeDrawHud, cancelDrawHud, syncDrawHudValues } from "./drawhud.js";
+import { afterDrawPoint, startRectAt, startDiscAt, paintDrawHud, commitRectDisc, closeDrawHud, cancelDrawHud, syncDrawHudValues, typeSizeStart } from "./drawhud.js";
 import { openCtxMenu } from "./ctxmenu.js";
 
 
@@ -258,6 +258,11 @@ export class InputMethods {
         }
         if (!Number.isFinite(px) || !Number.isFinite(py)) return;
         if (Math.abs(px) > this.maxMm || Math.abs(py) > this.maxMm) { this.onMessage("That point is off the table."); return; }
+        // r15 10.7: a size already typed: the click says where its middle goes
+        if ((this.tool === "rect" || this.tool === "disc") && this.drawDraft && this.drawDraft.typed) {
+          const d = this.drawDraft; if (d.kind === "rect") { d.ox = px; d.oy = py; } else { d.cx = px; d.cy = py; }
+          commitRectDisc({ fromHud: true }); return;
+        }
         if (this.tool === "rect") {
           if (this.drawDraft && this.drawDraft.kind === "rect") { commitRectDisc(); return; }
           startRectAt(px, py); this.rdDown = { sx, sy, id: e.pointerId }; this.draw(); return;
@@ -410,6 +415,8 @@ export class InputMethods {
           this.drawDraft = { kind: "line", x: to[0], y: to[1], len, ang };
           const first = this.drawPts[0];
           this.closeToStart = !!(first && this.drawPts.length >= 2 && Math.hypot(to[0] - first[0], to[1] - first[1]) <= 8);
+        } else if (this.drawDraft && this.drawDraft.typed) {
+          // r15 10.7: a typed size keeps its size while the pointer moves
         } else if (this.tool === "rect" && this.drawDraft && this.drawDraft.kind === "rect") {
           const d = this.drawDraft;
           const x = sn ? sn.x : mwx, y = sn ? sn.y : mwy;
@@ -618,6 +625,8 @@ export class InputMethods {
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
       if (e.key === " ") { this.spaceDown = false; return; } // Space is STOP, never pan
+      // r15 10.7: with Rectangle / Circle picked, typing a number opens the size box with it ("120 × 80", "Ø40"); letters stay shortcuts
+      if ((this.tool === "rect" || this.tool === "disc") && !this.drawDraft && !ctrl && !e.altKey && /^[0-9.Øø⌀]$/.test(e.key)) { stop(); typeSizeStart(e.key); return; }
       if (ctrl && k === "z") { stop(); e.shiftKey ? this.redo() : this.undo(); return; }
       if (ctrl && k === "y") { stop(); this.redo(); return; }
       if (ctrl && k === "a") { stop(); this.pickAll(); return; }
