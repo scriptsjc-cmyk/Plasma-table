@@ -1908,21 +1908,26 @@ body[data-screen="cut"] #running.amp-pause > #runHelp { display: none; }
   body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-icon { font-size: var(--fs-l); line-height: 1; }
 }
 
-/* Below 1440px wide, Download G-code is an icon so it never overlaps Start cutting. */
-@media (min-width: 1200px) and (max-width: 1439px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
-  body[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav {
-    grid-template-columns: 44px minmax(0, 1fr);
-    gap: 8px;
-    align-items: stretch;
+/* Below 1440px wide, Download G-code is an icon so it never overlaps Start cutting.
+   r15 8.1: asked of the Setup grid's own width (container "cutgrid"; its content box is the viewport less 42 px: 16 px
+   outside it, then 1 px border and 12 px padding a side, so 1397 px here is the old 1439 px viewport). The laptop conditions stay a media query. */
+@media (min-width: 1200px) and (min-height: 560px) and (hover: hover) and (pointer: fine) {
+  body.app-shell[data-screen="cut"][data-step="3"] .cutgrid { container: cutgrid / inline-size; }
+  @container cutgrid (max-width: 1397px) {
+    body[data-screen="cut"][data-step="3"] .step[data-step="3"] > .nav {
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 8px;
+      align-items: stretch;
+    }
+    body[data-screen="cut"][data-step="3"] .nav #btnExport3 {
+      width: 44px;
+      min-width: 44px;
+      max-width: 44px;
+      padding: 0;
+    }
+    body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-label { display: none; }
+    body[data-screen="cut"][data-step="3"] .nav #btnStart { min-width: 0; }
   }
-  body[data-screen="cut"][data-step="3"] .nav #btnExport3 {
-    width: 44px;
-    min-width: 44px;
-    max-width: 44px;
-    padding: 0;
-  }
-  body[data-screen="cut"][data-step="3"] .nav #btnExport3 .dl-label { display: none; }
-  body[data-screen="cut"][data-step="3"] .nav #btnStart { min-width: 0; }
 }
 
 

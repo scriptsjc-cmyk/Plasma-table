@@ -7,7 +7,9 @@ import { T } from "../lib/t.mjs";
 
 const t = new T("58_r15_cut_css_split");
 const FILES = ["css/screen-cut.css", "css/screen-cut-part.css", "css/screen-cut-run.css", "css/screen-cut-setup.css"];
-const BEFORE = "53b0d87ff91f1f355e948962e70ccaab3de92cd3";   // the rules of screen-cut.css before the split (comments and spacing ignored)
+// the rules of screen-cut.css before the split (comments and spacing ignored) was 53b0d87f…; r15 8.1's container query (the
+// Download G-code icon range asked of .cutgrid's width, same declarations, style-diff identical) is the one deliberate change since.
+const BEFORE = "e22b98dc67a9385b120ec6d697b5df99084c77bd";
 const index = fs.readFileSync(SITE + "index.html", "utf8");
 const links = [...index.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((m) => m[1]);
 const at = links.indexOf(FILES[0]);
