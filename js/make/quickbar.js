@@ -136,9 +136,12 @@ export function focusToolSearch() {
   moreOpen = true;
   document.body.classList.add("qb-searching", "qb-more-open");
   try { renderQuickBar(); } catch (e) { /* not ready */ }
-  const s = document.getElementById("qbSearch") || document.getElementById("qbMoreSearch");
-  if (s) { s.focus(); if (s.select) s.select(); }
   toggleMore(true);
+  // r15 Round 8 (pre-existing 85 C49): open first, then focus the search box that is on screen (focusing a hidden one did nothing)
+  const vis = (e) => !!(e && e.getClientRects().length);
+  const a = document.getElementById("qbSearch"), b = document.getElementById("qbMoreSearch");
+  const s = vis(a) ? a : (vis(b) ? b : (a || b));
+  if (s) { s.focus(); if (s.select) s.select(); }
 }
 
 // Undo, Redo, Fit and Delete sit in the Make a part header, not over the canvas.
