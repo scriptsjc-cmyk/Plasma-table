@@ -6,7 +6,8 @@ import { renderProTools } from "./protools.js";
 import { clickVerb } from "../ui/laptop.js";
 import { def } from "./sketch-util.js";
 import { FLANGE_STANDARDS, lookupFlange, applyFlangeDims, flangeShapeKeys } from "./flange-tables.js";
-import { getPrefs, savePrefs } from "../core/prefs.js";
+import { getPrefs, savePrefs, drawingSheet } from "../core/prefs.js";
+import { fitGrid } from "./arrayfit.js";
 
 export function cadLastFor(title) {
   try { return (getPrefs().cadLast || {})[title] || {}; } catch (e) { return {}; }
@@ -53,13 +54,21 @@ const CAD_OK = {
   "Cut control (whole job)": "Apply to the job",
   "Fill from a flange standard": "Fill in the sizes",
   "Fillet a corner": "Fillet",
-  "Linear array": (v) => `Make ${v.n} copies`,
+  "Linear array": (v) => (v.fit ? `Fill the sheet (${fillCount(v)})` : `Make ${v.n} copies`),
+  "Copy along a path": (v) => `Make ${v.n} along the path`,
   "Clean up tiny gaps (closer than the cut width)": "Clean up",
   "Offset the outline": "Offset",
   "Rotate about a point": "Rotate",
   "Scale by percent": "Scale",
   "Set this distance": "Set the distance",
 };
+// r15 10.5: how many the "as many as fit" array will make on the drawing sheet
+function fillCount(v) {
+  const box = sketch && sketch.picked().length ? sketch.pickedBox() : null;
+  if (!box) return 0;
+  const sh = drawingSheet(S.cfg && S.cfg.travel_mm);
+  return fitGrid({ x0: box[0], y0: box[1], w: box[2] - box[0], h: box[3] - box[1], gap: Number(v.gx) || 0, sheetW: sh.w, sheetH: sh.h }).n;
+}
 function cadOkLabel(title, vals) {
   const l = CAD_OK[title];
   if (typeof l === "function") { const n = vals && Number(vals.n); return Number.isFinite(n) && n > 0 ? l({ ...vals, n: Math.round(n) }) : "Make copies"; }
@@ -120,8 +129,21 @@ export function runPro(cmd) {
       { id: "n", label: "How many (including this one, max 50)", value: 3 },
       { id: "gx", label: "Gap across (mm)", value: 10 },
       { id: "gy", label: "Gap up (mm)", value: 0 },
-      { note: "The array is limited to 50 copies, including this one. A larger number is clipped to 50." },
-    ], (v) => sketch.linearArray(v.n, v.gx, v.gy), (v) => sketch.setCadPreview && sketch.setCadPreview("Linear array", v));
+      { id: "fit", type: "checkbox", label: "As many as fit on the sheet (the gap across is used both ways)", remember: false },
+      { note: "The array is limited to 50 copies, including this one. A larger number is clipped to 50. As many as fit fills the drawing sheet instead." },
+    ], (v) => {
+      if (v.fit) { const sh = drawingSheet(S.cfg && S.cfg.travel_mm); sketch.fillSheet(Number(v.gx) || 0, sh.w, sh.h); return; }
+      sketch.linearArray(v.n, v.gx, v.gy);
+    }, (v) => sketch.setCadPreview && (v.fit ? sketch.clearCadPreview() : sketch.setCadPreview("Linear array", v)));
+    return;
+  }
+  if (cmd === "pathcopy") {                                // r15 10.3
+    if (sketch.picked().length < 2) { toast("Pick the part to copy, then Shift-click the line or outline to copy it along (pick the path last).", true); return; }
+    openCad("Copy along a path", [
+      { id: "n", label: "How many copies (max 200)", value: 5 },
+      { id: "rotate", type: "checkbox", label: "Turn each copy to follow the path" },
+      { note: "The last part you picked is the path. Copies are shared out evenly along it, both ends included on an open line." },
+    ], (v) => sketch.copyAlongPath(v.n, { rotate: v.rotate }));
     return;
   }
   if (cmd === "polar") {
