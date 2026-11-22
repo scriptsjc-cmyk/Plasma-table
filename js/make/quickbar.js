@@ -281,7 +281,8 @@ export function renderQuickBar() {
       lastRail = g;
       addId(id);
     }
-    arcPopEl().innerHTML = grouped ? arcs.map((a) => { const n = infoOf(a); return B(a, n.icon, n.label); }).join("") : "";
+    { const ap = arcPopEl(), h = grouped ? arcs.map((a) => { const n = infoOf(a); return B(a, n.icon, n.label); }).join("") : "";
+      if (ap._qbHtml !== h) { ap.innerHTML = h; ap._qbHtml = h; } }   // r15 Round 8: only when it changes (see below)
     if (!grouped && arcOpen) toggleArc(false);
     parts.push(`<button type="button" data-qb="more" class="qb-more-btn${moreOpen ? " on" : ""}" aria-expanded="${moreOpen ? "true" : "false"}" aria-controls="qbMorePop" title="More tools" aria-label="More tools"><i>⋯</i><span>More</span></button>`);
     // one block per tool group, so a short group never splits across the panel's columns (a long one may)
