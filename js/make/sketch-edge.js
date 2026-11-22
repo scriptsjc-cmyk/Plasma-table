@@ -790,9 +790,11 @@ export class EdgeMethods {
       }
       return;
     }
+    this._dots = [];
     if (!this.isEditableCustom(one)) return;
     const world = this.rawWorld(one);
     const e = this.edgeSel && this.edgeSel.id === one.id ? this.edgeSel : null;
+    const allPts = this.pointEdit === one.id;            // r15 10.1: Edit points: every point gets a handle, smooth arc joins too
     for (let ci = 0; ci < world.length; ci++) {
       const pts = world[ci].pts, n = pts.length, closed = world[ci].closed !== false;
       const edges = closed ? n : n - 1;
@@ -837,7 +839,8 @@ export class EdgeMethods {
         const inside = insides && insides.has(i);
         // r15 2.14: dots only at real corners, not where an arc joins smoothly (the picked edge keeps its end dots)
         const ends = e && e.ci === ci && (e.ei === i || (e.ei + 1) % n === i);
-        if (!on && !hover && !ends && !this.filletPick && (clickedSet ? !clickedSet.has(i) : !isRealCorner(pts, bs, i, closed))) continue;
+        if (!allPts && !on && !hover && !ends && !this.filletPick && (clickedSet ? !clickedSet.has(i) : !isRealCorner(pts, bs, i, closed))) continue;
+        this._dots.push({ ci, vi: i });
         const rad = hover ? 8 : (on || (this.filletPick && inside) ? 6.5 : 4.5);
         ctx.beginPath(); ctx.arc(X, Y, rad, 0, 7);
         ctx.fillStyle = hover ? C.sel : (on ? C.sel : C.canvas);

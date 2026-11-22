@@ -203,6 +203,7 @@ export function renderQuickBar() {
     alignl: !many, alignr: !many, alignt: !many, alignb: !many, aligncx: !many, aligncy: !many, alignc: !many,
     distx: !many, disty: !many, mirv: !any || locked,
     edge: !(one && one.type === "custom"),
+    points: !one || locked, pathcopy: !many || locked,                       // r15 10.1 / 10.3
   };
   const onCls = { snap: !!sketch.opts.snap, draw: sketch.tool === "draw", measure: sketch.tool === "measure", rect: sketch.tool === "rect", disc: sketch.tool === "disc", size: !!one, trim: sketch.tool === "trim", arc3: sketch.tool === "arc3", arctan: sketch.tool === "arctan", spline: sketch.tool === "spline", maketan: sketch.tool === "maketan", makeconc: sketch.tool === "makeconc" };
   // UX2 fix: a greyed tool says why (tooltip + screen reader label)
@@ -211,6 +212,8 @@ export function renderQuickBar() {
     if (locked && !["undo", "redo"].includes(id) && any) return "the selected shape is locked";
     if (id === "join" || id === "subtract" || id === "alignl" || id === "alignr" || id === "alignt" || id === "alignb" || id === "aligncx" || id === "aligncy" || id === "alignc" || id === "distx" || id === "disty") return "Shift-click or Ctrl-click to pick two or more shapes first";
     if (id === "edge") return "select a drawn or joined outline first (Draw outline, then tap it)";
+    if (id === "pathcopy") return "pick the part to copy, then Shift-click the line or outline to copy it along";
+    if (id === "points") return "select one shape first";
     if (id === "ver") return "this shape has no versions";
     if (id === "resize" && one && one.lock) return "this part is locked";
     if (id === "resize" && one && (one.rot || 0) % 90 !== 0) return "this part is not axis-aligned (turn it to a 0° or 90° angle first)";
@@ -411,6 +414,8 @@ export function quickAction(a) {
     case "draw": case "measure": case "nest": case "offset": case "linarray": case "polar": case "subtract":
       runPro(a); break;
     case "trim": sketch.startTrimMode && sketch.startTrimMode("trim"); break;
+    case "points": if (sketch.startPointEdit()) setInspectorTab && setInspectorTab("part"); break;   // r15 10.1
+    case "pathcopy": runPro("pathcopy"); break;                                                      // r15 10.3
     case "extend": sketch.startTrimMode && sketch.startTrimMode("extend"); break;
     case "break": sketch.startTrimMode && sketch.startTrimMode("break"); break;
     case "arc3": sketch.startArc3 && sketch.startArc3(); break;

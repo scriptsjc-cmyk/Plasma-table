@@ -23,9 +23,9 @@ export const TOOL_GROUPS = [
     ["group", "▣", "Group"], ["ungroup", "▢", "Ungroup"],
   ] },
   { g: "Boolean & offset", items: [["join", "⊕", "Join (union)"], ["subtract", "⊖", "Cut out"], ["offset", "⧈", "Offset"], ["sliver", "≋", "Clean up tiny gaps"]] },
-  { g: "Arrays", items: [["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["nest", "⊞", "Auto-arrange"]] },
+  { g: "Arrays", items: [["linarray", "⋯", "Array"], ["polar", "✲", "Circle array"], ["pathcopy", "〰", "Copy along a path"], ["nest", "⊞", "Auto-arrange"]] },
   { g: "Cutting", items: [["cutctl", "⤳", "Cut control"], ["flangestd", "⊛", "Standard flange"]] },
-  { g: "Edit", items: [["trim", "✂", "Trim"], ["extend", "━", "Extend"], ["break", "⤢", "Break"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["maketan", "⊙", "Make tangent"], ["makeconc", "◎", "Make concentric"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"]] },
+  { g: "Edit", items: [["trim", "✂", "Trim"], ["points", "⌖", "Edit points"], ["extend", "━", "Extend"], ["break", "⤢", "Break"], ["fillet", "⌒", "Fillet"], ["chamfer", "⌜", "Chamfer"], ["maketan", "⊙", "Make tangent"], ["makeconc", "◎", "Make concentric"], ["ver", "◈", "Versions"], ["dup", "⧉", "Copy"]] },
 ];
 
 // Always shown next to "Make a part"; not part of the customisable rail.

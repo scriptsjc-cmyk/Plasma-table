@@ -58,6 +58,8 @@ const SPEC = {
   join: { act: "instant", setup: "two" }, subtract: { act: "instant", setup: "two" },
   offset: { act: "dialog", dlg: "cadDialog" }, sliver: { act: "dialog", dlg: "cadDialog", setup: "sliver" },
   linarray: { act: "dialog", dlg: "cadDialog" }, polar: { act: "dialog", dlg: "cadDialog" },
+  pathcopy: { act: "dialog", dlg: "cadDialog", setup: "two" },          // r15 10.3: copies of the first-picked part along the last-picked one
+  points: { act: "instant" },                                          // r15 10.1: Edit points turns the picked plate into an editable outline
   nest: { act: "dialog", dlg: "cadDialog", setup: "two" },
   cutctl: { act: "dialog", dlg: "cadDialog", effect: "cam", fill: { "#cad_tabs": "2" } },
   flangestd: { act: "dialog", dlg: "cadDialog", setup: "flange" },

@@ -25,6 +25,7 @@ export function fillEdgePanel() {
   if ($("edgeAng")) $("edgeAng").value = String(Math.round((($("edgeAngMode") && $("edgeAngMode").value === "rel" ? info.relAngle : info.angle) || 0) * 10) / 10);
   if ($("edgeBulge")) $("edgeBulge").value = String(Math.round(info.bulge * 1000) / 1000);
   if ($("edgeRad")) $("edgeRad").value = info.radius && Number.isFinite(info.radius) ? String(Math.round(info.radius * 10) / 10) : "";
+  if ($("edgeArc")) $("edgeArc").textContent = Math.abs(info.bulge) > 1e-9 ? "Make straight" : "Make arc";     // r15 10.1
   if ($("edgeHint")) $("edgeHint").textContent = info.vi != null
     ? "Corner selected. Drag it, or press Delete to remove it (an outline needs at least three corners)."
     : "Edge selected. Set a length, square it up, type an angle, or turn it into a curve. Double-click to add a corner.";
@@ -71,6 +72,7 @@ function bindEdgePanel() {
     fillEdgePanel();
   });
   $("edgeStraight") && ($("edgeStraight").onclick = () => { sketch.straightenEdge(); fillEdgePanel(); });
+  $("edgeArc") && ($("edgeArc").onclick = () => { sketch.toggleEdgeArc(); fillEdgePanel(); });
   $("edgeAddV") && ($("edgeAddV").onclick = () => { const e = sketch.edgeSel; if (e) sketch.addVertexOnEdge(e.ci, e.ei); fillEdgePanel(); });
   $("edgeDelV") && ($("edgeDelV").onclick = () => { sketch.deleteVertex(); fillEdgePanel(); });
   $("edgeDone") && ($("edgeDone").onclick = () => { sketch.doneEdge && sketch.doneEdge(); fillEdgePanel(); });

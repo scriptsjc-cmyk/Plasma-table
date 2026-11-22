@@ -15,6 +15,7 @@ import { FeatureMethods } from "./sketch-features.js";
 import { InputMethods } from "./sketch-input.js";
 import { TrimMethods } from "./sketch-trim.js";
 import { Stage6Methods } from "./sketch-stage6.js";
+import { PointMethods } from "./sketch-points.js";
 import { installLayoutLock } from "./sketch-lock.js";
 import { adoptCircleHoles, sanitizeFeature } from "./part-features.js";
 import { clickVerb } from "../ui/laptop.js";
@@ -142,6 +143,7 @@ export class Sketch {
   pick(ids, hole = null) {
     if (this.layout && this._holes && this._holes.size) ids = [...new Set(ids.map((id) => { const o = this.item(id), h = o && this.holeOwner(o); return h ? h.id : id; }))];     // in the layout a part's own holes are never picked on their own
     this.sel = { ids: [...ids], hole: ids.length === 1 ? hole : null }; this.normalizeEdgeSel();
+    if (this.pointEdit && !this.sel.ids.includes(this.pointEdit)) this.pointEdit = null;      // r15 10.1: picking another part ends Edit points
   }
   // ---------------------------------------------------------------- actions (all undoable)
   newItem(type, overrides) {
@@ -340,5 +342,5 @@ export class Sketch {
   }
 }
 
-mixin(Sketch, GeomMethods, EditMethods, ViewMethods, EdgeMethods, FeatureMethods, TrimMethods, Stage6Methods, InputMethods);
+mixin(Sketch, GeomMethods, EditMethods, ViewMethods, EdgeMethods, FeatureMethods, TrimMethods, Stage6Methods, PointMethods, InputMethods);
 installLayoutLock(Sketch);
