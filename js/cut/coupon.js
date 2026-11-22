@@ -45,20 +45,40 @@ export function couponPresetRow({ material, thickness, row, chart = {}, usedSpee
 // ---------------------------------------------------------------- pierce counter
 export const PIERCE_KEY = "plasma.pierces.v1";
 export class PierceCounter {
-  constructor(store) { this.store = store; this.job = 0; this.lifetime = 0; this.since = 0; this.torch = false; this.jobRef = null; this.load(); }
+  // r15 9.5: besides the lifetime total, the tip and the electrode each count their own pierces since they were last changed
+  constructor(store) { this.store = store; this.job = 0; this.lifetime = 0; this.since = 0; this.tip = { n: 0, since: 0 }; this.electrode = { n: 0, since: 0 }; this.torch = false; this.jobRef = null; this.load(); }
   load() {
-    try { const j = JSON.parse((this.store || localStorage).getItem(PIERCE_KEY) || "{}"); this.lifetime = Number.isFinite(j.lifetime) && j.lifetime >= 0 ? Math.trunc(j.lifetime) : 0; this.since = Number(j.since) || 0; } catch (e) { this.lifetime = 0; }
+    const cnt = (v) => (Number.isFinite(v) && v >= 0 && v < 1e9 ? Math.trunc(v) : 0);
+    const part = (o) => (o && typeof o === "object" ? { n: cnt(o.n), since: Number(o.since) > 0 ? Number(o.since) : 0 } : { n: 0, since: 0 });
+    try {
+      const j = JSON.parse((this.store || localStorage).getItem(PIERCE_KEY) || "{}") || {};
+      this.lifetime = cnt(j.lifetime); this.since = Number(j.since) || 0; this.tip = part(j.tip); this.electrode = part(j.electrode);
+    } catch (e) { this.lifetime = 0; this.tip = { n: 0, since: 0 }; this.electrode = { n: 0, since: 0 }; }
   }
-  save() { try { (this.store || localStorage).setItem(PIERCE_KEY, JSON.stringify({ lifetime: this.lifetime, since: this.since || Date.now() })); } catch (e) { /* private mode */ } }
+  save() { try { (this.store || localStorage).setItem(PIERCE_KEY, JSON.stringify({ lifetime: this.lifetime, since: this.since || Date.now(), tip: this.tip, electrode: this.electrode })); } catch (e) { /* private mode */ } }
   // call with every status report. `jobRef` = any value that changes when a new job starts. Counts torch-on edges while a job is running.
   // A practice (demo) controller never counts towards the lifetime number: no real consumable was used.
   feed(st, { running = false, demo = false, jobRef = null } = {}) {
     if (running && jobRef !== this.jobRef) { this.jobRef = jobRef; this.job = 0; }
     const torch = !!(st && st.torch);
     let counted = false;
-    if (torch && !this.torch && running) { this.job++; if (!demo) { if (!this.since) this.since = Date.now(); this.lifetime++; this.save(); } counted = true; }
+    if (torch && !this.torch && running) {
+      this.job++;
+      if (!demo) {
+        this.load();                                  // a reset made elsewhere (Settings) since the last pierce stays reset
+        const now = Date.now();
+        if (!this.since) this.since = now;
+        if (!this.tip.since) this.tip.since = now;
+        if (!this.electrode.since) this.electrode.since = now;
+        this.lifetime++; this.tip.n++; this.electrode.n++; this.save();
+      }
+      counted = true;
+    }
     this.torch = torch;
     return counted;
   }
   resetLifetime() { this.lifetime = 0; this.since = Date.now(); this.save(); }
+  resetTip() { this.load(); this.tip = { n: 0, since: Date.now() }; this.save(); }
+  resetElectrode() { this.load(); this.electrode = { n: 0, since: Date.now() }; this.save(); }
+  consumables() { return { lifetime: this.lifetime, tip: { ...this.tip }, electrode: { ...this.electrode } }; }
 }
