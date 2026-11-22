@@ -1,4 +1,5 @@
 // Safe numeric expressions for the size keypad: 100/2, 50+12.5, 80-5, 25*4, (30+10)/2
+// r15 10.8: a number may carry a unit: 2in or 2" (inches), 5cm, 50mm. The answer is always millimetres; a plain number is mm.
 export function evalExpr(raw) {
   const original = String(raw ?? "");
   if (/\d\s+\d/.test(original)) return NaN; // "1 2" is not a number
@@ -7,7 +8,7 @@ export function evalExpr(raw) {
   else if (s.includes(",")) return NaN;
   s = s.replace(/\s+/g, "").replace(/×/g, "*").replace(/÷/g, "/");
   if (!s || s.length > 200) return NaN;
-  if (!/^[-+*/().\d]+$/.test(s)) return NaN;
+  if (!/^[-+*/().\d"incm]+$/.test(s)) return NaN;
   if (/[*/]{2,}|\+{2,}|--|\/\/|\(\)/.test(s)) return NaN;
   let i = 0;
   const eat = (c) => { if (s[i] === c) { i++; return true; } return false; };
@@ -19,7 +20,11 @@ export function evalExpr(raw) {
       i++;
     }
     if (i === start) return NaN;
-    const v = parseFloat(s.slice(start, i));
+    let v = parseFloat(s.slice(start, i));
+    if (s.startsWith("in", i)) { i += 2; v *= 25.4; }
+    else if (s[i] === '"') { i++; v *= 25.4; }
+    else if (s.startsWith("mm", i)) i += 2;
+    else if (s.startsWith("cm", i)) { i += 2; v *= 10; }
     return Number.isFinite(v) ? v : NaN;
   }
   function factor() {
