@@ -97,12 +97,26 @@ const area = (pts) => { let a = 0; for (let i = 0; i < pts.length; i++) { const 
 // contours: [{ pts, closed, circle? }] in mm.
 // Returns { parts: [{ cs, x, y }], arcs, lines } : one editable part per outer outline (holes inside it travel with it,
 // each part stored relative to its own lower-left corner at x, y), or null if there is nothing to edit.
+function ringMeta(c) {
+  const m = {};
+  if (c.op === "score" || c.op === "mark") m.op = c.op;
+  if (c.role) m.role = c.role;
+  if (c.layer) m.layer = String(c.layer);
+  if (c.block) m.block = String(c.block);
+  return m;
+}
+function sameMid(a, b) {
+  const mid = (g) => [(g.pts[0][0] + g.pts[g.pts.length - 1][0]) / 2, (g.pts[0][1] + g.pts[g.pts.length - 1][1]) / 2];
+  const p = mid(a), q = mid(b);
+  return Math.hypot(p[0] - q[0], p[1] - q[1]) < 1e-6;
+}
 export function contoursToEditable(contours) {
   const rings = []; let arcs = 0, lines = 0;
   for (const c of contours) {
+    const meta = ringMeta(c);                       // r15 10.6: a DXF layer's etch / drill marks and its layer or block name
     if (c.circle) {
       const { cx, cy, r } = c.circle, k = Math.tan(Math.PI / 8);
-      rings.push({ pts: [[cx + r, cy], [cx, cy + r], [cx - r, cy], [cx, cy - r]], bulges: [k, k, k, k], closed: true });
+      rings.push({ pts: [[cx + r, cy], [cx, cy + r], [cx - r, cy], [cx, cy - r]], bulges: [k, k, k, k], closed: true, ...meta });
       arcs += 4; continue;
     }
     if (!c.pts || c.pts.length < 2) continue;
@@ -112,11 +126,12 @@ export function contoursToEditable(contours) {
     if (closed && pts.length < 3) continue;
     const r = closed ? fitRing(pts) : { pts, bulges: pts.map(() => 0), arcs: 0 };
     arcs += r.arcs; lines += r.pts.length - r.arcs;
-    rings.push({ pts: r.pts, bulges: r.bulges, closed });
+    rings.push({ pts: r.pts, bulges: r.bulges, closed, ...meta });
   }
   if (!rings.length) return null;
   // who sits inside whom: depth 0 = a part, depth 1 = a hole in it, depth 2 = a part inside that hole ...
-  const flat = rings.map((g) => (g.closed ? expandContour({ pts: g.pts, closed: true, bulges: g.bulges }).pts : null));
+  // an etched / marked ring is never a hole in a part: it comes in as its own part (r15 10.6)
+  const flat = rings.map((g) => (g.closed && !g.op ? expandContour({ pts: g.pts, closed: true, bulges: g.bulges }).pts : null));
   const info = rings.map((g, i) => ({ i, a: flat[i] ? area(flat[i]) : 0, parent: -1 }));
   for (const me of info) {
     if (!flat[me.i]) continue;
@@ -139,15 +154,30 @@ export function contoursToEditable(contours) {
     const g = groups.find((gr) => gr[0] === me.parent);
     if (g) g.push(me.i); else groups.push([me.i]);
   }
-  for (let i = 0; i < rings.length; i++) if (!flat[i]) groups.push([i]);          // open lines
+  for (let i = 0; i < rings.length; i++) {                                         // open lines
+    if (flat[i]) continue;
+    const prev = groups[groups.length - 1];
+    if (rings[i].role === "drill" && prev && prev.length === 1 && rings[prev[0]].role === "drill" && !flat[prev[0]] && sameMid(rings[prev[0]], rings[i])) { prev.push(i); continue; }   // a drill cross is one part
+    groups.push([i]);
+  }
   const parts = groups.map((ids) => {
     const gs = ids.map((i) => rings[i]);
     const boxes = gs.map(ringBox);
     const x0 = Math.min(...boxes.map((b) => b[0])), y0 = Math.min(...boxes.map((b) => b[1]));
-    return {
+    const part = {
       x: R1(x0), y: R1(y0),
-      cs: gs.map((g) => ({ pts: g.pts.map(([x, y]) => [R1(x - x0), R1(y - y0)]), closed: g.closed, bulges: g.bulges.map((b) => Math.round(b * 1e6) / 1e6) })),
+      cs: gs.map((g) => {
+        const c = { pts: g.pts.map(([x, y]) => [R1(x - x0), R1(y - y0)]), closed: g.closed, bulges: g.bulges.map((b) => Math.round(b * 1e6) / 1e6) };
+        if (g.op) c.op = g.op;
+        if (g.role) c.role = g.role;
+        return c;
+      }),
     };
+    const ops = new Set(gs.map((g) => g.op || "cut"));
+    if (ops.size === 1 && (ops.has("score") || ops.has("mark"))) part.op = [...ops][0];
+    const nm = gs.map((g) => g.layer || g.block).find(Boolean);
+    if (nm) part.name = gs[0].role === "drill" ? `${nm} (drill mark)` : nm;
+    return part;
   });
   return { parts, arcs, lines };
 }

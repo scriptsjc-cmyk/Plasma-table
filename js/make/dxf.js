@@ -2,8 +2,10 @@
 // SolidWorks, LibreCAD, Inkscape...). Supports LINE, ARC, CIRCLE, LWPOLYLINE (with
 // bulges), POLYLINE/VERTEX, SPLINE, ELLIPSE. Loose lines and arcs are joined into closed
 // outlines where their ends meet. Units come from the file's $INSUNITS (inches -> mm).
+// r15 10.6: blocks (INSERT) are drawn where they are placed; layer names say cut / etch / drill (layerOp).
 
 import { TOL, arcPoints, bulgePoints, circleContour, cleanPts } from "../core/geom.js";
+import { drillMark } from "./holerule.js";
 
 export const JOIN_TOL = 0.25; // mm: ends closer than this are joined (C43 close-paths)
 
@@ -22,100 +24,161 @@ export function parseDXF(text) {
       break;
     }
   }
-  // entities section
-  let start = pairs.findIndex((p, i) => p[0] === 2 && p[1] === "ENTITIES" && pairs[i - 1] && pairs[i - 1][1] === "SECTION");
+  // sections: ENTITIES (what is drawn) and BLOCKS (named drawings an INSERT places, r15 10.6)
+  const sectionAt = (name) => pairs.findIndex((p, i) => p[0] === 2 && p[1] === name && pairs[i - 1] && pairs[i - 1][1] === "SECTION");
+  const readEnts = (from) => {
+    const out = []; let cur = null;
+    for (let i = from + 1; i < pairs.length; i++) {
+      const [code, val] = pairs[i];
+      if (code === 0) {
+        if (cur) out.push(cur);
+        if (val === "ENDSEC") { cur = null; break; }
+        cur = { type: val, g: [] };
+      } else if (cur) cur.g.push([code, val]);
+    }
+    if (cur) out.push(cur);
+    return out;
+  };
+  let start = sectionAt("ENTITIES");
   if (start < 0) throw new Error("This doesn't look like a DXF file (no ENTITIES section). Save it as DXF from your CAD.");
-  const ents = [];
-  let cur = null;
-  for (let i = start + 1; i < pairs.length; i++) {
-    const [code, val] = pairs[i];
-    if (code === 0) {
-      if (cur) ents.push(cur);
-      if (val === "ENDSEC") { cur = null; break; }
-      cur = { type: val, g: [] };
-    } else if (cur) cur.g.push([code, val]);
-  }
-  if (cur) ents.push(cur);
-
-  const contours = [];   // already closed
-  const pieces = [];     // open pieces to join
-  const skipped = {};
-  let splines = 0, ellipses = 0;
-  const S = (v) => parseFloat(v) * scale;
-  const get = (e, c, d = 0) => { const f = e.g.find((x) => x[0] === c); return f ? parseFloat(f[1]) : d; };
-
-  for (let k = 0; k < ents.length; k++) {
-    const e = ents[k];
-    switch (e.type) {
-      case "LINE":
-        pieces.push([[S(get(e, 10)), S(get(e, 20))], [S(get(e, 11)), S(get(e, 21))]]);
-        break;
-      case "CIRCLE":
-        contours.push(circleContour(S(get(e, 10)), S(get(e, 20)), S(get(e, 40))));
-        break;
-      case "ARC": {
-        const cx = S(get(e, 10)), cy = S(get(e, 20)), r = S(get(e, 40));
-        const a0 = (get(e, 50) * Math.PI) / 180, a1 = (get(e, 51) * Math.PI) / 180;
-        const st = [cx + r * Math.cos(a0), cy + r * Math.sin(a0)];
-        pieces.push([st, ...arcPoints(cx, cy, r, a0, a1, true)]);
-        break;
-      }
-      case "LWPOLYLINE": {
-        const closedFlag = (get(e, 70) & 1) === 1;
-        const verts = [];
-        for (const [c, v] of e.g) {
-          if (c === 10) verts.push({ x: S(v), y: 0, b: 0 });
-          else if (c === 20 && verts.length) verts[verts.length - 1].y = S(v);
-          else if (c === 42 && verts.length) verts[verts.length - 1].b = parseFloat(v);
-        }
-        addPoly(verts, closedFlag);
-        break;
-      }
-      case "POLYLINE": {
-        const closedFlag = (get(e, 70) & 1) === 1;
-        const verts = [];
-        while (ents[k + 1] && ents[k + 1].type === "VERTEX") {
-          const v = ents[++k];
-          verts.push({ x: S(get(v, 10)), y: S(get(v, 20)), b: get(v, 42) });
-        }
-        if (ents[k + 1] && ents[k + 1].type === "SEQEND") k++;
-        addPoly(verts, closedFlag);
-        break;
-      }
-      case "SPLINE": {
-        splines++;
-        const pts = splinePoints(e, S);
-        if (pts.length >= 2) {
-          const closedFlag = (get(e, 70) & 1) === 1;
-          const p0 = pts[0], pn = pts[pts.length - 1];
-          if (closedFlag || Math.hypot(p0[0] - pn[0], p0[1] - pn[1]) < JOIN_TOL) contours.push({ pts: cleanPts(pts, true), closed: true });
-          else pieces.push(pts);
-        }
-        break;
-      }
-      case "ELLIPSE": {
-        ellipses++;
-        const cx = S(get(e, 10)), cy = S(get(e, 20)), mx = S(get(e, 11)), my = S(get(e, 21));
-        const ratio = get(e, 40, 1), t0 = get(e, 41, 0), t1 = get(e, 42, 2 * Math.PI);
-        const a = Math.hypot(mx, my), ang = Math.atan2(my, mx), b = a * ratio;
-        let sweep = t1 - t0; while (sweep <= 0) sweep += 2 * Math.PI;
-        const n = Math.max(24, Math.ceil(sweep / 0.05));
-        const pts = [];
-        for (let i = 0; i <= n; i++) {
-          const t = t0 + (sweep * i) / n, x = a * Math.cos(t), y = b * Math.sin(t);
-          pts.push([cx + x * Math.cos(ang) - y * Math.sin(ang), cy + x * Math.sin(ang) + y * Math.cos(ang)]);
-        }
-        if (Math.abs(sweep - 2 * Math.PI) < 1e-6) contours.push({ pts: cleanPts(pts, true), closed: true });
-        else pieces.push(pts);
-        break;
-      }
-      case "POINT": case "TEXT": case "MTEXT": case "DIMENSION": case "HATCH": case "INSERT": case "SOLID":
-      default:
-        if (!["SEQEND", "VERTEX", "ATTRIB", "VIEWPORT"].includes(e.type)) skipped[e.type] = (skipped[e.type] || 0) + 1;
+  const ents = readEnts(start);
+  const blocks = new Map();
+  const bAt = sectionAt("BLOCKS");
+  if (bAt >= 0) {
+    let blk = null;
+    for (const e of readEnts(bAt)) {
+      if (e.type === "BLOCK") { blk = { name: (e.g.find((x) => x[0] === 2) || [0, ""])[1], base: [0, 0], ents: [] }; const gx = e.g.find((x) => x[0] === 10), gy = e.g.find((x) => x[0] === 20); blk.base = [gx ? parseFloat(gx[1]) || 0 : 0, gy ? parseFloat(gy[1]) || 0 : 0]; }
+      else if (e.type === "ENDBLK") { if (blk && blk.name) blocks.set(blk.name, blk); blk = null; }
+      else if (blk) blk.ents.push(e);
     }
   }
 
-  function addPoly(verts, closedFlag) {
+  const contours = [];   // already closed
+  const groups = new Map();   // open pieces to join, kept apart per layer / block (key "" = layer 0, not in a block)
+  const skipped = {};
+  const layerSeen = new Map();
+  let splines = 0, ellipses = 0;
+  const S = (v) => parseFloat(v) * scale;
+  const get = (e, c, d = 0) => { const f = e.g.find((x) => x[0] === c); return f ? parseFloat(f[1]) : d; };
+  const gstr = (e, c, d = "") => { const f = e.g.find((x) => x[0] === c); return f ? String(f[1]) : d; };
+  const ID = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, id: true };
+  const tp = (m, [x, y]) => (m.id ? [x, y] : [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f]);
+  const tag = (c, info) => {
+    if (info.layer && info.layer !== "0") c.layer = info.layer;
+    if (info.block) c.block = info.block;
+    return c;
+  };
+  const putClosed = (c, m, info) => {
+    if (!m.id) {
+      const out = { pts: c.pts.map((p) => tp(m, p)), closed: true };
+      const sx = Math.hypot(m.a, m.b), sy = Math.hypot(m.c, m.d), skew = Math.abs(m.a * m.c + m.b * m.d);
+      if (c.circle && Math.abs(sx - sy) < 1e-9 * Math.max(1, sx) && skew < 1e-9) { const [cx, cy] = tp(m, [c.circle.cx, c.circle.cy]); out.circle = { cx, cy, r: c.circle.r * sx }; }
+      c = out;
+    }
+    contours.push(tag(c, info));
+  };
+  const putOpen = (pts, m, info) => {
+    const key = (info.layer && info.layer !== "0" ? info.layer : "") + "\u0000" + (info.block || "");
+    if (!groups.has(key)) groups.set(key, { info, pieces: [] });
+    groups.get(key).pieces.push(m.id ? pts : pts.map((p) => tp(m, p)));
+  };
+
+  function emit(list, m, inherit, block, stack) {
+    for (let k = 0; k < list.length; k++) {
+      const e = list[k];
+      let layer = gstr(e, 8, "0");
+      if (layer === "0" && inherit) layer = inherit;
+      const info = { layer, block };
+      if (!["SEQEND", "VERTEX", "ATTRIB", "VIEWPORT", "INSERT"].includes(e.type) || e.type === "INSERT") layerSeen.set(layer, (layerSeen.get(layer) || 0) + 1);
+      switch (e.type) {
+        case "LINE":
+          putOpen([[S(get(e, 10)), S(get(e, 20))], [S(get(e, 11)), S(get(e, 21))]], m, info);
+          break;
+        case "CIRCLE":
+          putClosed(circleContour(S(get(e, 10)), S(get(e, 20)), S(get(e, 40))), m, info);
+          break;
+        case "ARC": {
+          const cx = S(get(e, 10)), cy = S(get(e, 20)), r = S(get(e, 40));
+          const a0 = (get(e, 50) * Math.PI) / 180, a1 = (get(e, 51) * Math.PI) / 180;
+          const st = [cx + r * Math.cos(a0), cy + r * Math.sin(a0)];
+          putOpen([st, ...arcPoints(cx, cy, r, a0, a1, true)], m, info);
+          break;
+        }
+        case "LWPOLYLINE": {
+          const closedFlag = (get(e, 70) & 1) === 1;
+          const verts = [];
+          for (const [c, v] of e.g) {
+            if (c === 10) verts.push({ x: S(v), y: 0, b: 0 });
+            else if (c === 20 && verts.length) verts[verts.length - 1].y = S(v);
+            else if (c === 42 && verts.length) verts[verts.length - 1].b = parseFloat(v);
+          }
+          addPoly(verts, closedFlag, m, info);
+          break;
+        }
+        case "POLYLINE": {
+          const closedFlag = (get(e, 70) & 1) === 1;
+          const verts = [];
+          while (list[k + 1] && list[k + 1].type === "VERTEX") {
+            const v = list[++k];
+            verts.push({ x: S(get(v, 10)), y: S(get(v, 20)), b: get(v, 42) });
+          }
+          if (list[k + 1] && list[k + 1].type === "SEQEND") k++;
+          addPoly(verts, closedFlag, m, info);
+          break;
+        }
+        case "SPLINE": {
+          splines++;
+          const pts = splinePoints(e, S);
+          if (pts.length >= 2) {
+            const closedFlag = (get(e, 70) & 1) === 1;
+            const p0 = pts[0], pn = pts[pts.length - 1];
+            if (closedFlag || Math.hypot(p0[0] - pn[0], p0[1] - pn[1]) < JOIN_TOL) putClosed({ pts: cleanPts(pts, true), closed: true }, m, info);
+            else putOpen(pts, m, info);
+          }
+          break;
+        }
+        case "ELLIPSE": {
+          ellipses++;
+          const cx = S(get(e, 10)), cy = S(get(e, 20)), mx = S(get(e, 11)), my = S(get(e, 21));
+          const ratio = get(e, 40, 1), t0 = get(e, 41, 0), t1 = get(e, 42, 2 * Math.PI);
+          const a = Math.hypot(mx, my), ang = Math.atan2(my, mx), b = a * ratio;
+          let sweep = t1 - t0; while (sweep <= 0) sweep += 2 * Math.PI;
+          const n = Math.max(24, Math.ceil(sweep / 0.05));
+          const pts = [];
+          for (let i = 0; i <= n; i++) {
+            const t = t0 + (sweep * i) / n, x = a * Math.cos(t), y = b * Math.sin(t);
+            pts.push([cx + x * Math.cos(ang) - y * Math.sin(ang), cy + x * Math.sin(ang) + y * Math.cos(ang)]);
+          }
+          if (Math.abs(sweep - 2 * Math.PI) < 1e-6) putClosed({ pts: cleanPts(pts, true), closed: true }, m, info);
+          else putOpen(pts, m, info);
+          break;
+        }
+        case "INSERT": {                                   // r15 10.6: draw the block where it is placed (scale, turn, rows / columns)
+          const name = gstr(e, 2);
+          const blk = blocks.get(name);
+          if (!blk) { skipped.INSERT = (skipped.INSERT || 0) + 1; break; }
+          if (stack.includes(name) || stack.length > 8) { warnings.push(`Block “${name}” places itself (or nests too deep), so it was drawn once only.`); break; }
+          const sx = get(e, 41, 1) || 1, sy = get(e, 42, 1) || 1, rot = (get(e, 50, 0) * Math.PI) / 180;
+          const cols = Math.max(1, Math.min(100, Math.round(get(e, 70, 1)))), rows = Math.max(1, Math.min(100, Math.round(get(e, 71, 1))));
+          const csp = S(get(e, 44, 0)), rsp = S(get(e, 45, 0));
+          const co = Math.cos(rot), si = Math.sin(rot), bx = blk.base[0] * scale, by = blk.base[1] * scale;
+          for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+            const ix = S(get(e, 10)) + co * c * csp - si * r * rsp, iy = S(get(e, 20)) + si * c * csp + co * r * rsp;
+            const A = co * sx, B = si * sx, C = -si * sy, D = co * sy;           // turn · scale
+            const L = { a: A, b: B, c: C, d: D, e: ix - (A * bx + C * by), f: iy - (B * bx + D * by) };
+            const M = m.id ? L : { a: m.a * L.a + m.c * L.b, b: m.b * L.a + m.d * L.b, c: m.a * L.c + m.c * L.d, d: m.b * L.c + m.d * L.d, e: m.a * L.e + m.c * L.f + m.e, f: m.b * L.e + m.d * L.f + m.f };
+            emit(blk.ents, M, layer !== "0" ? layer : inherit, block || name, [...stack, name]);
+          }
+          break;
+        }
+        case "POINT": case "TEXT": case "MTEXT": case "DIMENSION": case "HATCH": case "SOLID":
+        default:
+          if (!["SEQEND", "VERTEX", "ATTRIB", "VIEWPORT", "ATTDEF"].includes(e.type)) skipped[e.type] = (skipped[e.type] || 0) + 1;
+      }
+    }
+  }
+
+  function addPoly(verts, closedFlag, m, info) {
     if (verts.length < 2) return;
     const pts = [[verts[0].x, verts[0].y]];
     const n = verts.length;
@@ -124,20 +187,48 @@ export function parseDXF(text) {
       pts.push(...bulgePoints([p.x, p.y], [q.x, q.y], p.b));
     }
     const first = pts[0], last = pts[pts.length - 1];
-    if (closedFlag || Math.hypot(first[0] - last[0], first[1] - last[1]) < JOIN_TOL) contours.push({ pts: cleanPts(pts, true), closed: true });
-    else pieces.push(pts);
+    if (closedFlag || Math.hypot(first[0] - last[0], first[1] - last[1]) < JOIN_TOL) putClosed({ pts: cleanPts(pts, true), closed: true }, m, info);
+    else putOpen(pts, m, info);
   }
 
-  const cleaned = cleanupOpenPieces(pieces);
-  contours.push(...cleaned.contours);
-  warnings.push(...cleaned.warnings);
+  emit(ents, ID, null, null, []);
+  let openCount = 0;
+  for (const { info, pieces } of groups.values()) {
+    const cleaned = cleanupOpenPieces(pieces);
+    for (const c of cleaned.contours) contours.push(tag(c, info));
+    openCount += cleaned.open;
+  }
+  if (openCount) {
+    warnings.push(openCount === 1
+      ? "1 open path was left open (its ends are more than " + JOIN_TOL + " mm apart). It will import as an open line, not a cut outline."
+      : openCount + " open paths were left open (ends more than " + JOIN_TOL + " mm apart). They will import as open lines, not cut outlines.");
+  }
+  // r15 10.6: what each layer does. etch / mark / score / engrave -> etched; drill / punch -> a drill mark at each circle's centre
+  const out = [];
+  for (const c of contours) {
+    const op = layerOp(c.layer || "0");
+    if (op === "score") out.push({ ...c, op: "score" });
+    else if (op === "drill") {
+      if (c.circle) out.push(...drillMark(c.circle.cx, c.circle.cy, c.circle.r * 2).map((x) => tag(x, { layer: c.layer, block: c.block })));
+      else out.push({ ...c, op: "mark" });
+    } else out.push(c);
+  }
   for (const [t, n] of Object.entries(skipped)) {
     const why = { TEXT: "convert text to outlines/sketch curves in your CAD", MTEXT: "convert text to outlines in your CAD",
-      INSERT: "explode blocks in your CAD", DIMENSION: "dimensions are ignored", HATCH: "hatching is ignored" }[t] || "not supported";
+      INSERT: "the block it places is missing from the file", DIMENSION: "dimensions are ignored", HATCH: "hatching is ignored" }[t] || "not supported";
     warnings.push(`Ignored ${n} ${t} item(s) – ${why}.`);
   }
   if (splines || ellipses) warnings.push(`${splines + ellipses} spline/ellipse curve(s) can't be edited as true curves, so they were turned into short straight lines (they still cut smoothly). Edit them point by point, or redraw them as arcs.`);
-  return { contours, warnings, units: unitsName, curves: { splines, ellipses }, open: cleaned.open };
+  const layers = [...layerSeen.entries()].map(([name, count]) => ({ name, op: layerOp(name), count }));
+  return { contours: out, warnings, units: unitsName, curves: { splines, ellipses }, open: openCount, layers };
+}
+
+// r15 10.6: what a DXF layer name means for the cut. Anything not named for etching or drilling is cut.
+export function layerOp(name) {
+  const n = String(name || "");
+  if (/drill|punch/i.test(n)) return "drill";
+  if (/etch|mark|scor|engrav|scribe/i.test(n)) return "score";
+  return "cut";
 }
 
 // C43: drop duplicate loose pieces, join ends within JOIN_TOL, close almost-closed

@@ -54,7 +54,7 @@ const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
   const f = fitGrid({ x0: 0, y0: 0, w: 100, h: 50, gap: 10, sheetW: 1000, sheetH: 500 });
   t.check("10.5 100 × 50 parts, 10 mm gap, on a 1000 × 500 sheet: 9 across, 8 up = 72", f.cols === 9 && f.rows === 8 && f.n === 72, JSON.stringify(f));
   const g = fitGrid({ x0: 200, y0: 100, w: 100, h: 50, gap: 10, sheetW: 1000, sheetH: 500 });
-  t.check("10.5 starting part-way across the sheet only fills what is left (8 × 6)", g.cols === 8 && g.rows === 6, JSON.stringify(g));
+  t.check("10.5 starting part-way across the sheet only fills what is left (7 × 6: 800 mm left fits 7 at 110)", g.cols === 7 && g.rows === 6, JSON.stringify(g));
   const one = fitGrid({ x0: 0, y0: 0, w: 900, h: 450, gap: 10, sheetW: 1000, sheetH: 500 });
   t.check("10.5 a part that only fits once is 1 (nothing to copy)", one.n === 1, JSON.stringify(one));
   const none = fitGrid({ x0: 0, y0: 0, w: 1200, h: 50, gap: 10, sheetW: 1000, sheetH: 500 });
