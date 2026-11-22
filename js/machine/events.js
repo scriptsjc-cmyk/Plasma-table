@@ -16,6 +16,19 @@ import { goStep } from "../ui/nav.js";
 import { log } from "./console.js";
 import { probeDisplayOn } from "./probefilter.js";
 import { torchTestLit } from "./torchtest.js";
+import { JobRecorder } from "../core/cuthistory.js";
+
+// r15 9.6 / 9.3: every job's end goes into the cut history, and its log lines and alarms are kept for a problem report
+let recorder = null;
+function rec() {
+  if (recorder) return recorder;
+  let store = null; try { store = window.localStorage; } catch (e) { store = null; }
+  if (!store) return null;
+  const partName = () => S.fileName || ($("partName") && $("partName").value.trim()) || "";
+  recorder = new JobRecorder(store, () => ({ part: partName(), material: S.material, thickness: S.thickness, practice: !!S.demo }));
+  return recorder;
+}
+const recSafe = (fn) => { try { const r = rec(); if (r) fn(r); } catch (e) { /* the history must never get in the way of a cut */ } };
 
 function onStatus(st) {
   S.status = st;
@@ -130,6 +143,7 @@ export function onEvent(kind, d) {
     }
   } else if (kind === "log") {
     log(d.text, d.level);
+    recSafe((r) => r.onLog(d.text || ""));
     if (S._settingsCapture) S._settingsCapture.push(d.text || "");
     if ($("advConsoleLog")) appendConsole(d.text || "");
     if (looksLikeFluidNC(d.text)) S.fluidnc = true;
@@ -143,8 +157,8 @@ export function onEvent(kind, d) {
       keepAwake(false);
       if (d.boardRun && d.result === "error" && d.phase === "upload") S.needStreamFallback = true;
     }
-    noteJobEnded(d); maybeLogJob(d); refresh();
+    noteJobEnded(d); maybeLogJob(d); recSafe((r) => r.onJob(d)); refresh();
   }
-  else if (kind === "alarm") { S.lastAlarm = d.message; S.lastAlarmCode = d.code; $("alarmTitle").textContent = "Alarm"; $("alarmText").textContent = d.message; if (POSITION_LOST_ALARMS.has(d.code)) S.zeroSet = false; refresh(); }
+  else if (kind === "alarm") { recSafe((r) => r.onAlarm(d.code, d.message)); S.lastAlarm = d.message; S.lastAlarmCode = d.code; $("alarmTitle").textContent = "Alarm"; $("alarmText").textContent = d.message; if (POSITION_LOST_ALARMS.has(d.code)) S.zeroSet = false; refresh(); }
   else if (kind === "safety") onSafety(d);
 }
