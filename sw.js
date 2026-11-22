@@ -184,6 +184,7 @@ const PRECACHE = [
   "js/make/presetbrowser.js",
   "js/make/presets/enclosures.js",
   "js/make/presets/fab-transitions.js",
+  "js/make/presets/families.js",
   "js/make/presets/flanges.js",
   "js/make/presets/fold-parts.js",
   "js/make/presets/gears-sprockets.js",

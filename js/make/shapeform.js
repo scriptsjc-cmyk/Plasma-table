@@ -3,6 +3,7 @@ import { SHAPES, SHAPE_PRESETS, shapeThumb } from "./shapes.js";
 import { screen } from "../ui/flow.js";
 import { shapeDef } from "./sketch.js";
 import { variantKey, variantsFor } from "./variants.js";
+import { familyOfShape, paramHelp } from "./presets/families.js";
 import { saveCurrent } from "../account/savepart.js";
 import { evalExpr } from "../core/expr.js";
 import { $, esc, toast } from "../core/dom.js";
@@ -141,14 +142,22 @@ function refreshHoleNote(inp, it) {
   if (old) { if (html) old.outerHTML = html; else old.remove(); }
   else if (html) lab.insertAdjacentHTML("afterend", html);
 }
+// r16 preset families: each size box says what it means (hover on a laptop); the part's title has an ⓘ with how to size it
+function helpTitle(k, label) { const h = paramHelp(k); return h ? `${label} – ${h}` : label; }
+function famTipBtn(type) {
+  const f = familyOfShape(type);
+  if (!f) return "";
+  const tip = `${f.what} How to size it: ${f.size}`;
+  return ` <button type="button" class="info-i famtip" data-tip="${esc(tip)}" aria-label="How to size this part for your job" title="${esc(tip)}"></button>`;
+}
 function paramField(it, param) {
   const [k, label, , meta] = param;
   const val = it.p[k];
   if (meta && meta.type === "select") {
     const opts = (meta.options || []).map((o) => `<option value="${esc(String(o.v))}"${String(o.v) === String(val) ? " selected" : ""}>${esc(o.l)}</option>`).join("");
-    return `<label><span class="plabel" title="${esc(label)}">${esc(label)}</span><select data-p="${esc(k)}" data-psel="1">${opts}</select></label>`;
+    return `<label><span class="plabel" title="${esc(helpTitle(k, label))}">${esc(label)}</span><select data-p="${esc(k)}" data-psel="1">${opts}</select></label>`;
   }
-  return `<label><span class="plabel" title="${esc(label)}">${esc(label)}</span><input type="number" step="any" min="0" inputmode="decimal" data-p="${esc(k)}" value="${esc(String(val))}"></label>${holeNoteHtml(it, shapeDef(it.type), k)}`;
+  return `<label><span class="plabel" title="${esc(helpTitle(k, label))}">${esc(label)}</span><input type="number" step="any" min="0" inputmode="decimal" data-p="${esc(k)}" value="${esc(String(val))}" title="${esc(helpTitle(k, label))}"></label>${holeNoteHtml(it, shapeDef(it.type), k)}`;
 }
 function extraFormHtml(it, sh) {
   let html = "";
@@ -245,7 +254,7 @@ function renderShapeFormCore() {
   const sh = shapeDef(it.type), b = sketch.boxOf(it);
   if (!sketch.opts.pro) {                        // Beginner: just the sizes, turn, add a hole, remove
     $("shapeForm").innerHTML = beginnerPartsHtml() + `
-      <div class="selhead"><b>${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}</div>
+      <div class="selhead"><b>${esc(sh.name)}</b>${famTipBtn(it.type)}${it.lock ? " 🔒" : ""}</div>
       <div id="fold3dHost" class="fold3d-host" hidden></div>
       ${it.lock ? `<p class="tip lockline">This part is locked, so it can't change. <button type="button" data-sk="toggleLock">🔓 Unlock</button></p>` : `<p class="tip">Type the size in millimetres.</p>`}
       <div class="grid2">${(it.type === "custom" ? [] : sh.params).map((pr) => paramField(it, pr)).join("")}</div>${customSizeHtml(it, b)}${extraFormHtml(it, sh)}
@@ -283,7 +292,7 @@ function renderShapeFormCore() {
         <button data-sk="flipV">⇅ Flip up/down</button>
       </div>` : "";
   $("shapeForm").innerHTML = `
-    <div class="selhead"><b>${esc(sh.name)}</b>${it.lock ? " 🔒" : ""}${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
+    <div class="selhead"><b>${esc(sh.name)}</b>${famTipBtn(it.type)}${it.lock ? " 🔒" : ""}${sketch.sel.hole != null ? ` <span class="muted">· hole picked – drag it or use the arrow keys</span>` : ""}</div>
     <div id="fold3dHost" class="fold3d-host" hidden></div>
     ${varBox}
     ${sh.tip ? `<p class="tip">${esc(sh.tip)}</p>` : ""}

@@ -942,4 +942,54 @@ body[data-screen="make"] #btnSelectMenu, body[data-screen="make"] #btnSnapMenu {
 /* r15 6.3: small-hole rule under a hole-size field (spans the form's row) */
 .shapeform .holerule, #shapeForm .holerule { grid-column: 1 / -1; margin: -2px 0 4px; line-height: 1.35; }
 .shapeform .holerule button, #shapeForm .holerule button { margin-left: 4px; }
+
+/* ---- r16 preset families (Josh 22 Nov): one card per family, a family page with its starting points and how to size it ---- */
+.presetbrowser .pbgrid:not(.pb-istiles):not(.pb-isdetail) { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.presetbrowser .pb-card {
+  display: grid; grid-template-rows: minmax(0, 1fr) auto auto; justify-items: center; align-content: stretch; gap: 3px;
+  min-height: 120px; height: 100%; padding: 6px 8px; text-align: center; white-space: normal;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+}
+.presetbrowser .pb-card:hover { border-color: var(--accent); }
+.presetbrowser .pb-cardpic { display: flex; align-items: center; justify-content: center; min-height: 0; width: 100%; color: var(--text); }
+.presetbrowser .pb-cardpic svg { max-width: 120px; max-height: 76px; width: auto; height: auto; }
+.presetbrowser .pb-cardname { font-weight: 700; font-size: var(--fs-s); line-height: 1.2; }
+.presetbrowser .pb-cardcount { font-size: var(--fs-xs); font-weight: 650; color: var(--accent); }
+.presetbrowser .pb-sub { font-size: var(--fs-xs); color: var(--muted); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.presetbrowser .pbgrid.pb-isdetail { display: block; overflow: auto; }
+.presetbrowser .pb-detail { display: grid; grid-template-columns: minmax(220px, 2fr) minmax(0, 3fr); gap: 16px; height: 100%; min-height: 0; align-items: start; }
+.presetbrowser .pb-dpic { display: grid; justify-items: center; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--text); }
+.presetbrowser .pb-dthumb svg { width: 100%; max-width: 300px; height: auto; max-height: 200px; }
+.presetbrowser .pb-dpickname { font-size: var(--fs-m); }
+.presetbrowser .pb-dtip { margin: 0; font-size: var(--fs-s); color: var(--muted); text-align: center; }
+.presetbrowser .pb-dinfo { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.presetbrowser .pb-dhead { display: flex; align-items: center; gap: 10px; }
+.presetbrowser .pb-dhead h3 { margin: 0; font-size: var(--fs-l); }
+.presetbrowser .pb-back { min-height: 36px; }
+.presetbrowser .pb-dwhat { margin: 0; }
+.presetbrowser .pb-dinfo h4 { margin: 4px 0 0; font-size: var(--fs-s); }
+.presetbrowser .pb-picks { display: flex; flex-wrap: wrap; gap: 6px; }
+.presetbrowser .pb-picks button { min-height: 36px; padding: 4px 10px; font-size: var(--fs-s); }
+.presetbrowser .pb-picks button.on { border-color: var(--accent); background: var(--accent-weak, var(--well)); color: var(--accent); font-weight: 650; }
+.presetbrowser .pb-howto { padding: 8px 10px; border-radius: 10px; background: var(--well); }
+.presetbrowser .pb-howto p { margin: 4px 0 0; font-size: var(--fs-s); line-height: 1.4; }
+.presetbrowser .pb-dactions { display: flex; gap: 8px; justify-content: flex-end; }
+.presetbrowser .pb-dactions .pb-use { min-width: 160px; min-height: 44px; font-weight: 700; }
+.presetbrowser .pb-dactions .pb-dfav { min-height: 44px; }
+.presetbrowser .pb-dfav.on { color: var(--accent); border-color: var(--accent); }
+@media (max-width: 700px) {
+  .presetbrowser .pb-detail { grid-template-columns: 1fr; }
+  .presetbrowser .pb-dthumb svg { max-height: 140px; }
+}
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  .presetbrowser .pbgrid:not(.pb-istiles):not(.pb-isdetail) { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .presetbrowser .pbgrid.pb-isdetail { overflow: auto; }
+}
+@media (min-width: 1280px) and (max-height: 760px) and (hover: hover) and (pointer: fine) {
+  .presetbrowser .pb-detail { gap: 10px; }
+  .presetbrowser .pb-dthumb svg { max-height: 150px; }
+  .presetbrowser .pb-picks button { min-height: 30px; padding: 2px 8px; font-size: var(--fs-xs); }
+  .presetbrowser .pb-howto p { font-size: var(--fs-xs); }
+  .presetbrowser .pb-dactions .pb-use, .presetbrowser .pb-dactions .pb-dfav { min-height: 36px; }
+}
 }

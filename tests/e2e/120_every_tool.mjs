@@ -27,7 +27,8 @@ const DIALOGS = ["cadDialog", "presetBrowser", "shapeLib", "verPop", "resizeDlg"
 //   act:   instant (the toolbar click is the action) | dialog (fill, then click its go button) | mode (clicks on the drawing)
 //   effect: items (default) | view | snap | measure | cam
 const SPEC = {
-  presets: { act: "dialog", dlg: "presetBrowser", go: "#pbGrid button, #pbGrid [data-preset], #pbGrid .pb-card" },
+  // r16 preset families: a card opens the family page, and "Use this part" adds it (go2)
+  presets: { act: "dialog", dlg: "presetBrowser", go: "#pbGrid .pb-card", go2: "#pbGrid [data-pbuse]" },
   // r15 3.6: Rectangle / Circle draw on the drawing (two corners; centre then edge) - a double-click on the button drops a standard one
   rect: { act: "mode", setup: "empty", clicks: (b) => [[b.C[0] - 40, b.C[1] - 20], [b.C[0] + 40, b.C[1] + 20]] },
   disc: { act: "mode", setup: "empty", clicks: (b) => [[b.C[0], b.C[1]], [b.C[0] + 30, b.C[1]]] }, triangle: { act: "instant" }, slot: { act: "instant" }, sector: { act: "instant" },
@@ -276,6 +277,11 @@ for (const [size, prof] of SIZES.filter(([s]) => !ONLY_SIZES.length || ONLY_SIZE
       if (!(await goBtn.count())) { t.check(`${name}: has a button to apply it (${go})`, false); continue; }
       try { await goBtn.click({ timeout: 2000 }); } catch (e) { t.check(`${name}: its apply button can be clicked`, false, String(e).split("\n")[0].slice(0, 120)); continue; }
       await sleep(300);
+      if (sp.go2) {
+        const b2 = page.locator(sp.go2).locator("visible=true").first();
+        try { await b2.click({ timeout: 2000 }); } catch (e) { t.check(`${name}: its second button can be clicked`, false, String(e).split("\n")[0].slice(0, 120)); continue; }
+        await sleep(300);
+      }
       }
       if (sp.after) await clickWorld(page, sp.after(await boxes(page)));
     } else if (sp.act === "mode") {

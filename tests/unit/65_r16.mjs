@@ -118,8 +118,9 @@ const mat = (n) => chart.materials.find((m) => m.name === n);
   const unwrap = (src) => { const s2 = src.replace(/\/\*[\s\S]*?\*\//g, "").trim(); const m = s2.match(/^@layer app \{([\s\S]*)\}$/); return m ? m[1] : s2; };
   const rules = MAKE.map((f) => unwrap(fs.readFileSync(SITE + f, "utf8"))).join("\n").replace(/\s+/g, " ").trim();
   // the rules of screen-make.css just before the split (r16 C2 included) were 2960b546…: the split moved no rule and changed none.
-  // Since then, on purpose: the closed "More holes" pop-over is display: none (the gate's tooltip and fit checks saw its buttons).
-  t.check("TIDY together they hold exactly the rules screen-make.css had, in the same order", crypto.createHash("sha1").update(rules).digest("hex") === "12e698aba4b0f612ec95f718e5e020eac2b67c18");
+  // Since then, on purpose: the closed "More holes" pop-over is display: none (the gate's tooltip and fit checks saw its buttons),
+  // then the preset-family cards and family page (end of screen-make-panels.css, unit 66).
+  t.check("TIDY together they hold exactly the rules screen-make.css had, in the same order", crypto.createHash("sha1").update(rules).digest("hex") === "cb475d472079020697c12674a74980ce95fedbfd");
   for (const f of [...MAKE, "css/screen-cut.css", "css/screen-cut-laptop.css", "css/screen-cut-setupgrid.css"]) {
     const n = fs.readFileSync(SITE + f, "utf8").split("\n").length;
     t.check(`TIDY ${f} is under 1,000 lines`, n < 1000, n + " lines");

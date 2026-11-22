@@ -118,9 +118,12 @@ const pb = await ev(page, () => {
 });
 if (pb.open) {
   await ev(page, () => {
-    const tile = document.querySelector('#pbGrid [data-shape="uboltplate"], #pbGrid [data-shape], .pb-tile');
-    if (tile) tile.click();
+    // r16 preset families: open a family card, then "Use this part"
+    const card = document.querySelector("#pbGrid .pb-card");
+    if (card) card.click();
   });
+  await sleep(200);
+  await ev(page, () => { const u = document.querySelector("#pbGrid [data-pbuse]"); if (u) u.click(); });
   await sleep(300);
 }
 a = await snap();
