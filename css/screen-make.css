@@ -1519,7 +1519,13 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
 
 /* ---- r12 Make a part (Simple) on a laptop: one toolbar row, no banner, compact tiles ---- */
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
-  body.beginner[data-screen="make"] #guideHead.guidehead { display: none; }
+  /* r12 4.2: no blue banner; its text is a slim title line over the panel ("Pick a template" / "Set the size") with the help in its "i" */
+  body.beginner[data-screen="make"] #guideHead.guidehead { display: flex; align-items: center; gap: 8px; min-height: 28px; padding: 2px 12px; background: none; border-bottom: 0; }
+  body.beginner[data-screen="make"] #guideHead.guidehead::after,
+  body.beginner[data-screen="make"] #guideHead #ghStep { display: none; }
+  body.beginner[data-screen="make"] #guideHead #ghTitle { font-size: var(--fs-m); font-weight: 700; white-space: nowrap; }
+  body.beginner[data-screen="make"] #guideHead #ghHelp { margin: 0; font-size: var(--fs-s); line-height: 1.3; display: flex; align-items: center; gap: 4px; min-width: 0; color: var(--muted); }
+  body.beginner[data-screen="make"] #guideHead #ghHelp .info-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   body[data-screen="make"] #exportRow { display: none; }
   body[data-screen="make"] .topmenu .make-only { display: flex; align-items: center; }
   body.beginner[data-screen="make"] .bgshapes {
@@ -1800,7 +1806,8 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
     gap: 4px;
     overflow: visible;
   }
-  body[data-screen="make"] .topbar #makeBar > h1 { display: none; }
+  /* r12 3.2: the one header row reads logo · "Make a part" · Undo / Redo / Fit / Delete · … (the title stays, kept short and on one line) */
+  body[data-screen="make"] .topbar #makeBar > h1 { font-size: var(--fs-md); white-space: nowrap; flex: 0 0 auto; margin: 0 4px 0 2px; }
   body[data-screen="make"] .topbar #makeBar #qbPinned button span,
   body[data-screen="make"] .topbar #makeBar #qbPinned button kbd { display: none; }
   body[data-screen="make"] .topbar #makeBar #qbPinned button {
