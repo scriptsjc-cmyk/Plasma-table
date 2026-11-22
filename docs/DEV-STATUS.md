@@ -4,7 +4,7 @@ The checker reads this file. Its rules are in README.md on the `checker-reports`
 
 Last updated: 22 Nov 2026, 06:36 (UK time). Live: r15 Round 10 @ 21e59af (CI green, version.json 2026.11.22-21e59af), on top of the editor-redesign test review and Round 9. Working on: nothing new until Josh answers the questions below.
 
-## r16 – done by Claude while the developer was away (branch `claude-r16`, NOT on main until Josh says OK)
+## r16 – done by Claude while the developer was away (branch `claude-r16`; LIVE on main @ 9662935 since 22 Nov 16:15, Josh: "Go live")
 Josh, 22 Nov 13:13: "Would you be able to do this update as dev is out of action for abit" → Rounds A, B and C of
 `porta-plan-r16.md` (project doc), test branch first; 13:17: "I also need a more tidier code" (split the big files).
 - A0 Porta Plazma → Porta Plasma everywhere (40 places). Old `porta-plazma-machine-backup` files still restore (OLD_BACKUP_KINDS).
