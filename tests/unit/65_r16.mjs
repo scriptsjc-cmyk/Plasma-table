@@ -117,8 +117,9 @@ const mat = (n) => chart.materials.find((m) => m.name === n);
   t.check("TIDY the three Make stylesheets are linked together, in order", at >= 0 && MAKE.every((f, i) => links[at + i] === f), links.join(" "));
   const unwrap = (src) => { const s2 = src.replace(/\/\*[\s\S]*?\*\//g, "").trim(); const m = s2.match(/^@layer app \{([\s\S]*)\}$/); return m ? m[1] : s2; };
   const rules = MAKE.map((f) => unwrap(fs.readFileSync(SITE + f, "utf8"))).join("\n").replace(/\s+/g, " ").trim();
-  // the rules of screen-make.css just before the split (r16 C2 included): the split moves no rule and changes none
-  t.check("TIDY together they hold exactly the rules screen-make.css had, in the same order", crypto.createHash("sha1").update(rules).digest("hex") === "2960b5467782e8af1d337783850b07577ea4aa62");
+  // the rules of screen-make.css just before the split (r16 C2 included) were 2960b546…: the split moved no rule and changed none.
+  // Since then, on purpose: the closed "More holes" pop-over is display: none (the gate's tooltip and fit checks saw its buttons).
+  t.check("TIDY together they hold exactly the rules screen-make.css had, in the same order", crypto.createHash("sha1").update(rules).digest("hex") === "12e698aba4b0f612ec95f718e5e020eac2b67c18");
   for (const f of [...MAKE, "css/screen-cut.css", "css/screen-cut-laptop.css", "css/screen-cut-setupgrid.css"]) {
     const n = fs.readFileSync(SITE + f, "utf8").split("\n").length;
     t.check(`TIDY ${f} is under 1,000 lines`, n < 1000, n + " lines");

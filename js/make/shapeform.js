@@ -257,7 +257,7 @@ function renderShapeFormCore() {
         <button data-sk="remove" class="quiet">🗑 Remove</button>
       </div>
       ${!sh.hole && !sh.sheet ? `<p class="tip">More holes:</p><div class="skbtns holeadd">${HOLE_ADDERS.map(([id, label]) => shapeDef(id) ? `<button data-sk="add" data-arg="${id}">${esc(label)}</button>` : "").join("")}</div>
-      <details class="holeaddmenu"><summary>＋ More holes</summary><div class="skbtns holeaddpop">${HOLE_ADDERS.map(([id, label]) => shapeDef(id) ? `<button data-sk="add" data-arg="${id}">${esc(label)}</button>` : "").join("")}</div></details>` : ""}`;
+      <details class="holeaddmenu"><summary title="Add more holes to this part">＋ More holes</summary><div class="skbtns holeaddpop popover">${HOLE_ADDERS.map(([id, label]) => shapeDef(id) ? `<button data-sk="add" data-arg="${id}">${esc(label)}</button>` : "").join("")}</div></details>` : ""}`;
     return;
   }
   const moved = Object.keys(it.holes || {}).length;

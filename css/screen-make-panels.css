@@ -386,6 +386,7 @@
 /* r16 C2 (Josh 22 Nov: put "More holes" back): on a laptop the list above stays out of the panel (it made the page scroll), and
    one "＋ More holes" button opens the same five buttons in a pop-over that sits over the picture, so nothing is hidden */
 .holeaddmenu { display: none; }
+.holeaddmenu:not([open]) > .holeaddpop { display: none; }
 @media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
   body.beginner[data-screen="make"] #srcShape .holeaddmenu { display: block; position: relative; margin: 4px 0 0; }
   body.beginner[data-screen="make"] #srcShape .holeaddmenu > summary {

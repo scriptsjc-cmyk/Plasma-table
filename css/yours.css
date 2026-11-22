@@ -569,6 +569,9 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
    category tabs go back to the 44 px tap size (short laptops, 1280 x 600 to 1536 x 730, keep the compact 36 px) */
 @media (min-width: 1200px) and (min-height: 760px) and (hover: hover) and (pointer: fine) {
   body .modesw-btn, body #btnSimpleView, body #btnPresetParts, body #btnAdvancedTools { min-height: 44px; }
+}
+/* the preset category tabs only from 860 px tall: at 1440 x 800 a 44 px list pushes the last categories off the dialog */
+@media (min-width: 1200px) and (min-height: 860px) and (hover: hover) and (pointer: fine) {
   body .presetbrowser .pbcats button { min-height: 44px; }
 }
 /* r16 C1 (Josh 22 Nov: no dead buttons): the toolbar position does nothing on a laptop (the left rail), so the choice is only

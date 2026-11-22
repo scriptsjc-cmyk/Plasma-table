@@ -4,6 +4,34 @@ The checker reads this file. Its rules are in README.md on the `checker-reports`
 
 Last updated: 22 Nov 2026, 06:36 (UK time). Live: r15 Round 10 @ 21e59af (CI green, version.json 2026.11.22-21e59af), on top of the editor-redesign test review and Round 9. Working on: nothing new until Josh answers the questions below.
 
+## r16 – done by Claude while the developer was away (branch `claude-r16`, NOT on main until Josh says OK)
+Josh, 22 Nov 13:13: "Would you be able to do this update as dev is out of action for abit" → Rounds A, B and C of
+`porta-plan-r16.md` (project doc), test branch first; 13:17: "I also need a more tidier code" (split the big files).
+- A0 Porta Plazma → Porta Plasma everywhere (40 places). Old `porta-plazma-machine-backup` files still restore (OLD_BACKUP_KINDS).
+  Not in the app (Josh does these): Supabase e-mail templates, re-upload config.yaml to the ESP32, stickers / adverts.
+- A1 folded presets whose sizes say "Inside" start on Sizes are: Inside (bends.js attachBendAllowance). A2 dustpan: no change –
+  the 3D base IS tapered (the checker's earlier note was wrong).
+- B the ANDELI CUT-65DS is the default plasma: config/cut_chart.json is its chart (profile, supplies, nozzles, duty, per-material
+  limits, more materials via `same_as`); the Reboot 60A chart moved to config/cut_chart_reboot60.json (Settings › Torch › Your
+  plasma, reload to switch). js/cut/plasmaprofile.js holds the pure logic (rowFor between rows, supply caps, cutStatus badges,
+  duty cycle, parseThickness). Cut › Material: More… materials, Other… thickness, "Set your Andeli to" card (amps, PSI, nozzle,
+  2T/ECO), badges, duty line, "Plugged into" supply (13 A / 110 V notice once; Next asks once when over the supply's limit),
+  Best edge / Balanced / Fastest. Coupon result: admin can publish it as the tested factory value.
+  Machine.findCut uses rowFor for a thickness between rows (exact rows unchanged, so existing G-code is unchanged).
+  NOT done: the 75 % exit slow-down for edge starts (needs the sheet edges in the CAM); edge start is a badge + advice.
+- C1 Toolbar position offered on phones / tablets only. C2 44 px mode switch + preset tabs on laptops ≥ 760 px tall;
+  "More holes" back on laptop Simple as a pop-over. C4 report.js DROP_KEY; e2e 30 skips only the scrubber's own pattern lines.
+  C3 (load time) NOT done: 205 start-up modules over HTTP/1.1 in the test; needs a bundler in the deploy (no network here).
+- Tidy: screen-make.css → +laptop +panels; screen-cut.css → +laptop +setupgrid (rules hashed identical); sketch-edit.js →
+  +sketch-arrange.js +sketch-shapeops.js; 8.2 (Josh: "Yes to 8.2" in his own words, to Claude) laptop.js MOVES table.
+- Tests: new unit 65_r16. Disclosed updates: 18 (Andeli chart: 25 mm, 10 mm 65 A), 34 (asks for Outside), 58 (hash for the
+  Material rules, six cut files), 60 (reads the split cut files), page-ids (+16, none removed), e2e 30 (above).
+  Deploy gate (ci-gate.mjs, JOBS=1, this box): first run blocked 96 (closed More-holes pop-over seen by the fit check; preset
+  tabs at 1440x800) and 111 (its buttons had no text while closed); fixed (closed pop-over display: none, preset tabs 44 px from
+  860 px tall) and both re-run clean: 96 270/270, 111 19/19. Every other gate suite passed (89 suites).
+  Not changed and not checkable here: e2e 66 / 71 / 73 crash in this box before the app loads (same on main) – the toolbar-position
+  checks in them still expect the laptop choice; please align them with C1.
+
 ## Working on
 - Nothing new: Round 10 is done (below). Waiting on the questions in "For Josh to decide".
 
