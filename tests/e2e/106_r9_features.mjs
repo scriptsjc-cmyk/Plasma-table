@@ -19,9 +19,9 @@ await ev(page, () => {
 await sleep(200);
 
 const tools = await ev(page, () => {
-  const ids = [...document.querySelectorAll("#quickBar [data-qb]")].map((b) => b.dataset.qb);
+  const ids = [...document.querySelectorAll(document.querySelector("#quickBar [data-qb=\"arcmenu\"]") ? "#quickBar [data-qb], #qbArcPop [data-qb]" : "#quickBar [data-qb]")].map((b) => b.dataset.qb)   /* r15 4.15-4.21: arcs and spline sit in the rail's one Arc ▾ menu */;
   const labels = (document.getElementById("quickBar") || {}).innerText || "";
-  return { ids, hasEtch: ids.includes("etch"), hasTan: ids.includes("arctan"), hasArc: ids.includes("arc3"), hasSpline: ids.includes("spline"), hasDraw: ids.includes("draw"), etchName: /Etch \/ mark/i.test(labels) };
+  return { ids, hasEtch: ids.includes("etch"), hasTan: ids.includes("arctan"), hasArc: ids.includes("arc3"), hasSpline: ids.includes("spline"), hasDraw: ids.includes("draw"), etchName: /Etch \/ mark/i.test(labels) || /^Etch \/ mark$/i.test((document.querySelector('#quickBar [data-qb="etch"]') || {}).getAttribute?.("aria-label") || "") };   /* r13 compact rail: icons only, the name is the button's label */
 });
 t.check("F10/ME-S3: Etch / mark, tangent arc, line, 3-point arc and spline are on the Advanced rail",
   tools.hasEtch && tools.hasTan && tools.hasArc && tools.hasSpline && tools.hasDraw && tools.etchName, JSON.stringify(tools));

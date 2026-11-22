@@ -30,6 +30,8 @@ await page.evaluate(() => {
 const tools = await page.evaluate(() => {
   const bar = document.getElementById("quickBar");
   const ids = [...(bar ? bar.querySelectorAll("[data-qb]") : [])].map((b) => b.getAttribute("data-qb"));
+  // r15 4.15-4.21: 3-point arc, tangent arc and spline sit in the rail's one Arc ▾ menu
+  if (ids.includes("arcmenu")) ids.push(...[...document.querySelectorAll("#qbArcPop [data-qb]")].map((b) => b.getAttribute("data-qb")));
   return {
     trim: ids.includes("trim"),
     extend: ids.includes("extend"),
