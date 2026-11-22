@@ -49,39 +49,45 @@
     {
       "id": "16a",
       "label": "16 A blue plug",
-      "amps_cap": 65
+      "amps_cap": 65,
+      "short": "16 A plug"
     },
     {
       "id": "32a",
       "label": "32 A plug",
-      "amps_cap": 65
+      "amps_cap": 65,
+      "short": "32 A plug"
     },
     {
       "id": "13a",
       "label": "13 A household plug",
       "amps_cap": 30,
-      "limited": true
+      "limited": true,
+      "short": "13 A plug"
     },
     {
       "id": "110v-3",
       "label": "110 V transformer, 3.3 kVA",
       "amps_cap": 28,
       "v110": true,
-      "limited": true
+      "limited": true,
+      "short": "110 V transformer"
     },
     {
       "id": "110v-5",
       "label": "110 V transformer, 5 kVA",
       "amps_cap": 40,
       "v110": true,
-      "limited": true
+      "limited": true,
+      "short": "110 V transformer"
     },
     {
       "id": "110v-10",
       "label": "110 V transformer, 10 kVA or bigger",
       "amps_cap": 45,
       "v110": true,
-      "limited": true
+      "limited": true,
+      "short": "110 V transformer"
     }
   ],
   "supply_source": "16 A = full power (Josh). 13 A and 110 V caps are placeholders until Josh tests them.",

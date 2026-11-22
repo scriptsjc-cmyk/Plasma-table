@@ -84,7 +84,7 @@ function supplyNotice(s) {
   const box = $("supplyNotice");
   if (!box) { toast(supplyNoticeText(s)); return; }
   $("supplyNoticeText").textContent = supplyNoticeText(s);
-  box.classList.remove("hidden");
+  box.classList.remove("hidden"); floatUnderChips(box);
   const ok = $("supplyNoticeOk"); if (ok) ok.focus();
 }
 const MAIN_MATS = 3;   // r16 B2: the first three materials are buttons; the rest sit under "More…"
@@ -121,12 +121,12 @@ export function renderMaterials() {
   const psi = r.air_psi, bar = r.air_bar ?? S.chart.air_bar;
   const air = prof.air_unit_on_display === "psi" && psi ? `${psi} PSI <span class="muted">(${esc(String(bar))} bar)</span>` : `${esc(String(bar))} bar`;
   const amps = ampsNow(), s = supplyOf(S.chart, sup);
-  const capNote = r.capped ? ` <span class="capnote">(max on ${esc((s && s.label || "").replace(/,.*$/, "").replace(/^\d+ V /, "110 V "))})</span>` : "";
+  const capNote = r.capped ? `<span class="capnote">${s && s.v110 ? "110 V" : esc(((s && (s.short || s.label)) || "").replace(/ plug$/, ""))} max</span>` : "";
   const ampsMore = `${S.chart.note || ""} Kerf ${kerf} mm. Values marked estimate are not in a published chart – test on scrap.`;
   const status = cutStatus(S.chart, mat, S.thickness, sup);
   const between = r.between ? `<div class="ampsnote small">Between the ${r.between[0]} and ${r.between[1]} mm settings: thicker setting's amps, a speed in between.</div>` : "";
   $("ampsCard").innerHTML = `
-    <div>Set your ${esc(prof.short || "plasma")} to</div>
+    <div>Set your ${esc(prof.short || "plasma")} to <button type="button" class="info-i srci" data-tip="${esc(ampsMore)}" aria-label="Where the cut settings come from"></button></div>
     <div class="big">${amps} A${capNote}</div>
     <dl class="ampsdl">
       <div><dt>Air</dt><dd>${air}</dd></div>
@@ -307,13 +307,17 @@ export function bindMaterial() {
   };
 }
 
+// the "Other…" box and the supply notice float just under the thickness buttons, over the settings card (never pushing it under Next)
+function floatUnderChips(el) {
+  try { const th = $("thicknesses"); el.style.top = (th.offsetTop + th.offsetHeight + 4) + "px"; } catch (e) { /* ignore */ }
+}
 // r16 B4: any thickness, typed in mm, inches (3/16", 0.125in) or UK sheet gauge (16 swg)
 export function setThickness(t) {
   S.thickness = Number(t); defaultSpeed(); applyMatchingPreset(); renderMaterials(); loadJob();
 }
 function openThOther() {
   const row = $("thOtherRow"); if (!row) return;
-  row.classList.remove("hidden"); $("thOtherMsg").textContent = "";
+  row.classList.remove("hidden"); floatUnderChips(row); $("thOtherMsg").textContent = "";
   $("thOther").value = ""; $("thOther").focus();
 }
 function closeThOther() { const row = $("thOtherRow"); if (row) row.classList.add("hidden"); }

@@ -89,11 +89,11 @@ export function cutStatus(chart, mat, t, supplyId) {
   if (row && Number(row.amps) > cap && s && s.limited) {
     const machineLimit = s.v110 && p && cap >= p.amps_max_110v;
     out.push({ kind: "supply", text: machineLimit
-      ? `On 110 V the plasma gives ${cap} A at most – this cuts slower. A 16 A supply gives full power.`
-      : `Over your ${s.label.replace(/,.*$/, "")}'s limit – it will cut slower at ${cap} A, and may trip it part-way through. Needs a 16 A supply for full power.` });
+      ? `110 V gives ${cap} A at most: this cuts slower. 16 A gives full power.`
+      : `Over your ${s.short || s.label}'s limit: slower at ${cap} A, and it may trip. 16 A gives full power.` });
   }
   if (Number(t) > pierceMax(chart, supplyId))
-    out.push({ kind: "edge", text: `Too thick to pierce (over ${pierceMax(chart, supplyId)} mm) – start each cut from the sheet edge or a drilled start hole.` });
+    out.push({ kind: "edge", text: `Too thick to pierce (over ${pierceMax(chart, supplyId)} mm): start from the sheet edge or a drilled hole.` });
   if (row && row.quality === "rough") out.push({ kind: "rough", text: "Rough edge – fine for scrap, not finished parts." });
   else if (row && row.quality === "usable") out.push({ kind: "rough", text: "Usable edge – expect some clean-up." });
   if (!out.length) out.push({ kind: "ok", text: "Pierce OK" });
