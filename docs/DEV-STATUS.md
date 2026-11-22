@@ -4,6 +4,17 @@ The checker reads this file. Its rules are in README.md on the `checker-reports`
 
 Last updated: 22 Nov 2026, 06:36 (UK time). Live: r15 Round 10 @ 21e59af (CI green, version.json 2026.11.22-21e59af), on top of the editor-redesign test review and Round 9. Working on: nothing new until Josh answers the questions below.
 
+## r17 – preset families, by Claude (LIVE on main @ a24edf5, 22 Nov 19:16; Josh: "Go live")
+Josh, 22 Nov 17:38–17:40: "a lot of separate parts that are the same thing just slight adjustments … less wasted space and more
+explanation … do all these and organise it better … just go straight for it".
+- js/make/presets/families.js: 280 presets → 45 families in 11 categories (317 starting points; a pick may carry its own values,
+  e.g. elbow3 n:2..5, cone steep/shallow). Every preset keeps its id. PARAM_HELP gives each size box a plain-English tip.
+- presetbrowser.js rewritten: family cards → family page (picture, starting points, How to size it, Favourite, Use this part).
+  Search / Favourites / Recent list starting points as one-click tiles (data-shape + data-pick). Esc on a family page goes back.
+- shapeform.js: size-box titles = label – help; ⓘ (.famtip) by the part title with what it's for + how to size it.
+- Tests: new unit 66_r16_families. Disclosed: e2e 120 presets (go: card, go2: Use this part), e2e 78 the same, unit 65 make-CSS hash.
+  First deploy blocked by gate e2e 125 4.21 (card names lacked .pb-name, so the check saw none) – fixed, gate green.
+
 ## r16 – done by Claude while the developer was away (branch `claude-r16`; LIVE on main @ 9662935 since 22 Nov 16:15, Josh: "Go live")
 Josh, 22 Nov 13:13: "Would you be able to do this update as dev is out of action for abit" → Rounds A, B and C of
 `porta-plan-r16.md` (project doc), test branch first; 13:17: "I also need a more tidier code" (split the big files).
