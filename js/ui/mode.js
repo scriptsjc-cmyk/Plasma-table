@@ -12,6 +12,7 @@ import { renderMatPreset } from "../cut/material.js";
 import { paintChrome, paintGuide, renderProTools, renderQuickBar, renderShapeForm, setShapeFs } from "../core/hooks.js";
 import { getPrefs, savePrefs } from "../core/prefs.js";
 import { enter } from "./transition.js";
+import { paintSheetSize } from "../make/sheetsize.js";
 
 export function normEditorMode(mode) {
   if (mode === "pro" || mode === "advanced") return "advanced";
@@ -55,6 +56,8 @@ export function setAppMode(mode, opts) {
   }
   if (sketch) {
     renderProTools(); renderShapeForm(); renderQuickBar();
+    // the Drawing sheet box (and its finished-size note) belongs to Advanced: show / hide it on the switch, not only on the next edit
+    try { paintSheetSize(); } catch (e) { /* not bound yet */ }
     if (autoFs && screen() === "make") {
       const dlgOpen = !!document.querySelector(".acctdlg:not(.hidden), .shapelib:not(.hidden)");
       if (isProMode() && S.src === "shape" && !dlgOpen) setShapeFs(true);
