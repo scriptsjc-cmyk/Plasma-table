@@ -2,12 +2,39 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 22 Nov 2026, 04:54 (UK time). Live: the editor-redesign test review (three fixes against approved rounds, e2e 129 in the gate) on top of r15 Round 9. Working on Round 10.
+Last updated: 22 Nov 2026, 05:38 (UK time). Live: r15 Round 10 (later / nice to have) on top of the editor-redesign test review and Round 9. Working on: nothing new until Josh answers the questions below.
 
 ## Working on
-- r15 Round 10 (10.1–10.9), tests first. Smooth-join points keep their click behaviour; in point-edit mode every editable point gets a handle.
+- Nothing new: Round 10 is done (below). Waiting on the questions in "For Josh to decide".
 
 ## Ready to check
+- r15 Round 10 (later / nice to have; approved in the same t534u words as Round 9), tests first: unit 64 (58 checks) @ 0f7d0f6,
+  e2e 130 (51 checks, now in the deploy gate) @ 2c2ec61, both red before the code:
+  - 10.1 ⋯ More › Edit points on any outline: a library part becomes its real points (arcs fitted before rounding, so a rounded
+    plate is 8 points, a circle 4 arcs; feature rows stay rows; one Undo puts the library part back). While it is on, every point has
+    a handle, smooth arc joins too; Esc or picking another part ends it. Outside it, smooth joins keep NO dot but stay grabbable
+    (Josh: keep the click behaviour). Edge panel: Make arc / Make straight. Double-click adds a point, Delete removes one (as before) @ a59dfa4
+  - 10.2 dragging a part shows the gap to the nearest part (label "gap 80 mm" + a dimension line; "touching / overlapping" at 0) @ d02a0bc
+  - 10.3 ⋯ More › Copy along a path (pick the part, Shift-click the path last; n copies shared out by length, ends included on an
+    open line, optional "turn to follow") @ 7cc1fee; Features › Holes along a curve, fitted to the part's longest curved edge when
+    added, end holes kept off the edges the curve meets @ 42d125a, a83002f
+  - 10.4 Add text with a range ("TAG 001–050", up or down, keeps leading zeros, max 200) makes numbered copies, 10 to a row,
+    each named after its number @ d9fe223
+  - 10.5 Array › "As many as fit on the sheet" fills the drawing sheet a gap apart; the button says how many ("Fill the sheet (143)") @ 7cc1fee
+  - 10.6 DXF: blocks (INSERT, with scale, turn, rows / columns, nested; a block that places itself is stopped with a warning) are
+    drawn where placed instead of skipped; layer names say what to do: etch / mark / score / engrave / scribe → etched, drill /
+    punch → a drill-mark cross at each circle's centre, anything else → cut; parts keep their layer or block name. Layer-0 files
+    are read exactly as before (all 35 DXF/SVG files byte-identical) @ 91a13e7. This finishes F11.
+  - 10.7 with Rectangle / Circle picked, typing a number opens the size box: "120 x 80" (× * by , also), "Ø40", "R20" in the
+    box; Enter places it mid-view, a click places it there. Letters stay tool shortcuts @ 8c9d86e, a3bad69
+  - 10.8 typed values take units anywhere numbers are typed as text (2in, 2", 5cm, 50mm; always mm inside). The drawing's size
+    tags, drag and gap labels follow the existing Settings › Units › Display units (inches show "4.00 in"; mm unchanged) @ 5ca65ec, d02a0bc
+  - 10.9 the live Z readout already exists (Setup jog strip, live torch panel). **Set top is NOT built** (it would send a new Z-zero
+    command to the controller and change pierce heights; held for Josh, below)
+  - No G-code change for existing parts: 339 presets (only the 8 known ones differ, as before) and 35 DXF/SVG byte-identical before the push
+  - Disclosed test changes: page-ids snapshot +edgeArc (none removed); e2e 120 gets plans for the two new tools; edge panel
+    "Add corner in the middle" → "Add corner" (tooltip keeps the words) so the panel still fits 1366×640; my own new unit 64 /
+    e2e 130 adjusted before the gate (a wrong 7-vs-8 count, R25 typed in the box, the existing "inch" value, curve-hole ends)
 - Editor-redesign test review (the r13-layout group) @ 4e9610e..4cb872c:
   - Fixed, against approved rounds (e2e 129, in the deploy gate, fails 15/24 on the code before): the laptop Make header says
     "Make a part" again (r12 3.2); Simple's panel title "Pick a template" / "Set the size" with its help in an "i" (r12 4.2: the
@@ -287,7 +314,7 @@ Last updated: 22 Nov 2026, 04:54 (UK time). Live: the editor-redesign test revie
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- Round 10.
+- Josh's answers below (Set top, inch scope, toolbar position, 36 px buttons, 8.2, More holes, upload bar). r15 rounds 1–10 are done except 9.7.
 
 ## Not a bug
 - Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
@@ -297,6 +324,15 @@ Last updated: 22 Nov 2026, 04:54 (UK time). Live: the editor-redesign test revie
   linked machine, nothing visible asked you to link one, and the list said "Home the machine". Both fixed in Round 8 part 2 (below).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
+- **10.9 Set top:** a button that marks where the torch is now as the top of the sheet would send a new command to the controller
+  (a work-Z zero) and change every pierce and cut height after it. That touches G-code safety, so it is not built. Build it (how
+  should it behave with touch-off off, for the air-start torch)?
+- **10.8 inches:** done as display + typed units. Not done: every input box showing inches (the Size tab, dialogs and the click-a-size
+  box still show mm, but accept 2in). Enough, or do you want full inch boxes everywhere?
+- **"Make it yours" toolbar position (top / bottom / left) does nothing on a laptop in Advanced** since the r12 rail (the old r7 CSS
+  no longer applies). Tests 66 ×1, 68 ×1, 71 ×1, 73 ×3 still expect it. Remove the choice on laptops (I update the tests), or make it move the rail?
+- **36 px header mode switch and preset category tabs on tall laptops (1366×768, 1440×900):** the compact-buttons choice is on by
+  default, while the tokens say 44 px above 720 px tall. Tests 73 ×4. Keep 36 px (I update the tests) or 44 px there?
 - **9.1:** to start the stable channel, cut a real part, then run Actions › Promote to stable (docs/RELEASES.md). Also add
   `https://scriptsjc-cmyk.github.io/Plasma-table/stable/` to the Supabase Auth redirect URLs (you change that yourself).
 - **9.3:** where should problem reports go (a support e-mail, or an upload place)? For now they are a file or a copy.
