@@ -97,6 +97,7 @@
      label beside the icon, the pressed label, and the small badge under the round icon. */
   --fs-stop: 28px; --fs-stop-make: 22px; --fs-stop-label: 24px; --fs-stop-pressed: 19px;
   --fs-stop-badge: 12px; --fs-stop-badge-s: 13px; --fs-stop-phone: 20px;
+  --fs-modesw: 14px;     /* Beginner / Advanced tools mode switch: round 5 look M6 ("Beginner" in full at 14 px; r15 Round 8 restores it after the type-scale pass) */
   --fs-readout: 34px;     /* amps, time left, speed and keypad numbers */
   --fs-readout-l: 44px;   /* the big time-left / speed readouts */
   --fs-pct: 56px;         /* the cutting % done */

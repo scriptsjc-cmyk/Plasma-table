@@ -92,7 +92,7 @@ body[data-screen="boot"]::before { content: "Loading…"; display: block; margin
   .cutlist .mv button { min-height: 44px; min-width: 44px; }
   .cutlist label { min-height: 44px; }
   .settab, .admtab, .movesel, body.pro-mode .choice.small button { min-height: 44px; font-size: var(--fs-s); }
-  .modesw-btn { font-size: var(--fs-s); }
+  .modesw-btn { font-size: var(--fs-modesw); }
   .qb-group { font-size: var(--fs-s); }
 }
 

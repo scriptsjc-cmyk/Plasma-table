@@ -358,7 +358,7 @@ body[data-step="3"] #exportRow { display: none; }
 }
 @media (max-width: 560px) {
   .topmenu .modesw-btn { flex: 1; }
-  .topmenu .modesw-btn[data-mode="beginner"] { font-size: var(--fs-s); }
+  .topmenu .modesw-btn[data-mode="beginner"] { font-size: var(--fs-modesw); }
   #topMenu #connPill, body.demo-on #topMenu #connPill { max-width: none; font-size: var(--fs-s); white-space: normal; }
   body.beginner[data-step="3"] .guidehead #ghTitle { font-size: var(--fs-l); }
 }

@@ -123,10 +123,10 @@ body.app-shell #quickBar { min-height: 0; overflow: auto; max-height: none; }
 }
 /* ---- UX2: Pro / Beginner mode switch ---- */
 .modesw { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--well); }
-.modesw-btn { min-height: 44px; min-width: 44px; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; font-weight: 700; font-size: var(--fs-s); color: var(--muted); }
+.modesw-btn { min-height: 44px; min-width: 44px; padding: 4px 10px; border: 0; border-radius: 0; background: transparent; font-weight: 700; font-size: var(--fs-modesw); color: var(--muted); }
 .modesw-btn.sel, .modesw-btn.sel:hover:not(:disabled), .modesw-btn.sel:focus-visible { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 @media (max-width: 640px) {
-  .modesw-btn { padding: 4px 12px; font-size: var(--fs-s); }        /* round 5 look M6: "Beginner" in full, never "Bgn" */
+  .modesw-btn { padding: 4px 12px; font-size: var(--fs-modesw); }        /* round 5 look M6: "Beginner" in full, never "Bgn" */
 }
 body.pro-mode .beginner-help, body.pro-mode .guide.howto, body.pro-mode .mattip,
 body.pro-mode p.skhelp, body.pro-mode .step[data-step="2"] > p.muted,
@@ -550,7 +550,7 @@ body[data-screen="make"].beginner.shape-fs #btnPicFs { display: none; }
 body[data-screen="make"] #topModeSwitch, body[data-screen="login"] #topModeSwitch, body[data-screen="boot"] #topModeSwitch { display: none; }
 /* a phone on its side while cutting: the header row is kept for Ready / TORCH / STOP (round 5 safety), and the mode only changes Make a part */
 body.short-land[data-screen="cut"] #topModeSwitch { display: none; }
-#topModeSwitch .modesw-btn { min-height: 44px; font-size: var(--fs-s); }
+#topModeSwitch .modesw-btn { min-height: 44px; font-size: var(--fs-modesw); }
 /* round 5 look M13: Pro adds shapes from one place, the tool list on the left (with All shapes… for the rest); the second icon grid is gone */
 body.pro-mode #srcShape > .addtiles { display: none; }
 
