@@ -35,6 +35,7 @@ Last updated: 22 Nov 2026, 05:38 (UK time). Live: r15 Round 10 (later / nice to 
   - Disclosed test changes: page-ids snapshot +edgeArc (none removed); e2e 120 gets plans for the two new tools; edge panel
     "Add corner in the middle" → "Add corner" (tooltip keeps the words) so the panel still fits 1366×640; my own new unit 64 /
     e2e 130 adjusted before the gate (a wrong 7-vs-8 count, R25 typed in the box, the existing "inch" value, curve-hole ends)
+  - CI fix: e2e 129 (my review test) crashed on CI because it waited a fixed 600 ms for the app; it now waits for the app to load (no check changed)
 - Editor-redesign test review (the r13-layout group) @ 4e9610e..4cb872c:
   - Fixed, against approved rounds (e2e 129, in the deploy gate, fails 15/24 on the code before): the laptop Make header says
     "Make a part" again (r12 3.2); Simple's panel title "Pick a template" / "Set the size" with its help in an "i" (r12 4.2: the

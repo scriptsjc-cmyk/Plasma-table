@@ -13,7 +13,8 @@ const view = async (w, h) => {
   const ctx = await br.newContext({ viewport: { width: w, height: h } });
   const page = await ctx.newPage(); page.errors = []; page.on("pageerror", (e) => page.errors.push(String(e)));
   await ctx.route((u) => !u.href.startsWith(s.base) && !u.href.startsWith("data:"), (r) => r.abort());
-  await page.goto(s.base + "/?test=1&turn=0", { waitUntil: "load" }); await sleep(600);
+  await page.goto(s.base + "/?test=1&turn=0", { waitUntil: "load" });
+  await page.waitForFunction(() => window.plasmaTest, null, { timeout: 15000 }); await sleep(300);   // wait for the app, not a fixed 600 ms (CI crash 22 Nov)
   return page;
 };
 const vis = (page, sel) => page.evaluate((sel) => { const el = document.querySelector(sel); if (!el) return null; const r = el.getBoundingClientRect(), cs = getComputedStyle(el); return cs.display !== "none" && cs.visibility !== "hidden" && r.width > 2 && r.height > 2 ? { l: r.left, t: r.top, r: r.right, b: r.bottom } : null; }, sel);
