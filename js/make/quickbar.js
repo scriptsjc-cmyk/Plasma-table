@@ -168,8 +168,10 @@ function paintPinnedTools(B, wrap, qb) {
     const slot = $("btnSimpleSnap") || $("btnDragPan") || $("btnMakeCheckCut") || $("btnViewParts") || $("editorSwitch");
     put(bar, pin, slot);
   }
-  if (!show) { pin.innerHTML = ""; return; }
-  pin.innerHTML = B("undo", "↶", "Undo") + B("redo", "↷", "Redo") + B("fit", "⤢", "Fit") + B("del", "🗑", "Delete");
+  if (!show) { pin.innerHTML = ""; pin._qbHtml = ""; return; }
+  const html = B("undo", "↶", "Undo") + B("redo", "↷", "Redo") + B("fit", "⤢", "Fit") + B("del", "🗑", "Delete");
+  if (pin._qbHtml === html) return;   // r15 Round 8: unchanged, so keep the same buttons (see renderQuickBar)
+  pin.innerHTML = html; pin._qbHtml = html;
   pin.querySelectorAll("[data-qb]").forEach((btn) => {
     btn.onclick = () => {
       const id = btn.dataset.qb;
@@ -227,7 +229,7 @@ export function renderQuickBar() {
     return `<button type="button" data-qb="${id}" class="${onCls[id] ? "on" : ""}${id === "del" && !dis[id] ? " danger" : ""}" ${dis[id] ? 'aria-disabled="true"' : ""} data-why="${esc(dis[id] ? whyOff(id) : "")}" data-label="${esc(label)}" title="${esc(title + why)}" aria-label="${esc(title + why)}"><i>${icon}</i><span>${esc(label)}${kbd}</span></button>`;
   };
   paintPinnedTools(B, wrap, qb);
-  if (!on) { qb.innerHTML = ""; if (arcOpen) toggleArc(false); refreshScrollRows(); return; }
+  if (!on) { qb.innerHTML = ""; qb._qbHtml = ""; if (arcOpen) toggleArc(false); refreshScrollRows(); return; }
   const q = paletteQ;
   const searchHtml = `<div class="qb-search"><button type="button" id="qbSearchBtn" class="qb-search-btn" aria-label="Search tools" title="Search tools (Ctrl+K or /)">🔍</button><input id="qbSearch" type="search" placeholder="Search tools" aria-label="Search tools" value="${esc(q)}" autocomplete="off"></div>`;
   const parts = [searchHtml];
@@ -291,12 +293,18 @@ export function renderQuickBar() {
   }
   const hadFocus = document.activeElement && (document.activeElement.id === "qbSearch" || document.activeElement.id === "qbMoreSearch");
   const focusId = hadFocus ? document.activeElement.id : "";
-  qb.innerHTML = parts.join("");
-  const chip = qb.querySelector("#qbFilterChip");
-  if (chip) chip.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); paletteQ = ""; moreOpen = true; renderQuickBar(); });
-  if (hadFocus) {
-    const s = $(focusId) || $("qbSearch") || $("qbMoreSearch");
-    if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+  // r15 Round 8: refresh() runs on every machine status report (about 10 a second when connected). Rebuild the bar only when
+  // its markup changes, so a press and its release land on the same button (and hover / keyboard focus stay put).
+  const html = parts.join("");
+  if (qb._qbHtml !== html) {
+    qb.innerHTML = html;
+    qb._qbHtml = html;
+    const chip = qb.querySelector("#qbFilterChip");
+    if (chip) chip.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); paletteQ = ""; moreOpen = true; renderQuickBar(); });
+    if (hadFocus) {
+      const s = $(focusId) || $("qbSearch") || $("qbMoreSearch");
+      if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
+    }
   }
   mountScrollRow(qb);
   refreshScrollRows();
