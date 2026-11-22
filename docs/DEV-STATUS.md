@@ -2,12 +2,11 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 21 Nov 2026, 21:58 (UK time). Live: r15 Round 8 part 1 (8.3–8.6, part of 8.1) and Josh's 21 Nov decisions: r15 7.5-redelbow and 7.5-saddlehole (CUT CHANGES), s2roffset kept. See `version.json`.
+Last updated: 22 Nov 2026, 00:23 (UK time). Live: r15 Round 8 part 2 (8.1 @layer + container query, pre-existing 41 item 11; 8.2 skipped, Josh 21 Nov) on top of part 1 and Josh's 21 Nov decisions (r15 7.5-redelbow, 7.5-saddlehole). See `version.json`.
 
 ## Working on
-- Round 8 part 2: the rest of 8.1 (CSS @layer, container queries for the three columns) and the pre-existing failures list. @layer
-  changes which rule wins between files (a later layer beats a more specific earlier rule), so it needs a file-by-file visual check.
-- 8.2 is waiting on a design question (For Josh to decide).
+- Round 8 part 2: the pre-existing failures list.
+- 8.2: **Skipped (Josh 21 Nov)**. laptop.js keeps its JS moves, unchanged.
 
 ## Ready to check
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
@@ -198,32 +197,51 @@ Last updated: 21 Nov 2026, 21:58 (UK time). Live: r15 Round 8 part 1 (8.3–8.6,
     tool at iPhone 14 landscape (a fold-out caught open or closed; the same diffs show up without the split). Full gate passed (79
     suites) at a05e377 before the push
 
+- r15 Round 8 part 2:
+  - 8.2: **Skipped (Josh 21 Nov)**. laptop.js keeps its JS moves, unchanged
+  - 8.1 @layer @ 1bcc8a1 / e7c4c81 (unit 59): tokens.css declares `@layer tokens, app;`. The tokens sit in `tokens`, and every other
+    stylesheet wraps its rules in `@layer app` in link order, so the cascade between files is exactly as before. tools/style-diff.mjs
+    @ 987524a compares every element's computed style (and ::before / ::after) in two copies of the site, in 9 scenes at 6 sizes:
+    54/54 identical; pixels identical. One layer per file was measured and not used: a later layer beats a more specific earlier
+    rule, and !important flips between layers. Layering base.css alone changed 42 of 54 scene/sizes (button paddings 8 → 2 px,
+    `.hidden` beating later importants), and all files layered changed hundreds of values. Making that identical means rewriting each
+    conflicting rule, which is new work, not a tidy. Test changes (disclosed): unit 59 (new this round) now checks the two-layer
+    form; unit 58 sets the `@layer app` wrapper aside before hashing the cut rules (same rules)
+  - 8.1 container queries @ 2264e7c (unit 60, written first): the Setup step's `.cutgrid` is container `cutgrid`, and the
+    1200–1439 px "Download G-code is an icon" range is `@container cutgrid (max-width: 1397px)`. Its content box is the viewport
+    less 42 px, measured at 1200 / 1439 / 1440 / 1441 px, identical to the old rule. The laptop conditions (hover, fine pointer,
+    height) stay a media query, because a container can't answer them. style-diff: only the new container-name / -type differ; pixels
+    identical. The three-column grids themselves stay viewport media queries: they are the page layout, so their container would be
+    the viewport, and nothing would be gained. Test change (disclosed): unit 58's pinned rule hash updated for this one rule move
+  - pre-existing 41 item 11 @ 12699a5 (tests) / 5bb7c5c / 7de123a (app): it was partly the test and partly the app. On the laptop
+    bed (hover + fine pointer), with no linked machine, nothing visible asked you to link one, and "Before you cut" said "Home the
+    machine". Now the list starts with a "Link a machine to run jobs" button that opens the link prompt (a demo account gets its
+    "Demo accounts can't control a real machine…" line as plain text), and "Home the machine" shows only once a machine is connected.
+    blockers() unchanged. Test changes (disclosed, no checks removed): item 11 is layout-aware (the laptop checks on the 1280×900
+    page; the old touch checks moved to an iPad page), and the account pill is opened through ☰ on laptops, where Account has lived
+    since 46e9604 (this also fixes the crash that hid the rest of 41). 41: 54/54
+  - Precheck: DXF/SVG 35 byte-identical. Presets: the same 8 as last push (dustpan, s2roffset, fishmouth, takeoff, britches,
+    teetemp, redelbow, saddlehole); no new cut changes
+  - Full gate passed (81 suites, no retries) at 7de123a before the push
+
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
 - Item 2: the walk stopped a ONE-part job before its first pierce, so Save speed, "Stopped during cut N" and Continue from cut never
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- Round 8 part 2: 8.1, 8.2 (after Josh decides), pre-existing failures list (incl. 63 ×1, 66 ×2 from 7.8).
+- Round 8 part 2: the pre-existing failures list (incl. 63 ×1, 66 ×2 from 7.8). 8.2 skipped (Josh 21 Nov).
 
 ## Not a bug
 - Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
   Josh 21 Nov: keep as is (his own answer card). A stop is always sent first.
-- Report ❌ "41 item 11 since 55c3d71": not the app. 55c3d71 also changed `tests/lib/browser.mjs` launchKillable to a real laptop
-  Chrome (hover + fine pointer), so 41 now gets the r13 laptop bed layout, where Link a machine sits in the header connection menu
-  by design. 75b7df1's app code shows the same layout under the new launcher. 41 still expects the touch layout; I'll fix the
-  test to match each layout in Round 7/8 (no app change, nothing weakened).
+- Report ❌ "41 item 11 since 55c3d71": the launcher change (55c3d71: real laptop Chrome, hover + fine pointer) moved 41 onto the r13
+  laptop bed layout. Part of it was the test (it expected the touch layout) and part was a real gap on the laptop layout: with no
+  linked machine, nothing visible asked you to link one, and the list said "Home the machine". Both fixed in Round 8 part 2 (below).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
 - Reducing elbow and saddle hole: decided 21 Nov (both redesigned, above).
-- **8.2 (stop moving header controls in JS, place them with CSS grid areas):** CSS can only arrange children of one grid container. The
-  controls laptop.js moves are in different parts of the page: #makeBar (top of the Make screen, moved into the header at 1280+) and
-  Pick all / Fit / Clear / Snap / guides (in the shape form, moved into the bar and its Select ▾ / Snap ▾ menus in Advanced). Doing it
-  in CSS means giving each one a single home in the markup, which changes what you see. (a) #makeBar lives in the header: under 1280
-  px it would sit above the safety banners instead of below them, and it would hide with the header in full-screen editing (today it
-  stays). (b) Pick all / Clear / Snap / guides live in the header menus at every size, so the beginner form loses them. Options: do (a)
-  and (b); do only (a); or keep the JS moves and tidy them (one table of where each control goes, no safeInsert). My suggestion is the
-  last one: it changes nothing on screen.
+- 8.2: decided 21 Nov 22:14, skipped (Josh 21 Nov). The JS moves stay.
 
 ## Questions for the checker
 - e2e 20 STOP-STREAM change (f9d612d, accepted by the reviewer): it now counts job lines from the moment of the STOP press (button
@@ -236,4 +254,4 @@ Last updated: 21 Nov 2026, 21:58 (UK time). Live: r15 Round 8 part 1 (8.3–8.6,
   The difference between your two runs is the launcher: 55c3d71 changed launchKillable from raw headless Chrome (no hover, so the
   touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
 - 2.17 (G-code unchanged when a part has no features): the developer checks it before every geometry/import push with `tmp/precheck.sh` (339 presets + 35 DXF/SVG byte-identical). Can you confirm it independently on the next push?
-- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 41 item 11 (see Not a bug), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×9 here (×9 at 8b0c852 too), 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×5 (OFFLINE fixed in Round 8), 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×1 (was ×4; rerun 21 Nov for 7.8), 66 ×2 (7.8), 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
+- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 65 "Advanced tools" label 13 px ×2, 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×9 here (×9 at 8b0c852 too), 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×5 (OFFLINE fixed in Round 8), 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×1 (was ×4; rerun 21 Nov for 7.8), 66 ×2 (7.8), 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
