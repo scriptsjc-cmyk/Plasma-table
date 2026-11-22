@@ -111,7 +111,7 @@ export function bindTools() {
     const open = DLGS.find((id) => $(id) && !$(id).classList.contains("hidden"));
     if (open) { closeDlg(open); e.preventDefault(); }
   });
-  if ($("btnHistoryCsv")) $("btnHistoryCsv").onclick = () => { const list = store() ? readHistory(store()) : []; saveFile("porta-plazma-cut-history.csv", historyCsv(list), "text/csv"); };
+  if ($("btnHistoryCsv")) $("btnHistoryCsv").onclick = () => { const list = store() ? readHistory(store()) : []; saveFile("porta-plasma-cut-history.csv", historyCsv(list), "text/csv"); };
   if ($("btnHistoryClear")) $("btnHistoryClear").onclick = async () => {
     const ok = await askConfirm({ title: "Clear the cut history?", body: "This removes every row on this device. It can't be undone.", ok: "Clear history", danger: true });
     if (ok && store()) { clearHistory(store()); paintHistory(); }

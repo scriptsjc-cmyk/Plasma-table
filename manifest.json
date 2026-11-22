@@ -1,6 +1,6 @@
 {
-  "name": "Porta Plazma CNC",
-  "short_name": "Porta Plazma",
+  "name": "Porta Plasma CNC",
+  "short_name": "Porta Plasma",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#E8EAED",

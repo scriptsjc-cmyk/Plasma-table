@@ -9,7 +9,7 @@ import { $, $$, esc, toast } from "../core/dom.js";
 import { host } from "../account/uibase.js";
 import { S, sketch } from "../core/state.js";
 import { loadJob, renderCutCheck } from "../cut/prepare.js";
-import { renderMaterials } from "../cut/material.js";
+import { renderMaterials, supplyNeedsAsk, supplyOkToGo } from "../cut/material.js";
 import { applyBodyMode, syncModeSwitch } from "./mode.js";
 import { enter, slideUnderline } from "./transition.js";
 import { syncPhoneUi } from "../make/phonesheet.js";
@@ -162,7 +162,7 @@ export function bindNav() {
   $$(".tab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
   $$("#stepper li").forEach((li) => (li.onclick = () => { if (!startAskOpen()) goStep(Number(li.dataset.step)); }));
   $$("[data-go]").forEach((b) => (b.onclick = () => goStep(Number(b.dataset.go))));
-  $("next1").onclick = () => (screen() === "make" ? sendToCutting() : goStep(3));
+  $("next1").onclick = () => { if (screen() === "make") { sendToCutting(); return; } if (!supplyNeedsAsk()) { goStep(3); return; } supplyOkToGo().then((ok) => { if (ok) goStep(3); }); };
   $("btnChangeMat").onclick = () => goStep(1);
   $("btnEditParts").onclick = () => {          // the layout only places parts: shape and size changes happen in Make a part, with the picked part still picked
     const it = sketch && sketch.selected(), id = it ? ((sketch.hostPart(it) || it).id) : null;

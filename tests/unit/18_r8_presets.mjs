@@ -8,14 +8,15 @@ const t = new T("18_r8_presets");
 const travel = A.machine.travel_mm;
 
 t.check("cut chart names its sources", Array.isArray(A.chart.sources) && A.chart.sources.length >= 2, JSON.stringify(A.chart.sources));
-t.check("max cuttable thickness is 20 mm", A.chart.max_cuttable_mm === 20);
+// r16 B (Josh 22 Nov): the chart is now the ANDELI CUT-65DS: mild steel to 25 mm (edge start, rough), 65 A on thick plate
+t.check("max cuttable thickness is 25 mm (ANDELI CUT-65DS, r16)", A.chart.max_cuttable_mm === 25);
 const mild = A.chart.materials.find((m) => /mild/i.test(m.name));
 t.check("mild steel is in the chart", !!mild);
 if (mild) {
   const row = (th) => mild.rows.find((r) => r.thickness_mm === th);
   const r3 = row(3), r10 = row(10), r20 = row(20);
   t.check("3 mm mild steel is 40 A from the published chart, not a guess", r3 && r3.amps === 40 && r3.feed_mm_min > 0 && !/estimate/i.test(r3.feed_source || ""), JSON.stringify(r3 && { amps: r3.amps, feed: r3.feed_mm_min, src: r3.feed_source }));
-  t.check("10 mm mild steel is 55 A (interpolated 60 A range)", r10 && r10.amps === 55, JSON.stringify(r10 && { amps: r10.amps }));
+  t.check("10 mm mild steel is 65 A (ANDELI thick-plate value, r16)", r10 && r10.amps === 65, JSON.stringify(r10 && { amps: r10.amps }));
   t.check("20 mm row is labelled an estimate (past 3/4 in)", r20 && /estimate/i.test(r20.feed_source || r20.note || ""), JSON.stringify(r20 && { feed: r20.feed_mm_min, src: r20.feed_source }));
   t.check("every row records a source for speed, pierce, cut height and kerf",
     mild.rows.every((r) => r.feed_source && r.pierce_delay_source && r.kerf_source),

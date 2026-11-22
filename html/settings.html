@@ -116,6 +116,14 @@
 
     <div class="setpane hidden" data-setpane="torch">
       <h3>Torch and THC</h3>
+      <label>Your plasma (sets the cut chart)
+        <select id="setPlasmaProfile">
+          <option value="andeli-cut65ds">ANDELI CUT-65DS (sold with the table)</option>
+          <option value="reboot60">Reboot 60A + P-80</option>
+        </select>
+      </label>
+      <p id="setPlasmaNote" class="muted small">The cut chart (amps, air, speeds, limits) follows the plasma. The power supply is chosen on Cut › Material.</p>
+      <button type="button" id="setPlasmaReload" class="hidden">Reload to use the new chart</button>
       <p class="muted small">Pierce height is how high the torch sits while the arc starts. Cut height is the running height. THC (torch height control by voltage) is only used if the controller has it.</p>
       <div class="grid3">
         <label>Pierce height (mm)<input id="setPierceH" type="number" min="0" step="0.1" inputmode="decimal"></label>
@@ -231,7 +239,7 @@
 
     <div class="setpane hidden" data-setpane="about">
       <h3>About</h3>
-      <img src="logo.svg" alt="Porta Plazma CNC" class="aboutmark">
+      <img src="logo.svg" alt="Porta Plasma CNC" class="aboutmark">
       <p id="aboutVer" class="aboutver"></p>
       <p class="muted small">The version and commit tell you which release this browser is running. If it differs from what you expect, press Check for a new version.</p>
       <div class="row wrap"><button type="button" id="btnCheckVer">Check for a new version</button><button type="button" id="btnAboutReload">Reload now</button></div>

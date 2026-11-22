@@ -9,7 +9,7 @@ import { paintCutList } from "./cutlist.js";
 import { paintStartCut } from "./restart.js";
 import * as CF from "./cutfeatures-ui.js";
 import { $, $$, esc } from "../core/dom.js";
-import { overrides, row } from "./material.js";
+import { overrides, row, renderDuty } from "./material.js";
 import { resolveEtch } from "./etch.js";
 import { currentSettings } from "../machine/settings.js";
 import { M, S, sketch } from "../core/state.js";
@@ -97,5 +97,6 @@ export function loadJob() {
     $("warnings").innerHTML = `<li>${esc(e.message)}</li>`;
   }
   paintCutList(); paintStartCut();
+  try { renderDuty(); } catch (e) { /* ignore */ }
   refresh();
 }

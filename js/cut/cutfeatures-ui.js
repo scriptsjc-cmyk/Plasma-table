@@ -6,6 +6,7 @@ import { ArcWatch, liveView, cutNumber, NOT_CONNECTED } from "./cutlive.js";
 import { ANCHORS, anchorById, anchorShift, shiftGcode as shiftGcodeText, loadOrigins, saveOrigin, deleteOrigin } from "./origins.js";
 import { couponContours, couponHole, couponPresetRow, RESULTS, COUPON, PierceCounter } from "./coupon.js";
 import { upsertLocalPreset } from "../machine/settings.js";
+import * as Acc from "../account/account.js";
 import { sheetCornerName } from "./bedview.js";
 
 const $ = (id) => document.getElementById(id);
@@ -196,6 +197,9 @@ export function maybeAskCouponResult(job) {
   $("cpSpeed").value = ""; $("cpAmps").value = "";
   $("cpSpeed").placeholder = `${Math.round(S.speed)} (as cut)`; $("cpAmps").placeholder = `${H.row().amps} A (as chart)`;
   $("cpHead").textContent = `How did the test coupon cut? (${S.material}, ${S.thickness} mm)`;
+  // r16 B7: Josh (admin) can publish a tested coupon result as the factory value everyone starts from
+  let admin = false; try { admin = !!Acc.isAdmin(); } catch (e) { /* ignore */ }
+  if ($("cpPublishWrap")) { $("cpPublishWrap").classList.toggle("hidden", !admin); $("cpPublish").checked = false; }
 }
 function hideCouponResult() { const w = $("couponResult"); if (w) w.classList.add("hidden"); }
 function saveCouponResult() {
@@ -205,6 +209,11 @@ function saveCouponResult() {
     const row = effRow();
     const rec = couponPresetRow({ material: S.material, thickness: S.thickness, row, chart: S.chart, usedSpeed: c.usedSpeed || S.speed, result: w.dataset.res, speed: $("cpSpeed").value.trim(), amps: $("cpAmps").value.trim() });
     upsertLocalPreset(rec);                  // the local cut-chart entry for this material and thickness (what "Save to cut chart" writes)
+    if ($("cpPublish") && $("cpPublish").checked && Acc.isAdmin()) {
+      Acc.adminUpsertCutPreset({ ...rec, notes: `Porta Plasma tested ${new Date().toISOString().slice(0, 10)}` })
+        .then(() => H.toast("Published as the tested factory value ✓"))
+        .catch((e) => H.toast("Couldn't publish: " + e.message, true));
+    }
     if (H.setSpeed) H.setSpeed(rec.cut_speed_mm_min);       // the saved speed wins over the chart, so it has to follow too
     hideCouponResult();
     H.applyPresetsAndRender();

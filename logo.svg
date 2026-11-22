@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 510 132" role="img" aria-label="Porta Plazma CNC">
-  <!-- Horizontal wordmark: icon + PORTA PLAZMA / CNC.
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 510 132" role="img" aria-label="Porta Plasma CNC">
+  <!-- Horizontal wordmark: icon + PORTA PLASMA / CNC.
        Type is system/Segoe geometric sans; swap for a licensed face in production. -->
   <rect width="510" height="132" fill="none"/>
   <g transform="translate(20,0)">
@@ -16,7 +16,7 @@
   </g>
   <text x="118" y="78" fill="#0B1F33"
         font-family="Segoe UI, system-ui, -apple-system, Arial, sans-serif"
-        font-size="44" font-weight="700" letter-spacing="-1.2">PORTA PLAZMA</text>
+        font-size="44" font-weight="700" letter-spacing="-1.2">PORTA PLASMA</text>
   <text x="122" y="106" fill="#4B5A6A"
         font-family="Segoe UI, system-ui, -apple-system, Arial, sans-serif"
         font-size="16" font-weight="650" letter-spacing="6.5">CNC</text>

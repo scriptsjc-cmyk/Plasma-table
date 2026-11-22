@@ -43,6 +43,17 @@
               <div id="materials" class="choice"></div>
               <h3>Thickness</h3>
               <div id="thicknesses" class="choice small"></div>
+              <div id="thOtherRow" class="thother hidden">
+                <label>Thickness <input id="thOther" type="text" inputmode="decimal" autocomplete="off" placeholder="2.5, 3/16&quot; or 16 swg" aria-describedby="thOtherMsg"></label>
+                <button type="button" id="thOtherOk" class="primary">Use</button>
+                <button type="button" id="thOtherCancel">Cancel</button>
+                <p id="thOtherMsg" class="warntext small" role="status"></p>
+              </div>
+              <div id="supplyNotice" class="supplynotice hidden" role="alertdialog" aria-labelledby="supplyNoticeHead">
+                <b id="supplyNoticeHead">Your power supply limits the plasma</b>
+                <p id="supplyNoticeText"></p>
+                <button type="button" id="supplyNoticeOk" class="primary">I understand</button>
+              </div>
               <p id="matTip" class="mattip"></p>
               <div id="ampsCard" class="amps"></div>
             </div>
@@ -67,6 +78,9 @@
             </div>
             <input type="range" id="spSlider" aria-label="Cut speed">
             <div class="speedends"><span>slower</span><span id="spRange"></span><span>faster</span></div>
+            <div id="spQuality" class="spquality" role="group" aria-label="Edge or speed">
+              <button type="button" class="small" data-q="0.9">Best edge</button><button type="button" class="small" data-q="1">Balanced</button><button type="button" class="small" data-q="1.1">Fastest</button>
+            </div>
             <p id="spNote" class="spnote"></p>
           </details>
           <details class="adjust" id="advCut">
@@ -290,6 +304,7 @@
               <label>Speed to use (mm/min, optional)<input id="cpSpeed" type="number" inputmode="decimal" min="10" max="20000" step="10"></label>
               <label>Amps (optional)<input id="cpAmps" type="number" inputmode="decimal" min="5" max="500" step="1"></label>
             </div>
+            <label class="check hidden" id="cpPublishWrap"><input type="checkbox" id="cpPublish"> Also publish this as the tested factory value for everyone (admin)</label>
             <div class="row"><button type="button" id="cpSave" class="xl accent grow" disabled>Save to the cut chart</button><button type="button" id="cpSkip" class="grow">Not now</button></div>
           </div>
           <div id="restartBox" class="restartbox hidden">

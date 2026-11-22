@@ -4,6 +4,7 @@
 import { GrblLink, RT } from "./grbl.js";
 import { startBoardJob, fileRunActive } from "./boardrun.js";
 import { JobError, prepareJob, touchoffTestLines, torchTestLines, fmt, jobPlan, restartLines } from "../cut/job.js";
+import { rowFor } from "../cut/plasmaprofile.js";
 import { resolveEtch } from "../cut/etch.js";
 import { currentSettings } from "./settings.js";
 import { Safety, SafetyError, limitsSizeText } from "./safety.js";
@@ -162,8 +163,10 @@ export class Machine {
   findCut(material, thickness, overrides = {}) {
     for (const mat of this.chart.materials) {
       if (mat.name !== material) continue;
-      for (const row of mat.rows) {
-        if (Math.abs(row.thickness_mm - Number(thickness)) < 1e-6) {
+      // r16 B4: a thickness between two chart rows gets a row worked out from them (see plasmaprofile.js rowFor)
+      const between = mat.rows.some((r) => Math.abs(r.thickness_mm - Number(thickness)) < 1e-6) ? null : rowFor(mat, thickness);
+      for (const row of (between ? [between] : mat.rows)) {
+        if (between || Math.abs(row.thickness_mm - Number(thickness)) < 1e-6) {
           const cut = {
             feed_mm_min: row.feed_mm_min, pierce_delay_s: row.pierce_delay_s,
             pierce_height_mm: row.pierce_height_mm ?? this.chart.pierce_height_mm,

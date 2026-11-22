@@ -56,7 +56,7 @@ const BDu = B.bendDeduction({ t: 1.5, r: 1.5, k: 0.44 });
 t.check("U-bracket: two bends, two deductions; inside radius 0 = the sheet thickness", near(u1.h, u0.h - 2 * BDu), `${r4(u0.h)} -> ${r4(u1.h)} (2 × ${r4(BDu)})`);
 
 // ---- cross-shaped open box: bends both ways, the box shrinks in X and in Y
-const O = sh("openbox"), po = defaults(O), o0 = bb(O.make({ ...po, bsz: 2 })), o1 = bb(O.make({ ...po, bt: 1, bir: 1, bk: 0.44 }));
+const O = sh("openbox"), po = defaults(O), o0 = bb(O.make({ ...po, bsz: 2 })), o1 = bb(O.make({ ...po, bt: 1, bir: 1, bk: 0.44, bsz: 0 }));   // r16 A1: the open box now starts on Inside; this checks the Outside deduction, so it asks for Outside
 const BDo = B.bendDeduction({ t: 1, r: 1, k: 0.44 });
 const nx = bends(O.make({ ...po, bsz: 2 })).filter((c) => near(c.pts[0][0], c.pts[1][0])).length, ny = bends(O.make({ ...po, bsz: 2 })).filter((c) => near(c.pts[0][1], c.pts[1][1])).length;
 const xs = new Set(bends(O.make({ ...po, bsz: 2 })).filter((c) => near(c.pts[0][0], c.pts[1][0])).map((c) => r4(c.pts[0][0]))).size;
@@ -76,7 +76,7 @@ t.check("no job thickness and none typed: the pattern is as cut", near(bb(L.make
 let bad = [];
 for (const s of withB) {
   const p = defaults(s);
-  const c0 = s.make({ ...p, bsz: 2 }), c1 = s.make({ ...p, bt: 1, bir: 1, bk: 0.44 });
+  const c0 = s.make({ ...p, bsz: 2 }), c1 = s.make({ ...p, bt: 1, bir: 1, bk: 0.44, bsz: 0 });   // r16 A1: Outside asked for (Inside-labelled presets now start on Inside)
   const k0 = bb(c0), k1 = bb(c1);
   const bx = new Set(bends(c0).filter((c) => near(c.pts[0][0], c.pts[1][0])).map((c) => r4(c.pts[0][0]))).size;
   const by = new Set(bends(c0).filter((c) => near(c.pts[0][1], c.pts[1][1])).map((c) => r4(c.pts[0][1]))).size;

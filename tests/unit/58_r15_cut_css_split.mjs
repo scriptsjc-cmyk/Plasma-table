@@ -9,7 +9,9 @@ const t = new T("58_r15_cut_css_split");
 const FILES = ["css/screen-cut.css", "css/screen-cut-part.css", "css/screen-cut-run.css", "css/screen-cut-setup.css"];
 // the rules of screen-cut.css before the split (comments and spacing ignored) was 53b0d87f…; r15 8.1's container query (the
 // Download G-code icon range asked of .cutgrid's width, same declarations, style-diff identical) and the mode-switch size token (pre-existing 65) are the deliberate changes since.
-const BEFORE = "5851b5994094116e027920b9c019cc072d73229b";
+// r16 Round B (Josh 22 Nov) adds the Material rules for the ANDELI card (end of screen-cut-part.css) and lets the laptop card
+// show Air, Nozzle and Mode (nth-child(n+4) / (n+5)); those are the only changes, made on purpose.
+const BEFORE = "ec6070a153470ff75a5b64099958681810f4d524";   // was 5851b5994094116e027920b9c019cc072d73229b before r16
 const index = fs.readFileSync(SITE + "index.html", "utf8");
 const links = [...index.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((m) => m[1]);
 const at = links.indexOf(FILES[0]);

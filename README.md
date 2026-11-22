@@ -1,4 +1,4 @@
-# Porta Plazma CNC
+# Porta Plasma CNC
 
 Browser operator screen for a CNC plasma table (FluidNC / grblHAL): draw or import a part, lay it on the sheet, set the start point, cut.
 A static site (no build step) that works offline once loaded. Live: https://scriptsjc-cmyk.github.io/Plasma-table/

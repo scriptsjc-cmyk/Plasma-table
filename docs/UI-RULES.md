@@ -1,6 +1,6 @@
 # UI rules (read this first)
 
-One page for anyone (person or AI helper) changing how Porta Plazma looks. Safety rules in `ARCHITECTURE.md` §4 come first; nothing here overrides them.
+One page for anyone (person or AI helper) changing how Porta Plasma looks. Safety rules in `ARCHITECTURE.md` §4 come first; nothing here overrides them.
 
 ## Never
 - **STOP never moves, fades, shrinks or animates.** It sits in the header at one fixed size per layout and is the largest control on every screen that shows it. It is the top layer: the header (`--z-header`) and STOP (`--z-stop`) are above every dialog, numpad, popover, toast and sheet. Only the pass-through hover tip and the pinned header-hidden layers are higher.

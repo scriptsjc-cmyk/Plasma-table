@@ -477,6 +477,17 @@ export function bindSettings() {
   $("btnSaveSettings") && ($("btnSaveSettings").onclick = () => { if (readFormIntoState()) toast("Settings saved."); });
   $$("input[name=setEtchTool]").forEach((r) => r.addEventListener("change", paintEtchToolFields));
   $("setCutterKind") && $("setCutterKind").addEventListener("change", () => paintCutterEtchNote());
+  // r16 B1: which plasma (and so which cut chart). The chart is read at start-up, so a change asks for a reload.
+  const prof = $("setPlasmaProfile");
+  if (prof) {
+    try { prof.value = localStorage.getItem("plasma.profile") || "andeli-cut65ds"; } catch (e) { /* ignore */ }
+    prof.addEventListener("change", () => {
+      try { localStorage.setItem("plasma.profile", prof.value); } catch (e) { /* ignore */ }
+      $("setPlasmaReload") && $("setPlasmaReload").classList.remove("hidden");
+      toast("Plasma changed – reload to use its cut chart.");
+    });
+    $("setPlasmaReload") && ($("setPlasmaReload").onclick = () => { if (S.connected) { toast("Disconnect from the table first, then reload.", true); return; } location.reload(); });
+  }
   $("formSetPreset") && $("formSetPreset").addEventListener("submit", (e) => {
     e.preventDefault();
     try {
@@ -508,7 +519,7 @@ export function bindSettings() {
     const { makeBackup } = await backupMod();
     const payload = makeBackup(localStorage, { app: state, presets, at: new Date().toISOString() });
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "porta-plazma-machine-settings-" + new Date().toISOString().slice(0, 10) + ".json";
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "porta-plasma-machine-settings-" + new Date().toISOString().slice(0, 10) + ".json";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });

@@ -1,4 +1,4 @@
-// Porta Plazma CNC operator screen (browser version): the entry point.
+// Porta Plasma CNC operator screen (browser version): the entry point.
 // It wires the modules together (init), binds the controls (bind) and starts the app. The screens themselves live in the
 // folders next to this file: core/ make/ cut/ machine/ account/ ui/  (see docs/ARCHITECTURE.md).
 import { demoEdges } from "./ui/demo.js";
@@ -48,6 +48,7 @@ import { kerfNow, leadNow, loadJob } from "./cut/prepare.js";
 import { bindNav, goStep, onScreen, routeAuth, sendToCutting, showTab, testBypass } from "./ui/nav.js";
 import { bindSketchBar, showSource, syncShapeForm, useCoupon, useShape, useShapeSoon, useStraight } from "./make/useshape.js";
 import { bindProTools, renderProTools, setShapeFs } from "./make/protools.js";
+import { expandChart } from "./cut/plasmaprofile.js";
 import { applyMatchingPreset, applyPresetRow, bindMaterial, defaultSpeed, renderMaterials, row, saveSpeed, setSpeed } from "./cut/material.js";
 import { bindJog, bindJogKeys, mountJogPads } from "./machine/jog.js";
 import { bindGate, paintWhy, refreshGate } from "./ui/gate.js";
@@ -125,10 +126,14 @@ function bind() {
   bindPreviewNav(drawPreview);
 }
 
+// r16 B1: which plasma drives the table. The ANDELI CUT-65DS is sold with it; Josh's own table can use his Reboot 60A.
+export const PLASMA_CHARTS = { "andeli-cut65ds": "config/cut_chart.json", reboot60: "config/cut_chart_reboot60.json" };
+function chartFile() { let id = null; try { id = localStorage.getItem("plasma.profile"); } catch (e) { /* ignore */ } return PLASMA_CHARTS[id] || PLASMA_CHARTS["andeli-cut65ds"]; }
+
 async function init() {
   const text = async (p) => { const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(p); return r.text(); };
   const [machine, chart, settings] = await Promise.all([
-    text("config/machine.json").then(JSON.parse), text("config/cut_chart.json").then(JSON.parse), text("config/grblhal_settings.txt")]);
+    text("config/machine.json").then(JSON.parse), text(chartFile()).then(JSON.parse).then(expandChart), text("config/grblhal_settings.txt")]);
   S.cfg = machine; S.chart = chart;
   // r15 5.1: folded flat patterns take their bends off for the job's sheet, or a deduction Josh measured and saved for it
   setBendContext({ thickness: () => S.thickness, measured: (th) => { const m = getPrefs().bendBD; return m && m[String(th)] != null ? m[String(th)] : null; } });
@@ -138,7 +143,7 @@ async function init() {
   M.on(onEvent);
   M.estopProvider = estopOn;
   M.startGuard = scoreMarkProblem;      // the machine refuses Start too, whatever the buttons say
-  document.title = "Porta Plazma CNC";
+  document.title = "Porta Plasma CNC";
   initFeatures({
     S, M: () => M, cfg: () => S.cfg, toast, cmd, refresh, drawPreview, loadJob, goStep, showSource, setShapeFs, row,
     isPro: () => true, camHandles: () => screen() === "cut" && !!$("advCut").open, jobRunning: () => !!(M && M.jobRunning()), sketchActive: () => !!(sketch && sketch.active),
@@ -155,7 +160,7 @@ async function init() {
     S, sketch: () => sketch, toast, esc, refresh, loadJob, askSize: askSize, sizeCheckWanted: sizeCheckWanted, scaleContours: scaleContours, useShape, useShapeSoon, showSource, kerf: kerfNow, workArea: workAreaSheet,
     afterAdd: () => { if (screen() === "cut" && S.cur === 1) { useShape(); goStep(3); } },   // parts picked on step 1 land straight on the bed
   });
-  $("machineName").textContent = "Porta Plazma";
+  $("machineName").textContent = "Porta Plasma";
   try {
     const saved = JSON.parse(localStorage.getItem("plasma.material") || "null");
     if (saved) { S.material = saved.m; S.thickness = saved.t; }

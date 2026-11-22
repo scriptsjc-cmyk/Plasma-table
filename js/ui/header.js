@@ -1,4 +1,4 @@
-// Hide the whole Porta Plazma account bar on Make and Cut. A faint logo in the corner brings it back.
+// Hide the whole Porta Plasma account bar on Make and Cut. A faint logo in the corner brings it back.
 // On Cut, STOP stays a fixed floating control (same size, top-right). On Make a part, STOP is hidden
 // unless a machine is connected (real or practice) or a job is running/paused — then it shows, and
 // it floats with the bar hidden just as on Cut.

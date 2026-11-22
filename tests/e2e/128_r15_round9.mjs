@@ -117,7 +117,7 @@ for (const prof of ["d1280x600", "d1536x730", "iphone14"]) {
   await ev(page, () => { localStorage.setItem("plasma.limits", JSON.stringify({ limits: { x: [0, 1240], y: [0, 790], z: [-55, 0] } })); localStorage.setItem("plasma.speeds", JSON.stringify({ "Mild steel|3": 1850 })); });
   const bk = await download(page, "#btnMachBackup");
   let bkj = null; try { bkj = JSON.parse(bk.text); } catch (e) { bkj = null; }
-  t.check(`9.4 ${prof}: Back up machine settings saves a file with the app settings, edges and saved speeds`, !!bkj && bkj.kind === "porta-plazma-machine-backup" && bkj.app && bkj.machine.limits.x[1] === 1240 && bkj.machine.speeds["Mild steel|3"] === 1850 && !/eyJhbGciOiJIUzI1NiJ9/.test(bk.text), bk.text.slice(0, 300));
+  t.check(`9.4 ${prof}: Back up machine settings saves a file with the app settings, edges and saved speeds`, !!bkj && bkj.kind === "porta-plasma-machine-backup" && bkj.app && bkj.machine.limits.x[1] === 1240 && bkj.machine.speeds["Mild steel|3"] === 1850 && !/eyJhbGciOiJIUzI1NiJ9/.test(bk.text), bk.text.slice(0, 300));
   const file = "/tmp/128-backup-" + prof + ".json"; fs.writeFileSync(file, bk.text);
   await ev(page, () => localStorage.setItem("plasma.speeds", JSON.stringify({ "Mild steel|3": 999 })));
   await page.setInputFiles("#machRestoreFile", file); await sleep(800);

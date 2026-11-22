@@ -89,7 +89,7 @@ const H = await mod("cuthistory");
   t.check("9.3 the report has the version, settings, edges, last job log, alarms and cut history", rep.version.id === "2026.11.22-abc1234" && rep.settings && rep.settings.bed.x === 1300 && rep.machine.limits && rep.lastJob.lines.includes("G1 X10 Y10") && rep.alarms.length === 1 && rep.history.length === 1, text.slice(0, 600));
   t.check("9.3 the report carries no password, key, sign-in token or account e-mail", SECRETS.every((s) => !text.includes(s)) && !text.includes("josh@example.com") && !/sb-abcd-auth-token|access_token|refresh_token/.test(text), text);
   t.check("9.3 no key in the report is named like a secret", !/"[^"]*(pass(word)?|secret|token|api_?key|service_?role|jwt|auth)[^"]*"\s*:/i.test(text), text.match(/"[^"]*(pass|secret|token|key|auth)[^"]*"\s*:/gi));
-  t.check("9.3 the report is plain JSON a person can read", (() => { try { return JSON.parse(text).kind === "porta-plazma-problem-report"; } catch (e) { return false; } })());
+  t.check("9.3 the report is plain JSON a person can read", (() => { try { return JSON.parse(text).kind === "porta-plasma-problem-report"; } catch (e) { return false; } })());
 }
 // ---------------------------------------------------------------- 9.4 machine settings backup / restore
 {

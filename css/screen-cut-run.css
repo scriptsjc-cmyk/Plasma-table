@@ -91,7 +91,7 @@
   body[data-screen="cut"][data-step="1"] .mat-col > h3 { padding-right: 160px; }
   body[data-screen="cut"][data-step="1"] .mat-col #matTipInfo { margin-right: 120px; }
   body[data-screen="cut"][data-step="1"] .ampsdl { display: grid; margin: 2px 0; font-size: var(--fs-xs); }
-  body[data-screen="cut"][data-step="1"] .ampsdl > div:nth-child(n+3) { display: none; }   /* Pierce + Cut height (r15 4.4: Cut speed lives in its own box) */
+  body[data-screen="cut"][data-step="1"] .ampsdl > div:nth-child(n+4) { display: none; }   /* r16: Air, Nozzle and Mode stay (what to set on the plasma); Pierce + Cut height + Kerf hide (r15 4.4: Cut speed lives in its own box) */
   body[data-screen="cut"][data-step="1"] #speedBox { margin-bottom: 52px; }
   body[data-screen="cut"][data-step="3"] #btnOriginOpts {
     position: static;

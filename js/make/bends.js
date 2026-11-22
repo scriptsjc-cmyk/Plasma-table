@@ -176,7 +176,11 @@ export function attachBendAllowance(sh, { isFold } = {}) {
   const square = bl.length > 0 && bl.every((c) => Math.abs(c.pts[0][0] - c.pts[1][0]) <= NEAR || Math.abs(c.pts[0][1] - c.pts[1][1]) <= NEAR);
   if (!square) { sh.bendAllowance = false; return sh; }
   const make = sh.make, note = sh.note;
-  sh.params = [...sh.params, ...BEND_PARAMS];
+  // r16 A1: a preset whose sizes are labelled "Inside …" means inside sizes, so "Sizes are" starts on Inside for it
+  // (before, every preset started on Outside and an "Inside 150" box came out about 2 × thickness too small inside).
+  const insideLabels = (sh.params || []).some(([, l]) => /^inside\b|\(inside\)/i.test(String(l || "")));
+  sh.params = [...sh.params, ...(insideLabels ? BEND_PARAMS.map((p) => (p[0] === "bsz" ? [p[0], p[1], SIZE_INSIDE, ...p.slice(3)] : p)) : BEND_PARAMS)];
+  sh.sizesInside = insideLabels;
   const deg = Number(sh.bendDeg) || 90;            // a preset whose bends aren't 90° says so (the ridge cap's are 45°)
   sh.makeFlat = make;                              // the as-drawn pattern (nothing taken off), e.g. for the 3D
   sh.make = (p) => applyBendDeduction(make(p), bendFor(p, deg).bd);

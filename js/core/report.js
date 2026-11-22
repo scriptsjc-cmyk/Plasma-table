@@ -3,7 +3,7 @@
 // any key named like a secret is dropped, and sign-in tokens, keys and e-mail addresses inside text are removed.
 import { readHistory, readLastJob, readAlarms } from "./cuthistory.js";
 
-export const REPORT_KIND = "porta-plazma-problem-report";
+export const REPORT_KIND = "porta-plasma-problem-report";
 const SECRET_KEY = /pass(word)?|secret|token|api_?key|service_?role|jwt|auth|session|cookie|credential|private/i;
 const SCRUB = [
   [/eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/g, "[removed]"],          // a sign-in token (JWT)
@@ -44,4 +44,4 @@ export function collectReport(store, { version = null, env = null, connected = n
   return scrub(rep);
 }
 export const reportText = (rep) => JSON.stringify(rep, null, 2);
-export const reportFileName = (d = new Date()) => "porta-plazma-problem-report-" + d.toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".json";
+export const reportFileName = (d = new Date()) => "porta-plasma-problem-report-" + d.toISOString().slice(0, 16).replace(/[:T]/g, "-") + ".json";

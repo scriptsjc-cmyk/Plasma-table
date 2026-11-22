@@ -62,7 +62,7 @@ const box = `(() => {
   const logo = fs.readFileSync(new URL("../../logo.svg", import.meta.url), "utf8");
   const vb = /viewBox="([^"]+)"/.exec(logo);
   const nums = vb ? vb[1].split(/\s+/).map(Number) : [];
-  ck("U19 logo viewBox is wide enough that PORTA PLAZMA is not clipped", nums.length === 4 && nums[2] >= 500, vb && vb[1]);
+  ck("U19 logo viewBox is wide enough that PORTA PLASMA is not clipped", nums.length === 4 && nums[2] >= 500, vb && vb[1]);
   const grbl = fs.readFileSync(new URL("../../js/machine/grbl.js", import.meta.url), "utf8");
   ck("U20 unlock reminder tells the operator to set the start point again", /Unlock, then set the start point again/.test(grbl));
   const htmlDir = new URL("../../html/", import.meta.url);

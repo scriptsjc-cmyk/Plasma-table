@@ -2,7 +2,9 @@
 // before) plus what this browser knows about the machine: the edges (work area from home), saved cut speeds, the material,
 // the small-hole speed choice, saved start points and the sheet. A restore is checked as a whole first; if any part is bad,
 // nothing at all is restored. No sign-in data is read or written.
-export const BACKUP_KIND = "porta-plazma-machine-backup";
+export const BACKUP_KIND = "porta-plasma-machine-backup";
+// Backups saved before the name fix (22 Nov 2026) say "porta-plazma"; they still restore.
+export const OLD_BACKUP_KINDS = ["porta-plazma-machine-backup"];
 const isObj = (o) => o && typeof o === "object" && !Array.isArray(o);
 const fin = (v) => typeof v === "number" && Number.isFinite(v);
 const j = (store, key) => { try { return JSON.parse(store.getItem(key) || "null"); } catch (e) { return null; } };
@@ -80,7 +82,7 @@ function checkSheet(s, errors) {
 // Returns { errors, parts, machine } — parts names what a restore will replace; errors empty means it is safe to apply.
 export function checkBackup(data) {
   const errors = [];
-  if (!isObj(data) || data.kind !== BACKUP_KIND) return { errors: ["That file is not a machine settings backup."], parts: [], machine: null };
+  if (!isObj(data) || (data.kind !== BACKUP_KIND && !OLD_BACKUP_KINDS.includes(data.kind))) return { errors: ["That file is not a machine settings backup."], parts: [], machine: null };
   if (data.v !== 1) return { errors: ["That backup was made by a newer version of the app."], parts: [], machine: null };
   const m = isObj(data.machine) ? data.machine : {};
   const machine = {
