@@ -161,6 +161,14 @@ for (const prof of ["desktop", "iphone14"]) {
   const openLinarray = async () => {
     const desk = page.locator('#shapeForm [data-pro="linarray"]').filter({ visible: true });
     if (await desk.count()) { await desk.first().click(); return; }
+    // r15 Round 8: the laptop Advanced editor keeps Array in the tool bar's More menu (not on the form, no phone sheet)
+    const qbMore = page.locator('[data-qb="more"]').filter({ visible: true });
+    if (await qbMore.count()) {
+      const qbLin = page.locator('#qbMorePop [data-qb="linarray"]');
+      if (!(await qbLin.isVisible())) await qbMore.first().click();
+      await qbLin.waitFor({ state: "visible", timeout: 5000 });
+      await qbLin.click(); return;
+    }
     const more = page.locator('#phoneBar [data-ph="more"]');
     const lin = page.locator('#phoneSheet [data-more="linarray"]');
     if (!(await lin.isVisible()) && await more.isVisible()) {
@@ -172,6 +180,12 @@ for (const prof of ["desktop", "iphone14"]) {
   // Pro buttons produce a result via the UI
   await page.evaluate(() => { window.plasmaTest.setShapeFs(false); const s = window.plasmaTest.sketch; s.clear(); s.add("plate", true); s.pick([s.items[0].id]); s.fitView(); s.commit(); s.onSelect(); });
   await sleep(400);
+  if (await page.locator('[data-qb="more"]').filter({ visible: true }).count()) {
+    // r15 Round 8: each machine status report (about 10 a second when connected) ran refresh(), which rebuilt the whole tool bar,
+    // so a click could land on a button that was replaced between press and release. Its buttons must stay the same nodes.
+    const same = await page.evaluate(async () => { const b = document.querySelector('[data-qb="more"]'); await new Promise((r) => setTimeout(r, 1000)); return { connected: !!window.plasmaTest.S.connected, same: b === document.querySelector('[data-qb="more"]') }; });
+    t.check(P("the tool bar is not rebuilt while nothing on it changes (status reports from the machine)"), same.same, JSON.stringify(same), "QB-STABLE");
+  }
   await openLinarray(); await page.waitForSelector("#cadDialog:not(.hidden)");
   t.check(P("linear array dialog opens with 3 fields"), await page.locator("#cadFields input").count() === 3);
   await shot(page, `${prof}-cad-dialog`);
