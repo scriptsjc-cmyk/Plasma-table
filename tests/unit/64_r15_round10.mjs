@@ -106,7 +106,9 @@ const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
   const D = [[0, 0], [100, 0]];
   for (let i = 1; i < 36; i++) { const a = (Math.PI * i) / 36; D.push([50 + 50 * Math.cos(a), 50 * Math.sin(a)]); }
   const fit = PF.fitArcToOutline(D, 6);
-  t.check("10.3 added to a D shape, the holes follow its curved edge (centre 50,0, radius 50 - inset, 0..180°)", fit && near(fit.x, 50, 0.5) && near(fit.y, 0, 0.5) && near(fit.r, 50 - fit.inset, 0.5) && fit.inset >= 6 && near(fit.a0, 0, 6) && near(fit.a1, 180, 6), JSON.stringify(fit));
+  t.check("10.3 added to a D shape, the holes follow its curved edge (centre 50,0, radius 50 - inset, going round the top)", fit && near(fit.x, 50, 0.5) && near(fit.y, 0, 0.5) && near(fit.r, 50 - fit.inset, 0.5) && fit.inset >= 6 && fit.a0 > 0 && fit.a0 < 30 && fit.a1 > 150 && fit.a1 < 180, JSON.stringify(fit));
+  const ends = fit ? PF.holeCentres(PF.sanitizeFeature({ id: 3, k: "arc", x: fit.x, y: fit.y, n: 5, d: 6, r: fit.r, a0: fit.a0, a1: fit.a1 })) : [];
+  t.check("10.3 ...and the end holes stay clear of the straight edge the curve meets (at least Ø + 3 mm of metal)", ends.length === 5 && ends.every(([, y]) => y >= 6 / 2 + 3 - 1e-6), JSON.stringify(ends));
   const sqOut = PF.fitArcToOutline([[0, 0], [100, 0], [100, 50], [0, 50]], 6);
   t.check("10.3 an outline with no curved edge gives null (the row keeps its plain defaults)", sqOut === null, JSON.stringify(sqOut));
 }

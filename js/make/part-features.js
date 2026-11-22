@@ -226,8 +226,14 @@ export function fitArcToOutline(pts, d = 6) {
   const ang = (p) => Math.atan2(p[1] - uy, p[0] - ux) * 180 / Math.PI;
   let a0 = ang(p1), a1 = ang(p3);
   if (full) { a0 = 0; a1 = 360; }
-  else if (best.sg > 0) { while (a1 <= a0) a1 += 360; }                   // the run turns anticlockwise: go a0 -> a1 up
-  else { while (a1 >= a0) a1 -= 360; }
+  else {
+    if (best.sg > 0) { while (a1 <= a0) a1 += 360; }                      // the run turns anticlockwise: go a0 -> a1 up
+    else { while (a1 >= a0) a1 -= 360; }
+    // the end holes stay off the edges the curve meets: pull each end back along the curve by the inset (arc length)
+    const m = ((inset + Number(d) / 2) / (R - inset)) * 180 / Math.PI * Math.sign(a1 - a0);
+    if (Math.abs(a1 - a0) <= 2 * Math.abs(m)) return null;
+    a0 += m; a1 -= m;
+  }
   const r2 = (v) => Math.round(v * 100) / 100;
   return { x: r2(ux), y: r2(uy), r: r2(R - inset), a0: r2(a0), a1: r2(a1), inset };
 }
