@@ -230,6 +230,22 @@ try {
       const pill = boxes.find((b) => b.startTag); return { beam: m && m.beamPx, pill }; });
     const off = tg.beam && tg.pill && !(tg.pill.l < tg.beam.r && tg.beam.l < tg.pill.r && tg.pill.t < tg.beam.b && tg.beam.t < tg.pill.b);
     t.check(`4.10 ${prof}: the "Touch off, then cut starts here" tag is not on the X beam`, !!off, J(tg));
+    // r15 Round 8 (checker): ...and not on the gantry's Y leg (the dark arm under the torch), nor is the "Sheet corner" label.
+    await ev(page, () => document.getElementById("btnZero").click()); await sleep(600);       // Start here (Practice): the torch is at the sheet corner
+    // armPx is checked against the picture: the pixel in the middle of the leg, away from every label, is the leg's dark fill.
+    const leg = await ev(page, () => { const cv = document.querySelector("#cutView canvas#preview") || document.getElementById("preview"); const m = cv && cv._mach, a = m && m.armPx, boxes = (cv && cv._labelBoxes) || [];
+      if (!a) return { a: null };
+      const dpr = cv.width / cv.getBoundingClientRect().width, cx = a.l + 0.2 * (a.r - a.l);   // in the arm (the box's right part is the Y motor)
+      const ys = []; for (let y = Math.max(a.t, 4) + 4; y < Math.min(a.b, cv.height / dpr - 4); y += 6) if (!boxes.some((b) => !b.rail && !b.leg && !b.gantry && b.l - 2 <= cx && cx <= b.r + 2 && b.t - 2 <= y && y <= b.b + 2)) ys.push(y);
+      const y = ys[Math.floor(ys.length / 2)], px = y == null ? null : [...cv.getContext("2d").getImageData(Math.round(cx * dpr), Math.round(y * dpr), 1, 1).data];
+      const hit = (b) => b && b.l < a.r && a.l < b.r && b.t < a.b && a.t < b.b;
+      const pill = boxes.find((b) => b.startTag), corner = boxes.find((b) => b.corner);
+      return { a, px, pillOn: hit(pill), cornerOn: hit(corner), pill, corner };
+    });
+    const dark = leg.px && leg.px[0] < 70 && leg.px[1] < 75 && leg.px[2] < 85;
+    t.check(`4.10 ${prof}: the Y leg's box is on the picture's leg`, !!leg.a && dark, J({ a: leg.a, px: leg.px }));
+    t.check(`4.10 ${prof}: the touch-off tag is not on the gantry's Y leg`, !!leg.pill && !leg.pillOn, J(leg));
+    t.check(`4.10 ${prof}: the "Sheet corner (0, 0)" label is not on the gantry's Y leg`, !!leg.corner && !leg.cornerOn, J(leg));
     t.check(`no page error (${prof} setup)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
