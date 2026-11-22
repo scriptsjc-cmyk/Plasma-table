@@ -6,6 +6,7 @@ import { foldLabel, MAX_FOLD_MARKS } from "./folddirs.js";
 import { drawFeatureHandles } from "./part-features.js";
 import { clickVerb, clickVerbLower } from "../ui/laptop.js";
 import { drawingSheet, formatLen, getPrefs } from "../core/prefs.js";
+import { fmtLen, unitsFrom } from "../core/units.js";
 import { applyBedScreen, bedViewRotated, visibleWorld } from "../cut/bedview.js";
 
 // When the preview dock is overlaid on the canvas (phone Cut), lift the footer captions above it
@@ -297,14 +298,14 @@ export class ViewMethods {
       }
       const round = one && def(one.type).uniform && !one.rot && Math.abs((b[2] - b[0]) - (b[3] - b[1])) < 0.05 && one.type !== "custom";
       if (this.layout) { /* sheet layout: the gap numbers are drawn instead of the size tags */ } else if (list.length > 1) {
-        this.tag(ctx, `${list.length} shapes · ${r1(b[2] - b[0])} × ${r1(b[3] - b[1])} mm`, (x0 + x1) / 2, Math.max(18, y0 - 20), C.sel);
+        this.tag(ctx, `${list.length} shapes · ${this.fmtLen(b[2] - b[0], true)} × ${this.fmtLen(b[3] - b[1])}`, (x0 + x1) / 2, Math.max(18, y0 - 20), C.sel);
       } else if (round) {
-        const r = this.tag(ctx, `Ø ${r1(b[2] - b[0])} mm`, (x0 + x1) / 2, Math.max(18, y0 - 20), C.sel);
+        const r = this.tag(ctx, `Ø ${this.fmtLen(b[2] - b[0])}`, (x0 + x1) / 2, Math.max(18, y0 - 20), C.sel);
         this.dimHits.push({ ...r, kind: "d", it: one, label: "Diameter (mm)" });
       } else if (one) {
-        const wr = this.tag(ctx, `${r1(b[2] - b[0])} mm`, (x0 + x1) / 2, Math.max(18, y0 - 20), C.sel);
+        const wr = this.tag(ctx, this.fmtLen(b[2] - b[0]), (x0 + x1) / 2, Math.max(18, y0 - 20), C.sel);
         this.dimHits.push({ ...wr, kind: "w", it: one, label: "Width (mm)" });
-        const hr = this.tag(ctx, `${r1(b[3] - b[1])} mm`, x1 + 36, (y0 + y1) / 2, C.sel);
+        const hr = this.tag(ctx, this.fmtLen(b[3] - b[1]), x1 + 36, (y0 + y1) / 2, C.sel);
         this.dimHits.push({ ...hr, kind: "h", it: one, label: "Height (mm)" });
       }
       if (one && this.opts.pro && !this.layout) {
@@ -377,6 +378,15 @@ export class ViewMethods {
       const d = this.drag;
       ctx.fillStyle = "rgba(0,120,212,.12)"; ctx.strokeStyle = C.sel; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
       ctx.fillRect(d.sx, d.sy, d.cx - d.sx, d.cy - d.sy); ctx.strokeRect(d.sx, d.sy, d.cx - d.sx, d.cy - d.sy); ctx.setLineDash([]);
+    }
+    // r15 10.2: the gap being read out while a part is dragged, as a dimension line between the two nearest points
+    if (this.gapInfo && this.drag && !this.gapInfo.overlap && this.gapInfo.d > 0.05) {
+      const [ax, ay] = S(this.gapInfo.a[0], this.gapInfo.a[1]), [bx, by] = S(this.gapInfo.b[0], this.gapInfo.b[1]);
+      ctx.save(); ctx.strokeStyle = C.edge || C.sel; ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]);
+      for (const [x, y] of [[ax, ay], [bx, by]]) { ctx.beginPath(); ctx.arc(x, y, 3, 0, 7); ctx.fillStyle = C.edge || C.sel; ctx.fill(); }
+      if (Math.hypot(bx - ax, by - ay) > 60) this.tag(ctx, this.fmtLen(this.gapInfo.d), (ax + bx) / 2, (ay + by) / 2 - 16, C.edge || C.lock);
+      ctx.restore();
     }
     if (this.label) this.tag(ctx, this.label.text, this.label.x, this.label.y - 28, C.partLine);
 
@@ -603,7 +613,13 @@ export class ViewMethods {
     if (ctx.roundRect) ctx.roundRect(x - tw / 2, y - th / 2, tw, th, 8); else ctx.rect(x - tw / 2, y - th / 2, tw, th);
     ctx.fill();
     ctx.fillStyle = themeColor("--cad-tag-text", "#FFFFFF"); ctx.textAlign = "center"; ctx.fillText(text, x, y + 5); ctx.textAlign = "start";
-    return { x: x - tw / 2, y: y - th / 2, w: tw, h: th };
+    return { x: x - tw / 2, y: y - th / 2, w: tw, h: th, text };
+  }
+  // r15 10.8: a length as the drawing shows it (mm, or inches when picked in Settings); bare = no unit (the first of a pair)
+  fmtLen(mm, bare) {
+    const u = unitsFrom(getPrefs());
+    const t = fmtLen(mm, u);
+    return bare ? t.replace(/ (mm|in)$/, "") : t;
   }
 
   _paintCadPreview(ctx, S, s, C) {

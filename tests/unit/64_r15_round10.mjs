@@ -155,8 +155,8 @@ const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
   t.check("10.8 plain numbers and old expressions are unchanged", evalExpr("100/2") === 50 && evalExpr("50+12.5") === 62.5 && evalExpr("12,5") === 12.5 && Number.isNaN(evalExpr("1 2")));
   t.check("10.8 a unit on its own, or a made-up unit, is not a number", [ "in", "mm", "2ft", "2inch2", "2 in in" ].every((s) => Number.isNaN(evalExpr(s))), ["in", "2ft"].map(evalExpr).join(","));
   const U = await mod("units");
-  t.check("10.8 lengths show in mm by default, in inches when picked", U.fmtLen(50.8) === "50.8 mm" && U.fmtLen(50.8, "in") === '2.00"' && U.fmtLen(25.4 * 1.234, "in") === '1.23"', U.fmtLen(50.8, "in"));
-  t.check("10.8 the units preference is mm unless inches is saved", U.unitsFrom({}) === "mm" && U.unitsFrom({ units: "in" }) === "in" && U.unitsFrom({ units: "furlong" }) === "mm");
+  t.check("10.8 lengths show in mm by default, in inches when picked", U.fmtLen(50.8) === "50.8 mm" && U.fmtLen(50.8, "in") === "2.00 in" && U.fmtLen(25.4 * 1.234, "in") === "1.23 in", U.fmtLen(50.8, "in"));
+  t.check("10.8 the existing display-units choice (mm / inch) is read; anything else is mm", U.unitsFrom({}) === "mm" && U.unitsFrom({ units: "inch" }) === "in" && U.unitsFrom({ units: "in" }) === "in" && U.unitsFrom({ units: "furlong" }) === "mm");
 }
 
 process.exit(t.done() ? 1 : 0);

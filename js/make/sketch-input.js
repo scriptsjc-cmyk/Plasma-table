@@ -471,7 +471,11 @@ export class InputMethods {
       if (d.kind === "move") {
         const [dx, dy] = this.snapMove(wx - d.wx, wy - d.wy, d.moving, free);
         for (const m of d.moving) { m.it.x = r1(m.x + dx); m.it.y = r1(m.y + dy); }
-        this.label = { text: `moved ${r1(dx)}, ${r1(dy)} mm`, x: sx, y: sy };
+        // r15 10.2: the gap to the nearest part, live
+        let g = null; try { g = this.layout ? null : this.dragGap(d.moving); } catch (err) { g = null; }
+        this.gapInfo = g;
+        const gapTxt = g ? (g.overlap ? " · touching / overlapping" : ` · gap ${this.fmtLen(g.d)}`) : "";
+        this.label = { text: `moved ${this.fmtLen(dx, true)}, ${this.fmtLen(dy)}${gapTxt}`, x: sx, y: sy };
       } else if (d.kind === "hole") {
         const step = free ? 0.1 : this.opts.snap || 0.1;
         it.holes = clone(d.holes);
@@ -482,7 +486,7 @@ export class InputMethods {
         this.resizeTo(it, Math.round(Math.abs(wx - ax) / step) * step, Math.round(Math.abs(wy - ay) / step) * step);
         const b = this.boxOf(it), W = b[2] - b[0], H = b[3] - b[1];
         it.x = r1(it.x + (wx < ax ? ax - W : ax) - b[0]); it.y = r1(it.y + (wy < ay ? ay - H : ay) - b[1]);
-        this.label = { text: `${r1(W)} × ${r1(H)} mm`, x: sx, y: sy };
+        this.label = { text: `${this.fmtLen(W, true)} × ${this.fmtLen(H)}`, x: sx, y: sy };
       } else if (d.kind === "vertex") {
         this.moveVertex(d.ci, d.vi, wx, wy);
         this.label = { text: `${r1(wx)}, ${r1(wy)} mm`, x: sx, y: sy };
@@ -510,7 +514,7 @@ export class InputMethods {
       const d = this.drag;
       if (!d) return;
       if (d.kind === "pinch") { if (this.pointers.size === 0) this.drag = null; return; }
-      this.drag = null; this.label = null; this.guides = [];
+      this.drag = null; this.label = null; this.guides = []; this.gapInfo = null;
       if (d.kind === "dim") {
         if (!d.moved) this.onDimTap(d.dim);
         this.draw(); return;
@@ -625,6 +629,7 @@ export class InputMethods {
       const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
       const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
       if (e.key === " ") { this.spaceDown = false; return; } // Space is STOP, never pan
+      if (e.key === "Escape" && this.pointEdit && !this.tool) { stop(); this.endPointEdit(); this.onMessage("Edit points finished."); return; }   // r15 10.1
       // r15 10.7: with Rectangle / Circle picked, typing a number opens the size box with it ("120 × 80", "Ø40"); letters stay shortcuts
       if ((this.tool === "rect" || this.tool === "disc") && !this.drawDraft && !ctrl && !e.altKey && /^[0-9.Øø⌀]$/.test(e.key)) { stop(); typeSizeStart(e.key); return; }
       if (ctrl && k === "z") { stop(); e.shiftKey ? this.redo() : this.undo(); return; }

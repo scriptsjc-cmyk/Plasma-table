@@ -69,6 +69,7 @@ for (const prof of ["d1280x600", "d1536x730"]) {
   const pe = await ev(page, () => { const s = window.plasmaTest.sketch, it = s.items[0]; s.draw(); const n = s.rawWorld(it).reduce((a, c) => a + c.pts.length, 0); return { where: null, type: it.type, mode: s.pointEdit === it.id, dots: (s._dots || []).length, n, msg: document.getElementById("toast").textContent }; });
   t.check(`10.1 ${prof}: ☰ More › Edit points turns a library part into an editable outline (${where})`, !!where && pe.type === "custom" && pe.mode, J(pe));
   t.check(`10.1 ${prof}: in point-edit mode every point has a handle, smooth arc joins included`, pe.n >= 8 && pe.dots === pe.n, J(pe));
+  t.check(`10.1 ${prof}: a rounded plate becomes its real points (4 straight edges + 4 corner arcs = 8 points), not dozens of short lines`, pe.n === 8, J(pe));
   t.check(`10.1 ${prof}: it says how to add, move and delete points`, /double.?click/i.test(pe.msg) && /delete/i.test(pe.msg), J(pe.msg));
   await shot(page, `edit-points-${prof}`);
   const sel = await ev(page, () => { const s = window.plasmaTest.sketch, it = s.items[0], c = it.shape.cs[0]; const i = c.bulges.findIndex((b) => Math.abs(b) < 1e-9); s.selectEdge(it.id, 0, i); return i; });
@@ -190,7 +191,7 @@ for (const prof of ["d1280x600", "d1536x730"]) {
   // ---------------------------------------------------------------- 10.8 inches
   await fresh(page);
   const inch = await ev(page, async () => {
-    const T = window.plasmaTest, s = T.sketch; T.savePrefs({ units: "in" });
+    const T = window.plasmaTest, s = T.sketch; T.savePrefs({ units: "inch" });
     s.add("rect", true, { w: 101.6, h: 50.8 }); const it = s.items[0]; s.pick([it.id]); s.onSelect(); s.draw();
     const w = s.dimHits.find((h) => h.kind === "w"), h = s.dimHits.find((h) => h.kind === "h");
     const sel = document.getElementById("setUnits");
@@ -199,9 +200,9 @@ for (const prof of ["d1280x600", "d1536x730"]) {
     out.back = (s.dimHits.find((h) => h.kind === "w") || {}).text;
     return out;
   });
-  t.check("10.8 with inches picked, the drawing's size tags read in inches", inch.w === '4.00"' && inch.h === '2.00"', J(inch));
+  t.check("10.8 with inches picked, the drawing's size tags read in inches", inch.w === "4.00 in" && inch.h === "2.00 in", J(inch));
   t.check("10.8 back to mm reads mm again", inch.back === "101.6 mm", J(inch));
-  t.check("10.8 Settings has the units choice", inch.sel, J(inch));
+  t.check("10.8 the choice is the existing Settings › Units › Display units", inch.sel, J(inch));
 
   t.check(`no page error (${prof})`, !page.errors.length, J(page.errors.slice(0, 3)));
   } catch (e) { t.check(`${prof}: the run finished without a crash`, false, String(e && e.message || e).slice(0, 300)); }
