@@ -12,11 +12,11 @@ export function paintMakeSelStatus() {
   else el.textContent = n + " parts selected. Shift-click or Ctrl-click to pick more. Then Join or Cut out.";
 }
 
+// r15 Round 8 (pre-existing 40 A11Y): these are role="switch", so their state is aria-checked only (aria-pressed is not allowed on a switch)
 export function paintMakeHeaderTools() {
   const snap = $("btnSimpleSnap");
   if (snap && sketch) {
     const on = !!sketch.opts.snap;
-    snap.setAttribute("aria-pressed", on ? "true" : "false");
     snap.setAttribute("aria-checked", on ? "true" : "false");
     snap.classList.toggle("on", on);
   }
@@ -24,7 +24,6 @@ export function paintMakeHeaderTools() {
   if (pan) {
     const dragPans = !!getPrefs().emptyDragPan;
     const selects = !dragPans;
-    pan.setAttribute("aria-pressed", selects ? "true" : "false");
     pan.setAttribute("aria-checked", selects ? "true" : "false");
     pan.classList.toggle("on", selects);
     const lab = pan.querySelector(".switch-label");
