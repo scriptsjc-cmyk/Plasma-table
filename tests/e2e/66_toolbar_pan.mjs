@@ -106,7 +106,8 @@ for (const [w, h, label, mobile] of [[1366, 768, "laptop", false]]) {
   }
   ck(`${label}: the toolbar does not cover Start or Save`, !g.coversSave && !g.coversStart, g);
   if (label === "laptop") {
-    ck("laptop: compact tools on a fine pointer stay at least 36 px tall and do not overflow sideways", g.btnH >= 35 && g.overflow <= 2, g);
+    // r13 #11 (approved): the laptop left icon rail uses 32 px buttons; elsewhere compact tools stay at least 36 px
+    ck("laptop: compact tools on a fine pointer stay at least 36 px tall and do not overflow sideways", (g.leftOfCanvas && g.dir === "column" ? g.btnH >= 31.5 : g.btnH >= 35) && g.overflow <= 2, g);
   } else {
     ck(`${label}: tools stay at least 44 px tall on a touch screen`, g.btnH >= 43.5, g);
   }
