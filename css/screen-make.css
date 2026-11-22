@@ -1899,6 +1899,27 @@ body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDo
   body.beginner[data-screen="make"] #srcShape .skbtns.holeadd,
   body.beginner[data-screen="make"] #srcShape p.tip { display: none; }
 }
+/* r16 C2 (Josh 22 Nov: put "More holes" back): on a laptop the list above stays out of the panel (it made the page scroll), and
+   one "＋ More holes" button opens the same five buttons in a pop-over that sits over the picture, so nothing is hidden */
+.holeaddmenu { display: none; }
+@media (min-width: 1280px) and (hover: hover) and (pointer: fine) {
+  body.beginner[data-screen="make"] #srcShape .holeaddmenu { display: block; position: relative; margin: 4px 0 0; }
+  body.beginner[data-screen="make"] #srcShape .holeaddmenu > summary {
+    list-style: none; cursor: pointer; min-height: 36px; display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--card); font-size: var(--fs-s); font-weight: 600;
+  }
+  body.beginner[data-screen="make"] #srcShape .holeaddmenu > summary::-webkit-details-marker { display: none; }
+  body.beginner[data-screen="make"] #srcShape .holeaddmenu[open] > .holeaddpop {
+    position: absolute; z-index: var(--z-panel-pop); left: 0; right: 0; bottom: calc(100% + 4px);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 6px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 6px 20px var(--black-18);
+  }
+  body.beginner[data-screen="make"] #srcShape .holeaddpop button { min-height: 36px; }
+}
+@media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
+  body.beginner[data-screen="make"] #srcShape .holeaddmenu { margin: 0; }
+  body.beginner[data-screen="make"] #srcShape .holeaddmenu > summary { min-height: 22px; font-size: var(--fs-xs); }
+}
 
 @media (min-width: 1280px) and (max-height: 620px) and (hover: hover) and (pointer: fine) {
   body.beginner[data-screen="make"] #srcShape .skbtns.bigbtns button[data-sk="remove"] { min-height: 32px; }

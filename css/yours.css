@@ -564,4 +564,16 @@ body.yours-toolbar-left.laptop-ui.pro-mode[data-screen="make"]:not(.phone-ui) #q
 @media (min-width: 900px) and (max-height: 640px) and (hover: hover) and (pointer: fine) {
   body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar #qbMorePop .qb-more-list button { --tool-h: 28px; }
 }
+
+/* r16 C2 (Josh 22 Nov: 44 px on tall laptops): from 760 px tall there is room, so the header mode switch and the preset
+   category tabs go back to the 44 px tap size (short laptops, 1280 x 600 to 1536 x 730, keep the compact 36 px) */
+@media (min-width: 1200px) and (min-height: 760px) and (hover: hover) and (pointer: fine) {
+  body .modesw-btn, body #btnSimpleView, body #btnPresetParts, body #btnAdvancedTools { min-height: 44px; }
+  body .presetbrowser .pbcats button { min-height: 44px; }
+}
+/* r16 C1 (Josh 22 Nov: no dead buttons): the toolbar position does nothing on a laptop (the left rail), so the choice is only
+   offered on phones and tablets */
+@media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+  #yoursToolbarWrap { display: none; }
+}
 }

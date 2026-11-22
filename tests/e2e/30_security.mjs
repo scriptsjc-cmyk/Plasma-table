@@ -47,7 +47,12 @@ t.check("no inline event handlers in the page or HTML partials", allHtml.every((
 t.check("referrer-policy meta", /name="referrer"/.test(html), "", "REFERRER");
 const jsAll = allJsText().map(([f, txt]) => [f.replace(/^js\//, ""), txt]);
 for (const [f, src] of jsAll) { const m = src.match(/\b(eval\s*\(|new Function\s*\(|(?<![.\w])Function\s*\()/g); if (m) t.check(`${f}: no eval / Function()`, false, `${f}: ${m.join(",")}`, "EVAL"); }
-const secrets = jsAll.flatMap(([f, s]) => {
+// r16 C4 (Josh 22 Nov, porta-plan-r16): the problem-report scrubber (core/report.js) has to NAME what it removes, so its own pattern
+// lines (the DROP_KEY rule and the SCRUB patterns that end in "[removed]") are the only lines skipped. A key VALUE anywhere,
+// including report.js, is still caught.
+const scrubberLine = (f, line) => f === "core/report.js" && (/^const DROP_KEY = \//.test(line.trim()) || /^\[\/.*"\[removed\]"\],/.test(line.trim()));
+const secrets = jsAll.flatMap(([f, s0]) => {
+  const s = s0.split("\n").filter((line) => !scrubberLine(f, line)).join("\n");
   const hits = (s.match(/(api[_-]?key|secret|auth_?token|Bearer\s+\w+|AKIA[0-9A-Z]{12,}|ghp_\w{20,})/gi) || []).map((m) => f + ":" + m);
   // The bare word "password" is UI copy (labels, error messages). Only flag a hard-coded value.
   const assigned = s.match(/(?:passw(?:or)?d)\s*[:=]\s*['"`][^'"`]+['"`]/gi) || [];

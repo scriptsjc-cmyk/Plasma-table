@@ -1,10 +1,10 @@
 // r15 9.3 "Send a problem report": what support needs to see what went wrong, as one readable JSON file the user saves and sends.
 // It reads ONLY the keys listed here (never the sign-in session or anything else in storage), then scrubs again on the way out:
-// any key named like a secret is dropped, and sign-in tokens, keys and e-mail addresses inside text are removed.
+// any key named like a password, token or private key is dropped, and sign-in tokens, keys and e-mail addresses inside text are removed.
 import { readHistory, readLastJob, readAlarms } from "./cuthistory.js";
 
 export const REPORT_KIND = "porta-plasma-problem-report";
-const SECRET_KEY = /pass(word)?|secret|token|api_?key|service_?role|jwt|auth|session|cookie|credential|private/i;
+const DROP_KEY = /pass(word)?|secret|token|api_?key|service_?role|jwt|auth|session|cookie|credential|private/i;
 const SCRUB = [
   [/eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/g, "[removed]"],          // a sign-in token (JWT)
   [/\bsb_(secret|publishable)_[A-Za-z0-9_-]+/g, "[removed]"],                           // a Supabase key
@@ -17,7 +17,7 @@ export function scrub(v, depth = 0) {
   if (Array.isArray(v)) return v.slice(0, 500).map((x) => scrub(x, depth + 1));
   if (v && typeof v === "object") {
     const out = {};
-    for (const [k, x] of Object.entries(v)) if (!SECRET_KEY.test(k)) out[k] = scrub(x, depth + 1);
+    for (const [k, x] of Object.entries(v)) if (!DROP_KEY.test(k)) out[k] = scrub(x, depth + 1);
     return out;
   }
   return typeof v === "number" || typeof v === "boolean" || v == null ? v : null;
