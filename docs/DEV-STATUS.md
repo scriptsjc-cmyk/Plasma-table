@@ -2,13 +2,23 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 22 Nov 2026, 03:20 (UK time). Live: the checker's three new problems from the Round 8 report (touch-off tag and Sheet corner label off the gantry's Y leg, X / Y chips off the holes, Bed and home labels off the gantry) on top of r15 Round 8. See `version.json`.
+Last updated: 22 Nov 2026, 04:09 (UK time). Live: r15 Round 9 (9.1–9.6; 9.7 not done; 9.5 tip size → kerf held for Josh) on top of the checker fixes from the Round 8 report. See `Ready to check`.
 
 ## Working on
-- Round 9 (9.1–9.6, not 9.7), tests first. 9.5's tip size → kerf changes G-code, so it is held for Josh. Then the r13-layout test group.
+- The r13-layout test group (66 / 68 / 71 / 72 / 73 / 77 / 85 / 97 / 83 / 106 ME1): update a test only where an approved round clearly
+  meant the change; doubtful ones go to the reviewer.
 - 8.2: **Skipped (Josh 21 Nov)**. laptop.js keeps its JS moves, unchanged.
 
 ## Ready to check
+- r15 Round 9 (before selling), tests first: unit 62 (31 checks) @ b5d9cfe, e2e 128 (83 checks, now in the deploy gate) @ ed990b2, unit 63 (28) @ 7609a77; live @ the DEV-STATUS commit
+  - 9.6 cut history (date, part, material, thickness, time, finished / stopped and why) with CSV download; the last job's log and alarms kept for the report; practice jobs are marked practice @ 3b76051
+  - 9.5 consumables: tip and electrode pierce counts in Settings › Torch, each with its own "New tip / New electrode" (asks first); practice never counts @ 3cabe0f. **Tip size → kerf is NOT done** (it changes G-code; held for Josh)
+  - 9.3 ☰ Send a problem report: version, screen, settings, last job log and alarms; anything named like a password / key / token / session and any JWT, sb_secret_ key, Bearer value or e-mail is removed. It is a download or copy (there is no support address or upload place yet; question for Josh) @ 59a0b4a
+  - 9.4 Settings › Backup: back up / restore machine settings (edges, speeds, material, slow holes, start points, sheet, app settings, presets). Checked as a whole first, nothing half-restored; refused while connected; asks before replacing; reloads after @ 95c18c5
+  - 9.2 ☰ Setup guide: connect → motor direction → torch test → edges → test coupon. Each step opens the real screen; it never presses Connect; connect and edges tick themselves @ 4bc7b84
+  - 9.1 stable channel: the deploy publishes `stable/` (newest release Josh promoted) and keeps the newest 3 promoted releases at `v/<commit>/` for rollback, from `stable-*` tags made only by the hand-run "Promote to stable" workflow (needs the "I cut a real part" tick; only commits on main). Each copy has its own service-worker cache; About shows "stable". **No stable-* tag exists yet, so the live site is unchanged; nothing was promoted.** docs/RELEASES.md @ d55c04f, fabf389
+  - start-up cost kept as before Round 9 (the new modules load after start-up or on use) @ 73dea1a
+  - Disclosed test changes: tests/data/r15-page-ids.json gains the 30 new ids (none removed, order kept); my own new e2e 128 adjusted before it was committed to the gate; unit 54 now has 19 checks (one partial fewer); 40_layout_a11y is the same as before Round 9 (59/62: cut-bed axe ×2 and SLOW-NET, all pre-existing)
 - r15 Round 1 (1.1–1.7) @ bb5aadb (already ✅ in the first report)
 - r15 7.1, 7.2 (113_r15_fits), 7.3 (120_every_tool), 7.4 (121_features), all in the deploy gate @ bb5aadb
 - r15 2.1, 2.3–2.5, 2.7–2.11, 2.13, 2.14, 2.16 (loose holes on open + DXF/SVG auto-adopt, 122_loose_holes) @ bb5aadb
@@ -270,7 +280,7 @@ Last updated: 22 Nov 2026, 03:20 (UK time). Live: the checker's three new proble
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- Round 9 (9.1–9.6). Then the r13-layout test group (66 / 68 / 71 / 72 / 73 / 77 / 85 / 97 / 83 / 106 ME1): update a test only where an
+- The r13-layout test group (66 / 68 / 71 / 72 / 73 / 77 / 85 / 97 / 83 / 106 ME1): update a test only where an
   approved round clearly meant the change.
 
 ## Not a bug
@@ -281,6 +291,12 @@ Last updated: 22 Nov 2026, 03:20 (UK time). Live: the checker's three new proble
   linked machine, nothing visible asked you to link one, and the list said "Home the machine". Both fixed in Round 8 part 2 (below).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
+- **Round 9 approval:** the plan lists "which rounds to approve" as waiting on you, and I was told to start Round 9 by the reviewer, not
+  in your own words. It is live, but nothing in it changes G-code, and the stable channel does nothing until you promote a release.
+- **9.1:** to start the stable channel, cut a real part, then run Actions › Promote to stable (docs/RELEASES.md). Also add
+  `https://scriptsjc-cmyk.github.io/Plasma-table/stable/` to the Supabase Auth redirect URLs (you change that yourself).
+- **9.3:** where should problem reports go (a support e-mail, or an upload place)? For now they are a file or a copy.
+- **9.5:** should the tip size change the kerf? That changes G-code, so it waits for you.
 - **Checker report "Decisions from Josh (21 Nov, 22:52)" says 8.2 is approved** (keep the JS moves, drive them from one table). Your
   answer card at 22:14 said skip 8.2, and I only act on your own words, so 8.2 stays skipped. Which do you want?
 - **"More holes" (slot, corner, row, ring, grid of holes) is hidden in Simple view on laptops ≥ 1280 px** since 9314773 (20 Nov,
