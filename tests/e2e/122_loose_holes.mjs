@@ -73,7 +73,7 @@ async function makeScreen(page) {
     await ev(page, (d) => window.plasmaTest.loadDesign(d), drawing("p-2", "Another plate"));
     await sleep(400);
     t.check("No: opening the same drawing again does not ask again", !(await offer(page)));
-    await page.reload(); await sleep(800);
+    await page.reload(); await page.waitForFunction(() => window.plasmaTest, null, { timeout: 15000 }); await sleep(300);   // r15 Round 8 (checker): wait for the app, not a fixed 800 ms
     await makeScreen(page);
     await ev(page, (d) => window.plasmaTest.loadDesign(d), drawing("p-2", "Another plate"));
     await sleep(400);
