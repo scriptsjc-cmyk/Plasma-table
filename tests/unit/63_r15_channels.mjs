@@ -71,6 +71,12 @@ try {
   const vd2 = fs.readdirSync(path.join(tmp, "v")).sort();
   t.check("9.1 after a rollback the kept copies are the newest 3 promotions, nothing stale left", JSON.stringify(vd2) === JSON.stringify([s7(2), s7(3), s7(4)].sort()), vd2);
 
+  // ---- two promotions in the same second: the later tag name wins (the workflow's tags carry a UTC time)
+  day--;
+  tag("stable-f", shas[1]); day--; tag("stable-g", shas[4]);
+  build();
+  t.check("9.1 two promotions in the same second: the later one is stable/", JSON.parse(read("stable/version.json")).tag === "stable-g", read("stable/version.json"));
+
   // ---- service-worker cache clean-up: each worker only clears its own channel
   const ownOf = (src) => {
     const pick = (re) => (src.match(re) || [""])[0];

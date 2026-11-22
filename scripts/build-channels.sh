@@ -10,7 +10,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="${1:-$ROOT}"
 cd "$ROOT"
 KEEP=3
-TAGS=$(git for-each-ref --sort=-creatordate --format='%(refname:short)' 'refs/tags/stable-*' | head -n "$KEEP")
+# newest promotion first (tag time); two in the same second: the later tag name (the workflow's tags carry a UTC time)
+TAGS=$(git for-each-ref --sort=-refname --sort=-creatordate --format='%(refname:short)' 'refs/tags/stable-*' | head -n "$KEEP")
 if [ -z "$TAGS" ]; then echo "channels: no stable release yet (no stable-* tag); nothing added"; exit 0; fi
 rm -rf "$OUT/stable" "$OUT/v"
 copy() {   # copy <tag> <dir> <channel> <cache-prefix>
