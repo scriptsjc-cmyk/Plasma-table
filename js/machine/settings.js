@@ -8,6 +8,10 @@ import { DIALECTS } from "./dialect.js";
 import { defaultEtchSettings, sanitizeEtchSettings } from "../cut/etch.js";
 import { probeDisplayOn } from "./probefilter.js";
 import { syncCutPrefsToAccount } from "../core/prefs.js";
+import { S } from "../core/state.js";
+import { PierceCounter } from "../cut/coupon.js";
+import { makeBackup, checkBackup, applyBackup } from "./machinebackup.js";
+import { askConfirm } from "../core/safeprompt.js";
 
 const KEY = "plasma.settings.v1";
 
@@ -245,6 +249,7 @@ function showTab(id) {
   if (save) save.classList.toggle("hidden", live);
   if (row) row.classList.toggle("hidden", live);
   if (id === "firmware") mountFirmware();
+  if (id === "torch") paintConsumables();
   if (id === "materials") paintMaterials();
   if (id === "io") paintIo();
   if (id === "about" && host && host.paintAbout) host.paintAbout();
@@ -254,6 +259,25 @@ function showTab(id) {
 function $$(sel, root) { return [...(root || document).querySelectorAll(sel)]; }
 
 function isPro() { return !!(host && host.isPro && host.isPro()); }
+
+
+// ---- r15 9.5 tip and electrode counters (Settings › Torch)
+function counter() { let st = null; try { st = window.localStorage; } catch (e) { st = null; } return st ? new PierceCounter(st) : null; }
+const sinceText = (t) => (t > 0 ? " since " + new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
+export function paintConsumables() {
+  const c = counter(); if (!c || !$("consTip")) return;
+  const k = c.consumables();
+  $("consTip").textContent = `Tip: ${k.tip.n.toLocaleString("en-GB")} pierces${sinceText(k.tip.since)}`;
+  $("consElectrode").textContent = `Electrode: ${k.electrode.n.toLocaleString("en-GB")} pierces${sinceText(k.electrode.since)}`;
+}
+async function newConsumable(kind) {
+  const name = kind === "tip" ? "tip" : "electrode";
+  const ok = await askConfirm({ title: `New ${name} fitted?`, body: `The ${name} count goes back to 0. The lifetime total stays.`, ok: `New ${name} fitted` });
+  if (!ok) return;
+  const c = counter(); if (!c) return;
+  if (kind === "tip") c.resetTip(); else c.resetElectrode();
+  paintConsumables();
+}
 
 export function paintSettings() {
   const box = $("settingsTabs"); if (!box) return;
@@ -474,6 +498,40 @@ export function bindSettings() {
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "plasma-app-settings.json"; a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $("btnNewTip") && ($("btnNewTip").onclick = () => newConsumable("tip"));
+  $("btnNewElectrode") && ($("btnNewElectrode").onclick = () => newConsumable("electrode"));
+  // r15 9.4 machine settings: app settings + presets + this table's edges, speeds, material, start points, sheet
+  $("btnMachBackup") && ($("btnMachBackup").onclick = () => {
+    if (!readFormIntoState()) return;
+    const payload = makeBackup(localStorage, { app: state, presets, at: new Date().toISOString() });
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "porta-plazma-machine-settings-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $("btnMachRestore") && ($("btnMachRestore").onclick = () => $("machRestoreFile").click());
+  $("machRestoreFile") && ($("machRestoreFile").onchange = async (e) => {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try {
+      // the edges and speeds a running machine is using must not change under it, and a reload would drop the link
+      if (S.connected) throw new Error("Disconnect the machine first (Cut › Setup › Disconnect), then restore. Nothing was restored.");
+      if (f.size > 2 * 1024 * 1024) throw new Error("Nothing was restored. That file is too big to be a machine settings backup.");
+      let data; try { data = JSON.parse(await f.text()); } catch (e2) { throw new Error("Nothing was restored. That file is not a machine settings backup."); }
+      const checked = checkBackup(data);
+      if (checked.errors.length) throw new Error("Nothing was restored. " + checked.errors[0]);
+      let app = null, list = null;
+      if (data.app != null) { const a = sanitizeSettings(data.app, { strict: true }); if (a.errors.length) throw new Error("Nothing was restored. " + a.errors[0]); app = a.settings; }
+      if (data.presets != null) { const pr = sanitizePresets(data.presets); if (pr.errors.length) throw new Error("Nothing was restored. " + pr.errors[0]); list = pr.presets; }
+      const ok = await askConfirm({ title: "Restore machine settings?", body: `This replaces: ${checked.parts.join(", ") || "nothing"}. The app reloads afterwards.`, ok: "Restore" });
+      if (!ok) return;
+      applyBackup(localStorage, checked);
+      if (list) { presets = list; saveLocalPresets(); }
+      if (app) { state = app; saveSettings(state); }
+      toast("Machine settings restored. Reloading…");
+      setTimeout(() => location.reload(), 500);
+    } catch (err) { toast(err.message, true); }
   });
   $("btnAppRestore") && ($("btnAppRestore").onclick = () => $("appRestoreFile").click());
   $("appRestoreFile") && ($("appRestoreFile").onchange = async (e) => {

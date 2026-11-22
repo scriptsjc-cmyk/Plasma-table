@@ -136,6 +136,7 @@
   <button type="button" id="menuExportGcode" class="pill make-only">Download G-code</button>
   <button type="button" id="menuOpenDxf" class="pill make-only">Open DXF / SVG</button>
   <button type="button" id="menuExportDxf" class="pill make-only">Export DXF / SVG</button>
+  <div id="slot-tools-menu" hidden></div><!-- r15 Round 9: setup guide, cut history, problem report (html/tools.html) -->
   <p id="menuVer" class="menu-ver"></p>
   </div>
   <div id="connWrap" class="conn-wrap">
@@ -220,7 +221,6 @@
 <div id="demoAcctBar" class="banner amber hidden" role="status">Demo: accounts stay in this browser. Claim code <b>DEMO-0000</b> links a practice machine.</div>
 <!-- ============================================================ MAIN MENU (after sign-in) -->
 <main id="appMain">
-
 <section id="menuView" class="view hidden" aria-label="Main menu">
   <div class="menuwrap">
     <h1 id="menuHello">What do you want to do?</h1>
@@ -383,6 +383,7 @@
 <!-- shape library (Make) -->
 <div id="slot-make-dialogs" hidden></div>
 <div id="slot-help-version" hidden></div><!-- version / release popover (html/settings.html) -->
+<div id="slot-tools" hidden></div><!-- r15 Round 9 windows (html/tools.html) -->
 
 <div id="slot-make-entry" hidden></div><!-- number pad, CAD size fields, floating tool bar (html/make.html) -->
 

@@ -9,6 +9,7 @@ const PARTIALS = [
   "html/parts.html",
   "html/account.html",
   "html/settings.html",
+  "html/tools.html",
 ];
 
 function fillSlot(id, nodes) {

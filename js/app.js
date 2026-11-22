@@ -20,6 +20,7 @@ import { initYours, bindYours, paintYours } from "./ui/yours.js";
 import { bindScrollRows, refreshScrollRows } from "./ui/scrollrow.js";
 import { bindPreviewNav, previewCam, resetPreviewCam } from "./cut/previewnav.js";
 import { bindHowto, openHowto, closeHowto } from "./ui/howto.js";
+import { bindTools } from "./ui/tools.js";
 import { askSize, scaleContours, sizeCheckWanted } from "./make/sizecheck.js";
 import { continueFromCut } from "./cut/restart.js";
 import { initFeatures } from "./ui/features.js";
@@ -202,6 +203,7 @@ async function init() {
   watchWhy(paintWhy);
   try { const s0 = currentSettings(); if (s0 && s0.bed && S.cfg && S.cfg.travel_mm) S.cfg.travel_mm = { x: s0.bed.x, y: s0.bed.y, z: s0.bed.z }; } catch (e) { /* defaults stay */ }   // a saved bed size also applies after a reload
   bindHowto();
+  bindTools();
   defaultSpeed();
   applyMatchingPreset();
   renderMaterials();

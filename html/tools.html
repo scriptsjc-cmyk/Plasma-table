@@ -1,0 +1,62 @@
+<!-- r15 Round 9: the ☰ items "Set up your new table", "Cut history" and "Send a problem report", and their windows. -->
+<template data-slot="tools-menu">
+  <button type="button" id="menuSetupGuide" class="pill">Set up your new table</button>
+  <button type="button" id="menuCutHistory" class="pill">Cut history</button>
+  <button type="button" id="menuReport" class="pill">Send a problem report</button>
+</template>
+<template data-slot="tools">
+<!-- 9.2 the setup guide -->
+<div id="guideDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+  <div class="shapelib-card acctcard toolcard">
+    <div class="shapelib-head">
+      <h2 id="guideTitle">Set up your new table</h2>
+      <button type="button" class="acct-close" id="guideClose">Close</button>
+    </div>
+    <div class="toolbody">
+      <p class="muted small">Do these once, in order, before the first real cut. <span id="guideCount"></span></p>
+      <ol id="guideSteps" class="guidesteps"></ol>
+    </div>
+  </div>
+</div>
+<!-- 9.6 cut history -->
+<div id="historyDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+  <div class="shapelib-card acctcard toolcard wide">
+    <div class="shapelib-head">
+      <h2 id="historyTitle">Cut history</h2>
+      <button type="button" class="acct-close" id="historyClose">Close</button>
+    </div>
+    <div class="toolbody">
+      <p class="muted small">Every job started on this browser, newest first. Kept on this device only.</p>
+      <div class="historywrap">
+        <table class="historytable">
+          <thead><tr><th>Date</th><th>Part</th><th>Material</th><th>Thickness</th><th>Time</th><th>Result</th></tr></thead>
+          <tbody id="historyRows"></tbody>
+        </table>
+        <p id="historyEmpty" class="muted hidden">No cuts yet.</p>
+      </div>
+      <div class="row wrap">
+        <button type="button" id="btnHistoryCsv">Download CSV</button>
+        <button type="button" id="btnHistoryClear">Clear history</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 9.3 problem report -->
+<div id="reportDlg" class="acctdlg shapelib hidden" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+  <div class="shapelib-card acctcard toolcard">
+    <div class="shapelib-head">
+      <h2 id="reportTitle">Send a problem report</h2>
+      <button type="button" class="acct-close" id="reportClose">Close</button>
+    </div>
+    <div class="toolbody">
+      <p class="small">Saves one file to send to support. It holds the app version, your settings and machine edges, the last job's log and alarms, and your recent cut history. No passwords, keys or sign-in details. Nothing is sent by itself.</p>
+      <label>What happened? (optional)<textarea id="reportNote" rows="3" maxlength="2000"></textarea></label>
+      <div class="row wrap">
+        <button type="button" id="btnReportDownload" class="accent">Download report</button>
+        <button type="button" id="btnReportCopy">Copy to clipboard</button>
+      </div>
+      <details class="reportpeek"><summary>Show what's in it</summary><pre id="reportPreview"></pre></details>
+    </div>
+  </div>
+</div>
+</template>

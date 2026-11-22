@@ -97,4 +97,23 @@ body:not([data-mode="pro"]) .pro-copy, body[data-mode="pro"] .beg-copy { display
 #gateDlg .acctcard, #gateDlg .shapelib-card { max-height: calc(100vh - 24px); overflow: auto; padding-bottom: 16px; }
 #gateDlg .row { position: sticky; bottom: 0; background: var(--well); padding-top: 8px; }
 .adv-warn { color: var(--warn-text); }
+
+/* r15 Round 9: setup guide, cut history, problem report windows */
+.toolcard { width: min(640px, 100%); max-height: calc(100dvh - var(--topbar-h, 56px) - 24px); display: flex; flex-direction: column; }
+.toolcard.wide { width: min(900px, 100%); }
+.toolcard .toolbody { overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.guidesteps { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 10px; }
+.guidestep h3 { margin: 0 0 2px; font-size: var(--fs-m); }
+.guidestep p { margin: 0 0 6px; }
+.guidestep.done h3 { color: var(--go); }
+.guide-flash { outline: 3px solid var(--accent); outline-offset: 3px; }
+.historywrap { overflow: auto; max-height: 50dvh; }
+.historytable { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.historytable th, .historytable td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.historytable td:nth-child(2) { white-space: normal; }
+.historytable tr.practice td { color: var(--muted); }
+#reportNote { width: 100%; font: inherit; }
+.reportpeek pre { max-height: 30dvh; overflow: auto; font-size: var(--fs-xs, 12px); white-space: pre-wrap; word-break: break-word; }
+.consumables { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.consumables .row { align-items: center; }
 }

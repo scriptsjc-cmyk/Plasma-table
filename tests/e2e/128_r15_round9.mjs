@@ -47,14 +47,20 @@ for (const prof of ["d1280x600", "d1536x730", "iphone14"]) {
   t.check(`9.2 ${prof}: five steps in order: connect, motor direction, torch test, edges, test coupon`, J(g.map((s) => s.id)) === J(["connect", "motors", "torch", "edges", "coupon"]) && g.every((s) => s.title && s.open), J(g));
   t.check(`9.2 ${prof}: nothing is done on a new browser`, g.every((s) => !s.done), J(g));
   await page.click('#guideSteps [data-guide="motors"] [data-guide-open]'); await sleep(700);
-  const mt = await ev(page, () => ({ scr: window.plasmaTest.screen(), tab: document.getElementById("setupView") && document.getElementById("setupView").dataset.setupTab, dlg: !document.getElementById("guideDlg").classList.contains("hidden") }));
-  t.check(`9.2 ${prof}: Motor direction › Open goes to Machine setup › Motors`, mt.scr === "setup" && mt.tab === "motors" && !mt.dlg, J(mt));
+  const mt = await ev(page, () => { const v = document.getElementById("setupView"); return { scr: window.plasmaTest.screen(), vis: !!v && v.getClientRects().length > 0 && !v.classList.contains("hidden"), tab: v && v.dataset.setupTab, dlg: !document.getElementById("guideDlg").classList.contains("hidden") }; });
+  t.check(`9.2 ${prof}: Motor direction › Open goes to Machine setup › Motors`, mt.scr === "cut" && mt.vis && mt.tab === "motors" && !mt.dlg, J(mt));
   await openMenuItem(page, "menuSetupGuide");
   await page.click('#guideSteps [data-guide="motors"] [data-guide-done]'); await sleep(300);
   await page.keyboard.press("Escape"); await sleep(200);
   await openMenuItem(page, "menuSetupGuide");
   const g2 = await ev(page, () => ({ motors: document.querySelector('#guideSteps [data-guide="motors"]').classList.contains("done"), count: document.getElementById("guideCount") ? document.getElementById("guideCount").textContent : "" }));
   t.check(`9.2 ${prof}: "Done" on a step sticks (and the count says 1 of 5)`, g2.motors && /1 of 5/.test(g2.count), J(g2));
+  await page.click('#guideSteps [data-guide="connect"] [data-guide-open]'); await sleep(800);
+  const cn0 = await ev(page, () => ({ scr: window.plasmaTest.screen(), step: window.plasmaTest.S.cur, toast: document.getElementById("toast").textContent, asked: window.__devAsked }));
+  t.check(`9.2 ${prof}: with no part yet, Connect › Open goes to Cut › Part and says to choose a part first`, cn0.scr === "cut" && cn0.step === 1 && /choose any part/i.test(cn0.toast) && cn0.asked === 0, J(cn0));
+  await ev(page, () => { const T = window.plasmaTest; T.showScreen("make", { force: true }); const s = T.sketch; s.clear(); s.add("rect", true, { w: 120, h: 80 }); s.commit(); T.sendToCutting(); });
+  await page.waitForFunction(() => window.plasmaTest.screen() === "cut");
+  await openMenuItem(page, "menuSetupGuide");
   await page.click('#guideSteps [data-guide="connect"] [data-guide-open]'); await sleep(800);
   const cn = await ev(page, () => { const b = document.getElementById("btnConnect"), r = b && b.getBoundingClientRect(); return { scr: window.plasmaTest.screen(), step: window.plasmaTest.S.cur, vis: !!b && b.getClientRects().length > 0 && r.top >= 0 && r.bottom <= innerHeight, asked: window.__devAsked, conn: !!window.plasmaTest.S.connected }; });
   t.check(`9.2 ${prof}: Connect › Open shows the Connect button on Cut › Setup, and does not press it`, cn.scr === "cut" && cn.vis && cn.asked === 0 && !cn.conn, J(cn));
@@ -118,7 +124,7 @@ for (const prof of ["d1280x600", "d1536x730", "iphone14"]) {
   const refused = await ev(page, () => ({ sp: JSON.parse(localStorage.getItem("plasma.speeds")), conn: !!window.plasmaTest.S.connected, toast: (document.getElementById("toast") || {}).textContent || "" }));
   t.check(`9.4 ${prof}: restore is refused while a machine (here Practice) is connected, and nothing changes`, refused.conn && refused.sp["Mild steel|3"] === 999 && /disconnect/i.test(refused.toast), J(refused));
   await ev(page, () => { const T = window.plasmaTest; T.showScreen("cut", { force: true }); T.goStep(3); }); await sleep(400);
-  await ev(page, () => { const b = document.getElementById("btnDisconnect"); if (b && b.getClientRects().length) b.click(); }); await sleep(800);
+  await ev(page, () => document.getElementById("btnDisconnect").click()); await sleep(800);      // (on a laptop it lives in the header's connection menu)
   const disc = await ev(page, () => !window.plasmaTest.S.connected);
   t.check(`9.4 ${prof}: (setup) Practice disconnected`, disc);
   await openMenuItem(page, "btnSettings");

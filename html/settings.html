@@ -133,6 +133,12 @@
         </select>
       </label>
       <p class="muted small">Josh’s current Reboot 60A is touch-start. The Andeli CUT-65DS is a pilot-arc cutter. This does not change pierce or cut numbers.</p>
+      <div class="consumables" id="consCard">
+        <h3>Tip and electrode</h3>
+        <p class="muted small">Every real pierce counts on both. Practice runs don't count. Press the button when you fit a new one.</p>
+        <div class="row wrap"><span id="consTip"></span><button type="button" id="btnNewTip" class="small">New tip fitted</button></div>
+        <div class="row wrap"><span id="consElectrode"></span><button type="button" id="btnNewElectrode" class="small">New electrode fitted</button></div>
+      </div>
     </div>
 
     <div class="setpane hidden" data-setpane="pierce">
@@ -239,6 +245,13 @@
         <button type="button" id="btnAppBackup">Download app settings</button>
         <button type="button" id="btnAppRestore">Restore app settings</button>
         <input id="appRestoreFile" type="file" accept=".json,application/json" class="hidden" aria-label="Restore app settings file">
+      </div>
+      <h3>Machine settings</h3>
+      <p class="muted small">One file with the app settings and presets plus this table's edges, saved speeds, material, saved start points and sheet. Keep it somewhere safe. Restore checks the whole file first: if anything in it is wrong, nothing is restored. Disconnect the machine before restoring; the app reloads afterwards.</p>
+      <div class="row wrap">
+        <button type="button" id="btnMachBackup">Back up machine settings</button>
+        <button type="button" id="btnMachRestore">Restore machine settings</button>
+        <input id="machRestoreFile" type="file" accept=".json,application/json" class="hidden" aria-label="Restore machine settings file">
       </div>
     </div>
 
