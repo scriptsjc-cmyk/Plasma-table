@@ -455,6 +455,32 @@ try {
     t.check(`no page error (${prof} machine setup)`, !page.errors.length, J(page.errors.slice(0, 3)));
     await page.ctx.close();
   }
+  // ---------------------------------------------------------------- r15 Round 8 (checker): Machine setup › Bed and home, the canvas labels
+  // ("Controller 0,0 …" / "Home 0,0 …" and "Torch X … Y … Z …") are not drawn over the gantry, nor on each other, and stay on the canvas
+  for (const prof of ["d1280x600", "d1366x640", "d1536x730"]) {
+    const page = await newPage(br, prof, { base: srv.base });
+    await page.waitForFunction(() => window.plasmaTest);
+    await demoToShape(page, { stay: "cut" });
+    await ev(page, () => { const T = window.plasmaTest; T.setAppMode && T.setAppMode("pro", { persist: false, autoFs: false }); const b = document.getElementById("menuSetup"); if (b) b.click(); });
+    await page.waitForFunction(() => { const cv = document.getElementById("setupBed"); return cv && cv.offsetParent; }, null, { timeout: 10000 });
+    await sleep(800);
+    const bl = await ev(page, () => { const cv = document.getElementById("setupBed"), L = cv._labels || {}, G = cv._gantry || [];
+      const dpr = cv.width / cv.getBoundingClientRect().width, W = cv.width / dpr, H = cv.height / dpr;
+      const hit = (a, b) => a && b && Math.min(a.r, b.r) - Math.max(a.l, b.l) > -1 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > -1;
+      const leg = G.find((g) => g.leg); let px = null;
+      if (leg) { const x = leg.l + 0.2 * (leg.r - leg.l), labs = [L.home, L.torch].filter(Boolean);
+        for (let y = Math.max(4, leg.t + 6); y < Math.min(H - 4, leg.b - 6); y += 5) if (!labs.some((b) => b.l - 3 <= x && x <= b.r + 3 && b.t - 3 <= y && y <= b.b + 3)) { px = [...cv.getContext("2d").getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data]; break; } }
+      const onG = (b) => G.filter((g) => hit(b, g)).map((g) => g.kind);
+      const inC = (b) => !b || (b.l >= 0 && b.r <= W && b.t >= 0 && b.b <= H);
+      return { home: L.home, torch: L.torch, n: G.length, px, homeOn: onG(L.home), torchOn: onG(L.torch), each: hit(L.home, L.torch), inC: inC(L.home) && inC(L.torch) }; });
+    const dark = bl.px && bl.px[0] < 70 && bl.px[1] < 75 && bl.px[2] < 85;
+    t.check(`Bed and home ${prof}: the gantry's boxes are on the picture (the Y leg's middle is the leg's dark fill)`, bl.n >= 4 && !!dark, J({ n: bl.n, px: bl.px }));
+    t.check(`Bed and home ${prof}: the home label is not on the gantry`, !!bl.home && bl.homeOn.length === 0, J(bl));
+    t.check(`Bed and home ${prof}: the "Torch X … Y … Z …" label is not on the gantry`, !!bl.torch && bl.torchOn.length === 0, J(bl));
+    t.check(`Bed and home ${prof}: the two labels don't overlap and both are on the canvas`, !bl.each && bl.inC, J(bl));
+    t.check(`no page error (${prof} bed and home)`, !page.errors.length, J(page.errors.slice(0, 3)));
+    await page.ctx.close();
+  }
   // ---------------------------------------------------------------- 4.20 straight after switching to Advanced (first paint), Snap is not on the rail
   for (const prof of ["d1280x600", "d1440"]) {
     const page = await newPage(br, prof, { base: srv.base });
