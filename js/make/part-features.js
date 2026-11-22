@@ -12,6 +12,7 @@ export const FEATURE_KINDS = {
   bolt:   { label: "Bolt circle",     icon: "⊚", keys: [["n", "Count", 4], ["d", "Ø", 6.5], ["pcd", "Circle Ø (PCD)", 60], ["ang", "Start angle °", 0]] },
   grid:   { label: "Grid of holes",   icon: "⁘", keys: [["cols", "Across", 2], ["rows", "Up", 2], ["px", "Pitch across", 40], ["py", "Pitch up", 40], ["d", "Ø", 8]] },
   edge:   { label: "Holes in a line", icon: "⋯", keys: [["n", "Count", 3], ["pitch", "Pitch", 30], ["d", "Ø", 8], ["rot", "Angle °", 0]] },
+  arc:    { label: "Holes along a curve", icon: "◠", keys: [["n", "Count", 5], ["d", "Ø", 6], ["r", "Curve radius", 40], ["a0", "From °", 0], ["a1", "To °", 180]] },   // r15 10.3
   rect:   { label: "Rectangle cut-out", icon: "▭", keys: [["w", "Width", 40], ["h", "Height", 20], ["r", "Corner radius", 0], ["rot", "Angle °", 0]] },
   shape:  { label: "Shape cut-out",   icon: "△", keys: [["shape", "Shape", "triangle"], ["w", "Width", 40], ["h", "Height", 30], ["rot", "Angle °", 0]] },
   text:   { label: "Text",            icon: "T", keys: [["text", "Text", "TEXT"], ["h", "Letter height", 10]], op: "score" },
@@ -173,6 +174,14 @@ export function holeCentres(f) {
     for (let j = 0; j < f.rows; j++) for (let i = 0; i < f.cols; i++) out.push([f.x + (i - (f.cols - 1) / 2) * f.px, f.y + (j - (f.rows - 1) / 2) * f.py]);
     return out;
   }
+  if (f.k === "arc") {                              // r15 10.3: evenly from a0 to a1 round (x, y); a full turn has no doubled hole
+    const span = f.a1 - f.a0, full = Math.abs(Math.abs(span) - 360) < 1e-6 || Math.abs(span) > 360, out = [];
+    for (let i = 0; i < f.n; i++) {
+      const a = full ? f.a0 + (360 * i) / f.n : f.a0 + (f.n === 1 ? span / 2 : (span * i) / (f.n - 1));
+      const [c, s] = cs(a); out.push([f.x + f.r * c, f.y + f.r * s]);
+    }
+    return out;
+  }
   if (f.k === "edge") {
     const [c, s] = cs(f.rot), out = [];
     for (let i = 0; i < f.n; i++) { const t = (i - (f.n - 1) / 2) * f.pitch; out.push([f.x + t * c, f.y + t * s]); }
@@ -180,7 +189,48 @@ export function holeCentres(f) {
   }
   return [];
 }
-export const isHoleFeature = (f) => ["hole", "bolt", "grid", "edge"].includes(f.k);
+export const isHoleFeature = (f) => ["hole", "bolt", "grid", "edge", "arc"].includes(f.k);
+
+// r15 10.3: fit "Holes along a curve" to an outline's longest curved run (a flattened arc: many short edges turning the
+// same way, each by less than 20°). The holes sit `inset` mm inside that edge (at least Ø + 3 mm of metal). null = no curve.
+export function fitArcToOutline(pts, d = 6) {
+  const n = pts ? pts.length : 0;
+  if (n < 6) return null;
+  const turn = (i) => {
+    const A = pts[(i - 1 + n) % n], P = pts[i], Q = pts[(i + 1) % n];
+    const ax = P[0] - A[0], ay = P[1] - A[1], bx = Q[0] - P[0], by = Q[1] - P[1];
+    return Math.atan2(ax * by - ay * bx, ax * bx + ay * by) * 180 / Math.PI;
+  };
+  const T = pts.map((_, i) => turn(i));
+  const curvy = (i, sg) => Math.abs(T[i]) > 0.2 && Math.abs(T[i]) < 20 && Math.sign(T[i]) === sg;
+  let best = null;
+  for (let s = 0; s < n; s++) {
+    const sg = Math.sign(T[s]);
+    if (!curvy(s, sg) || curvy((s - 1 + n) % n, sg)) continue;          // start of a run
+    let len = 0; while (len < n && curvy((s + len) % n, sg)) len++;
+    if (len >= 3 && (!best || len > best.len)) best = { s, len, sg };
+  }
+  if (!best && T.every((t, i) => curvy(i, Math.sign(T[0])))) best = { s: 0, len: n, sg: Math.sign(T[0]) };
+  if (!best) return null;
+  const full = best.len >= n;
+  const at = (k) => pts[((best.s - 1 + k) % n + n) % n];                 // the run spans the points either side of its turning vertices
+  const p1 = at(0), p3 = at(full ? Math.floor((2 * n) / 3) : best.len + 1), p2 = at(full ? Math.floor(n / 3) : Math.round((best.len + 1) / 2));
+  const ax = p1[0], ay = p1[1], bx = p2[0], by = p2[1], cx = p3[0], cy = p3[1];
+  const D = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
+  if (Math.abs(D) < 1e-9) return null;
+  const ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / D;
+  const uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / D;
+  const R = Math.hypot(ax - ux, ay - uy);
+  const inset = exact(Math.max(Number(d) + 3, Math.round(R * 0.15)));
+  if (!(R - inset > d)) return null;
+  const ang = (p) => Math.atan2(p[1] - uy, p[0] - ux) * 180 / Math.PI;
+  let a0 = ang(p1), a1 = ang(p3);
+  if (full) { a0 = 0; a1 = 360; }
+  else if (best.sg > 0) { while (a1 <= a0) a1 += 360; }                   // the run turns anticlockwise: go a0 -> a1 up
+  else { while (a1 >= a0) a1 -= 360; }
+  const r2 = (v) => Math.round(v * 100) / 100;
+  return { x: r2(ux), y: r2(uy), r: r2(R - inset), a0: r2(a0), a1: r2(a1), inset };
+}
 
 // the contours one feature cuts / etches, in the part frame
 // ---------------------------------------------------------------- Pattern on any feature (plan 2.6): copies of the one row
@@ -360,6 +410,7 @@ function featureSummaryOne(f) {
     case "bolt": return `${f.n} × Ø${n(f.d)} on ${n(f.pcd)} PCD${f.ang ? ` at ${n(f.ang)}°` : ""}`;
     case "grid": return `${f.cols} × ${f.rows} × Ø${n(f.d)}, pitch ${n(f.px)} × ${n(f.py)}`;
     case "edge": return `${f.n} × Ø${n(f.d)}, pitch ${n(f.pitch)}`;
+    case "arc": return `${f.n} × Ø${n(f.d)} on R${n(f.r)}`;
     case "rect": return `${n(f.w)} × ${n(f.h)}${f.r ? ` R${n(f.r)}` : ""} at ${n(f.x)}, ${n(f.y)}`;
     case "shape": return `${f.shape === "drawn" ? "drawn shape" : f.shape} ${n(f.w)} × ${n(f.h)} at ${n(f.x)}, ${n(f.y)}`;
     case "text": return `"${f.text}" ${n(f.h)} high at ${n(f.x)}, ${n(f.y)}`;
