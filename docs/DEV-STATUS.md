@@ -2,14 +2,21 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 22 Nov 2026, 04:09 (UK time). Live: r15 Round 9 (9.1–9.6; 9.7 not done; 9.5 tip size → kerf held for Josh) on top of the checker fixes from the Round 8 report. See `Ready to check`.
+Last updated: 22 Nov 2026, 04:54 (UK time). Live: the editor-redesign test review (three fixes against approved rounds, e2e 129 in the gate) on top of r15 Round 9. Working on Round 10.
 
 ## Working on
-- The r13-layout test group (66 / 68 / 71 / 72 / 73 / 77 / 85 / 97 / 83 / 106 ME1): update a test only where an approved round clearly
-  meant the change; doubtful ones go to the reviewer.
-- 8.2: **Skipped (Josh 21 Nov)**. laptop.js keeps its JS moves, unchanged.
+- r15 Round 10 (10.1–10.9), tests first. Smooth-join points keep their click behaviour; in point-edit mode every editable point gets a handle.
 
 ## Ready to check
+- Editor-redesign test review (the r13-layout group) @ 4e9610e..4cb872c:
+  - Fixed, against approved rounds (e2e 129, in the deploy gate, fails 15/24 on the code before): the laptop Make header says
+    "Make a part" again (r12 3.2); Simple's panel title "Pick a template" / "Set the size" with its help in an "i" (r12 4.2: the
+    banner text had been hidden with no title in its place); pressing Advanced tools shows the Drawing sheet box at once (it stayed
+    hidden until the next edit, a real bug)
+  - Tests updated where an approved round clearly meant the change (disclosed in 78de558 / 4cb872c): 66 (rail 32 px, r13 #11),
+    71, 72, 73, 77, 83, 85, 97 (panel never scrolls, r12 3.3: now checks nothing on any tab is clipped), 106
+  - Not changed, asked: the "Make it yours" toolbar position does nothing on a laptop since the r12 rail (66 ×1, 68 ×1, 71 ×1,
+    73 ×3); 36 px header buttons and preset tabs on tall laptops (73 ×4)
 - r15 Round 9 (before selling; approved: Josh t534u, 21 Nov, "I give permission to do all of the ideas" covers r15 rounds 1–10 except 9.7 and the 'Waiting on Josh' items, as quoted to me by the reviewer), tests first: unit 62 (31 checks) @ b5d9cfe, e2e 128 (83 checks, now in the deploy gate) @ ed990b2, unit 63 (28) @ 7609a77; live @ 4739e75
   - 9.6 cut history (date, part, material, thickness, time, finished / stopped and why) with CSV download; the last job's log and alarms kept for the report; practice jobs are marked practice @ 3b76051
   - 9.5 consumables: tip and electrode pierce counts in Settings › Torch, each with its own "New tip / New electrode" (asks first); practice never counts @ 3cabe0f. **Tip size → kerf is NOT done** (it changes G-code; held for Josh)
@@ -280,8 +287,7 @@ Last updated: 22 Nov 2026, 04:09 (UK time). Live: r15 Round 9 (9.1–9.6; 9.7 no
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- The r13-layout test group (66 / 68 / 71 / 72 / 73 / 77 / 85 / 97 / 83 / 106 ME1): update a test only where an
-  approved round clearly meant the change.
+- Round 10.
 
 ## Not a bug
 - Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
