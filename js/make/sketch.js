@@ -9,6 +9,8 @@ import { KEY, KEY_OPTS, MAX_BULGE, MIN, clone, def, mixin, r1 } from "./sketch-u
 import { GeomMethods } from "./sketch-geom.js";
 import { classifyContainment } from "../core/geom.js";
 import { EditMethods } from "./sketch-edit.js";
+import { ArrangeMethods } from "./sketch-arrange.js";
+import { ShapeOpsMethods } from "./sketch-shapeops.js";
 import { ViewMethods } from "./sketch-view.js";
 import { EdgeMethods } from "./sketch-edge.js";
 import { FeatureMethods } from "./sketch-features.js";
@@ -342,5 +344,5 @@ export class Sketch {
   }
 }
 
-mixin(Sketch, GeomMethods, EditMethods, ViewMethods, EdgeMethods, FeatureMethods, TrimMethods, Stage6Methods, PointMethods, InputMethods);
+mixin(Sketch, GeomMethods, EditMethods, ArrangeMethods, ShapeOpsMethods, ViewMethods, EdgeMethods, FeatureMethods, TrimMethods, Stage6Methods, PointMethods, InputMethods);
 installLayoutLock(Sketch);

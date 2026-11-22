@@ -106,4 +106,33 @@ const mat = (n) => chart.materials.find((m) => m.name === n);
   t.check("B6 a busy long job at 65 A does not fit, and 45 A is offered", !b.ok && b.safeAmps === 45, JSON.stringify(b));
   t.check("B6 45 A can run all day", c.ok && c.pct === 100);
 }
+
+// ---------------------------------------------------------------- tidy (Josh 22 Nov: "I also need a more tidier code")
+{
+  const crypto = await import("node:crypto");
+  const MAKE = ["css/screen-make.css", "css/screen-make-laptop.css", "css/screen-make-panels.css"];
+  const index = fs.readFileSync(SITE + "index.html", "utf8");
+  const links = [...index.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((m) => m[1]);
+  const at = links.indexOf(MAKE[0]);
+  t.check("TIDY the three Make stylesheets are linked together, in order", at >= 0 && MAKE.every((f, i) => links[at + i] === f), links.join(" "));
+  const unwrap = (src) => { const s2 = src.replace(/\/\*[\s\S]*?\*\//g, "").trim(); const m = s2.match(/^@layer app \{([\s\S]*)\}$/); return m ? m[1] : s2; };
+  const rules = MAKE.map((f) => unwrap(fs.readFileSync(SITE + f, "utf8"))).join("\n").replace(/\s+/g, " ").trim();
+  // the rules of screen-make.css just before the split (r16 C2 included): the split moves no rule and changes none
+  t.check("TIDY together they hold exactly the rules screen-make.css had, in the same order", crypto.createHash("sha1").update(rules).digest("hex") === "2960b5467782e8af1d337783850b07577ea4aa62");
+  for (const f of [...MAKE, "css/screen-cut.css", "css/screen-cut-laptop.css", "css/screen-cut-setupgrid.css"]) {
+    const n = fs.readFileSync(SITE + f, "utf8").split("\n").length;
+    t.check(`TIDY ${f} is under 1,000 lines`, n < 1000, n + " lines");
+  }
+  const WAS = "align applyVariant arrayPivotOf cancelCentrePick cancelPolarPick centreBetween centrePrompt currentVariantKey cutOutline defaultDrawBulge distribute finishDraw finishOpenDraw flipV hitCentreEdge join joinParts linearArray mirror moveHole nest nudge offsetBy polarArray popDrawPoint pushDrawPoint resetHoles resizeCustomTo resizeTo rotateBy setAngle setHoleOffset setName setParam setPos startPolarPick subtract takeCentreEdge toggleHide toggleLock unlockAll variants _copyOwnedHoles _placeCentre".split(" ");
+  const src = ["sketch-edit", "sketch-arrange", "sketch-shapeops"].map((f) => fs.readFileSync(SITE + `js/make/${f}.js`, "utf8")).join("\n");
+  const defs = WAS.map((m) => (src.match(new RegExp(`^  ${m}\\(`, "gm")) || []).length);
+  t.check("TIDY every sketch edit command is defined exactly once across the three files", defs.every((n) => n === 1), WAS.filter((m, i) => defs[i] !== 1).join(","));
+  const { load } = await import("../lib/env.mjs");
+  const A = await load(); const sk = A.newSketch();
+  t.check("TIDY the Sketch still has every edit command", WAS.every((m) => typeof sk[m] === "function"), WAS.filter((m) => typeof sk[m] !== "function").join(","));
+  sk.add("rect", true); sk.pick([sk.items[0].id]); sk.linearArray(3, 10, 0);
+  t.check("TIDY a linear array still works after the move", sk.items.length === 3, String(sk.items.length));
+  const lap = fs.readFileSync(SITE + "js/ui/laptop.js", "utf8");
+  t.check("TIDY 8.2 the laptop DOM moves come from one table", /const MOVES = \[/.test(lap) && !/makeHome|skToolsHome|skOptsHome|tabsHome/.test(lap));
+}
 t.done();

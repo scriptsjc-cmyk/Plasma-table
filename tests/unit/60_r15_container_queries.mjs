@@ -7,7 +7,8 @@ import { SITE } from "../lib/site.mjs";
 import { T } from "../lib/t.mjs";
 
 const t = new T("60_r15_container_queries");
-const css = fs.readFileSync(SITE + "css/screen-cut.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+// r16 tidy: screen-cut.css is split into parts linked one after another; the rules are looked for in all of them
+const css = ["css/screen-cut.css", "css/screen-cut-laptop.css", "css/screen-cut-setupgrid.css"].map((f) => fs.readFileSync(SITE + f, "utf8")).join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
 t.check("the Setup step's .cutgrid is named as an inline-size container", /\[data-step="3"\] \.cutgrid \{[^}]*container: cutgrid \/ inline-size;/.test(css));
 t.check("no viewport max-width range is left for the Download G-code icon", !/@media \(min-width: 1200px\) and \(max-width: 1439px\)/.test(css));
 const at = css.indexOf("@container cutgrid (max-width: 1397px)");

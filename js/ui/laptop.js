@@ -24,7 +24,6 @@ export function isShellLaptop() {
   catch (e) { return false; }
 }
 
-let makeHome = null, tabsHome = null, skToolsHome = null, skOptsHome = null;
 function safeInsert(parent, el, before) {
   if (!parent || !el) return;
   const ref = (before && before.parentNode === parent) ? before : null;
@@ -76,48 +75,41 @@ function tuckSelectSnap(onAdv) {
   }
 }
 
-export function placeMakeBar() {
+// r15 8.2 (Josh 22 Nov, "Yes to 8.2"): the laptop chrome's DOM moves are one table. Each row says which element moves, when
+// it sits in its laptop place, where that is, and what it goes before; otherwise it goes back where the page put it. Rows are
+// placed in table order and put back in reverse order, so a row can rely on the rows above it already being in place.
+const homes = new Map();
+function laptopState() {
+  const b = document.body, shell = isShellLaptop(), make = b.dataset.screen === "make";
   const bar = $("makeBar");
-  const tabs = document.querySelector(".topbar .tabs") || document.querySelector("header .tabs") || document.querySelector(".tabs");
-  const top = document.querySelector(".topbar");
-  const stop = $("btnStop");
-  if (bar && top) {
-    if (!makeHome) makeHome = { ref: null };
-    const on = isShellLaptop() && document.body.dataset.screen === "make" && !document.body.classList.contains("header-hidden");
-    if (on) placeNode(bar, makeHome, top, stop || null);
-    else restoreNode(bar, makeHome);
-  }
-  const tools = document.querySelector("#srcShape .sktools") || document.querySelector(".sktools");
-  const opts = document.querySelector("#srcShape .skopts") || document.querySelector(".skopts");
-  const pin = $("qbPinned");
-  const onAdv = !!(bar && isShellLaptop() && document.body.dataset.screen === "make" && (document.body.classList.contains("pro-mode") || document.body.classList.contains("advanced-mode")));
-  if (onAdv) {
-    if (tools) {
-      if (!skToolsHome) skToolsHome = { ref: null };
-      placeNode(tools, skToolsHome, bar, pin ? pin.nextElementSibling : bar.firstChild);
-    }
-    if (opts) {
-      if (!skOptsHome) skOptsHome = { ref: null };
-      placeNode(opts, skOptsHome, bar, tools ? tools.nextElementSibling : (pin ? pin.nextElementSibling : null));
-    }
-  } else {
-    if (opts) {
-      if (!skOptsHome) skOptsHome = { ref: null };
-      restoreNode(opts, skOptsHome);
-    }
-    if (tools) {
-      if (!skToolsHome) skToolsHome = { ref: null };
-      restoreNode(tools, skToolsHome);
-    }
-  }
-  if (onAdv) tuckSelectSnap(true);
-  else tuckSelectSnap(false);
-  // The Cut header is a two-row grid: menu + STOP on row 1, .tabs (Part / Setup / Cut / Layout) on row 2.
-  // Moving .tabs into .topbar-main puts Layout on the same row as the connection chip and they overlap at 1280.
-  if (tabs) {
-    if (!tabsHome) tabsHome = { ref: null };
-    restoreNode(tabs, tabsHome);
-  }
+  return {
+    bar, top: document.querySelector(".topbar"),
+    tools: document.querySelector("#srcShape .sktools") || document.querySelector(".sktools"),
+    opts: document.querySelector("#srcShape .skopts") || document.querySelector(".skopts"),
+    tabs: document.querySelector(".topbar .tabs") || document.querySelector("header .tabs") || document.querySelector(".tabs"),
+    pin: $("qbPinned"),
+    onBar: shell && make && !b.classList.contains("header-hidden"),
+    onAdv: !!(bar && shell && make && (b.classList.contains("pro-mode") || b.classList.contains("advanced-mode"))),
+  };
+}
+const MOVES = [
+  // the Make bar joins the header, before STOP (r12)
+  { id: "makeBar", el: (c) => c.bar, need: (c) => !!(c.bar && c.top), when: (c) => c.onBar, to: (c) => c.top, before: () => $("btnStop") || null },
+  // Advanced: the sketch tools, then the sketch options, ride in the Make bar after the pinned tools
+  { id: "sktools", el: (c) => c.tools, when: (c) => c.onAdv, to: (c) => c.bar, before: (c) => (c.pin ? c.pin.nextElementSibling : c.bar.firstChild) },
+  { id: "skopts", el: (c) => c.opts, when: (c) => c.onAdv, to: (c) => c.bar, before: (c) => (c.tools ? c.tools.nextElementSibling : (c.pin ? c.pin.nextElementSibling : null)) },
+  // the Cut header is a two-row grid (menu + STOP, then Part / Setup / Cut / Layout); .tabs always stays home, or Layout
+  // lands on the connection chip's row and they overlap at 1280
+  { id: "tabs", el: (c) => c.tabs, when: () => false },
+];
+export function placeMakeBar() {
+  const c = laptopState();
+  const home = (m) => { if (!homes.has(m.id)) homes.set(m.id, { ref: null }); return homes.get(m.id); };
+  const live = MOVES.filter((m) => m.el(c) && (!m.need || m.need(c)));
+  const placed = live.filter((m) => m.when(c)), back = live.filter((m) => !m.when(c)).reverse();
+  for (const m of placed) placeNode(m.el(c), home(m), m.to(c), m.before(c));
+  for (const m of back) restoreNode(m.el(c), home(m));
+  tuckSelectSnap(c.onAdv);
 }
 
 function closeHeadPops() {

@@ -1,0 +1,789 @@
+/* Make a part on a laptop (wide screen, fine pointer): the CAD chrome, r7 sheet size and Advanced chrome, the C46–C50 compact
+   tools. Split from screen-make.css in r16: linked straight after it, so every rule keeps its order. */
+@layer app {
+/* ---- Laptop CAD chrome (wide + fine pointer): slim left tools, roomy right properties ---- */
+body.laptop-ui.pro-mode[data-screen="make"] { --pt-insp-w: 0px; }
+body.laptop-ui.pro-mode[data-screen="make"] #cutView:has(#ptInspector) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+body.laptop-ui.pro-mode[data-screen="make"] #ptInspector {
+  display: none; /* properties live in the right-hand step pane */
+}
+@media (min-width: 900px) {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.editing {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) minmax(320px, 380px);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "tools preview props";
+    column-gap: 10px;
+    min-height: 0;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBarWrap,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #quickBarWrap {
+    grid-area: tools; display: block; min-width: 0; min-height: 0;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar.quickbar,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #quickBar.quickbar {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 76px;
+    height: 100%;
+    max-height: none;
+    gap: 4px;
+    padding: 6px 4px;
+    align-items: stretch;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar .qb-group,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar > .qb-search { display: none; }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar button {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    flex-direction: column;
+    font-size: var(--fs-xs);
+    line-height: 1.15;
+    padding: 4px 2px;
+    gap: 1px;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar button kbd,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .cutgrid.with-qb #quickBar button .qbhint {
+    display: block;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid #quickBarWrap,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap {
+    grid-column: 1; grid-row: 1; grid-area: auto;
+    width: 76px; min-width: 76px; max-width: 76px;
+    display: block; min-height: 0; height: 100%;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .previewPane,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .previewPane,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .previewPane {
+    grid-column: 2; grid-row: 1; grid-area: auto;
+    min-width: 0; min-height: 0; width: auto;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .stepPane,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane {
+    grid-column: 3 !important; grid-row: 1 !important; grid-area: auto !important;
+    display: block !important;
+    overflow: auto;
+    min-width: 320px !important;
+    width: auto !important;
+    min-height: 0;
+    padding: 12px 14px 24px;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #makeSplit { display: none; }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) canvas#preview {
+    width: 100%; height: 100%; min-width: 0; min-height: 200px;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane .shapeform,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) #shapeForm {
+    display: block;
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane label,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .shapeform label {
+    font-size: var(--fs-s);
+  }
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane input[type="number"],
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane input[type="text"],
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .shapeform input {
+    min-height: 40px;
+    font-size: var(--fs-m);
+  }
+  body.laptop-ui.pro-mode[data-screen="make"] #makeSplit { display: none; }
+}
+
+/* The one Advanced parts list: every shape and hole, with pick / hide / lock. */
+.layerspanel { margin-top: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); min-width: 0; }
+.layershead { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.layerspanel h3 { margin: 0; font-size: var(--fs-m); flex: 1; }
+#layersClose { display: none; min-width: 44px; min-height: 44px; }
+.layerslist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: min(420px, 45vh); overflow: auto; }
+.layer-hint { margin: 0 0 8px; }
+.layer-row.is-hole { padding-left: 16px; }
+.layer-row.is-hole .layer-pick { font-weight: 500; color: var(--muted-text, var(--muted)); }
+
+.layer-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; /* r15: the eye and lock keep their own width (44 px on a laptop) instead of spilling past the list */ gap: 4px; align-items: center; }
+.layer-row.on .layer-pick { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.layer-row.is-hidden .layer-pick { opacity: 0.55; }
+.layer-pick { text-align: left; min-height: 40px; padding: 4px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Phone Advanced: the same list opens as a roomy sheet from the Parts button, and does not sit over the canvas until then. */
+body.phone-ui .layerspanel { display: none; }
+body.phone-ui.pro-mode[data-screen="make"] #srcShape #layersPanel.is-open,
+body.phone-ui.advanced-mode[data-screen="make"] #srcShape #layersPanel.is-open {
+  display: flex !important;
+  flex-direction: column;
+  position: fixed;
+  left: 10px; right: 10px; bottom: 64px; top: auto;
+  max-height: 55dvh;
+  z-index: var(--z-float);
+  pointer-events: auto;
+  margin: 0;
+  box-shadow: var(--shadow);
+}
+body.phone-ui.pro-mode[data-screen="make"] #srcShape #layersPanel.is-open #layersClose,
+body.phone-ui.advanced-mode[data-screen="make"] #srcShape #layersPanel.is-open #layersClose {
+  display: inline-flex !important;
+}
+body.phone-ui #srcShape #layersPanel.is-open .layerslist { max-height: none; flex: 1 1 auto; overflow: auto; }
+
+/* type-while-drawing HUD */
+.drawhud {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  z-index: var(--z-hud); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px;
+  padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--card) 94%, transparent); box-shadow: var(--shadow);
+  max-width: min(640px, calc(100vw - 24px));
+}
+.drawhud.hidden { display: none; }
+.drawhud-lab { font-size: var(--fs-s); color: var(--muted); font-weight: 600; }
+.drawhud input { width: 88px; min-height: 40px; font-size: var(--fs-m); }
+
+/* right-click menu */
+.cadctx {
+  position: fixed; z-index: var(--z-ctx); min-width: 180px; padding: 6px;
+  border-radius: 10px; border: 1px solid var(--line-strong);
+  background: var(--card); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.cadctx.hidden { display: none; }
+.cadctx-item { text-align: left; min-height: 40px; padding: 6px 10px; border: 0; background: transparent; border-radius: 8px; }
+.cadctx-item:hover, .cadctx-item:focus { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.cadctx-item:disabled { opacity: 0.45; }
+
+/* Preset parts browser */
+.presetbrowser {
+  position: fixed; left: 0; right: 0; bottom: 0; top: var(--topbar-h, 56px); z-index: var(--z-dialog-top);
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--c-black) 35%, transparent);
+  opacity: 0; pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.presetbrowser.is-open { opacity: 1; pointer-events: auto; }
+.presetbrowser.hidden { display: none; }
+.pb-frame {
+  width: min(1100px, calc(100vw - 32px));
+  height: min(760px, calc(100dvh - var(--topbar-h, 56px) - 24px));
+  display: flex; flex-direction: column;
+  background: var(--card); color: var(--text);
+  border-radius: 16px; box-shadow: var(--shadow);
+  transform: translateY(10px) scale(0.98);
+  transition: transform 180ms ease;
+  overflow: hidden;
+}
+.presetbrowser.is-open .pb-frame { transform: none; }
+.pb-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.pb-head h2 { margin: 0; font-size: var(--fs-xl); flex: 0 0 auto; }
+.pb-head input { flex: 1; min-height: 44px; font-size: var(--fs-m); }
+.pb-head #pbClose { min-height: 44px; min-width: 72px; }
+.pbcats { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.pbcats button { min-height: 44px; padding: 6px 12px; }
+.pbcats button.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.pbgrid {
+  flex: 1; overflow: auto; padding: 16px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; align-content: start;
+}
+.pb-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  min-height: 140px; padding: 12px 8px; text-align: center;
+  border-radius: 12px;
+}
+.pb-tile svg, .pb-tile img { width: 96px; height: 72px; }
+.pb-name { font-size: var(--fs-s); line-height: 1.25; }
+
+/* Phone sideways hint (Make and Cut, portrait). Remembered once dismissed.
+   Sits at the bottom as a small toast and does not intercept clicks on the rest of the page. */
+.sideways-hint {
+  position: fixed;
+  top: auto;
+  bottom: calc(var(--phonebar-h, 56px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-float-hint);
+  display: flex; align-items: center; gap: 10px;
+  max-width: min(420px, calc(100vw - 16px));
+  padding: 8px 10px 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: var(--shadow);
+  font-size: var(--fs-s);
+  pointer-events: none;
+}
+.sideways-hint.hidden { display: none; }
+.sideways-hint button { min-width: 44px; min-height: 44px; border-radius: 999px; pointer-events: auto; }
+
+/* Customise toolbar: a roomy dialog, not a control that sits on the canvas. */
+.toolbarcustom {
+  position: fixed; inset: 0; z-index: var(--z-bar);
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--c-black) 35%, transparent);
+  opacity: 0; pointer-events: none;
+  transition: opacity 180ms ease;
+}
+.toolbarcustom.is-open { opacity: 1; pointer-events: auto; }
+.toolbarcustom.hidden { display: none; }
+.tc-card {
+  width: min(920px, calc(100vw - 24px));
+  max-height: min(640px, calc(100dvh - 24px));
+  display: flex; flex-direction: column;
+  background: var(--card); color: var(--text);
+  border: 1px solid var(--line-strong); border-radius: 14px;
+  box-shadow: var(--shadow); padding: 14px 16px 16px; min-height: 0;
+}
+.tc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.tc-head h2 { margin: 0; flex: 1; font-size: var(--fs-l); }
+.tc-head button { min-height: 44px; }
+.tc-note { margin: 0 0 12px; }
+.tc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+.tc-col, .tc-catalog { min-height: 0; overflow: auto; }
+.tc-col h3, .tc-catalog h3 { margin: 0 0 8px; font-size: var(--fs-m); }
+.tc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 6px; align-items: center; }
+.tc-catalog .tc-row { grid-template-columns: minmax(0, 1fr) auto; }
+.tc-lab { display: flex; align-items: center; gap: 8px; min-height: 40px; }
+.tc-row button { min-height: 40px; }
+.tc-row.is-on { opacity: 0.7; }
+@media (max-width: 699px) {
+  .tc-cols { grid-template-columns: 1fr; }
+  .tc-card { max-height: calc(100dvh - 16px); }
+}
+
+
+/* ---- r7: sheet size, Fit nowrap, Advanced chrome, phone peek ---- */
+.sheetsize {
+  margin: 12px 0 8px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--well);
+}
+.sheetsize h3 { margin: 0 0 8px; font-size: var(--fs-m); font-weight: 700; }
+.sheetsize .grid2 { gap: 8px 12px; }
+.sheetsize input { min-height: 40px; width: 100%; }
+
+/* Advanced already has Undo / Redo / Fit on the toolbar — keep Pick all and Clear here. */
+body.pro-mode #skUndo, body.advanced-mode #skUndo,
+body.pro-mode #skRedo, body.advanced-mode #skRedo,
+body.pro-mode #skFit, body.advanced-mode #skFit { display: none; }
+#skFit, #btnPicFit, #btnPicFit .picword { white-space: nowrap; }
+.pictools { flex-wrap: nowrap; gap: 6px; }
+.pictools button { white-space: nowrap; }
+
+/* Remove is a quiet secondary action, not a danger button */
+.shapeform button.quiet, button[data-sk="remove"].quiet {
+  background: var(--well); color: var(--text); border-color: var(--line);
+}
+
+/* Phone Advanced shape sheet: a peek bar that expands, so the drawing stays in view */
+body.phone-ui[data-screen="make"].pro-mode .cutgrid,
+body.phone-ui[data-screen="make"].advanced-mode .cutgrid {
+  padding-bottom: calc(var(--phonebar-h, 56px) + 64px);
+}
+.phonesheet {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: var(--phonebar-h, 56px);
+  top: auto;
+  z-index: var(--z-sheet);
+  max-height: 64px;
+  height: 64px;
+  overflow: hidden;
+  background: var(--card);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 24px var(--shade-18);
+  padding: 0 12px 8px;
+  display: flex; flex-direction: column;
+}
+.phonesheet.is-expanded {
+  max-height: 45dvh;
+  height: auto;
+  overflow: auto;
+}
+.phonesheet-handle {
+  flex: none;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 20px; min-height: 20px; margin: 0;
+  border: 0; background: transparent; position: relative;
+}
+.phonesheet.is-expanded .phonesheet-handle,
+.phonesheet-handle { min-height: 28px; }
+.phonesheet-peek {
+  display: flex; align-items: baseline; gap: 8px;
+  min-height: 36px; padding: 0 4px 4px;
+  cursor: pointer;
+}
+.phonesheet-peek b { font-size: var(--fs-m); }
+.phonesheet.is-expanded .phonesheet-peek { cursor: default; }
+
+@media (orientation: landscape) and (max-height: 540px) {
+  body.phone-ui[data-screen="make"].pro-mode .cutgrid,
+  body.phone-ui[data-screen="make"].advanced-mode .cutgrid {
+    padding-bottom: 0;
+    padding-right: 52px;
+  }
+  body.phone-ui[data-screen="make"].pro-mode:has(#phoneSheet.is-expanded) .cutgrid,
+  body.phone-ui[data-screen="make"].advanced-mode:has(#phoneSheet.is-expanded) .cutgrid {
+    padding-right: min(320px, 40vw);
+  }
+  body.phone-ui.short-land[data-screen="make"] .phonesheet,
+  body.phone-ui[data-screen="make"].pro-mode .phonesheet,
+  body.phone-ui[data-screen="make"].advanced-mode .phonesheet {
+    top: var(--topbar-h, 56px);
+    right: 0; left: auto; bottom: 0;
+    width: 52px;
+    max-height: none;
+    height: auto;
+    border-radius: 16px 0 0 16px;
+    box-shadow: -8px 0 24px var(--shade-12);
+    padding: 8px 6px;
+  }
+  body.phone-ui[data-screen="make"] .phonesheet.is-expanded {
+    width: min(320px, 40vw);
+    padding: 8px 12px;
+  }
+  body.phone-ui[data-screen="make"] .phonesheet:not(.is-expanded) .phonesheet-peek {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    min-height: 0; padding: 8px 0;
+    align-items: center;
+  }
+}
+
+/* G-code download pop on Make (Cut keeps its own rules in screen-cut.css) */
+body[data-screen="make"] .exportpop {
+  position: absolute; bottom: 100%; left: 0; z-index: var(--z-panel-pop);
+  min-width: 260px; padding: 12px;
+  background: var(--well); border: 1px solid var(--line); border-radius: var(--r);
+  box-shadow: var(--shadow);
+}
+body[data-screen="make"] .exportpop.hidden { display: none; }
+body[data-screen="make"] .exportpop-actions { gap: 8px; margin-top: 8px; justify-content: flex-end; }
+
+#makeBar .modesw-btn, .editorsw .modesw-btn, #editorSwitch .modesw-btn {
+  min-height: 44px;
+}
+
+/* r8 item 8: 'Make a part' is already in the header next to Undo — don't repeat it above Set the size / Pick a template. */
+body.beginner[data-screen="make"] .guidehead #ghStep { display: none; }
+
+/* r8: Simple-only Snap, box-select/pan toggle, hover tips, check-cut dialog */
+body:not(.beginner) #btnSimpleSnap { display: none; }
+#btnSimpleSnap.on, #btnDragPan.on { outline: none; }
+#btnSimpleSnap:focus-visible, #btnDragPan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hovertip { position: fixed; z-index: var(--z-hovertip); max-width: 280px; padding: 6px 10px; background: var(--c-1a1a1a); color: var(--c-white); font-size: var(--fs-s); line-height: 1.35; border-radius: 6px; pointer-events: none; box-shadow: 0 4px 16px var(--black-25); }
+.makecheck-pick { display: flex; flex-direction: column; align-items: stretch; gap: 12px; margin: 8px 0; }
+.makecheck-job { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 4px 0 8px; font-weight: 650; }   /* r15 6.5 */
+.makecheck-job[hidden], .makecheck-pick[hidden] { display: none; }
+.makecheck-field { display: flex; flex-direction: column; gap: 6px; }
+.makecheck-lab { font-weight: 650; }
+.makecheck-chips button { min-height: 40px; padding: 6px 12px; }
+.makecheck-chips button.sel { background: var(--accent-weak); border-color: var(--accent); font-weight: 700; }
+#makeCheckDlg .cutcheck { margin-top: 8px; }
+#btnSimpleSnap, #btnDragPan, #btnMakeCheckCut { flex: none; }
+
+/* r8: extra header tools must not wrap into a second row and steal canvas height on a phone. */
+@media (max-width: 900px) {
+  #btnDragPan, #btnSimpleSnap, #btnMakeCheckCut { display: none; } /* Check cut, Snap and pan stay on laptop; they must not steal a second header row on a phone */
+  #makeBar.makebar, .makebar { flex-wrap: nowrap; overflow: hidden; }
+  #makeBar h1 { font-size: var(--fs-m); white-space: nowrap; }
+}
+
+/* r8: on the narrowest phones the Make header wraps Advanced / Preset rather than pushing them off the right edge. */
+@media (max-width: 400px) {
+  #makeBar.makebar, .makebar { flex-wrap: wrap; overflow: hidden; }
+  #editorSwitch { flex: 1 1 100%; min-width: 0; }
+  #btnAdvancedTools, #btnPresetParts, #btnSimpleView { flex: 1 1 auto; min-width: 0; max-width: 100%; }
+}
+
+/* Folded 3D view on Make a part (editor + preset tiles) */
+.fold3d-host { margin: 8px 0 10px; }
+.fold3d-wrap {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--c-e8edf2);
+  overflow: hidden;
+}
+.fold3d-wrap { position: relative; }
+.fold3d-wrap canvas.fold3d {
+  display: block;
+  width: 100%;
+  height: 180px;
+  touch-action: none;
+  cursor: grab;
+  background: var(--c-e8edf2);
+}
+.fold3d-expand {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: var(--fs-s);
+  font-weight: 650;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  color: var(--text);
+  cursor: pointer;
+}
+body.phone-ui .fold3d-expand,
+body:not(.laptop-ui) .fold3d-expand { display: none !important; }
+.fold3d-lb {
+  position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-lightbox);
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--c-black) 45%, transparent);
+  padding: 16px;
+}
+.fold3d-lb[hidden] { display: none !important; }
+.fold3d-lb-inner {
+  position: relative;
+  width: min(80vw, 1100px);
+  height: min(70vh, 720px);
+  background: var(--c-e8edf2);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.fold3d-lb-inner canvas.fold3d {
+  display: block; width: 100%; height: 100%;
+  touch-action: none; cursor: grab; background: var(--c-e8edf2);
+}
+.fold3d-lb-close {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  min-width: 36px; min-height: 36px; padding: 0;
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  cursor: pointer; font-size: var(--fs-l);
+}
+.fold3d-cap {
+  margin: 0;
+  padding: 4px 8px 6px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+/* Phone: compact Folded view in the size form (does not change the drawing/form split).
+   Collapsed, the thumb sits on the shape-name row so it stays above the sticky Next. */
+body.phone-ui.has-fold3d .selhead { padding-right: 176px; }
+body.phone-ui .fold3d-host { margin: 6px 0 8px; }
+body.phone-ui .fold3d-host:not(:has(details[open])) {
+  height: 0;
+  margin: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
+}
+body.phone-ui .fold3d-host:not(:has(details[open])) .fold3d-sum {
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  gap: 6px;
+  padding: 2px 6px;
+  background: var(--c-e8edf2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+body.phone-ui .fold3d-box {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--c-e8edf2);
+}
+body.phone-ui .fold3d-sum {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 8px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 650;
+}
+body.phone-ui .fold3d-sum::-webkit-details-marker,
+body.phone-ui .fold3d-sum::marker { display: none; }
+body.phone-ui .fold3d-mini { flex: 0 0 auto; line-height: 0; }
+body.phone-ui .fold3d-mini svg { width: 56px; height: 40px; display: block; }
+body.phone-ui .fold3d-wrap canvas.fold3d,
+body:not(.laptop-ui) .fold3d-wrap canvas.fold3d { height: 100px; }
+body.phone-ui .fold3d-cap,
+body:not(.laptop-ui) .fold3d-cap {
+  padding: 3px 8px 5px;
+  font-size: var(--fs-xs);
+  line-height: 1.3;
+  white-space: normal;
+}
+/* Laptop: the disclosure chrome is hidden; the 3D view stays open in the form. */
+body.laptop-ui .fold3d-box { border: 0; background: transparent; }
+body.laptop-ui .fold3d-sum { display: none; }
+body.laptop-ui .fold3d-wrap canvas.fold3d { height: 300px; }
+.pb-tile { position: relative; }
+.pb-tile svg.fold-thumb { width: 96px; height: 72px; }
+
+#makeSelStatus, .makeselstatus { margin: 0 0 8px; color: var(--text); font-size: var(--fs-sm); font-weight: 650; }
+#makeSelStatus:empty { display: none; }
+
+#mtKind { min-width: 0; width: 100%; white-space: normal; height: auto; min-height: var(--tap); }
+#mtKind option { white-space: normal; }
+.mt-lab, #textDlg label { overflow: visible; white-space: normal; }
+#mtSize { font-weight: 700; }
+
+/* C28 label wrap */
+#shapeForm label, #shapeForm .mktool, .shapelib button, .shapelib .sname,
+.qb-btn span, #quickBar [data-qb] span, .layer-pick, .variantbtn, [data-var] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+.cc-error { color: var(--cad-danger, var(--c-c42b1c)); }
+.cc-warn { color: var(--cad-lock, var(--c-c05600)); }
+#makeCheckOut li[data-gi]:hover { text-decoration: underline; }
+
+/* C34: drawing export drops below the Make header button, not above it off the screen. */
+.makeexp-wrap { position: relative; display: inline-flex; align-items: center; flex: 0 0 auto; }
+#makeExportPop {
+  position: absolute; top: 100%; bottom: auto; left: 0; margin-top: 4px;
+  z-index: var(--z-float); min-width: 260px;
+}
+
+
+/* ---- C46–C50 layout: compact tools, one home, visible Save, shortcuts, library favs ---- */
+body.pro-mode #btnSimpleSnap,
+body.advanced-mode #btnSimpleSnap { display: none; }
+body.beginner .skopts { display: none; }
+
+/* Laptop properties pane: footer stays put; the form scrolls above it. */
+@media (min-width: 900px) {
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .stepPane,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane {
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column;
+    min-height: 0;
+    padding: 12px 14px 0;
+  }
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .stepPane > .step[data-step="1"],
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane > .step[data-step="1"] {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  /* The include slot is replaced by #srcShape at boot; that element must be the scroller. */
+  body.app-shell.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .stepPane #srcShape,
+  body.laptop-ui.pro-mode[data-screen="make"]:not(.shape-fs) .stepPane #srcShape {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Mid-width / phone: tools stay one scrolling row and never cover Save / Download. */
+@media (max-width: 899px) {
+  body.app-shell[data-screen="make"] .cutgrid.with-qb #quickBar.quickbar,
+  body.app-shell[data-screen="make"] #quickBar.quickbar,
+  body[data-screen="make"] #quickBar {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-height: 64px;
+    align-items: stretch;
+  }
+  body[data-screen="make"] #quickBar .qb-group { display: none; }
+  body[data-screen="make"] #exportRow,
+  body[data-screen="make"] .previewDock .exportrow {
+    position: relative;
+    z-index: var(--z-sheet-row);
+    flex-wrap: nowrap;
+  }
+}
+
+/* Small-screen inspector as a bottom sheet (already used on phones); keep canvas height. */
+@media (max-width: 899px) {
+  body.app-shell.pro-mode[data-screen="make"]:not(.phone-ui):not(.short-land) .stepPane {
+    max-height: 46dvh;
+    overflow: auto;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 24px var(--shade-14);
+  }
+}
+
+#quickBarWrap { position: relative; }
+#quickBar .qb-more-btn { flex: 0 0 auto; }
+#qbMorePop.qb-more {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  position: absolute;
+  z-index: var(--z-hud-pop);
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  min-width: 220px;
+}
+#qbMorePop.qb-more.is-open { display: flex; }
+@media (min-width: 900px) {
+  body.laptop-ui.pro-mode[data-screen="make"] #qbMorePop.qb-more {
+    left: calc(100% + 6px);
+    bottom: 8px;
+    top: auto;
+  }
+}
+@media (max-width: 899px) {
+  #qbMorePop.qb-more {
+    left: auto;
+    right: 8px;
+    bottom: calc(100% + 6px);
+    max-width: min(320px, calc(100vw - 16px));
+  }
+}
+body.qb-searching #quickBar .qb-search { display: flex !important; }
+
+/* C50: Beginner phone canvas keeps a clear gap above help / footer overlap. */
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewPane,
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) canvas#preview {
+  padding-bottom: 16px;
+}
+body.app-shell.phone-ui.beginner[data-screen="make"]:not(.short-land) .previewDock {
+  margin-bottom: 8px;
+}
+
+.pb-tilewrap { position: relative; display: flex; flex-direction: column; }
+.pb-fav {
+  position: absolute; top: 4px; right: 4px;
+  min-width: 36px; min-height: 36px; padding: 0;
+  border: 0; background: color-mix(in srgb, var(--card) 85%, transparent);
+  border-radius: 999px; font-size: var(--fs-m); line-height: 1;
+}
+.pb-fav.on { color: var(--c-c05600); }
+
+.shortcut-sheet {
+  position: fixed; inset: var(--topbar-h, 56px) 0 0 0; z-index: var(--z-shortcuts);
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--c-black) 35%, transparent);
+  min-width: 0; padding: 16px;
+}
+.shortcut-sheet.hidden { display: none !important; }
+.shortcut-sheet-inner {
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  max-width: min(560px, calc(100vw - 24px));
+  max-height: min(80vh, 640px);
+  overflow: auto;
+  padding: 16px 18px 20px;
+}
+.shortcut-sheet-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.shortcut-sheet-head h2 { margin: 0; flex: 1; font-size: var(--fs-l); }
+.shortcut-table { width: 100%; border-collapse: collapse; }
+.shortcut-table th { text-align: left; white-space: nowrap; padding: 6px 12px 6px 0; width: 34%; font-weight: 700; }
+.shortcut-table td { padding: 6px 0; }
+.shortcut-table kbd { font: 650 13px ui-monospace, monospace; }
+
+
+/* C46: the left tool rail is for any wide Advanced Make screen, not only
+   pointer:fine (headless / some tablets still need the 76px column so the
+   toolbar cannot wrap over the canvas and cover Save / Download). */
+@media (min-width: 900px) {
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.editing {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr) minmax(320px, 380px);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "tools preview props";
+    column-gap: 10px;
+    min-height: 0;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #quickBarWrap,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid #quickBarWrap,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBarWrap {
+    grid-area: tools;
+    grid-column: 1; grid-row: 1;
+    display: block;
+    width: 76px; min-width: 76px; max-width: 76px;
+    min-height: 0; height: 100%;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar.quickbar,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #quickBar.quickbar {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 76px;
+    height: 100%;
+    max-height: none;
+    gap: 4px;
+    padding: 6px 4px;
+    align-items: stretch;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar .qb-group,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar > .qb-search { display: none; }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb #quickBar button {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 52px;
+    flex-direction: column;
+    font-size: var(--fs-xs);
+    line-height: 1.15;
+    padding: 4px 2px;
+    gap: 1px;
+  }
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .previewPane,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .previewPane,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .previewPane {
+    grid-column: 2; grid-row: 1; grid-area: auto;
+    min-width: 0; min-height: 0; width: auto;
+  }
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid .stepPane,
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .cutgrid.with-qb .stepPane,
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) .stepPane {
+    grid-column: 3 !important; grid-row: 1 !important; grid-area: auto !important;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden !important;
+    min-width: 320px !important;
+    width: auto !important;
+    min-height: 0;
+    padding: 12px 14px 0;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #makeSplit { display: none; }
+  body.app-shell.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) canvas#preview {
+    width: 100%; height: 100%; min-width: 0; min-height: 200px;
+  }
+  body.pro-mode[data-screen="make"]:not(.shape-fs):not(.phone-ui) #qbMorePop.qb-more {
+    left: calc(100% + 6px);
+    bottom: 8px;
+    top: auto;
+  }
+}
+
+.qb-filter-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 6px 0; padding: 4px 10px; min-height: 36px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-weak); color: var(--text); font-weight: 700; cursor: pointer; }
+.qb-filter-chip:hover { filter: brightness(1.04); }
+
+.topmenu .make-only { display: none; }
+
+}
