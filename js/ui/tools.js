@@ -7,7 +7,8 @@ import { showScreen } from "./flow.js";
 import { askConfirm } from "../core/safeprompt.js";
 import { setSetupTab } from "../machine/setupbed.js";
 import { readHistory, clearHistory, resultText } from "../core/cuthistory.js";
-import { collectReport, reportText, reportFileName } from "../core/report.js";
+// report.js loads when a report is made, not at start-up (every start-up file costs a round trip on a slow connection)
+const reportMod = () => import("../core/report.js");
 import { RUN } from "./about.js";
 
 const store = () => { try { return window.localStorage; } catch (e) { return null; } };
@@ -90,9 +91,10 @@ async function buildReport() {
   try { const r = await fetch("version.json?" + Date.now(), { cache: "no-store" }); if (r.ok) version = await r.json(); } catch (e) { /* offline: the version this page runs */ }
   const env = { ua: navigator.userAgent, screen: `${screen.width}x${screen.height}`, view: `${innerWidth}x${innerHeight}`, lang: navigator.language, mode: document.body.dataset.mode || "" };
   const connected = S.connected ? { practice: !!S.demo, kind: (M && M.grbl && M.grbl.t && M.grbl.t.kind) || "", fluidnc: !!S.fluidnc, state: (S.status && S.status.state) || "" } : null;
+  const { collectReport } = await reportMod();
   return collectReport(store() || { getItem: () => null }, { version, env, connected, note: ($("reportNote") && $("reportNote").value) || "" });
 }
-async function paintReportPreview() { const pre = $("reportPreview"); if (pre) pre.textContent = reportText(await buildReport()); }
+async function paintReportPreview() { const pre = $("reportPreview"); if (pre) { const rep = await buildReport(); pre.textContent = (await reportMod()).reportText(rep); } }
 
 export function bindTools() {
   const wire = (btn, dlg, paint) => { const b = $(btn); if (b) b.addEventListener("click", () => { paint(); openDlg(dlg); }); };
@@ -114,9 +116,9 @@ export function bindTools() {
     const ok = await askConfirm({ title: "Clear the cut history?", body: "This removes every row on this device. It can't be undone.", ok: "Clear history", danger: true });
     if (ok && store()) { clearHistory(store()); paintHistory(); }
   };
-  if ($("btnReportDownload")) $("btnReportDownload").onclick = async () => { const rep = await buildReport(); saveFile(reportFileName(), reportText(rep), "application/json"); toast("Report saved. Send the file to support."); };
+  if ($("btnReportDownload")) $("btnReportDownload").onclick = async () => { const rep = await buildReport(); const R = await reportMod(); saveFile(R.reportFileName(), R.reportText(rep), "application/json"); toast("Report saved. Send the file to support."); };
   if ($("btnReportCopy")) $("btnReportCopy").onclick = async () => {
-    try { await navigator.clipboard.writeText(reportText(await buildReport())); toast("Report copied."); } catch (e) { toast("Couldn't copy here. Use Download report instead.", true); }
+    try { const rep = await buildReport(); await navigator.clipboard.writeText((await reportMod()).reportText(rep)); toast("Report copied."); } catch (e) { toast("Couldn't copy here. Use Download report instead.", true); }
   };
   if ($("reportNote")) $("reportNote").addEventListener("input", () => { clearTimeout(paintReportPreview._t); paintReportPreview._t = setTimeout(paintReportPreview, 300); });
 }

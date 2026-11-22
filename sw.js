@@ -31,7 +31,6 @@ const PRECACHE = [
   "html/parts.html",
   "html/settings.html",
   "html/setup.html",
-  "html/tools.html",
   "css/base.css",
   "css/components.css",
   "css/layout.css",

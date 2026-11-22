@@ -10,7 +10,8 @@ import { probeDisplayOn } from "./probefilter.js";
 import { syncCutPrefsToAccount } from "../core/prefs.js";
 import { S } from "../core/state.js";
 import { PierceCounter } from "../cut/coupon.js";
-import { makeBackup, checkBackup, applyBackup } from "./machinebackup.js";
+// machinebackup.js loads when a backup or restore is asked for, not at start-up
+const backupMod = () => import("./machinebackup.js");
 import { askConfirm } from "../core/safeprompt.js";
 
 const KEY = "plasma.settings.v1";
@@ -502,8 +503,9 @@ export function bindSettings() {
   $("btnNewTip") && ($("btnNewTip").onclick = () => newConsumable("tip"));
   $("btnNewElectrode") && ($("btnNewElectrode").onclick = () => newConsumable("electrode"));
   // r15 9.4 machine settings: app settings + presets + this table's edges, speeds, material, start points, sheet
-  $("btnMachBackup") && ($("btnMachBackup").onclick = () => {
+  $("btnMachBackup") && ($("btnMachBackup").onclick = async () => {
     if (!readFormIntoState()) return;
+    const { makeBackup } = await backupMod();
     const payload = makeBackup(localStorage, { app: state, presets, at: new Date().toISOString() });
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "porta-plazma-machine-settings-" + new Date().toISOString().slice(0, 10) + ".json";
@@ -519,6 +521,7 @@ export function bindSettings() {
       if (S.connected) throw new Error("Disconnect the machine first (Cut › Setup › Disconnect), then restore. Nothing was restored.");
       if (f.size > 2 * 1024 * 1024) throw new Error("Nothing was restored. That file is too big to be a machine settings backup.");
       let data; try { data = JSON.parse(await f.text()); } catch (e2) { throw new Error("Nothing was restored. That file is not a machine settings backup."); }
+      const { checkBackup, applyBackup } = await backupMod();
       const checked = checkBackup(data);
       if (checked.errors.length) throw new Error("Nothing was restored. " + checked.errors[0]);
       let app = null, list = null;
