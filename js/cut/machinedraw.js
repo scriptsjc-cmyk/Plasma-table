@@ -66,6 +66,24 @@ export function drawMachineBed(ctx, T, X, Y, sc) {
   ctx.textAlign = "right"; ctx.fillText("X beam", X(bx1) - 8, Y(by + MACH.beamH / 2) + 4); ctx.textAlign = "start";
 }
 
+// r15 4.10 (checker): the gantry's parts on screen, as drawMachineBed / drawGantry draw them (same numbers), so canvas labels
+// can keep off them: the X beam with its cable chain, the Y leg (arm, end cap, Y motor), the carriage with the X motor, and the
+// torch handle (130 mm out to the front-left, 22 mm wide). opts as drawGantry's. Boxes are {l, r, t, b, kind} in canvas units.
+export function gantryBoxes(T, X, Y, sc, opts = {}) {
+  if (!T) return [];
+  const bb = (xs, ys, kind, more) => ({ l: Math.min(...xs), r: Math.max(...xs), t: Math.min(...ys), b: Math.max(...ys), kind, ...more });
+  const [tx, ty] = torchXY(T, opts), M_ = MACH;
+  const by = T.y[0] - 20 - M_.beamH, carY = by - 25, top = T.y[1] + 30, armX = tx + M_.torchOff, armC = armX + M_.armW / 2;
+  const out = [
+    bb([X(T.x[0] - 40), X(T.x[1] + 110)], [Y(by - 34), Y(by + M_.beamH)], "beam", { rail: true }),
+    bb([X(armX - 3), X(armX + M_.armW + 2 + M_.motor)], [Y(carY), Y(top)], "leg", { leg: true }),
+    bb([X(armC - M_.carW / 2), X(armC + M_.carW / 2)], [Y(carY - 30), Y(carY + M_.carD)], "carriage", { gantry: true }),
+  ];
+  const X0 = X(tx), Y0 = Y(ty), a = Math.PI * 0.82, L = 130 * sc, W = 11 * sc;
+  const hp = [[0, -W], [0, W], [L, -W], [L, W]].map(([u, v]) => [X0 + u * Math.cos(a) - v * Math.sin(a), Y0 + u * Math.sin(a) + v * Math.cos(a)]);
+  out.push(bb(hp.map((q) => q[0]), hp.map((q) => q[1]), "handle", { gantry: true }));
+  return out;
+}
 export function drawGantry(ctx, T, X, Y, sc, opts = {}) {
   if (!machineVisible() || !T) return;
   const has = !!(S.status && S.status.MPos);

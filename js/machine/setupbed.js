@@ -3,7 +3,7 @@
 import { S } from "../core/state.js";
 import { $, themeColor } from "../core/dom.js";
 import { drawAxisHints, bedViewRotated } from "../cut/bedview.js";
-import { drawGantry, drawMachineBed, markMachine } from "../cut/machinedraw.js";
+import { drawGantry, drawMachineBed, gantryBoxes, markMachine } from "../cut/machinedraw.js";
 import { toView, viewArea } from "../cut/preview.js";
 import { setInfoText } from "../ui/hovertip.js";
 import { isShellLaptop } from "../ui/laptop.js";
@@ -145,41 +145,49 @@ export function drawSetupBed() {
   ctx.stroke();
   ctx.beginPath(); ctx.arc(hx, hy, 5, 0, 7); ctx.fill();
   ctx.font = "bold 13px Barlow, system-ui";
-  const homeTop = rot || hy < h * 0.4;
-  ctx.textAlign = hx < w * 0.55 ? "left" : "right";
-  ctx.textBaseline = homeTop ? "top" : "bottom";
-  const hxOff = hx < w * 0.55 ? 12 : -12;
-  const hyOff = homeTop ? 12 : -12;
+  // r15 4.10 (checker): the labels keep off the gantry (beam, Y leg, carriage, torch handle) and each other. First choice is
+  // where they always went; then further out, the other side, the other way up — the first spot that is clear and on the canvas.
+  const gantry = gantryBoxes(T, X, Y, sc, { toView });
+  const hitB = (b, c) => Math.min(b.r, c.r) - Math.max(b.l, c.l) > -1 && Math.min(b.b, c.b) - Math.max(b.t, c.t) > -1;
+  const place = (text, ax, ay, dx0, dy0, sideR, down, avoid) => {
+    let first = null;
+    for (const dy of [dy0, dy0 + 18, dy0 + 36, dy0 + 54, dy0 + 72, dy0 + 90]) for (const dx of [dx0, dx0 + 40, dx0 + 80, dx0 + 120])
+      for (const sR of [sideR, !sideR]) for (const dn of [down, !down]) {
+        ctx.textAlign = sR ? "left" : "right"; ctx.textBaseline = dn ? "top" : "bottom";
+        const x = ax + (sR ? dx : -dx), y = ay + (dn ? dy : -dy), bx = textBox(ctx, text, x, y);
+        const spot = { x, y, bx, align: ctx.textAlign, base: ctx.textBaseline };
+        if (!first) first = spot;
+        if (bx.l >= 2 && bx.r <= w - 2 && bx.t >= 2 && bx.b <= h - 2 && !avoid.some((o) => hitB(bx, o))) return spot;
+      }
+    return first;
+  };
   const homeLabel = (S.safety && S.safety.referenced)
     ? "Home 0,0 — machine thinks it is here"
     : "Controller 0,0 (power-up — home not set)";
-  ctx.fillText(homeLabel, hx + hxOff, hy + hyOff);
-  const homeBox = textBox(ctx, homeLabel, hx + hxOff, hy + hyOff);
+  const hs = place(homeLabel, hx, hy, 12, 12, hx < w * 0.55, rot || hy < h * 0.4, gantry);
+  ctx.textAlign = hs.align; ctx.textBaseline = hs.base;
+  ctx.fillText(homeLabel, hs.x, hs.y);
+  const homeBox = hs.bx;
   ctx.restore();
 
   const mp = S.status && S.status.MPos;
+  let torchBox = null;
   if (mp) {
     const [vx, vy] = toView(mp[0], mp[1]);
     const [tx, ty] = [X(vx), Y(vy)];
     ctx.save();
     ctx.fillStyle = themeColor("--text", "#1F2A37");
     ctx.font = "12px Barlow, system-ui";
-    ctx.textAlign = tx < w * 0.55 ? "left" : "right";
-    ctx.textBaseline = ty < h * 0.5 ? "top" : "bottom";
-    const lx = tx < w * 0.55 ? 16 : -16, ly = ty < h * 0.5 ? 18 : -18;
     const torchLabel = `Torch  X ${fmt(mp[0])}  Y ${fmt(mp[1])}  Z ${fmt(mp[2])} mm`;
-    // r13: never on top of the Home 0,0 label (the torch is often parked at home): step below or above it.
-    let [px, py] = [tx + lx, ty + ly];
-    const hit = (b, c) => Math.min(b.r, c.r) - Math.max(b.l, c.l) > 0 && Math.min(b.b, c.b) - Math.max(b.t, c.t) > 0;
-    if (hit(textBox(ctx, torchLabel, px, py), homeBox)) {
-      const below = ctx.textBaseline === "top" ? homeBox.b + 4 : homeBox.b + 4 + (textBox(ctx, torchLabel, 0, 0).b - textBox(ctx, torchLabel, 0, 0).t);
-      const above = ctx.textBaseline === "top" ? homeBox.t - 4 - (textBox(ctx, torchLabel, 0, 0).b - textBox(ctx, torchLabel, 0, 0).t) : homeBox.t - 4;
-      const fitsBelow = (ctx.textBaseline === "top" ? below + 16 : below) <= h - 2;
-      py = fitsBelow ? below : above;
-    }
-    ctx.fillText(torchLabel, px, py);
+    // r13: never on top of the Home 0,0 label (the torch is often parked at home)
+    const ts = place(torchLabel, tx, ty, 16, 18, tx < w * 0.55, ty < h * 0.5, [...gantry, homeBox]);
+    ctx.textAlign = ts.align; ctx.textBaseline = ts.base;
+    ctx.fillText(torchLabel, ts.x, ts.y);
+    torchBox = ts.bx;
     ctx.restore();
   }
+  cv._labels = { home: homeBox, torch: torchBox };
+  cv._gantry = gantry;
   const torchPx = mp ? [X(toView(mp[0], mp[1])[0]), Y(toView(mp[0], mp[1])[1])] : null;
   cv._map = { toPx: (x, y) => [X(x), Y(y)], sc, T };
   cv._home = [X(0), Y(0)];

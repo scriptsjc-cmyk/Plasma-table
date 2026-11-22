@@ -12,7 +12,7 @@ import * as Acc from "../account/account.js";
 import { insideRegion } from "./nest.js";
 import { initNestUi, paintNest, nestNow } from "./nestui.js";
 import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
-import { MACH, drawGantry, drawMachineBed, machineVisible, torchXY } from "./machinedraw.js";
+import { MACH, drawGantry, drawMachineBed, gantryBoxes, machineVisible } from "./machinedraw.js";
 import { drawAxisHints, bedViewRotated } from "./bedview.js";
 import { drawingSheet } from "../core/prefs.js";
 import { placeLayoutToolbar, paintGapTip, setupPadTop, setupPadBot } from "./setuplayout.js";
@@ -214,19 +214,10 @@ function markMach(sk, m) {
     y: m.T.y.slice(),
     beam: { x0: m.T.x[0] - 40, x1: m.T.x[1] + 110, y0: m.T.y[0] - 20 - MACH.beamH, h: MACH.beamH },
   };
-  // r15 4.10: the X beam (and the cable chain along it) on screen, so the canvas labels can keep off the rail
-  const b = sk.cv._mach.beam, ys = [m.Y(b.y0 - 34), m.Y(b.y0 + b.h)], xs = [m.X(b.x0), m.X(b.x1)];
-  sk.cv._mach.beamPx = { l: Math.min(...xs), r: Math.max(...xs), t: Math.min(...ys), b: Math.max(...ys), rail: true };
-  // r15 4.10 (checker): the Y leg too (the arm, its end cap and the Y motor, as drawGantry draws them), so no label sits on it
-  const [tx] = torchXY(m.T, { sheet: true }), armX = tx + MACH.torchOff, carY = b.y0 - 25, top = m.T.y[1] + 30;
-  const lx = [m.X(armX - 3), m.X(armX + MACH.armW + 2 + MACH.motor)], ly = [m.Y(carY), m.Y(top)];
-  sk.cv._mach.armPx = { l: Math.min(...lx), r: Math.max(...lx), t: Math.min(...ly), b: Math.max(...ly), leg: true };
-  // ...the carriage on the beam (with the X motor hanging off its front) and the torch handle (130 mm out to the front-left, 22 mm wide)
-  const armC = armX + MACH.armW / 2, cxs = [m.X(armC - MACH.carW / 2), m.X(armC + MACH.carW / 2)], cys = [m.Y(carY - 30), m.Y(carY + MACH.carD)];
-  sk.cv._mach.carPx = { l: Math.min(...cxs), r: Math.max(...cxs), t: Math.min(...cys), b: Math.max(...cys), gantry: true };
-  const [hx, hy] = torchXY(m.T, { sheet: true }), X0 = m.X(hx), Y0 = m.Y(hy), a = Math.PI * 0.82, L = 130 * m.sc, W = 11 * m.sc;
-  const hp = [[0, -W], [0, W], [L, -W], [L, W]].map(([u, v]) => [X0 + u * Math.cos(a) - v * Math.sin(a), Y0 + u * Math.sin(a) + v * Math.cos(a)]);
-  sk.cv._mach.handlePx = { l: Math.min(...hp.map((q) => q[0])), r: Math.max(...hp.map((q) => q[0])), t: Math.min(...hp.map((q) => q[1])), b: Math.max(...hp.map((q) => q[1])), gantry: true };
+  // r15 4.10: the X beam (and the cable chain along it) on screen, so the canvas labels can keep off the rail;
+  // (checker) the Y leg, the carriage and the torch handle too
+  const g = gantryBoxes(m.T, m.X, m.Y, m.sc, { sheet: true }), pick = (k) => { const o = g.find((v) => v.kind === k); if (!o) return null; const { kind, ...r } = o; return r; };
+  sk.cv._mach.beamPx = pick("beam"); sk.cv._mach.armPx = pick("leg"); sk.cv._mach.carPx = pick("carriage"); sk.cv._mach.handlePx = pick("handle");
 }
 function drawBg(sk, ctx, S, C, w, h) {
   const cv = ctx.canvas;
