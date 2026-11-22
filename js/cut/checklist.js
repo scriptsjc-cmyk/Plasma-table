@@ -152,7 +152,8 @@ export function paintBeforeCut(linkWhy) {
     const act = action ? `<button type="button" class="beforecut-link" data-before="${esc(action)}">${esc(label)}</button>` : esc(label);
     rows.push(`<li class="${cls}"><span class="beforecut-mark" aria-hidden="true">${mark}</span><span class="beforecut-text" title="${esc(label)}">${act}</span></li>`);
   };
-  if (linkWhyNow) add(false, linkWhyNow.replace(/\.$/, ""), "todo", "link");
+  // "Link a machine" is a button (opens the link prompt); a demo account's line is plain text (it wraps; nothing to link)
+  if (linkWhyNow) add(false, linkWhyNow.replace(/\.$/, ""), "todo", /^Link a machine/.test(linkWhyNow) ? "link" : "");
   if (S.connected) add(machineHomed(), machineHomed() ? "Machine homed" : "Home the machine", machineHomed() ? "ok" : "todo");
   const cornerOk = zeroIsConfirmed();
   add(cornerOk, cornerOk ? "Sheet corner set" : "Jog to the sheet's back-left corner and press Start here", cornerOk ? "ok" : "todo");
