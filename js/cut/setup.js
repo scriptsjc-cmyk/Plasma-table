@@ -12,7 +12,7 @@ import * as Acc from "../account/account.js";
 import { insideRegion } from "./nest.js";
 import { initNestUi, paintNest, nestNow } from "./nestui.js";
 import { drawStartMark, startMarkAt as markAt } from "./startmark.js";
-import { MACH, drawGantry, drawMachineBed, machineVisible } from "./machinedraw.js";
+import { MACH, drawGantry, drawMachineBed, machineVisible, torchXY } from "./machinedraw.js";
 import { drawAxisHints, bedViewRotated } from "./bedview.js";
 import { drawingSheet } from "../core/prefs.js";
 import { placeLayoutToolbar, paintGapTip, setupPadTop, setupPadBot } from "./setuplayout.js";
@@ -217,6 +217,16 @@ function markMach(sk, m) {
   // r15 4.10: the X beam (and the cable chain along it) on screen, so the canvas labels can keep off the rail
   const b = sk.cv._mach.beam, ys = [m.Y(b.y0 - 34), m.Y(b.y0 + b.h)], xs = [m.X(b.x0), m.X(b.x1)];
   sk.cv._mach.beamPx = { l: Math.min(...xs), r: Math.max(...xs), t: Math.min(...ys), b: Math.max(...ys), rail: true };
+  // r15 4.10 (checker): the Y leg too (the arm, its end cap and the Y motor, as drawGantry draws them), so no label sits on it
+  const [tx] = torchXY(m.T, { sheet: true }), armX = tx + MACH.torchOff, carY = b.y0 - 25, top = m.T.y[1] + 30;
+  const lx = [m.X(armX - 3), m.X(armX + MACH.armW + 2 + MACH.motor)], ly = [m.Y(carY), m.Y(top)];
+  sk.cv._mach.armPx = { l: Math.min(...lx), r: Math.max(...lx), t: Math.min(...ly), b: Math.max(...ly), leg: true };
+  // ...the carriage on the beam (with the X motor hanging off its front) and the torch handle (130 mm out to the front-left, 22 mm wide)
+  const armC = armX + MACH.armW / 2, cxs = [m.X(armC - MACH.carW / 2), m.X(armC + MACH.carW / 2)], cys = [m.Y(carY - 30), m.Y(carY + MACH.carD)];
+  sk.cv._mach.carPx = { l: Math.min(...cxs), r: Math.max(...cxs), t: Math.min(...cys), b: Math.max(...cys), gantry: true };
+  const [hx, hy] = torchXY(m.T, { sheet: true }), X0 = m.X(hx), Y0 = m.Y(hy), a = Math.PI * 0.82, L = 130 * m.sc, W = 11 * m.sc;
+  const hp = [[0, -W], [0, W], [L, -W], [L, W]].map(([u, v]) => [X0 + u * Math.cos(a) - v * Math.sin(a), Y0 + u * Math.sin(a) + v * Math.cos(a)]);
+  sk.cv._mach.handlePx = { l: Math.min(...hp.map((q) => q[0])), r: Math.max(...hp.map((q) => q[0])), t: Math.min(...hp.map((q) => q[1])), b: Math.max(...hp.map((q) => q[1])), gantry: true };
 }
 function drawBg(sk, ctx, S, C, w, h) {
   const cv = ctx.canvas;
@@ -228,6 +238,7 @@ function drawBg(sk, ctx, S, C, w, h) {
     drawGantry(ctx, m.T, m.X, m.Y, m.sc, { sheet: true });
     markMach(sk, m);
     if (sk.cv && sk.cv._mach && sk.cv._mach.beamPx) boxesAdd(cv, { ...sk.cv._mach.beamPx });
+    for (const k of ["armPx", "carPx", "handlePx"]) if (sk.cv && sk.cv._mach && sk.cv._mach[k]) boxesAdd(cv, { ...sk.cv._mach[k] });
   } else if (sk.cv && sk.cv._mach) {
     sk.cv._mach = null;
   }
@@ -285,16 +296,21 @@ function drawBg(sk, ctx, S, C, w, h) {
     ctx.textBaseline = iy >= oy ? "top" : "bottom";
     const long = bedViewRotated() ? "Sheet corner (0, 0) — top-left, back-left of the table" : "Sheet corner (0, 0)";
     const short = "Sheet corner (0, 0)";
-    const lx = ox + (ix >= ox ? 8 : -8), dy = iy >= oy ? 1 : -1;
-    // r13: the long name, else the short one, stepping away from the corner until it is clear of the sheet title and part numbers
+    const side = ix >= ox ? 1 : -1, dy = iy >= oy ? 1 : -1;
+    // r13: the long name, else the short one, stepping away from the corner until it is clear of the sheet title and part numbers;
+    // r15 4.10 (checker): then the same on the other side of the corner (the gantry's Y leg runs up through it once touched off)
     let pick = null;
-    for (const [lab, k] of [[long, 0], [short, 0], [short, 1], [short, 2], [short, 3], [short, 4]]) {
-      const ly = oy + dy * (10 + k * 18);
-      if (!hitsAny(cv, textBox(ctx, lab, lx, ly))) { pick = [lab, ly]; break; }
+    const tries = [[long, 0, side], [short, 0, side], [short, 1, side], [short, 2, side], [short, 3, side], [short, 4, side],
+      ...[0, 1, 2, 3, 4, 5, 6].map((k) => [short, k, -side]), [short, 5, side], [short, 6, side]];
+    for (const [lab, k, sd] of tries) {
+      ctx.textAlign = sd > 0 ? "left" : "right";
+      const lx = ox + sd * 8, ly = oy + dy * (10 + k * 18);
+      if (!hitsAny(cv, textBox(ctx, lab, lx, ly))) { pick = [lab, lx, ly, ctx.textAlign]; break; }
     }
-    if (!pick) pick = [short, oy + dy * 10];
-    ctx.fillText(pick[0], lx, pick[1]);
-    boxesAdd(cv, textBox(ctx, pick[0], lx, pick[1]));
+    if (!pick) pick = [short, ox + side * 8, oy + dy * 10, side > 0 ? "left" : "right"];
+    ctx.textAlign = pick[3];
+    ctx.fillText(pick[0], pick[1], pick[2]);
+    boxesAdd(cv, { ...textBox(ctx, pick[0], pick[1], pick[2]), corner: true });
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
   }
 }

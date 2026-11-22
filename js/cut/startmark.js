@@ -35,11 +35,17 @@ export function drawStartMark(sk, ctx, S, prep, units) {
   // r13: the tag (28 px pill) goes under the mark, else over it, else further down — never on another label
   ctx.font = "600 14px Barlow, system-ui";
   const tw = Math.max(44, ctx.measureText(text).width + 16), cv = ctx.canvas;
-  const [cw] = sk.size(), px = Math.max(tw / 2 + 2, Math.min(cw - tw / 2 - 2, x));   // tag() keeps the pill inside the canvas the same way
-  const pill = (cy) => ({ l: px - tw / 2, r: px + tw / 2, t: cy - 14, b: cy + 14 });
-  const clear = (cy) => !boxesOf(cv).some((o) => boxesHit(o, pill(cy), 2));
-  let cy = [y + 24, y - 24, y + 52, y + 80, y - 52, y + 108, y + 136].find(clear);   // r15 4.10: the X beam is a box too, so the tag steps off the rail
-  if (cy == null) cy = y + 24;
-  const r = sk.tag(ctx, text, x, cy, GO);
+  const [cw] = sk.size(), cx = (v) => Math.max(tw / 2 + 2, Math.min(cw - tw / 2 - 2, v));   // tag() keeps the pill inside the canvas the same way
+  const pill = (px, cy) => ({ l: px - tw / 2, r: px + tw / 2, t: cy - 14, b: cy + 14 });
+  const clear = ([px, cy]) => !boxesOf(cv).some((o) => boxesHit(o, pill(px, cy), 2));
+  const ys = [y + 24, y - 24, y + 52, y + 80, y - 52, y + 108, y + 136];   // r15 4.10: the X beam is a box too, so the tag steps off the rail
+  // r15 4.10 (checker): the Y leg runs the whole height of the bed, so when no height clears it, slide the tag to the side of the
+  // leg nearer the mark (then the other side), height by height, so it stays by the mark
+  const leg = boxesOf(cv).find((o) => o.leg);
+  // a side the canvas edge would push the tag back from comes last
+  const sides = leg ? [leg.r + 6 + tw / 2, leg.l - 6 - tw / 2].sort((a, b) => (Math.abs(cx(a) - a) > 1) - (Math.abs(cx(b) - b) > 1) || Math.abs(a - x) - Math.abs(b - x)) : [];
+  const spots = ys.flatMap((v) => [[cx(x), v], ...sides.map((sx) => [cx(sx), v])]);
+  const at2 = spots.find(clear) || [x, y + 24];
+  const r = sk.tag(ctx, text, at2[0], at2[1], GO);
   if (r) boxesAdd(cv, { l: r.x, r: r.x + r.w, t: r.y, b: r.y + r.h, startTag: true });
 }
