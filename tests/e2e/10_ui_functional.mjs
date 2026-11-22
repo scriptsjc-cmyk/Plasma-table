@@ -187,7 +187,9 @@ for (const prof of ["desktop", "iphone14"]) {
     t.check(P("the tool bar is not rebuilt while nothing on it changes (status reports from the machine)"), same.same, JSON.stringify(same), "QB-STABLE");
   }
   await openLinarray(); await page.waitForSelector("#cadDialog:not(.hidden)");
-  t.check(P("linear array dialog opens with 3 fields"), await page.locator("#cadFields input").count() === 3);
+  // r15 10.5 added the "As many as fit on the sheet" checkbox: still 3 number fields, plus that one checkbox (left off)
+  { const f = await page.evaluate(() => [...document.querySelectorAll("#cadFields input")].map((i) => i.type + (i.type === "checkbox" ? ":" + i.checked : "")));
+    t.check(P("linear array dialog opens with 3 fields (+ the 10.5 fit checkbox, off)"), f.filter((x) => x !== "checkbox:false").length === 3 && f.filter((x) => x === "checkbox:false").length === 1, JSON.stringify(f)); }
   await shot(page, `${prof}-cad-dialog`);
   await page.locator("#cadOk").click({ force: true }); await sleep(150); t.check(P("linear array default → 3 copies"), (await state(page)).filter((i) => i.type === "plate").length === 3, JSON.stringify((await state(page)).map((i) => i.type)));
   // dialog validation

@@ -2,7 +2,7 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 22 Nov 2026, 05:38 (UK time). Live: r15 Round 10 (later / nice to have) on top of the editor-redesign test review and Round 9. Working on: nothing new until Josh answers the questions below.
+Last updated: 22 Nov 2026, 06:36 (UK time). Live: r15 Round 10 @ 21e59af (CI green, version.json 2026.11.22-21e59af), on top of the editor-redesign test review and Round 9. Working on: nothing new until Josh answers the questions below.
 
 ## Working on
 - Nothing new: Round 10 is done (below). Waiting on the questions in "For Josh to decide".
@@ -36,6 +36,9 @@ Last updated: 22 Nov 2026, 05:38 (UK time). Live: r15 Round 10 (later / nice to 
     "Add corner in the middle" → "Add corner" (tooltip keeps the words) so the panel still fits 1366×640; my own new unit 64 /
     e2e 130 adjusted before the gate (a wrong 7-vs-8 count, R25 typed in the box, the existing "inch" value, curve-hole ends)
   - CI fix: e2e 129 (my review test) crashed on CI because it waited a fixed 600 ms for the app; it now waits for the app to load (no check changed)
+  - Live @ 21e59af (the first push, 4c9bf45, stopped at that 129 crash and never deployed)
+  - Out-of-gate sweep after the push: e2e 10 "linear array dialog opens with 3 fields" now counts the 3 number fields plus the new
+    10.5 fit checkbox (left off) instead of 4 inputs (disclosed; 268/268). Every other out-of-gate failure fails the same on d9df4d2 (before Round 10)
 - Editor-redesign test review (the r13-layout group) @ 4e9610e..4cb872c:
   - Fixed, against approved rounds (e2e 129, in the deploy gate, fails 15/24 on the code before): the laptop Make header says
     "Make a part" again (r12 3.2); Simple's panel title "Pick a template" / "Set the size" with its help in an "i" (r12 4.2: the
@@ -325,6 +328,13 @@ Last updated: 22 Nov 2026, 05:38 (UK time). Live: r15 Round 10 (later / nice to 
   linked machine, nothing visible asked you to link one, and the list said "Home the machine". Both fixed in Round 8 part 2 (below).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
+- **e2e 30 [SECRETS] fails since 9.3 (59a0b4a; my miss, 30 is not in the deploy gate).** No key is in the code: the check looks for
+  the bare words "secret" / "api key", and core/report.js names them in its scrubber (the rules that DROP such keys from a problem
+  report). 30 passes 22/22 on the commit before. Fix choices: (a) 30 skips only report.js's scrubber lines (a security-test change,
+  so your call), or (b) report.js lists the key names another way (that would only hide the words from the check, so I have not).
+- **e2e 40 SLOW-NET (pre-existing):** on a 400 ms-per-request network the app is usable after ~17.5 s (limit 15 s; it was failing
+  before r15). Round 10 adds one more file level (~0.4 s), and the suite now stops at its 15 s wait instead of reporting the fail.
+  A real fix is fewer chained module loads (preload hints or a bundle). Do you want that as a round?
 - **10.9 Set top:** a button that marks where the torch is now as the top of the sheet would send a new command to the controller
   (a work-Z zero) and change every pierce and cut height after it. That touches G-code safety, so it is not built. Build it (how
   should it behave with touch-off off, for the air-start torch)?
@@ -360,7 +370,7 @@ Last updated: 22 Nov 2026, 05:38 (UK time). Live: r15 Round 10 (later / nice to 
   The difference between your two runs is the launcher: 55c3d71 changed launchKillable from raw headless Chrome (no hover, so the
   touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
 - 2.17 (G-code unchanged when a part has no features): the developer checks it before every geometry/import push with `tmp/precheck.sh` (339 presets + 35 DXF/SVG byte-identical). Can you confirm it independently on the next push?
-- Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×9 here (×9 at 8b0c852 too), 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×5 (OFFLINE fixed in Round 8), 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×1 (was ×4; rerun 21 Nov for 7.8), 66 ×2 (7.8), 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
+- Pre-existing failures outside the deploy gate, re-run 22 Nov 06:20 at 21e59af (each fails the same on d9df4d2 and, where checked, before r15): 30 SECRETS ×1 (9.3, above), 40 cut-bed axe ×2 + SLOW-NET (now a crash, above), 47 iphone14 library search 'l bracket', 49 ESTOP ×3 and 55 section 11 ×4 (Josh: keep), 52 crash (slothole / More holes), 53 s2r ×3 (don't touch), 56 crash (35 arc lost; also on 71e68d5), 57 ×3 (layout drag / layout toolbar), 58 crash (Nest panel), 63 ×1 (phone picture 54 % vs 55 %), 66 ×1 / 68 ×1 / 71 ×1 / 73 ×7 (toolbar position + 36 px, For Josh), 69_phone_cut #torchBig at 320×568, 76 item 11 ×2 (upload bar, For Josh), 94 ×1 (disconnect reminder; also on 71e68d5), 100 ×1 (long help behind i icons). Fixed since the old list: 10, 41, 65, 69_simple_advanced_phone, 72, 77, 83, 85, 96_fold3d, 97, 106. Do you see any others?
 - Round 8 part 2 update to that list: fixed 10, 41 item 11, 52 item 21, 65, 69_simple_advanced_phone, 83 C30, 85 C49, 106 F10 and two of
   40's axe findings. Still open: 57 ×3, 52 slot-hole crash (Josh), 53 s2r ×3 + crash and unit 22 C9-S2R ×2 (cut geometry, so I left
   them), 58, 63 ×1, 66 ×2, 68_layout_polish ×1 (newly seen, the same r13 laptop tool bar group), 69_phone_cut, 71 ×4, 72 ×4 + crash, 73 ×9,
