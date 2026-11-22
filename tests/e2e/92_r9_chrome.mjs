@@ -138,7 +138,9 @@ for (const prof of ["d1440", "d1366"]) {
   t.check(n("item 4: the pill updates live when the connection changes"), /Practice|Connected|FluidNC/i.test(afterBed) && !/not connected/i.test(afterBed), JSON.stringify({ before, afterBed }));
 
   await ev(page, () => window.plasmaTest.showScreen("menu"));
-  await ev(page, () => { document.getElementById("menuSetup").click(); });
+  // r15 Round 8 (checker: item 2 flaky under load): Menu > Machine setup lands on the Setup tab in the same click, not a moment later
+  const tabNow = await ev(page, () => { document.getElementById("menuSetup").click(); return document.body.dataset.tab; });
+  t.check(n("item 2: Menu > Machine setup opens the Setup tab straight away (no Cut tab first)"), tabNow === "setup", JSON.stringify({ tabNow }));
   await sleep(300);
   const setup = await ev(page, () => {
     const tabs = document.querySelector("header.topbar nav.tabs");
