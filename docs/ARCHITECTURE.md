@@ -58,8 +58,10 @@ name; `tests/unit/90_module_graph.mjs` enforces it).
 Eleven plain files, linked from `index.html` **in this order** (later files win ties, so the order is part of the design; each file's
 header says what it holds and which rules must stay in cascade order): `tokens.css` (colours, type, spacing variables), `base.css`
 (resets, utilities, buttons, forms), `layout.css` (app shell, step grid, stepper, nav bar), `components.css` (dialogs, keypad, jog pad,
-chips, lists), then one file per screen: `screen-signin-menu.css`, `screen-make.css`, `screen-cut.css`, `screen-parts.css`,
-`screen-setup.css`, `screen-admin.css`, and finally `yours.css` (the "Make it yours" appearance overrides).
+chips, lists), then one file per screen: `screen-signin-menu.css`, `screen-make.css` (+ `-laptop`, `-panels`), `screen-cut.css`
+(+ `-laptop`, `-setupgrid`, `-part`, `-run`, `-setup`), `screen-parts.css`, `screen-setup.css`, `screen-admin.css`, and finally `yours.css`
+(the "Make it yours" appearance overrides). A screen split into parts (r15 8.1, r16) links its parts one after another, so the
+rules keep their order; a new rule goes in the part for its layout (phone / laptop) and era, at the end.
 Put a new rule in the file of the screen it styles; a new colour or size becomes a token. A new `css/*.css` file must be linked in
 `index.html`; the offline list picks it up by itself (`scripts/stamp-version.sh` rewrites the `sw.js` precache from the files on disk).
 
