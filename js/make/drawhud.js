@@ -160,7 +160,7 @@ export function paintDrawHud() {
   } else if (tool === "rect" && sketch.drawDraft) {
     const d = sketch.drawDraft;
     el.innerHTML = `<span class="drawhud-lab">Width</span><input id="drawHudW" type="text" inputmode="decimal" value="${Math.abs(d.w || 0)}" aria-label="Width in millimetres">
-      <span class="drawhud-lab">Height</span><input id="drawHudH" type="text" inputmode="decimal" value="${Math.abs(d.h || 0)}" aria-label="Height in millimetres">
+      <span class="drawhud-lab">Height</span><input id="drawHudH" type="text" inputmode="decimal" value="${d.typed && !d.h ? "" : Math.abs(d.h || 0)}" aria-label="Height in millimetres">
       <span class="muted small">Tab switches · Enter places it · Esc cancels</span>`;
     el.classList.remove("hidden"); el.hidden = false;
     fields = ["drawHudW", "drawHudH"];
@@ -228,6 +228,7 @@ function onHudInput() {
     const d = sketch.drawDraft, both = pairIn($("drawHudW"));
     d.w = both ? both.w : num($("drawHudW"), d.w);
     d.h = both ? both.h : num($("drawHudH"), d.h);
+    if (both && $("drawHudH")) $("drawHudH").value = String(both.h);      // r15 10.7: the height box shows the typed height
     if (d.typed) { d.x = d.ox - Math.abs(d.w) / 2; d.y = d.oy - Math.abs(d.h) / 2; }
     sketch.draw();
   } else if (sketch.tool === "disc" && sketch.drawDraft) {
