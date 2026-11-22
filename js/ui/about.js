@@ -36,7 +36,9 @@ async function checkVersion(manual) {
   if (manual && $("aboutNote")) $("aboutNote").textContent = j ? `You are on the latest version (${RUN.id}).` : "Couldn't check right now (offline?). You are on " + RUN.id + ".";
   return j ? "same" : "offline";
 }
-function versionText() { return `Version ${RUN.id}${RUN.commit && RUN.commit !== "pending" && !String(RUN.id).includes(RUN.commit) ? " · " + RUN.commit : ""}`; }
+// r15 9.1: the stable/ copy says "stable", a kept older release (v/<commit>/) says so; the main site shows no channel
+function channelText() { const c = RUN.channel; return !c ? "" : c === "stable" ? " · stable" : /^v-/.test(c) ? " · kept release" : ""; }
+function versionText() { return `Version ${RUN.id}${RUN.commit && RUN.commit !== "pending" && !String(RUN.id).includes(RUN.commit) ? " · " + RUN.commit : ""}${channelText()}`; }
 export function paintVersionLines() {
   const t = versionText();
   if ($("verLine")) $("verLine").textContent = t;
@@ -44,7 +46,7 @@ export function paintVersionLines() {
   if ($("menuVer")) $("menuVer").textContent = t;
 }
 export function paintAbout() {
-  if ($("aboutVer")) $("aboutVer").innerHTML = `<b>${RUN.id}</b><br><span class="muted small">commit ${RUN.commit} · built ${RUN.built}</span>`;
+  if ($("aboutVer")) $("aboutVer").innerHTML = `<b>${RUN.id}</b>${channelText()}<br><span class="muted small">commit ${RUN.commit} · built ${RUN.built}</span>`;
 }
 export function bindVersion() {
   window.addEventListener("pt-new-version", (e) => {
@@ -71,7 +73,7 @@ export function startVersionWatch() {
     // is still running an older release (for example a slow fetch fell back to the old cache).
     // Do not adopt the new id as "what we're on" — that would hide the Reload banner.
     if (VERSION && VERSION.id && j.id !== VERSION.id) { showUpdate(j); return; }
-    RUN = { id: j.id, commit: j.commit || VERSION.commit, built: j.built || VERSION.built };
+    RUN = { id: j.id, commit: j.commit || VERSION.commit, built: j.built || VERSION.built, channel: j.channel || VERSION.channel };
     paintVersionLines();
     paintAbout();
   });

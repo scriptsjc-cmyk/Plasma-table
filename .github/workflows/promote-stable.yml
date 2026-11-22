@@ -1,0 +1,58 @@
+# r15 9.1 Promote a release to the stable channel (what buyers get at /stable/).
+# Run it by hand from the Actions tab ONLY after cutting a real part with that release on a real table.
+# It tags the commit stable-<date>-<commit> and redeploys the site; the deploy publishes stable/ and keeps the newest 3
+# promoted releases at v/<commit>/. Rolling back = run this again with the older commit (see docs/RELEASES.md).
+name: Promote to stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit or tag to promote (it must already be on main). Default: what main is now."
+        required: true
+        default: main
+        type: string
+      cut_done:
+        description: "I cut a real part with this release on a real table and it came out right"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write   # to push the stable-* tag
+  actions: write    # to start the Pages deploy
+
+concurrency:
+  group: promote-stable
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: A real cut first
+        if: ${{ inputs.cut_done != true }}
+        run: |
+          echo "Not promoted: tick 'I cut a real part with this release' only after a real cut."
+          exit 1
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag the release
+        env:
+          REF: ${{ inputs.ref }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -e
+          SHA=$(git rev-parse --verify "${REF}^{commit}")
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "Not promoted: $SHA is not on main."; exit 1; }
+          TAG="stable-$(date -u +%Y%m%d-%H%M%S)-${SHA:0:7}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Promoted to stable by $ACTOR after a real cut" "$SHA"
+          git push origin "refs/tags/$TAG"
+          echo "Promoted $SHA as $TAG" >> "$GITHUB_STEP_SUMMARY"
+      - name: Redeploy the site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main

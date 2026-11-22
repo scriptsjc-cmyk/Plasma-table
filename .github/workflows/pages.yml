@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   # r13 section 5: deploy only after the gate passes. tests/ci-gate.mjs runs every unit suite plus the safety and fit
-  # end-to-end suites (20_demo_job_safety, 22_stop_overlay, 70, 74, 92_r9_chrome, 96_fits_screen, 110, 111, 112, 113_r15_fits, 120_every_tool, 121_features, 122_loose_holes, 123_features_phone, 124_r15_round3, 125_r15_round4, 126_r15_round5, 127_r15_round6); only the checks listed in
+  # end-to-end suites (20_demo_job_safety, 22_stop_overlay, 70, 74, 92_r9_chrome, 96_fits_screen, 110, 111, 112, 113_r15_fits, 120_every_tool, 121_features, 122_loose_holes, 123_features_phone, 124_r15_round3, 125_r15_round4, 126_r15_round5, 127_r15_round6, 128_r15_round9); only the checks listed in
   # tests/known-failures.txt may fail. Everything runs against a local static server and the in-browser practice table.
   test:
     runs-on: ubuntu-latest
@@ -51,12 +51,18 @@ jobs:
     steps:
       - name: Check out the commit being deployed
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # r15 9.1: the stable-* release tags are needed for the stable/ channel
       - name: Stamp version
         run: ./scripts/stamp-version.sh
       - name: Show what was stamped
         run: cat version.json
       - name: Tighten the public page's CSP (no WebSockets on the https site)
         run: ./scripts/harden-csp.sh
+      # r15 9.1: buyers use stable/ (the newest release Josh promoted with the "Promote to stable" workflow after a real cut);
+      # the newest 3 promoted releases stay at v/<commit>/ for rollback. With no stable-* tag this step adds nothing.
+      - name: Add the stable channel and the kept releases
+        run: ./scripts/build-channels.sh
       - uses: actions/configure-pages@v5
       - name: Upload the site
         uses: actions/upload-pages-artifact@v3

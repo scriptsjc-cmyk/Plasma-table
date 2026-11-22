@@ -259,6 +259,10 @@ const PRECACHE = [
 /* precache:end */
 ];
 const PREFIX = "plasma-cad-";
+// r15 9.1: the stable/ and v/<id>/ copies of the app live under this site too, each with a cache prefix of its own
+// (scripts/build-channels.sh rewrites PREFIX in those copies). A worker only ever clears caches of its own channel.
+const CHANNELS = ["plasma-cad-stable-", "plasma-cad-v-"];
+const isOwn = (k) => k.startsWith(PREFIX) && !CHANNELS.some((c) => c !== PREFIX && c.startsWith(PREFIX) && k.startsWith(c));
 const SLOW_MS = 6000;
 const scopeUrl = (p) => new URL(p, self.registration.scope).href;
 const isRequired = (p) => p === "./" || p === "index.html" || p === "manifest.json" || p === "version.json" || /^(js|css|config|html)\//.test(p);
@@ -283,7 +287,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    const old = keys.filter((k) => k.startsWith(PREFIX) && k !== CACHE);
+    const old = keys.filter((k) => isOwn(k) && k !== CACHE);
     // also remove the pre-release-id caches this app used before ("plasma-cad-v1" style names share the prefix; nothing else is touched)
     await Promise.all(old.map((k) => caches.delete(k)));
     await self.clients.claim();
