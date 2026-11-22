@@ -194,7 +194,9 @@ for (const prof of ["desktop", "iphone14"]) {
   await page.evaluate(() => { const s = window.plasmaTest.sketch; s.clear(); s.add("rect", true); s.pick([s.items[0].id]); s.onSelect(); });
   await sleep(400);
   await openLinarray(); await page.waitForSelector("#cadDialog:not(.hidden)");
-  await page.fill("#cad_n", "abc").catch(() => {}); await page.locator("#cadOk").click({ force: true }); t.check(P("array dialog: letters rejected with message"), await toastText(page) !== "" || await page.locator("#cadDialog:not(.hidden)").count() === 1, await toastText(page));
+  // r15 Round 8: page.fill() can't put letters in a number field (it threw and was swallowed, so the default 3 stayed); type them as a person would
+  await page.locator("#cad_n").click(); await page.keyboard.press("Control+A"); await page.keyboard.type("abc");
+  await page.locator("#cadOk").click({ force: true }); t.check(P("array dialog: letters rejected with message"), await toastText(page) !== "" || await page.locator("#cadDialog:not(.hidden)").count() === 1, await toastText(page));
   await page.close().catch(() => {}); await page.ctx.close().catch(() => {});
 }
 await br.close(); await srv.close();
