@@ -4,9 +4,9 @@
 // The model lives in part-features.js; the sketch flattens features to plain contours before anything is cut.
 import { $, esc, toast } from "../core/dom.js";
 import { S, sketch } from "../core/state.js";
-import { CUTOUT_SHAPES, FEATURE_KINDS, PATTERNABLE, adoptableHoles, featureOps, isHoleFeature, exact, featureIssues, featureSummary, mirrored, newFeature, patternOf, setFeatureValue, syncLinks } from "./part-features.js";
+import { fitArcToOutline, CUTOUT_SHAPES, FEATURE_KINDS, PATTERNABLE, adoptableHoles, featureOps, isHoleFeature, exact, featureIssues, featureSummary, mirrored, newFeature, patternOf, setFeatureValue, syncLinks } from "./part-features.js";
 
-const ADD_ORDER = [["hole", "Hole"], ["slot", "Slot"], ["bolt", "Bolt circle"], ["grid", "Grid of holes"], ["edge", "Holes in a line"],
+const ADD_ORDER = [["hole", "Hole"], ["slot", "Slot"], ["bolt", "Bolt circle"], ["grid", "Grid of holes"], ["edge", "Holes in a line"], ["arc", "Holes along a curve"],
   ["rect", "Rectangle cut-out"], ["shape", "Shape cut-out"], ["text", "Text"], ["etch", "Etch line"], ["corner", "Corners"]];
 let openId = null, menuFor = null;
 
@@ -173,6 +173,10 @@ function addFeature(kind) {
   }
   change((it, fr) => {
     const f = newFeature(kind, nextId(it), fr.W, fr.H);
+    if (kind === "arc" && fr.outline) {                 // r15 10.3: follow the part's curved edge, inside the metal
+      const fit = fitArcToOutline(fr.outline, f.d);
+      if (fit) { f.x = fit.x; f.y = fit.y; f.r = fit.r; f.a0 = fit.a0; f.a1 = fit.a1; }
+    }
     if (kind === "corner") {                            // a shape with a corner radius: the row sets it; any other outline: a Corners row (plan 2.12)
       if ("r" in it.p) f.r = Number(it.p.r) || 0;
       else { f.r = 5; f.kind = "round"; f.at = "all"; }
