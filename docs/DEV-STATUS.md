@@ -10,7 +10,7 @@ Last updated: 22 Nov 2026, 04:09 (UK time). Live: r15 Round 9 (9.1–9.6; 9.7 no
 - 8.2: **Skipped (Josh 21 Nov)**. laptop.js keeps its JS moves, unchanged.
 
 ## Ready to check
-- r15 Round 9 (before selling), tests first: unit 62 (31 checks) @ b5d9cfe, e2e 128 (83 checks, now in the deploy gate) @ ed990b2, unit 63 (28) @ 7609a77; live @ the DEV-STATUS commit
+- r15 Round 9 (before selling; approved: Josh t534u, 21 Nov, "I give permission to do all of the ideas" covers r15 rounds 1–10 except 9.7 and the 'Waiting on Josh' items, as quoted to me by the reviewer), tests first: unit 62 (31 checks) @ b5d9cfe, e2e 128 (83 checks, now in the deploy gate) @ ed990b2, unit 63 (28) @ 7609a77; live @ 4739e75
   - 9.6 cut history (date, part, material, thickness, time, finished / stopped and why) with CSV download; the last job's log and alarms kept for the report; practice jobs are marked practice @ 3b76051
   - 9.5 consumables: tip and electrode pierce counts in Settings › Torch, each with its own "New tip / New electrode" (asks first); practice never counts @ 3cabe0f. **Tip size → kerf is NOT done** (it changes G-code; held for Josh)
   - 9.3 ☰ Send a problem report: version, screen, settings, last job log and alarms; anything named like a password / key / token / session and any JWT, sb_secret_ key, Bearer value or e-mail is removed. It is a download or copy (there is no support address or upload place yet; question for Josh) @ 59a0b4a
@@ -291,8 +291,6 @@ Last updated: 22 Nov 2026, 04:09 (UK time). Live: r15 Round 9 (9.1–9.6; 9.7 no
   linked machine, nothing visible asked you to link one, and the list said "Home the machine". Both fixed in Round 8 part 2 (below).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
-- **Round 9 approval:** the plan lists "which rounds to approve" as waiting on you, and I was told to start Round 9 by the reviewer, not
-  in your own words. It is live, but nothing in it changes G-code, and the stable channel does nothing until you promote a release.
 - **9.1:** to start the stable channel, cut a real part, then run Actions › Promote to stable (docs/RELEASES.md). Also add
   `https://scriptsjc-cmyk.github.io/Plasma-table/stable/` to the Supabase Auth redirect URLs (you change that yourself).
 - **9.3:** where should problem reports go (a support e-mail, or an upload place)? For now they are a file or a copy.
