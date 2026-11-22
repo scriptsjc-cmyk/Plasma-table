@@ -5,6 +5,7 @@
 // body[data-screen] says which one is showing. The E-stop here only ever calls the app's existing STOP path (host.stop),
 // so a soft reset and torch-off are exactly what they were before: no new machine commands.
 import { cancelConfirm } from "../core/safeprompt.js";
+import { showTab } from "../core/hooks.js";
 const $ = (id) => document.getElementById(id);
 let H = null;
 
@@ -181,11 +182,11 @@ export function initFlow(host) {
     // Always the Cut tab. Entering the cut screen used to restore a leftover
     // Machine setup tab, so Menu > Cut sent people back to setup.
     showScreen("cut");
-    import("./nav.js").then((n) => n.showTab("cut"));
+    showTab("cut");
   };
   const openMachineSetup = () => {
     showScreen("cut");
-    import("./nav.js").then((n) => n.showTab("setup"));
+    showTab("setup");   // r15 Round 8: in the same click (was a dynamic import a moment later; e2e 92 item 2 flaked under load)
   };
   if ($("menuSetup")) $("menuSetup").onclick = openMachineSetup;
   if ($("btnBarSetup")) $("btnBarSetup").onclick = openMachineSetup;

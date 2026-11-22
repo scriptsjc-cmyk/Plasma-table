@@ -14,5 +14,6 @@ export const renderShapeForm = (...a) => H.renderShapeForm(...a);
 export const runPro = (...a) => H.runPro(...a);
 export const setShapeFs = (...a) => H.setShapeFs(...a);
 export const showSource = (...a) => H.showSource(...a);
+export const showTab = (...a) => H.showTab(...a);
 export const useShape = (...a) => H.useShape(...a);
 export const useShapeSoon = (...a) => H.useShapeSoon(...a);

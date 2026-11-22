@@ -45,7 +45,7 @@ import { bedViewRotated, jogToMachine } from "./cut/bedview.js";
 import { isFoldPart, foldModel, drawFoldCanvas, DEFAULT_CAM } from "./make/fold3d.js";
 import { openPresetBrowser } from "./make/presetbrowser.js";
 import { kerfNow, leadNow, loadJob } from "./cut/prepare.js";
-import { bindNav, goStep, onScreen, routeAuth, sendToCutting, testBypass } from "./ui/nav.js";
+import { bindNav, goStep, onScreen, routeAuth, sendToCutting, showTab, testBypass } from "./ui/nav.js";
 import { bindSketchBar, showSource, syncShapeForm, useCoupon, useShape, useShapeSoon, useStraight } from "./make/useshape.js";
 import { bindProTools, renderProTools, setShapeFs } from "./make/protools.js";
 import { applyMatchingPreset, applyPresetRow, bindMaterial, defaultSpeed, renderMaterials, row, saveSpeed, setSpeed } from "./cut/material.js";
@@ -84,7 +84,7 @@ import { bindPicture } from "./make/picture.js";
 import { bindCutSummary } from "./make/cutsummary.js";
 
 // Late-bound calls (see core/hooks.js): the real functions are registered here once, before anything runs.
-provide({ goStep, loadJob, paintChrome, paintGuide, refresh, renderProTools, renderQuickBar, renderShapeForm, runPro, setShapeFs, showSource, useShape, useShapeSoon });
+provide({ goStep, loadJob, paintChrome, paintGuide, refresh, renderProTools, renderQuickBar, renderShapeForm, runPro, setShapeFs, showSource, showTab, useShape, useShapeSoon });
 
 function bind() {
   bindDimEdit();
