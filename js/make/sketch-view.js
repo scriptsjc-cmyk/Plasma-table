@@ -309,16 +309,32 @@ export class ViewMethods {
       }
       if (one && this.opts.pro && !this.layout) {
         // r15 4.17: the X / Y chips sit under the part; when the part fills the view to the bottom they go just inside
-        // its bottom-left corner instead, never on the outline
-        const [, ch] = this.size(), below = y1 + 22 + 14 + 34 <= ch;
-        const cy = below ? y1 + 22 : y1 - 22, cx = below ? x0 : x0 + 30;
+        // its bottom-left corner instead, never on the outline. r15 4.10/4.17 (checker): ...and never on a hole: if a corner
+        // hole is there, they go in the gutter left of the part (one above the other), else inside, stepped clear of the holes
+        const [, ch] = this.size();
         ctx.font = "600 14px Barlow, system-ui";
         const xt = `X ${r1(b[0])}`, xw = Math.max(44, ctx.measureText(xt).width + 16);
-        const xr = this.tag(ctx, xt, below ? cx : x0 + 8 + xw / 2, cy, C.partLine);
+        const yt = `Y ${r1(b[1])}`, yw = Math.max(44, ctx.measureText(yt).width + 16);
+        const holes = this.contoursOf(one).slice(1).map((c) => { const q = c.pts.map((p) => S(p[0], p[1]));
+          return { l: Math.min(...q.map((v) => v[0])), r: Math.max(...q.map((v) => v[0])), t: Math.min(...q.map((v) => v[1])), b: Math.max(...q.map((v) => v[1])) }; });
+        const box = (cx, cy, w) => ({ l: cx - w / 2, r: cx + w / 2, t: cy - 14, b: cy + 14 });
+        const clearOf = (bx) => !holes.some((h) => Math.min(bx.r, h.r) - Math.max(bx.l, h.l) > -3 && Math.min(bx.b, h.b) - Math.max(bx.t, h.t) > -3);
+        // a spot is [X centre, X row, Y centre, Y row]
+        const row = (lx, cy) => [lx + xw / 2, cy, lx + xw + 8 + yw / 2, cy];
+        const below = y1 + 22 + 14 + 34 <= ch;
+        const spots = [];
+        if (below) spots.push([x0, y1 + 22, x0 + xw / 2 + 8 + yw / 2, y1 + 22]);                                            // under the part, as before
+        spots.push(row(x0 + 8, y1 - 22));                                                                                    // just inside the corner
+        if (x0 - 8 - Math.max(xw, yw) >= 4) spots.push([x0 - 8 - xw / 2, y1 - 50, x0 - 8 - yw / 2, y1 - 14]);              // gutter left of the part
+        for (let k = 1; k <= 12; k++) spots.push(row(x0 + 8 + k * 12, y1 - 22), row(x0 + 8, y1 - 22 - k * 12));          // inside, stepped clear
+        // outside the part (under it, or in the left gutter), or wholly inside its outline; and off every hole
+        const placed = (bx) => bx.t > y1 + 2 || bx.r < x0 - 2 || (bx.l > x0 + 2 && bx.r < x1 - 2 && bx.t > y0 + 2 && bx.b < y1 - 2);
+        const ok = (sp) => { const A = box(sp[0], sp[1], xw), B = box(sp[2], sp[3], yw); return clearOf(A) && clearOf(B) && placed(A) && placed(B); };
+        const sp = spots.find(ok) || row(x0 + 8, y1 - 22);
+        const xr = this.tag(ctx, xt, sp[0], sp[1], C.partLine);
         this.dimHits.push({ ...xr, kind: "x", it: one, label: "Left edge X (mm)" });
         ctx.font = "600 14px Barlow, system-ui";
-        const yt = `Y ${r1(b[1])}`, yw = Math.max(44, ctx.measureText(yt).width + 16);
-        const yr = this.tag(ctx, yt, xr.x + xr.w + 8 + yw / 2, cy, C.partLine);
+        const yr = this.tag(ctx, yt, sp[1] === sp[3] ? xr.x + xr.w + 8 + yw / 2 : sp[2], sp[3], C.partLine);   // in a row: just right of X as drawn
         this.dimHits.push({ ...yr, kind: "y", it: one, label: "Bottom edge Y (mm)" });
       }
       if (one && !this.layout && one.feats) drawFeatureHandles(this, ctx, S, C, one);   // r15 2.14: handles at feature centres
