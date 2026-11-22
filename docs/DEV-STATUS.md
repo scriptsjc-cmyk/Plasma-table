@@ -2,10 +2,10 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 22 Nov 2026, 01:48 (UK time). Live: r15 Round 8 part 2 (8.1 @layer + container query; pre-existing fixes incl. the prefs reset on reload and the tool bar rebuilt by status reports; 8.2 skipped, Josh 21 Nov) on top of part 1 and Josh's 21 Nov decisions. See `version.json`.
+Last updated: 22 Nov 2026, 03:20 (UK time). Live: the checker's three new problems from the Round 8 report (touch-off tag and Sheet corner label off the gantry's Y leg, X / Y chips off the holes, Bed and home labels off the gantry) on top of r15 Round 8. See `version.json`.
 
 ## Working on
-- Round 8 is done. Next: the r13-layout test group (see the open list under Questions for the checker), then Josh's three questions.
+- Round 9 (9.1–9.6, not 9.7), tests first. 9.5's tip size → kerf changes G-code, so it is held for Josh. Then the r13-layout test group.
 - 8.2: **Skipped (Josh 21 Nov)**. laptop.js keeps its JS moves, unchanged.
 
 ## Ready to check
@@ -250,13 +250,28 @@ Last updated: 22 Nov 2026, 01:48 (UK time). Live: r15 Round 8 part 2 (8.1 @layer
   - Full gate passed (82 suites, no retries) at 0c71dcf before this push
   - Full gate passed (81 suites, no retries) at 7de123a before the push
 
+- Checker's new problems (Round 8 report), each test written first and failing:
+  - 4.10 touch-off tag over the Y rail @ dac5a38 (test) / 23d44ef: the gantry's Y leg, carriage and torch handle are label boxes on
+    Setup too, not only the X beam. The touch-off tag slides beside the leg when no height clears it, and "Sheet corner (0, 0)" tries
+    the other side of the corner. 125 checks, after Start here at 1280 / 1366 / 1536, that neither sits on the leg (the leg's box is
+    checked against the picture's dark fill)
+  - 4.17 X / Y chips over a hole @ 60a46a2 (test) / 126585e: Plate with holes fitted to the view: default, Ø16 at 12 mm (fails before
+    the fix at all three sizes) and 300 × 60. The chips go under the part, else just inside its corner when that is clear of holes,
+    else stacked in the gutter left of the part, else inside, stepped clear
+  - Bed and home labels over the gantry (your report, item 3) @ 8e81eeb (test) / 013a1a7: `gantryBoxes()` in machinedraw.js gives the beam,
+    Y leg, carriage and torch handle with the drawing's own numbers (Setup uses it now too). "Controller 0,0 …" / "Home 0,0 …" and
+    "Torch X … Y … Z …" take the first clear spot: where they always went, then further out, the other side, the other way up.
+    125 checks both are off the gantry, off each other and on the canvas, at 1280 / 1366 / 1536
+  - Precheck: DXF/SVG 35 identical; the same 8 presets as last push. Full gate passed (82 suites) before this push
+
 ## Why 96/113 missed report items 1 and 2
 - Item 1: the walk only ever opened the Size and Holes tabs in Advanced, never Arrange. Now "make-advanced-arrange" at every size.
 - Item 2: the walk stopped a ONE-part job before its first pierce, so Save speed, "Stopped during cut N" and Continue from cut never
   showed. Now "cut-stopped-midjob": 3 parts, speed changed, STOP after cut 2, checked before and after the E-stop reset.
 
 ## Next up
-- Round 8 part 2: the pre-existing failures list (incl. 63 ×1, 66 ×2 from 7.8). 8.2 skipped (Josh 21 Nov).
+- Round 9 (9.1–9.6). Then the r13-layout test group (66 / 68 / 71 / 72 / 73 / 77 / 85 / 97 / 83 / 106 ME1): update a test only where an
+  approved round clearly meant the change.
 
 ## Not a bug
 - Space-bar STOP path (e2e 49 ESTOP ×3: Space also sends "$$" after "!" + Ctrl-X, and is not ignored on Make; 55 section 11 ×4):
