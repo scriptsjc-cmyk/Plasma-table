@@ -2,10 +2,10 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 22 Nov 2026, 00:23 (UK time). Live: r15 Round 8 part 2 (8.1 @layer + container query, pre-existing 41 item 11; 8.2 skipped, Josh 21 Nov) on top of part 1 and Josh's 21 Nov decisions (r15 7.5-redelbow, 7.5-saddlehole). See `version.json`.
+Last updated: 22 Nov 2026, 01:48 (UK time). Live: r15 Round 8 part 2 (8.1 @layer + container query; pre-existing fixes incl. the prefs reset on reload and the tool bar rebuilt by status reports; 8.2 skipped, Josh 21 Nov) on top of part 1 and Josh's 21 Nov decisions. See `version.json`.
 
 ## Working on
-- Round 8 part 2: the pre-existing failures list.
+- Round 8 is done. Next: the r13-layout test group (see the open list under Questions for the checker), then Josh's three questions.
 - 8.2: **Skipped (Josh 21 Nov)**. laptop.js keeps its JS moves, unchanged.
 
 ## Ready to check
@@ -223,8 +223,31 @@ Last updated: 22 Nov 2026, 00:23 (UK time). Live: r15 Round 8 part 2 (8.1 @layer
   - pre-existing 65 ×2 @ 02ce572: the Beginner / Advanced tools mode switch is 14 px again (named token `--fs-modesw`), as round 5
     look M6 set it. e825afa's type-scale pass had moved its five rules to 13 px. 65: 71/71. Test change (disclosed): unit 58's pinned
     cut-rule hash updated (one screen-cut.css line). Full gate passed (81) at 02ce572
+  - Checker "new problems" 1 and 2: e2e 92 item 2 flaky @ 649594f (test: Menu › Machine setup must land on Setup in the same
+    click) / 4f07d69: Menu › Cut and Machine setup set the tab through core/hooks `showTab` in the click itself, not a dynamic import a
+    moment later (92 40/40 ×6, three at once). e2e 122 @ 73651ea: after the reload it waits for `window.plasmaTest`, not a fixed 800 ms
+    (test timing only)
+  - pre-existing 10 PRO-PERSIST and 69_simple_advanced_phone, **a real bug** @ abc71af (unit 61, written first) / 3f1d700:
+    since 9f22b5b (20 Nov), the cut panel's start-up save of speeds and material ran before Make it yours loaded the prefs, and wrote the
+    defaults over them. Every reload lost Simple / Advanced, theme, accent, toolbar and the rest. Prefs now read what is stored before
+    the first save. 69_simple_advanced_phone 14/14
+  - **found via 10, a real bug** @ c821e91 / 0c71dcf: with a machine connected (practice or real), each status report (about 10 a
+    second) ran refresh(), which rebuilt the whole Make tool bar, the pinned Undo / Redo / Fit / Delete and the Arc ▾ menu. A press and
+    its release could land on different buttons, and hover and keyboard focus were lost. They are now rebuilt only when their markup
+    changes (10's new QB-STABLE check fails without it). 10: 268/268 (it used to crash at the line array). Test changes (disclosed):
+    10 opens Linear array from the laptop tool bar's ⋯ More menu, where it lives, and types the letters into the number field rather
+    than using page.fill() (which can't, and its error was swallowed)
+  - pre-existing 85 C49 @ c4d59ba: Ctrl+K and / now focus the tool search. The More menu opens first, then the search box on screen
+    gets focus (it used to focus the hidden one)
+  - pre-existing 40 A11Y ×2 @ 6d5a926: the Make header's Snap and Drag-selects switches drop aria-pressed (not allowed on
+    role="switch"; aria-checked carries the state and the CSS already used it). 40 is ×3 now
+  - pre-existing 52 item 21 @ 036c3bf (test): the hand-built page now confirms the "Before you cut" safety prompt after Start; the
+    first-job flag is recorded as before
+  - pre-existing 83 C30 and 106 F10 @ 578ca88 (test): arcs and spline count as on the rail when they are in its Arc ▾ menu (r15 4.18),
+    and Etch / mark's name is read from the button label on the compact icon rail
   - Precheck: DXF/SVG 35 byte-identical. Presets: the same 8 as last push (dustpan, s2roffset, fishmouth, takeoff, britches,
-    teetemp, redelbow, saddlehole); no new cut changes
+    teetemp, redelbow, saddlehole); no new cut changes (rerun at 0c71dcf)
+  - Full gate passed (82 suites, no retries) at 0c71dcf before this push
   - Full gate passed (81 suites, no retries) at 7de123a before the push
 
 ## Why 96/113 missed report items 1 and 2
@@ -243,6 +266,14 @@ Last updated: 22 Nov 2026, 00:23 (UK time). Live: r15 Round 8 part 2 (8.1 @layer
   linked machine, nothing visible asked you to link one, and the list said "Home the machine". Both fixed in Round 8 part 2 (below).
 
 ## For Josh to decide (found while testing, not in the plan; all there before r15)
+- **Checker report "Decisions from Josh (21 Nov, 22:52)" says 8.2 is approved** (keep the JS moves, drive them from one table). Your
+  answer card at 22:14 said skip 8.2, and I only act on your own words, so 8.2 stays skipped. Which do you want?
+- **"More holes" (slot, corner, row, ring, grid of holes) is hidden in Simple view on laptops ≥ 1280 px** since 9314773 (20 Nov,
+  "hide controls that still overflow"). That's a control hidden to make the page fit. Put it back (in a popover, or by letting the
+  form scroll), or leave it? (52 crashes there.)
+- **76 item 11:** on the laptop Part step (three columns, no page scroll, 1685ac9) the upload bar no longer opens into a bigger drop
+  zone when clicked (your r8 item 11). The whole screen takes dropped files. Keep it compact (then I update the test) or bring the
+  bigger zone back?
 - Reducing elbow and saddle hole: decided 21 Nov (both redesigned, above).
 - 8.2: decided 21 Nov 22:14, skipped (Josh 21 Nov). The JS moves stay.
 
@@ -258,3 +289,10 @@ Last updated: 22 Nov 2026, 00:23 (UK time). Live: r15 Round 8 part 2 (8.1 @layer
   touch layout) to Playwright's Chrome (hover + fine pointer, so the r13 laptop layout, Link a machine in the header menu). See Not a bug.
 - 2.17 (G-code unchanged when a part has no features): the developer checks it before every geometry/import push with `tmp/precheck.sh` (339 presets + 35 DXF/SVG byte-identical). Can you confirm it independently on the next push?
 - Pre-existing failures outside the deploy gate (listed for Round 7/8): 57 ×3, 52 item 21, 10 (Advanced persists, line-array timeout), 55 section 11, 53, 58 (Nest panel; crashes at a hidden select), 69_phone_cut (#torchBig at 320×568), 69_simple_advanced_phone (Advanced not kept after reload), 71 ×4, 73_r7_make ×9 here (×9 at 8b0c852 too), 83, 85 (C46/C48/C49), 96_fold3d ×1 (iPhone 14 picture 119 px; was ×3 before 5.8), 97_pro_panel_scroll ×6 (panel no longer overflows since Barlow, same at HEAD before Round 5), 106_r9_features ×2 (F10 rail list, ME1 checklist), 49 ESTOP ×3 (Josh: keep as is). Round 4 found more, all identical on the commit before each change: 40_layout_a11y ×5 (OFFLINE fixed in Round 8), 47 [iphone14] library search 'l bracket' (hidden behind the old Save G-code as crash), 47 'TORCH ON pill' once under load (passes alone: flaky), 52 slothole crash, 63 ×1 (was ×4; rerun 21 Nov for 7.8), 66 ×2 (7.8), 72_make_header ×4 + crash, 76 item 11 ×2, 77 ×4 (d1440/d1366 info icon), 100 'long help behind i icons' ×1. The new ones (47, 49, 65, 69, 73, 106) fail identically on 71e68d5, before the Round 3 work. Do you see any of these, and do you agree they were there before r15?
+- Round 8 part 2 update to that list: fixed 10, 41 item 11, 52 item 21, 65, 69_simple_advanced_phone, 83 C30, 85 C49, 106 F10 and two of
+  40's axe findings. Still open: 57 ×3, 52 slot-hole crash (Josh), 53 s2r ×3 + crash and unit 22 C9-S2R ×2 (cut geometry, so I left
+  them), 58, 63 ×1, 66 ×2, 68_layout_polish ×1 (newly seen, the same r13 laptop tool bar group), 69_phone_cut, 71 ×4, 72 ×4 + crash, 73 ×9,
+  76 item 11 ×2 (Josh), 77 ×4, 83 crash (Export button moved), 85 C46 / C48, 96_fold3d ×1, 97 ×6, 100 ×1, 106 ME1, 40 ×3 (zeroCard
+  summary has buttons inside it; making the iPhone bed picture focusable needs care around Space-as-STOP; slow-net), 47 ×1, 49 ESTOP ×3
+  (Josh: keep). Most of 66 / 68 / 71 / 72 / 73 / 77 / 85 / 97 are older tests against the r13 laptop editor layout. Each needs a
+  "was this change meant?" check before the test is updated, which is the next job.
