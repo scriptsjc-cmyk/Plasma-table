@@ -80,7 +80,7 @@ function famCard(f) {
   const first = pickShape(f.picks[0]);
   return `<button type="button" class="pb-card" data-fam="${esc(f.id)}" title="${esc(f.what)}">
     <span class="pb-cardpic">${first ? shapeThumb(first, 120, 76) : ""}</span>
-    <span class="pb-cardname">${esc(f.name)}</span>
+    <span class="pb-name pb-cardname">${esc(f.name)}</span>
     <span class="pb-cardcount">${f.picks.length > 1 ? `${f.picks.length} versions` : "1 version"}</span>
   </button>`;
 }
