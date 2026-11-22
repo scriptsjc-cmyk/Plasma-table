@@ -349,6 +349,21 @@ try {
         return hz(Tt) || hz(B) || vt(L) || vt(R); };
       return { n: chips.length, on: chips.filter(crosses).map((c) => c.kind), box: [L, Tt, R, B].map(Math.round), chips: chips.map((c) => [c.x, c.y, c.w, c.h].map(Math.round)) }; });
     t.check(`4.17 ${prof}: the X / Y position chips don't sit on the part outline`, xy.n === 2 && xy.on.length === 0, J(xy));
+    // r15 Round 8 (checker): the default Plate with holes fitted to the view: the chips are on neither the outline nor a hole
+    for (const [pname, pp] of [["default", {}], ["Ø16 holes 12 mm in", { hole: 16, inset: 12 }], ["300 × 60, holes 10 mm in", { w: 300, h: 60, inset: 10 }]]) {
+      const xyp = await ev(page, (pp) => { const T = window.plasmaTest, s = T.sketch; s.clear(); s.add("plate", true, {}); Object.assign(s.items[0].p, pp); s.commit(); s.pick([s.items[0].id]); s.onSelect(); s.fitView(); s.draw && s.draw();
+        const it = s.items[0], cs = s.contoursOf(it), sb = (c) => { const q = c.pts.map((p) => s.toScreen(p[0], p[1])); return { l: Math.min(...q.map((v) => v[0])), r: Math.max(...q.map((v) => v[0])), t: Math.min(...q.map((v) => v[1])), b: Math.max(...q.map((v) => v[1])) }; };
+        const out = sb(cs[0]), holes = cs.slice(1).map(sb), pad = 2, [cw, ch] = s.size();
+        const chips = (s.dimHits || []).filter((h) => h.kind === "x" || h.kind === "y").map((c) => ({ kind: c.kind, l: c.x, r: c.x + c.w, t: c.y, b: c.y + c.h }));
+        const hit = (a, b) => Math.min(a.r, b.r) - Math.max(a.l, b.l) > -pad && Math.min(a.b, b.b) - Math.max(a.t, b.t) > -pad;
+        const crosses = (c) => { const hz = (y) => c.t - pad < y && c.b + pad > y && c.r > out.l && c.l < out.r, vt = (x) => c.l - pad < x && c.r + pad > x && c.b > out.t && c.t < out.b;
+          return hz(out.t) || hz(out.b) || vt(out.l) || vt(out.r); };
+        return { n: chips.length, holes: holes.length, onOutline: chips.filter(crosses).map((c) => c.kind), onHole: chips.filter((c) => holes.some((h) => hit(c, h))).map((c) => c.kind),
+          inView: chips.every((c) => c.l >= 0 && c.r <= cw && c.t >= 0 && c.b <= ch), apart: chips.length === 2 && !hit(chips[0], chips[1]),
+          out: [out.l, out.t, out.r, out.b].map(Math.round), chips: chips.map((c) => [c.l, c.t, c.r, c.b].map(Math.round)), hb: holes.map((h) => [h.l, h.t, h.r, h.b].map(Math.round)) }; }, pp);
+      t.check(`4.17 ${prof}: Plate with holes (${pname}): the X / Y chips are on neither the outline nor a hole, in view and apart`,
+        xyp.n === 2 && xyp.holes >= 1 && xyp.onOutline.length === 0 && xyp.onHole.length === 0 && xyp.inView && xyp.apart, J(xyp));
+    }
     // 4.18 rail: the first tool clears the rail's border; 3-point arc / Tangent arc / Spline are one "Arc ▾" button that opens them
     const rail = await ev(page, () => { const qb = document.getElementById("quickBar"), r = qb.getBoundingClientRect(), c = getComputedStyle(qb);
       const btns = [...qb.querySelectorAll(":scope > button[data-qb]")].filter((b) => b.getClientRects().length);
