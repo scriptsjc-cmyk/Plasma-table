@@ -4,6 +4,7 @@
 import { textToContours, TEXT_FONTS, defaultWeight } from "./textshape.js";
 import { traceImage, toGray, grayHistogram, otsu } from "./trace.js";
 import { contoursToEditable } from "./editable.js";
+import { expandNumbered } from "./numbered.js";
 
 import { esc } from "../core/dom.js";
 const $ = (id) => document.getElementById(id);
@@ -95,7 +96,7 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
 </div>`;
   document.body.append(...root.children);
   const tdlg = $("textDlg"), rdlg = $("traceDlg");
-  let tres = null, rres = null, img = null, imgHist = null, timer = null;
+  let tres = null, rres = null, img = null, imgHist = null, timer = null, numbered = null;
   const num = (id, d) => { const v = parseFloat($(id).value); return Number.isFinite(v) ? v : d; };
   const closeBoth = () => { tdlg.classList.add("hidden"); rdlg.classList.add("hidden"); };
   const syncPro = () => { const p = !!isPro(); tdlg.classList.toggle("is-pro", p); rdlg.classList.toggle("is-pro", p); };
@@ -125,14 +126,19 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
   const paintText = () => {
     const txt = $("mtText").value;
     if (!txt.trim()) { tres = null; drawOutlines($("mtPrev"), []); $("mtInfo").textContent = "Type some words."; $("mtAdd").disabled = true; return; }
-    try { tres = textToContours(txt, textOpts()); } catch (e) { tres = null; $("mtInfo").textContent = "Could not make that text: " + e.message; $("mtAdd").disabled = true; return; }
+    // r15 10.4: a range in the text ("TAG 001–050") makes numbered copies; the preview shows the first one
+    const nums = expandNumbered(txt);
+    if (nums && nums.error) { tres = null; drawOutlines($("mtPrev"), []); $("mtInfo").textContent = nums.error; $("mtAdd").disabled = true; return; }
+    numbered = nums;
+    try { tres = textToContours(nums ? nums[0] : txt, textOpts()); } catch (e) { tres = null; $("mtInfo").textContent = "Could not make that text: " + e.message; $("mtAdd").disabled = true; return; }
     drawOutlines($("mtPrev"), tres.contours);
     const miss = (tres.missing || []).filter(Boolean);
     const warn = tres.islands ? ` ${tres.islands} centre${tres.islands > 1 ? "s" : ""} are loose (no bridge possible).` : "";
     const missNote = miss.length
       ? ` These characters aren't in the font and were not added (they would not be cut as a “?”): ${miss.join(" ")}.`
       : "";
-    $("mtInfo").textContent = `${tres.width.toFixed(0)} × ${tres.height.toFixed(0)} mm, stroke ${tres.weight.toFixed(1)} mm.` + warn + missNote;
+    const numNote = numbered ? `${numbered.length} numbered copies: ${numbered[0]} … ${numbered[numbered.length - 1]}. Each about ` : "";
+    $("mtInfo").textContent = numNote + `${tres.width.toFixed(0)} × ${tres.height.toFixed(0)} mm, stroke ${tres.weight.toFixed(1)} mm.` + warn + missNote;
     $("mtAdd").disabled = !tres.contours.length || !!miss.length;
   };
   const textSoon = () => { clearTimeout(timer); timer = setTimeout(paintText, 120); };
@@ -165,9 +171,35 @@ export function initMakeTools({ sketch, isPro, afterAdd, toast, blocked }) {
     afterAdd && afterAdd(n, label);
     return n;
   }
+  // r15 10.4: each numbered copy is its own group of parts named after its number, laid out 10 to a row, 10 mm apart
+  function addNumbered(labels, extra) {
+    const opts = textOpts(), b = sketch.allBoxExcept([]);
+    const ox = b ? Math.round(b[2] + 15) : 20;
+    let x = ox, y = b ? Math.round(b[1]) : 20, rowH = 0;
+    const parts = [];
+    labels.forEach((lab, i) => {
+      if (i && i % 10 === 0) { x = ox; y += rowH + 10; rowH = 0; }
+      let r; try { r = textToContours(lab, opts); } catch (e) { return; }
+      const e = r && contoursToEditable(r.contours); if (!e || !e.parts.length) return;
+      const bx = Math.min(...e.parts.map((p) => p.x)), by = Math.min(...e.parts.map((p) => p.y));
+      for (const p of e.parts) parts.push({ cs: p.cs, x: p.x - bx + x, y: p.y - by + y, op: extra.op, name: lab });
+      x += Math.ceil(r.width) + 10; rowH = Math.max(rowH, Math.ceil(r.height));
+    });
+    if (!parts.length) { toast("Nothing to add.", true); return 0; }
+    const n = sketch.importParts(parts, false);
+    sketch.pick(sketch.items.slice(-n).map((i) => i.id)); sketch.draw(); sketch.onSelect();
+    sketch.ensureVisible && sketch.ensureVisible();
+    afterAdd && afterAdd(n, "text");
+    return n;
+  }
   $("mtAdd").onclick = () => {
     if (!tres || !tres.contours.length) return;
     const etch = $("mtKind").value === "etch";
+    if (numbered) {
+      const n = addNumbered(numbered, etch ? { op: "score" } : {});
+      if (n) { tdlg.classList.add("hidden"); toast(`${numbered.length} numbered copies added (${numbered[0]} … ${numbered[numbered.length - 1]}), picked together.`); }
+      return;
+    }
     const n = addParts(tres.contours, "text", etch ? { op: "score", name: "Etch text" } : {});
     if (n) { tdlg.classList.add("hidden"); toast(etch ? (n === 1 ? "Text added as an etch (it will be marked first, not cut through)." : `Text added as ${n} etch parts, picked together. They will be marked first, not cut through.`) : (n === 1 ? "Text added as 1 part." : `Text added as ${n} parts, picked together.`)); }
   };
