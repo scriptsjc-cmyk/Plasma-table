@@ -124,7 +124,10 @@ const cutFile = async (page, file) => {
   await T(p, "window.plasmaTest.goStep(3)"); await sleep(400);
   await T(p, "(() => { document.getElementById('btnZero').click(); })()"); await sleep(500);
   await T(p, "(() => { document.querySelectorAll('#checklist input').forEach((i) => { if (!i.disabled) i.checked = true; }); document.getElementById('checklist').dispatchEvent(new Event('change')); })()"); await sleep(300);
-  await T(p, "document.getElementById('btnStart').click()"); await sleep(1200);
+  await T(p, "document.getElementById('btnStart').click()"); await sleep(600);
+  // r15 Round 8: Start asks "Before you cut" first (the safety prompt; newPage() answers it, this page is built by hand): confirm it
+  for (let i = 0; i < 3 && await T(p, "!document.getElementById('safeDlg').classList.contains('hidden')"); i++) { await p.click("#safeDlgOk"); await sleep(600); }
+  await sleep(600);
   const key = await T(p, "Object.keys(localStorage).filter((k) => k.startsWith('plasma.firstJobDone.'))");
   ck("21 starting a job records that the first job is done", key.length === 1 && (await T(p, `localStorage.getItem(${JSON.stringify(key[0])})`)) === "1", JSON.stringify(key));
   await T(p, "window.plasmaTest.estopPress('space')"); await sleep(800);
