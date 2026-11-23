@@ -13,7 +13,7 @@ const FILES = ["css/screen-cut.css", "css/screen-cut-laptop.css", "css/screen-cu
 // Download G-code icon range asked of .cutgrid's width, same declarations, style-diff identical) and the mode-switch size token (pre-existing 65) are the deliberate changes since.
 // r16 Round B (Josh 22 Nov) adds the Material rules for the ANDELI card (end of screen-cut-part.css) and lets the laptop card
 // show Air, Nozzle and Mode (nth-child(n+4) / (n+5)); those are the only changes, made on purpose.
-const BEFORE = "2ffa21447e944201bb3e7b1ecd43b22f88422841";   // r18: the connection menu's own items share the Disconnect button size (was 0dd23415… in r16/r17); was 5851b599… before r16, ec6070a1… before the floating Other… / supply notice and the two-row thickness buttons
+const BEFORE = "13bcd980d333645f6c941a25b20810c1ec03e07f";   // r18: Marker pen uses the Practice-run switch style (was 2ffa2144…); the connection menu's own items share the Disconnect button size (was 0dd23415… in r16/r17); was 5851b599… before r16, ec6070a1… before the floating Other… / supply notice and the two-row thickness buttons
 const index = fs.readFileSync(SITE + "index.html", "utf8");
 const links = [...index.matchAll(/<link rel="stylesheet" href="([^"]+)">/g)].map((m) => m[1]);
 const at = links.indexOf(FILES[0]);

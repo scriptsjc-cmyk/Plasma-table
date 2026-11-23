@@ -289,7 +289,9 @@ export function bindMaterial() {
   if ($("supplyNoticeOk")) $("supplyNoticeOk").onclick = () => $("supplyNotice").classList.add("hidden");
   const spQ = $("spQuality");
   if (spQ) spQ.onclick = (e) => { const b = e.target.closest("[data-q]"); if (b) setSpeed(Math.round(row().feed_mm_min * Number(b.dataset.q) / 10) * 10); };
-  ["ovDelay", "ovPierce", "ovCut", "ovKerf", "ovLead", "dryRun"].forEach((id) => $(id).addEventListener("change", () => { renderMaterials(); loadJob(); }));
+  ["ovDelay", "ovPierce", "ovCut", "ovKerf", "ovLead", "dryRun", "penRun"].forEach((id) => $(id).addEventListener("change", () => { renderMaterials(); loadJob(); }));
+  // r18: the Marker pen switch sits inside More cut options, so its summary says when the pen is on
+  $("penRun").addEventListener("change", () => { const tag = $("penOnTag"); if (tag) tag.classList.toggle("hidden", !$("penRun").checked); });
   $("dryRun").addEventListener("change", () => { if (!$("dryRun").checked && $("dryFirstNote")) $("dryFirstNote").classList.add("hidden"); });
   $("spDown").onclick = () => setSpeed(S.speed - speedStep(row().feed_mm_min));
   $("spUp").onclick = () => setSpeed(S.speed + speedStep(row().feed_mm_min));

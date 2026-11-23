@@ -84,7 +84,8 @@
             <p id="spNote" class="spnote"></p>
           </details>
           <details class="adjust" id="advCut">
-            <summary>More cut options</summary>
+            <summary>More cut options<b id="penOnTag" class="penon hidden">&nbsp;· pen on</b></summary>
+            <label class="check prominent penrun"><input type="checkbox" id="penRun" role="switch"> Marker pen (no cutting) <button type="button" class="info-i" data-tip="Draws every line of the part with a marker pen instead of cutting – handy for marking out. Fit the pen in a sprung holder on the torch carriage, tip a little below the torch. Before each line the floating head touches the sheet, the pen draws, then lifts. The torch never comes on. If the pen sits beside the torch, set its offset in Settings › Etch / mark." aria-label="About the marker pen"></button></label>
             <p class="muted small has-info"><span class="info-label">Leave a box empty for the recommended Auto value.</span><button type="button" class="info-i" data-tip="Leave a box empty to use the recommended value shown in it as “Auto”." aria-label="More about Auto values"></button><span class="info-body"> Leave a box empty to use the recommended value shown in it as “Auto”.</span></p>
             <div class="grid2">
               <label>Cut width / kerf (mm)<input id="ovKerf" type="number" step="0.1" inputmode="decimal"></label>

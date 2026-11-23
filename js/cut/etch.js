@@ -7,6 +7,13 @@ export const ETCH_END = "; PORTA-ETCH END";
 // Default mark height sits above the cut so a plasma etch cannot pierce. Starting point only — test on scrap.
 export const ETCH_HEIGHT_ABOVE_CUT_MM = 1.5;
 export const ETCH_LEAD_MM = 2;
+// r18 marker pen (Josh 23 Nov: "use a marker pen in the cnc to mark designs out with ink"): the whole design is drawn
+// as a scribe pass with no torch at all. The pen rides in a sprung holder on the torch carriage: before each line the
+// floating head touches the sheet (like a pierce, but the torch never fires), the pen draws, then lifts to travel.
+export const ETCH_START_PEN = "; PORTA-ETCH SCRIBE PEN";
+export const PEN_DOWN = "; PORTA-PEN DOWN";
+export const PEN_UP = "; PORTA-PEN UP";
+export const PEN_FEED_MM_MIN = 3000;
 
 export function isEtchOp(op) { return ETCH_OPS.includes(op); }
 
@@ -153,8 +160,11 @@ export function emitEtchGcode(contours, { T = (p) => p, resolved, name = "etch" 
     lines.push("; " + etchPauseMessage("etch", n));
     lines.push("M0");
   }
-  lines.push(scribe ? ETCH_START_SCRIBE : ETCH_START_PLASMA);
-  if (scribe) {
+  const pen = scribe && !!r.pen;
+  lines.push(pen ? ETCH_START_PEN : scribe ? ETCH_START_SCRIBE : ETCH_START_PLASMA);
+  if (pen) {
+    lines.push(`; marker pen: draws every line in ink, the torch never comes on` + ((dx || dy) ? `, pen offset ${fmt(dx)}, ${fmt(dy)} mm` : ""));
+  } else if (scribe) {
     lines.push(`; scribe/marker on ${r.scribe.on}, off ${r.scribe.off}` + ((dx || dy) ? `, offset ${fmt(dx)}, ${fmt(dy)} mm` : ""));
   } else {
     lines.push(`; plasma etch: turn the cutter to its lowest amps (about ${r.plasma.amps} A), ${r.plasma.feed_mm_min} mm/min, height ${r.plasma.height_mm} mm (starting point, test on scrap), no pierce delay`);
@@ -163,13 +173,13 @@ export function emitEtchGcode(contours, { T = (p) => p, resolved, name = "etch" 
     const pts = offsetPts(c.pts, dx, dy).map(T);
     const a = pts[0];
     lines.push(`G0 X${fmt(a[0])} Y${fmt(a[1])}`);
-    lines.push(scribe ? r.scribe.on : "M3");
+    lines.push(pen ? PEN_DOWN : scribe ? r.scribe.on : "M3");
     for (let i = 1; i < pts.length; i++) lines.push(`G1 X${fmt(pts[i][0])} Y${fmt(pts[i][1])}`);
     if (c.closed !== false && pts.length >= 3) {
       const d = Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]);
       if (d > 0.05) lines.push(`G1 X${fmt(pts[0][0])} Y${fmt(pts[0][1])}`);
     }
-    lines.push(scribe ? r.scribe.off : "M5");
+    lines.push(pen ? PEN_UP : scribe ? r.scribe.off : "M5");
   }
   lines.push(ETCH_END);
   if (pauseAmps) {

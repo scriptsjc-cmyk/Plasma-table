@@ -327,6 +327,10 @@ export class GrblLink {
     // would also break the handshake). Commands stay queued until resumePoll.
     if (this.pollPaused) return;
     while (this.pending.length) {
+      // r18 marker pen: a touch-off is only sent once everything before it has been acknowledged, so the "floating head
+      // already triggered" check below reads the head AFTER the previous pen line has lifted (a pen draws with the head
+      // pushed up). Cutting is unchanged in effect: the board waits at a G38.2 for earlier moves anyway.
+      if (isProbeMove(this.pending[0].line) && this.inflight.length) return;
       if (this._gateProbe(this.pending[0])) return;
       const { line, source, got, done } = this.pending[0];
       const n = line.length + 1;

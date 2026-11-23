@@ -6,7 +6,7 @@
 //    torch on -> pierce delay -> drop to cut height -> set cut feed.
 //  * After every M5: lift clear for the next rapid.
 
-import { ETCH_START_PLASMA, ETCH_START_SCRIBE, ETCH_END, ETCH_HEIGHT_ABOVE_CUT_MM, ETCH_LEAD_MM } from "./etch.js";
+import { ETCH_START_PLASMA, ETCH_START_SCRIBE, ETCH_START_PEN, ETCH_END, ETCH_HEIGHT_ABOVE_CUT_MM, ETCH_LEAD_MM, PEN_FEED_MM_MIN } from "./etch.js";
 
 export class JobError extends Error {}
 const MAX_COORD_MM = 100000;   // 100 m: far beyond any table, still safe to print with toFixed()
@@ -84,6 +84,8 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
   const cuts = [], rapids = [], etches = [];
   let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
   let etchMode = null, etchToolOn = false, sawEtch = false, etchLen = 0;
+  const penLift = (Number(probe.switch_offset_mm) || 0) + (Number(torch.safe_lift_mm) || 0);   // clears the floating head switch, then the usual lift
+  let penPass = false, penDown = false, penLen = 0, penDowns = 0;
   const etchCfg = (cut && cut.etch) || {};
   const etchPlasma = etchCfg.plasma || {};
   const etchHeight = Number(etchPlasma.height_mm) > 0 ? Number(etchPlasma.height_mm) : cutH + ETCH_HEIGHT_ABOVE_CUT_MM;
@@ -105,8 +107,31 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
     const slowTag = /\(\s*PORTA-SLOW\s+(\d+(?:\.\d+)?)\s*\)/i.exec(rawLine);
     if (slowTag) slowPct = Math.max(20, Math.min(100, Number(slowTag[1])));
     if (/PORTA-ETCH PLASMA/i.test(rawLine)) { etchMode = "plasma"; sawEtch = true; out.push(ETCH_START_PLASMA); continue; }
+    if (/PORTA-ETCH SCRIBE PEN/i.test(rawLine)) { etchMode = "scribe"; penPass = true; sawEtch = true; out.push(ETCH_START_PEN); continue; }
     if (/PORTA-ETCH SCRIBE/i.test(rawLine)) { etchMode = "scribe"; sawEtch = true; out.push(ETCH_START_SCRIBE); continue; }
-    if (/PORTA-ETCH END/i.test(rawLine)) { etchMode = null; etchToolOn = false; out.push(ETCH_END); continue; }
+    if (/PORTA-ETCH END/i.test(rawLine)) {
+      if (penPass && penDown && !dryRun) out.push("G91", `G0 Z${fmt(penLift)}`, "G90");
+      etchMode = null; etchToolOn = false; penPass = false; penDown = false; out.push(ETCH_END); continue;
+    }
+    // r18 marker pen (Josh: "floating head should be active when drawing and lift up till it's not active when changing"):
+    // pen down = probe down until the floating head trips and STAY there, so the head is pushed up (pen pressing) while it
+    // draws; pen up = rise by the head's switch travel (that always releases it) plus the normal safe lift. A fixed rise is
+    // used instead of G38.4 so a wavy sheet that lets the head drop off mid-line can't put the board in alarm on the lift.
+    if (/PORTA-PEN (DOWN|UP)/i.test(rawLine)) {
+      if (!penPass) { warnings.push(`Line ${lineno}: a pen move outside a marker-pen pass was skipped.`); continue; }
+      if (/DOWN/i.test(rawLine) && !penDown) {
+        penDown = true; etchToolOn = true; current = null; penDowns += 1;
+        out.push("; pen down");
+        if (!dryRun) out.push("G91", `G38.2 Z-${fmt(probe.probe_distance_mm)} F${fmt(probe.probe_feed)}`, "G90");
+        out.push(`G1 F${fmt(PEN_FEED_MM_MIN)}`);
+      } else if (/UP/i.test(rawLine) && penDown) {
+        penDown = false; etchToolOn = false; current = null;
+        out.push("; pen up");
+        // G4 makes the board finish the lift before it answers, so the next touch-off is sent with the head released
+        if (!dryRun) out.push("G91", `G0 Z${fmt(penLift)}`, "G90", "G4 P0.01");
+      }
+      continue;
+    }
     // Amp-dial pauses sit outside the etch markers (before the pass and after END). Keep the tagged comments.
     if (/PORTA-PAUSE/i.test(rawLine)) { out.push(rawLine.trim()); continue; }
     const line = stripComments(rawLine);
@@ -167,7 +192,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
       else { pts = [[nx, ny]]; length = Math.hypot(nx - x, ny - y); }
       current.pts.push(...pts);
       if (kind === "cut" || kind === "etch") {
-        if (kind === "cut") { cutLen += length; cutTime += length / curFeed; } else etchLen += length;
+        if (kind === "cut") { cutLen += length; cutTime += length / curFeed; } else if (penPass) penLen += length; else etchLen += length;
         for (const [px, py] of [[x, y], ...pts]) {
           minx = Math.min(minx, px); maxx = Math.max(maxx, px);
           miny = Math.min(miny, py); maxy = Math.max(maxy, py);
@@ -277,7 +302,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
 
   const rapidFeed = machine.rapid_feed_estimate || 6000;
   const probeTime = (probe.probe_distance_mm / Math.max(probe.probe_feed, 1)) * 60 * 0.3;
-  const est = cutTime * 60 + (etchLen / Math.max(etchFeed, 1)) * 60 + (rapidLen / rapidFeed) * 60 + pierces * (delay + probeTime + 1.0);
+  const est = cutTime * 60 + (etchLen / Math.max(etchFeed, 1)) * 60 + (rapidLen / rapidFeed) * 60 + pierces * (delay + probeTime + 1.0) + (penLen / PEN_FEED_MM_MIN) * 60 + penDowns * (probeTime + 0.5);
   const r2 = (v) => Math.round(v * 100) / 100;
   const simplify = (polys) => polys.filter((p) => p.pts.length > 1).map((p) => p.pts.map(([a, b]) => [r2(a), r2(b)]));
 
@@ -294,6 +319,7 @@ export function prepareJob(gcodeText, cut, machine, dryRun = false) {
       height_mm: Math.round(height * 10) / 10,
       estimated_seconds: Math.round(est),
       line_count: out.length,
+      pen_length_mm: Math.round(penLen * 10) / 10,
     },
     warnings,
   };

@@ -57,6 +57,7 @@ export function renderCutCheck() {
   const body = `<table class="limits">${rows.map(([a, b]) => `<tr><td>${a}</td><td>${esc(b)}</td></tr>`).join("")}</table>`;
   $$(".limitsBody").forEach((el) => (el.innerHTML = body));
 }
+export function penMode() { const el = $("penRun"); return !!(el && el.checked); }
 export function loadJob() {
   if (!S.gcode && !S.design) return;
   if (S.src === "shape" && S.design && sketch && typeof sketch.contours === "function") {
@@ -65,8 +66,13 @@ export function loadJob() {
   try { resetPreviewCam(); } catch (e) { /* ignore */ }
   try {
     let gcode = S.gcode, cam = null, pre = [];
+    const pen = penMode();
+    if (pen && !S.design) throw new Error("Marker pen draws parts made or opened here (DXF, SVG or a shape). A G-code file can't be turned into pen lines – untick Marker pen to cut it.");
     if (S.design) {
-      cam = designToGcode(S.design.contours, { kerf: kerfNow(), leadIn: leadNow(), name: S.fileName, keepOrigin: !!(S.sheetMode && S.src === "shape" && !S.design.straight), etch: resolveEtch(row(), S.chart, currentSettings()), ...camOpts() });
+      // r18 marker pen: every line becomes a pen line (no kerf, no lead-ins, no torch)
+      const contours = pen ? S.design.contours.map((c) => ({ ...c, op: "mark" })) : S.design.contours;
+      const etch = resolveEtch(row(), S.chart, currentSettings());
+      cam = designToGcode(contours, { kerf: kerfNow(), leadIn: leadNow(), name: S.fileName, keepOrigin: !!(S.sheetMode && S.src === "shape" && !S.design.straight), etch: pen ? { ...etch, tool: "scribe", pen: true } : etch, ...camOpts() });
       gcode = cam.gcode;
       pre = [...(S.design.warnings || []), ...cam.warnings];
       if (S.design.straight) pre = pre.filter((w) => !/aren't closed shapes/.test(w));
