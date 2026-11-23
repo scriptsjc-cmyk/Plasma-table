@@ -630,6 +630,7 @@
   #demoTag.hidden { display: none; }
   .conn-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: var(--z-conn-menu); min-width: 180px; padding: 8px; background: var(--card, var(--c-white)); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 10px 28px color-mix(in srgb, var(--c-black) 18%, transparent); display: flex; flex-direction: column; gap: 6px; }
   .conn-menu.hidden, .conn-menu[hidden] { display: none; }
+  .conn-menu .connmenu-item,
   .conn-menu #btnDisconnect,
   .conn-menu #btnLinkMachine { min-height: 40px; width: 100%; font-size: var(--fs-s); margin: 0; }
   /* connPill stays visible; the wrap takes its place in the header flex */

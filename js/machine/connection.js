@@ -119,6 +119,34 @@ function paintConnectHelp() {
     : "This browser can't use USB or Bluetooth.";
   setInfoText(el, short, full, "More about connecting");
 }
+// r18 (Josh 23 Nov: "only lets me link but not control"): on a laptop the "Not connected" pill opens this menu
+// instead of connecting, and the menu only ever held Disconnect / Link a machine (and only on step 3). So it
+// always offers a way in: Connect + Practice while disconnected, Disconnect once connected on any step.
+function menuItem(menu, cls, text, onclick) {
+  let b = menu.querySelector("." + cls);
+  if (!b) {
+    b = document.createElement("button");
+    b.type = "button";
+    b.className = "connmenu-item " + cls;
+    b.setAttribute("role", "menuitem");
+    b.textContent = text;
+    b.onclick = (e) => { e.stopPropagation(); closeConnMenu(); onclick(); };
+    menu.insertBefore(b, menu.firstChild);
+  }
+  return b;
+}
+function paintConnMenu(menu) {
+  const on = !!S.connected;
+  const practice = menuItem(menu, "cm-practice", "Practice (no machine)", connectDemo);
+  const connect = menuItem(menu, "cm-connect", "Connect (USB or Bluetooth)", connectUSB);
+  connect.classList.add("go");
+  connect.classList.toggle("hidden", on || !!S.noUsb);
+  practice.classList.toggle("hidden", on);
+  const disc = $("btnDisconnect");
+  const discInMenu = !!(disc && disc.parentNode === menu && !disc.classList.contains("hidden"));
+  const discItem = menuItem(menu, "cm-disconnect", "Disconnect", disconnect);
+  discItem.classList.toggle("hidden", !on || discInMenu);
+}
 function closeConnMenu() {
   const menu = $("connMenu"), pill = $("connPill");
   if (!menu) return;
@@ -134,8 +162,15 @@ function toggleConnMenu() {
   menu.classList.toggle("hidden", !open);
   pill.setAttribute("aria-expanded", open ? "true" : "false");
   if (open) {
+    paintConnMenu(menu);
+    // The header row clips (overflow: hidden), so the menu is placed against the window, just under the pill.
+    const r = pill.getBoundingClientRect();
+    menu.style.position = "fixed";
+    menu.style.top = Math.round(r.bottom + 6) + "px";
+    menu.style.left = Math.round(r.left) + "px";
+    menu.style.right = "auto";
     const first = menu.querySelector("button:not(.hidden)");
-    if (first) first.focus();
+    if (first) first.focus({ preventScroll: true });
   }
 }
 
@@ -161,6 +196,7 @@ export function bindConnection() {
     closeConnMenu();
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeConnMenu(); });
+  window.addEventListener("resize", closeConnMenu);   // the menu is placed against the window when it opens
 
   $("btnDisconnect").onclick = disconnect;
   window.addEventListener("beforeunload", (e) => {
