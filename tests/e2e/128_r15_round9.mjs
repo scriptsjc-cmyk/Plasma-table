@@ -44,7 +44,7 @@ for (const prof of ["d1280x600", "d1536x730", "iphone14"]) {
   // ---------------------------------------------------------------- 9.2 the setup guide
   await openMenuItem(page, "menuSetupGuide");
   const g = await ev(page, () => [...document.querySelectorAll("#guideSteps [data-guide]")].map((li) => ({ id: li.dataset.guide, title: li.querySelector("h3, b, strong") ? li.querySelector("h3, b, strong").textContent.trim() : "", done: li.classList.contains("done"), open: !!li.querySelector("[data-guide-open]"), mark: !!li.querySelector("[data-guide-done]") })));
-  t.check(`9.2 ${prof}: five steps in order: connect, motor direction, torch test, edges, test coupon`, J(g.map((s) => s.id)) === J(["connect", "motors", "torch", "edges", "coupon"]) && g.every((s) => s.title && s.open), J(g));
+  t.check(`9.2 ${prof}: six steps in order (r18 added "choose your plasma" first): plasma, connect, motor direction, torch test, edges, test coupon`, J(g.map((s) => s.id)) === J(["plasma", "connect", "motors", "torch", "edges", "coupon"]) && g.every((s) => s.title && s.open), J(g));
   t.check(`9.2 ${prof}: nothing is done on a new browser`, g.every((s) => !s.done), J(g));
   await page.click('#guideSteps [data-guide="motors"] [data-guide-open]'); await sleep(700);
   const mt = await ev(page, () => { const v = document.getElementById("setupView"); return { scr: window.plasmaTest.screen(), vis: !!v && v.getClientRects().length > 0 && !v.classList.contains("hidden"), tab: v && v.dataset.setupTab, dlg: !document.getElementById("guideDlg").classList.contains("hidden") }; });
@@ -54,7 +54,7 @@ for (const prof of ["d1280x600", "d1536x730", "iphone14"]) {
   await page.keyboard.press("Escape"); await sleep(200);
   await openMenuItem(page, "menuSetupGuide");
   const g2 = await ev(page, () => ({ motors: document.querySelector('#guideSteps [data-guide="motors"]').classList.contains("done"), count: document.getElementById("guideCount") ? document.getElementById("guideCount").textContent : "" }));
-  t.check(`9.2 ${prof}: "Done" on a step sticks (and the count says 1 of 5)`, g2.motors && /1 of 5/.test(g2.count), J(g2));
+  t.check(`9.2 ${prof}: "Done" on a step sticks (and the count says 1 of 6)`, g2.motors && /1 of 6/.test(g2.count), J(g2));
   await page.click('#guideSteps [data-guide="connect"] [data-guide-open]'); await sleep(800);
   const cn0 = await ev(page, () => ({ scr: window.plasmaTest.screen(), step: window.plasmaTest.S.cur, toast: document.getElementById("toast").textContent, asked: window.__devAsked }));
   t.check(`9.2 ${prof}: with no part yet, Connect › Open goes to Cut › Part and says to choose a part first`, cn0.scr === "cut" && cn0.step === 1 && /choose any part/i.test(cn0.toast) && cn0.asked === 0, J(cn0));

@@ -49,6 +49,7 @@ import { bindNav, goStep, onScreen, routeAuth, sendToCutting, showTab, testBypas
 import { bindSketchBar, showSource, syncShapeForm, useCoupon, useShape, useShapeSoon, useStraight } from "./make/useshape.js";
 import { bindProTools, renderProTools, setShapeFs } from "./make/protools.js";
 import { expandChart } from "./cut/plasmaprofile.js";
+import { chartFileFor, currentPlasmaId } from "./cut/plasmapick.js";
 import { applyMatchingPreset, applyPresetRow, bindMaterial, defaultSpeed, renderMaterials, row, saveSpeed, setSpeed } from "./cut/material.js";
 import { bindJog, bindJogKeys, mountJogPads } from "./machine/jog.js";
 import { bindGate, paintWhy, refreshGate } from "./ui/gate.js";
@@ -126,9 +127,8 @@ function bind() {
   bindPreviewNav(drawPreview);
 }
 
-// r16 B1: which plasma drives the table. The ANDELI CUT-65DS is sold with it; Josh's own table can use his Reboot 60A.
-export const PLASMA_CHARTS = { "andeli-cut65ds": "config/cut_chart.json", reboot60: "config/cut_chart_reboot60.json" };
-function chartFile() { let id = null; try { id = localStorage.getItem("plasma.profile"); } catch (e) { /* ignore */ } return PLASMA_CHARTS[id] || PLASMA_CHARTS["andeli-cut65ds"]; }
+// r16 B1 / r18: which plasma drives the table (cut/plasmapick.js). The ANDELI CUT-65DS is the default.
+function chartFile() { return chartFileFor(currentPlasmaId()); }
 
 async function init() {
   const text = async (p) => { const r = await fetch(p, { cache: "no-cache" }); if (!r.ok) throw new Error(p); return r.text(); };

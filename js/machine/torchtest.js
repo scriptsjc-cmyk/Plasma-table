@@ -9,7 +9,7 @@ import { M, S } from "../core/state.js";
 import { $ } from "../core/dom.js";
 import { askConfirm } from "../core/safeprompt.js";
 import { cmd } from "./access.js";
-import { currentSettings, sanitizeCutterKind } from "./settings.js";
+import { currentSettings, resolveCutterKind } from "./settings.js";
 
 // Treat a dead link as a release, but never sooner than the transport's own
 // no-reply watchdog (3 s on USB/Bluetooth). A tighter 1.5 s cutoff was firing
@@ -38,7 +38,7 @@ function boardEstop() {
 export function cutterKind() {
   try {
     const s = (typeof currentSettings === "function" && currentSettings()) || (S && S.settings) || {};
-    return sanitizeCutterKind((s.cutter && s.cutter.kind) || s.cutterType);
+    return resolveCutterKind((s.cutter && s.cutter.kind) || s.cutterType || "auto");
   } catch (e) { /* ignore */ }
   return "touch-start";
 }

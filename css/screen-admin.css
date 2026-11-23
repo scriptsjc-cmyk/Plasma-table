@@ -105,6 +105,8 @@ body:not([data-mode="pro"]) .pro-copy, body[data-mode="pro"] .beg-copy { display
 .guidesteps { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 10px; }
 .guidestep h3 { margin: 0 0 2px; font-size: var(--fs-m); }
 .guidestep p { margin: 0 0 6px; }
+.guidestep .guidepick { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-weight: 600; }
+.guidestep .guidepick select { flex: 1; min-width: 0; min-height: 36px; font: inherit; font-weight: 400; }
 .guidestep.done h3 { color: var(--go); }
 .guide-flash { outline: 3px solid var(--accent); outline-offset: 3px; }
 .historywrap { overflow: auto; max-height: 50dvh; }

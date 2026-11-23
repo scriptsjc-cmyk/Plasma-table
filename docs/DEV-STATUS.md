@@ -4,6 +4,14 @@ The checker reads this file. Its rules are in README.md on the `checker-reports`
 
 Last updated: 22 Nov 2026, 06:36 (UK time). Live: r15 Round 10 @ 21e59af (CI green, version.json 2026.11.22-21e59af), on top of the editor-redesign test review and Round 9. Working on: nothing new until Josh answers the questions below.
 
+## r18 – choose your plasma cutter, by Claude (branch `claude-r18-plasma`; waiting for Josh's "Go live")
+Josh, 23 Nov: "adjust the cnc depending on what plazma cutter is being used … a reboot aswell but made default what it is now".
+- New `js/cut/plasmapick.js`: PLASMAS list (ANDELI CUT-65DS default, Reboot 60A), remembered in localStorage `plasma.profile`. `setPlasma()` swaps S.chart/M.chart straight away – no reload – and refuses while a job is running.
+- Setup guide: new first step "Choose your plasma cutter" with a dropdown. Settings › Torch: the plasma select now applies at once (the reload button `setPlasmaReload` is gone).
+- Cutter (start) type gains "Same as your plasma" (`auto`, now the default): Andeli = pilot arc, Reboot = touch start. A start type set by hand still wins. `resolveCutterKind()` in settings.js; torchtest uses it.
+- `config/cut_chart_reboot60.json` brought up to the Andeli chart's shape: supplies (16 A/32 A full 60 A, 13 A capped 30 A), nozzles 1.0/1.1/1.2, PSI and edge quality on each row, stainless/aluminium capped 16 mm, Galvanised/Zintec/Corten/Chequer plate added. Both charts carry `profile.cutter_kind`.
+- Tests: new unit 67_r18_plasma (25 checks). **Test changes disclosed:** e2e 128 check 9.2 now expects six guide steps with "plasma" first and "1 of 6" (was five / "1 of 5"); page-ids snapshot drops `setPlasmaReload`.
+
 ## r17 – preset families, by Claude (LIVE on main @ a24edf5, 22 Nov 19:16; Josh: "Go live")
 Josh, 22 Nov 17:38–17:40: "a lot of separate parts that are the same thing just slight adjustments … less wasted space and more
 explanation … do all these and organise it better … just go straight for it".

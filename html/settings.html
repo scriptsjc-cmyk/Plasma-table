@@ -116,14 +116,13 @@
 
     <div class="setpane hidden" data-setpane="torch">
       <h3>Torch and THC</h3>
-      <label>Your plasma (sets the cut chart)
+      <label>Your plasma cutter (sets the cut chart)
         <select id="setPlasmaProfile">
-          <option value="andeli-cut65ds">ANDELI CUT-65DS (sold with the table)</option>
-          <option value="reboot60">Reboot 60A + P-80</option>
+          <option value="andeli-cut65ds">ANDELI CUT-65DS – 65 A, pilot arc (sold with the table)</option>
+          <option value="reboot60">Reboot 60A – 60 A, touch start, P-80 torch</option>
         </select>
       </label>
-      <p id="setPlasmaNote" class="muted small">The cut chart (amps, air, speeds, limits) follows the plasma. The power supply is chosen on Cut › Material.</p>
-      <button type="button" id="setPlasmaReload" class="hidden">Reload to use the new chart</button>
+      <p id="setPlasmaNote" class="muted small">The amps, air, speeds and thickness limits on Cut › Material follow the plasma, straight away. The power supply is chosen on Cut › Material.</p>
       <p class="muted small">Pierce height is how high the torch sits while the arc starts. Cut height is the running height. THC (torch height control by voltage) is only used if the controller has it.</p>
       <div class="grid3">
         <label>Pierce height (mm)<input id="setPierceH" type="number" min="0" step="0.1" inputmode="decimal"></label>
@@ -135,12 +134,13 @@
       <p id="setThcNote" class="muted small"></p>
       <label>Cutter type
         <select id="setCutterKind">
-          <option value="touch-start">Touch-start (Reboot 60A — current cutter)</option>
+          <option value="auto">Same as your plasma (Andeli = pilot arc, Reboot = touch start)</option>
+          <option value="touch-start">Touch-start</option>
           <option value="pilot-arc">Pilot arc (Andeli CUT-65DS)</option>
           <option value="hf">High frequency (HF)</option>
         </select>
       </label>
-      <p class="muted small">Josh’s current Reboot 60A is touch-start. The Andeli CUT-65DS is a pilot-arc cutter. This does not change pierce or cut numbers.</p>
+      <p class="muted small">Leave this on "Same as your plasma" unless you use a different cutter. It only changes the torch-test and marking advice, not the pierce or cut numbers.</p>
       <div class="consumables" id="consCard">
         <h3>Tip and electrode</h3>
         <p class="muted small">Every real pierce counts on both. Practice runs don't count. Press the button when you fit a new one.</p>

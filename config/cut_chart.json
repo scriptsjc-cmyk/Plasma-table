@@ -43,7 +43,8 @@
         "amps_max": 65
       }
     ],
-    "source": "Andeli listing and factory spec table (pierce 5/16 in at 220 V, 1/4 in at 110 V; duty 30 % at 65 A, 60 % at 55 A, 100 % at 45 A)"
+    "source": "Andeli listing and factory spec table (pierce 5/16 in at 220 V, 1/4 in at 110 V; duty 30 % at 65 A, 60 % at 55 A, 100 % at 45 A)",
+    "cutter_kind": "pilot-arc"
   },
   "supplies": [
     {

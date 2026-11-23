@@ -24,6 +24,10 @@ const saveFile = (name, text, type) => {
 export const GUIDE_KEY = "plasma.setupGuide.v1";
 const machineSetup = (tab) => { showScreen("cut"); showTab("setup"); setSetupTab(tab); };
 const GUIDE = [
+  // r18 (Josh 23 Nov): the plasma cutter comes first – it sets the cut chart (amps, air, speeds, limits)
+  { id: "plasma", title: "Choose your plasma cutter", body: "The ANDELI CUT-65DS comes with the table. If you use a different cutter, pick it here – the amps, air, speeds and thickness limits follow it. You can change it later in Settings › Torch.",
+    open: () => { closeDlg("guideDlg"); import("../machine/settings.js").then((m) => m.openSettings("torch")).catch(() => {}); },
+    picker: true, auto: () => { try { return !!localStorage.getItem("plasma.profile"); } catch (e) { return false; } } },
   { id: "connect", title: "Connect the table", body: "Plug the table into this computer with the USB cable (or pair it by Bluetooth) and switch it on. Then press Connect on Cut › Setup.",
     // Connect sits on Cut › Setup, which opens once a part is chosen: point at it there (never press it)
     open: () => {
@@ -57,6 +61,18 @@ function paintGuide() {
     const d = document.createElement("button"); d.type = "button"; d.dataset.guideDone = ""; d.textContent = done ? "Not done yet" : "Done";
     d.setAttribute("aria-pressed", done ? "true" : "false");
     d.onclick = () => { setGuide(g.id, !done); paintGuide(); };
+    if (g.picker) {                                   // r18: choose the plasma right here
+      const lab = document.createElement("label"); lab.className = "guidepick";
+      lab.append("Plasma cutter ");
+      const sel = document.createElement("select"); sel.id = "guidePlasma"; sel.setAttribute("aria-label", "Plasma cutter");
+      import("../cut/plasmapick.js").then((P) => {
+        for (const pl of P.PLASMAS) { const opt = document.createElement("option"); opt.value = pl.id; opt.textContent = `${pl.name} – ${pl.note}`; sel.appendChild(opt); }
+        sel.value = P.currentPlasmaId();
+      }).catch(() => {});
+      sel.onchange = async () => { const { choosePlasma } = await import("../machine/settings.js"); const r = await choosePlasma(sel.value); if (r && r.ok) { setGuide("plasma", true); paintGuide(); } };
+      lab.appendChild(sel); li.append(h, p, lab, row);
+      row.append(o, d); ol.appendChild(li); continue;
+    }
     row.append(o, d); li.append(h, p, row); ol.appendChild(li);
   }
   if ($("guideCount")) $("guideCount").textContent = `${n} of ${GUIDE.length} done.`;

@@ -106,6 +106,7 @@ const PRECACHE = [
   "js/cut/nestui.js",
   "js/cut/origins.js",
   "js/cut/pierce.js",
+  "js/cut/plasmapick.js",
   "js/cut/plasmaprofile.js",
   "js/cut/playback.js",
   "js/cut/prepare.js",

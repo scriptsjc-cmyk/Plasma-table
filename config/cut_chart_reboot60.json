@@ -54,7 +54,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 1.5,
@@ -72,7 +74,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 2.0,
@@ -90,7 +94,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 3.0,
@@ -108,7 +114,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 4.0,
@@ -126,7 +134,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 10 ga–3/16 in (3.42–4.76 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 10 ga–3/16 in (3.42–4.76 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 5.0,
@@ -144,7 +154,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 6.0,
@@ -162,7 +174,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 8.0,
@@ -180,7 +194,9 @@
           "kerf_source": "estimate: between the 1.27 mm user-reported CUT-60 kerf and a wider 60 A kerf",
           "lead_in_mm": 5,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/4 in–1/3 in (6.35–8.47 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/4 in–1/3 in (6.35–8.47 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 10.0,
@@ -198,7 +214,9 @@
           "kerf_source": "estimate: scaled up from the 1.27 mm user-reported CUT-60 kerf for thicker / 60 A cuts",
           "lead_in_mm": 5,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/3 in–2/5 in (8.47–10.16 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/3 in–2/5 in (8.47–10.16 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.2,
+          "quality": "clean"
         },
         {
           "thickness_mm": 12.0,
@@ -217,7 +235,9 @@
           "lead_in_mm": 7,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
           "feed_source": "interpolated from the PrimeWeld CUT60 table between 2/5 in–1/2 in (10.16–12.7 mm); amps and air taken from the thicker of those two published points",
-          "note": "A heavy cut for a 60 A plasma. Needs dry air and fresh consumables. Test on scrap first."
+          "note": "A heavy cut for a 60 A plasma. Needs dry air and fresh consumables. Test on scrap first.",
+          "nozzle_mm": 1.2,
+          "quality": "clean"
         },
         {
           "thickness_mm": 16.0,
@@ -236,7 +256,9 @@
           "lead_in_mm": 7,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
           "feed_source": "interpolated from the PrimeWeld CUT60 table between 5/8 in–3/4 in (15.88–19.05 mm); amps and air taken from the thicker of those two published points",
-          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first."
+          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first.",
+          "nozzle_mm": 1.2,
+          "quality": "usable"
         },
         {
           "thickness_mm": 20.0,
@@ -255,7 +277,9 @@
           "lead_in_mm": 7,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
           "feed_source": "estimate: slightly beyond the thickest PrimeWeld CUT60 point (3/4 in, 19.05 mm at 300 mm/min); confirm on scrap",
-          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first."
+          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first.",
+          "nozzle_mm": 1.2,
+          "quality": "rough"
         }
       ],
       "max_cuttable_mm": 20
@@ -279,7 +303,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 1.5,
@@ -297,7 +323,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 2.0,
@@ -315,7 +343,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 3.0,
@@ -333,7 +363,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 4.0,
@@ -351,7 +383,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 10 ga–3/16 in (3.42–4.76 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 10 ga–3/16 in (3.42–4.76 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 5.0,
@@ -369,7 +403,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 6.0,
@@ -387,7 +423,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 8.0,
@@ -405,7 +443,9 @@
           "kerf_source": "estimate: between the 1.27 mm user-reported CUT-60 kerf and a wider 60 A kerf",
           "lead_in_mm": 5,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/4 in–1/3 in (6.35–8.47 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/4 in–1/3 in (6.35–8.47 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 10.0,
@@ -423,7 +463,9 @@
           "kerf_source": "estimate: scaled up from the 1.27 mm user-reported CUT-60 kerf for thicker / 60 A cuts",
           "lead_in_mm": 5,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/3 in–2/5 in (8.47–10.16 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/3 in–2/5 in (8.47–10.16 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.2,
+          "quality": "usable"
         },
         {
           "thickness_mm": 12.0,
@@ -442,7 +484,9 @@
           "lead_in_mm": 7,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
           "feed_source": "interpolated from the PrimeWeld CUT60 table between 2/5 in–1/2 in (10.16–12.7 mm); amps and air taken from the thicker of those two published points",
-          "note": "A heavy cut for a 60 A plasma. Needs dry air and fresh consumables. Test on scrap first."
+          "note": "A heavy cut for a 60 A plasma. Needs dry air and fresh consumables. Test on scrap first.",
+          "nozzle_mm": 1.2,
+          "quality": "usable"
         },
         {
           "thickness_mm": 16.0,
@@ -461,29 +505,12 @@
           "lead_in_mm": 7,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
           "feed_source": "interpolated from the PrimeWeld CUT60 table between 5/8 in–3/4 in (15.88–19.05 mm); amps and air taken from the thicker of those two published points",
-          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first."
-        },
-        {
-          "thickness_mm": 20.0,
-          "amps": 60,
-          "pierce_delay_s": 1.8,
-          "pierce_delay_source": "estimate: no pierce delay is published in the PrimeWeld CUT60 or Heavth P-80 charts; these values rise with thickness and should be confirmed on scrap",
-          "feed_mm_min": 240,
-          "air_bar": "5.0-5.4",
-          "air_psi": 75,
-          "pierce_height_mm": 5.0,
-          "pierce_height_source": "P-80 cutting parameters (Heavth): piercing height generally not less than 5 mm",
-          "cut_height_mm": 1.5,
-          "cut_height_source": "PrimeWeld CUT60 cutting speed table, distance to work 0.06 in (1.5 mm) for every listed thickness",
-          "kerf_mm": 1.8,
-          "kerf_source": "estimate: scaled up from the 1.27 mm user-reported CUT-60 kerf for thicker / 60 A cuts",
-          "lead_in_mm": 7,
-          "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "estimate: slightly beyond the thickest PrimeWeld CUT60 point (3/4 in, 19.05 mm at 240 mm/min); confirm on scrap",
-          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first."
+          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first.",
+          "nozzle_mm": 1.2,
+          "quality": "rough"
         }
       ],
-      "max_cuttable_mm": 20
+      "max_cuttable_mm": 16
     },
     {
       "name": "Aluminium",
@@ -504,7 +531,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 1.5,
@@ -522,7 +551,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 26 ga–16 ga (0.45–1.52 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 2.0,
@@ -540,7 +571,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 3.0,
@@ -558,7 +591,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 16 ga–10 ga (1.52–3.42 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.0,
+          "quality": "clean"
         },
         {
           "thickness_mm": 4.0,
@@ -576,7 +611,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 10 ga–3/16 in (3.42–4.76 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 10 ga–3/16 in (3.42–4.76 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 5.0,
@@ -594,7 +631,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 6.0,
@@ -612,7 +651,9 @@
           "kerf_source": "user-reported ~0.050 in (1.27 mm) on a CUT-60 with a 0.9 mm tip, 1/4 in and thinner (Langmuir Systems forum, May 2021)",
           "lead_in_mm": 3,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 3/16 in–1/4 in (4.76–6.35 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 8.0,
@@ -630,7 +671,9 @@
           "kerf_source": "estimate: between the 1.27 mm user-reported CUT-60 kerf and a wider 60 A kerf",
           "lead_in_mm": 5,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/4 in–1/3 in (6.35–8.47 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/4 in–1/3 in (6.35–8.47 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.1,
+          "quality": "clean"
         },
         {
           "thickness_mm": 10.0,
@@ -648,7 +691,9 @@
           "kerf_source": "estimate: scaled up from the 1.27 mm user-reported CUT-60 kerf for thicker / 60 A cuts",
           "lead_in_mm": 5,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/3 in–2/5 in (8.47–10.16 mm); amps and air taken from the thicker of those two published points"
+          "feed_source": "interpolated from the PrimeWeld CUT60 table between 1/3 in–2/5 in (8.47–10.16 mm); amps and air taken from the thicker of those two published points",
+          "nozzle_mm": 1.2,
+          "quality": "clean"
         },
         {
           "thickness_mm": 12.0,
@@ -667,7 +712,9 @@
           "lead_in_mm": 7,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
           "feed_source": "interpolated from the PrimeWeld CUT60 table between 2/5 in–1/2 in (10.16–12.7 mm); amps and air taken from the thicker of those two published points",
-          "note": "A heavy cut for a 60 A plasma. Needs dry air and fresh consumables. Test on scrap first."
+          "note": "A heavy cut for a 60 A plasma. Needs dry air and fresh consumables. Test on scrap first.",
+          "nozzle_mm": 1.2,
+          "quality": "usable"
         },
         {
           "thickness_mm": 16.0,
@@ -686,29 +733,36 @@
           "lead_in_mm": 7,
           "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
           "feed_source": "interpolated from the PrimeWeld CUT60 table between 5/8 in–3/4 in (15.88–19.05 mm); amps and air taken from the thicker of those two published points",
-          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first."
-        },
-        {
-          "thickness_mm": 20.0,
-          "amps": 60,
-          "pierce_delay_s": 1.8,
-          "pierce_delay_source": "estimate: no pierce delay is published in the PrimeWeld CUT60 or Heavth P-80 charts; these values rise with thickness and should be confirmed on scrap",
-          "feed_mm_min": 345,
-          "air_bar": "5.0-5.4",
-          "air_psi": 75,
-          "pierce_height_mm": 5.0,
-          "pierce_height_source": "P-80 cutting parameters (Heavth): piercing height generally not less than 5 mm",
-          "cut_height_mm": 1.5,
-          "cut_height_source": "PrimeWeld CUT60 cutting speed table, distance to work 0.06 in (1.5 mm) for every listed thickness",
-          "kerf_mm": 1.8,
-          "kerf_source": "estimate: scaled up from the 1.27 mm user-reported CUT-60 kerf for thicker / 60 A cuts",
-          "lead_in_mm": 7,
-          "lead_in_source": "estimate: a short lead-in, a little longer on thicker plate",
-          "feed_source": "estimate: slightly beyond the thickest PrimeWeld CUT60 point (3/4 in, 19.05 mm at 345 mm/min); confirm on scrap",
-          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first."
+          "note": "Near the limit of a 60 A / P-80 cut. Needs dry air and fresh consumables. If piercing struggles, start from the sheet edge. Expect some bevel and dross; test on scrap first.",
+          "nozzle_mm": 1.2,
+          "quality": "rough"
         }
       ],
-      "max_cuttable_mm": 20
+      "max_cuttable_mm": 16
+    },
+    {
+      "name": "Galvanised",
+      "same_as": "Mild steel",
+      "max_cuttable_mm": 12,
+      "tip": "Galvanised: cuts like mild steel, but the zinc coating gives off harmful fumes. Extraction on and wear a mask rated for metal fume."
+    },
+    {
+      "name": "Zintec",
+      "same_as": "Mild steel",
+      "max_cuttable_mm": 6,
+      "tip": "Zintec: thin zinc-coated mild steel. Cut it like mild steel, with extraction on."
+    },
+    {
+      "name": "Corten",
+      "same_as": "Mild steel",
+      "max_cuttable_mm": 25,
+      "tip": "Corten (weathering steel): cut it like mild steel."
+    },
+    {
+      "name": "Chequer plate",
+      "same_as": "Mild steel",
+      "max_cuttable_mm": 10,
+      "tip": "Chequer plate: measure the plate under the tread pattern, not over it, and cut tread side up."
     }
   ],
   "profile": {
@@ -723,6 +777,42 @@
     "duty": [],
     "air_unit_on_display": "bar",
     "eco_mode": false,
-    "nozzles": []
-  }
+    "nozzles": [
+      {
+        "mm": 1.0,
+        "amps_max": 40
+      },
+      {
+        "mm": 1.1,
+        "amps_max": 50
+      },
+      {
+        "mm": 1.2,
+        "amps_max": 60
+      }
+    ],
+    "cutter_kind": "touch-start"
+  },
+  "supplies": [
+    {
+      "id": "16a",
+      "label": "16 A blue plug",
+      "short": "16 A plug",
+      "amps_cap": 60
+    },
+    {
+      "id": "32a",
+      "label": "32 A plug",
+      "short": "32 A plug",
+      "amps_cap": 60
+    },
+    {
+      "id": "13a",
+      "label": "13 A household plug",
+      "short": "13 A plug",
+      "amps_cap": 30,
+      "limited": true
+    }
+  ],
+  "supply_source": "16 A = full power (as the Andeli). 13 A cap is a placeholder until tested."
 }

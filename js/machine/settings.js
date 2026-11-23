@@ -31,7 +31,7 @@ const defaultSettings = () => ({
   fluidnc: { host: "", port: 81 },
   firmwareWarned: false,
   etch: defaultEtchSettings(),
-  cutter: { kind: "touch-start" }, // Josh's current Reboot 60A. Andeli CUT-65DS = pilot-arc.
+  cutter: { kind: "auto" },        // r18: follows the chosen plasma (Andeli CUT-65DS = pilot-arc, Reboot 60A = touch-start)
 });
 
 // ---- validation: every number has a sane range; a bad value is refused (form) or dropped (stored/restored file), never half-applied
@@ -82,13 +82,14 @@ function sanitizeSettings(raw, { strict = false } = {}) {
   if (etch.errors && etch.errors.length) errors.push(...etch.errors);
   const cutterSrc = isObj(src.cutter) ? src.cutter : {};
   const kindRaw = cutterSrc.kind != null ? cutterSrc.kind : src.cutterType;
-  out.cutter = { kind: sanitizeCutterKind(kindRaw) };
+  out.cutter = { kind: kindRaw == null || kindRaw === "" ? "auto" : sanitizeCutterKind(kindRaw) };   // r18: unset = follow the plasma
   return { settings: out, errors: strict ? errors : [] };
 }
 
-export const CUTTER_KINDS = ["touch-start", "pilot-arc", "hf"];
+export const CUTTER_KINDS = ["auto", "touch-start", "pilot-arc", "hf"];   // r18: auto = same as the chosen plasma
 export function sanitizeCutterKind(v) {
   const k = String(v == null ? "" : v).toLowerCase().trim();
+  if (/^auto$|same as/.test(k)) return "auto";      // r18: follow the chosen plasma (Settings › Torch › Your plasma)
   if (/pilot/.test(k)) return "pilot-arc";
   if (/^hf\b|high[\s-]*freq/.test(k)) return "hf";
   return "touch-start";
@@ -212,10 +213,16 @@ export function closeSettings() {
 }
 
 
+// r18: "auto" means the start type of the chosen plasma (its cut chart says which)
+export function resolveCutterKind(kind) {
+  const k = sanitizeCutterKind(kind);
+  if (k !== "auto") return k;
+  try { const p = S.chart && S.chart.profile; return sanitizeCutterKind(p && p.cutter_kind) === "auto" ? "touch-start" : sanitizeCutterKind(p && p.cutter_kind); } catch (e) { return "touch-start"; }
+}
 function paintCutterEtchNote(kind) {
   const el = $("setCutterEtchNote");
   if (!el) return;
-  const k = sanitizeCutterKind(kind != null ? kind : ($("setCutterKind") && $("setCutterKind").value));
+  const k = resolveCutterKind(kind != null ? kind : ($("setCutterKind") && $("setCutterKind").value));
   if (k === "touch-start") {
     el.textContent = "Touch-start cannot strike an arc in the air, so plasma marking is unreliable. Scribe / marker mode is recommended. Plasma etch stays available.";
     el.classList.remove("hidden");
@@ -477,17 +484,13 @@ export function bindSettings() {
   $("btnSaveSettings") && ($("btnSaveSettings").onclick = () => { if (readFormIntoState()) toast("Settings saved."); });
   $$("input[name=setEtchTool]").forEach((r) => r.addEventListener("change", paintEtchToolFields));
   $("setCutterKind") && $("setCutterKind").addEventListener("change", () => paintCutterEtchNote());
-  // r16 B1: which plasma (and so which cut chart). The chart is read at start-up, so a change asks for a reload.
+  // r16 B1 / r18: which plasma (and so which cut chart). The change applies straight away (no reload).
   const prof = $("setPlasmaProfile");
   if (prof) {
-    try { prof.value = localStorage.getItem("plasma.profile") || "andeli-cut65ds"; } catch (e) { /* ignore */ }
-    prof.addEventListener("change", () => {
-      try { localStorage.setItem("plasma.profile", prof.value); } catch (e) { /* ignore */ }
-      $("setPlasmaReload") && $("setPlasmaReload").classList.remove("hidden");
-      toast("Plasma changed – reload to use its cut chart.");
-    });
-    $("setPlasmaReload") && ($("setPlasmaReload").onclick = () => { if (S.connected) { toast("Disconnect from the table first, then reload.", true); return; } location.reload(); });
+    import("../cut/plasmapick.js").then((P) => { prof.value = P.currentPlasmaId(); }).catch(() => {});
+    prof.addEventListener("change", () => choosePlasma(prof.value));
   }
+
   $("formSetPreset") && $("formSetPreset").addEventListener("submit", (e) => {
     e.preventDefault();
     try {
@@ -568,3 +571,18 @@ export function bindSettings() {
 }
 
 export { filterConsoleCommand };
+
+// r18: pick the plasma from Settings or the setup guide. Swaps the cut chart and repaints Cut › Material.
+export async function choosePlasma(id) {
+  const P = await import("../cut/plasmapick.js");
+  const Mat = await import("../cut/material.js");
+  const res = await P.setPlasma(id, { after: () => { try { Mat.defaultSpeed(); Mat.renderMaterials(); Mat.applyMatchingPreset && Mat.applyMatchingPreset(); } catch (e) { /* not on screen yet */ } } });
+  const sel = $("setPlasmaProfile");
+  if (!res.ok) { toast(res.why, true); if (sel) sel.value = P.currentPlasmaId(); return res; }
+  if (sel) sel.value = res.plasma.id;
+  try { const { loadJob } = await import("../core/hooks.js"); loadJob && loadJob(); } catch (e) { /* ignore */ }
+  paintCutterEtchNote();
+  try { const T = await import("./torchtest.js"); T.paintTorchTest && T.paintTorchTest(); } catch (e) { /* ignore */ }
+  toast(`Plasma: ${res.plasma.name} – cut settings updated.`);
+  return res;
+}
