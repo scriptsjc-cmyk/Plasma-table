@@ -21,13 +21,32 @@
 # Limit switches and the hardware E-stop are reserved but left as NO_PIN so
 # the board will boot and jog before those switches are fitted. Uncomment the
 # pin lines in the "when switches are fitted" notes after they are wired.
+#
+# Pin map (27 Nov 2026) — green screw-terminal adapter, USB at the bottom.
+# Right side, top to bottom:
+#   D23 spare; D22 Arc OK reserved (comment only, not wired yet);
+#   TX0 / RX0 leave empty (USB);
+#   D21 Z dir, D19 Z step, D18 Y dir, D5 Y step,
+#   TX2 (gpio.17) X dir, RX2 (gpio.16) X step;
+#   D4 E-stop reserved; D2 and D15 spare; GND; 3V3 for pull-ups.
+#   gpio.5 (Y step) can twitch once at power-up; enable the drivers after boot.
+# Left side, top to bottom:
+#   EN leave empty (board reset); VP / VN / D34 / D35 spare, input only
+#   (gpio.36 / gpio.39 / gpio.34 / gpio.35);
+#   D32 float sensor; D33 X limit; D25 Y limit;
+#   D26 Z limit reserved as a comment only (not active);
+#   D27 OLED SCL, D14 OLED SDA; D12 leave empty (can stop the board booting);
+#   D13 torch relay; GND (limit-switch COM wires); VIN 5 V from the buck.
+# No Z limit is active: the float sensor probes Z, and Z stays out of $H.
+# Other spares: gpio.23, gpio.2, gpio.15. Do not use gpio.12.
 
 name: Plasma Table
 board: ESP32 DevKitC V1 30-pin
 
 # Do not require homing before jogging. Turn must_home on after limit
 # switches are fitted, tested, and homing cycles are enabled below.
-# Homing: every axis has cycle: 0 and limit_* pins NO_PIN (no switches fitted).
+# Homing: every axis has cycle: 0 and limit_* pins NO_PIN (X/Y switches not
+# yet fitted; Z is left out of $H because the float sensor probes the sheet).
 # In FluidNC 4.1.1, cycle 0 means the axis is left out of $H (Home all).
 # $H with no cycle 1+ axes logs "No homing cycles defined" and goes to Alarm;
 # it does not move and does not set machine zero. Do not run $HX/$HY/$HZ
@@ -101,8 +120,8 @@ axes:
       hard_limits: false
       pulloff_mm: 2
       standard_stepper:
-        step_pin: gpio.18:low
-        direction_pin: gpio.19:low
+        step_pin: gpio.16:low
+        direction_pin: gpio.17:low
         disable_pin: NO_PIN
 
   y:
@@ -120,25 +139,27 @@ axes:
     motor0:
       limit_neg_pin: NO_PIN
       # When an NC limit switch is fitted at the negative/home end:
-      # limit_neg_pin: gpio.16:pu
+      # limit_neg_pin: gpio.25:pu
       hard_limits: false
       pulloff_mm: 2
       standard_stepper:
-        step_pin: gpio.22:low
-        # gpio.23:low so machine +Y is toward the operator (front). Y=0 is the
+        # gpio.5 can pulse briefly at power-up; enable the drivers after boot.
+        step_pin: gpio.5:low
+        # gpio.18:low so machine +Y is toward the operator (front). Y=0 is the
         # back / gantry rail. Do not drop :low to "fix" a jog-arrow direction.
-        direction_pin: gpio.23:low
+        direction_pin: gpio.18:low
         disable_pin: NO_PIN
-    # If the gantry is driven by TWO Y motors (not assumed here), add motor1:
+    # If the gantry is driven by TWO Y motors (not assumed here), add motor1 on
+    # two spare pins (gpio.23 and gpio.2 are free). Do not reuse the motor,
+    # limit, E-stop or OLED pins in the pin map above.
     # motor1:
     #   limit_neg_pin: NO_PIN
     #   hard_limits: false
     #   pulloff_mm: 2
     #   standard_stepper:
-    #     step_pin: gpio.17:low
-    #     direction_pin: gpio.4:low
+    #     step_pin: gpio.23:low
+    #     direction_pin: gpio.2:low
     #     disable_pin: NO_PIN
-    # and move the Y limit / E-stop / OLED pins as described in the wiring guide.
 
   z:
     steps_per_mm: 400
@@ -155,24 +176,26 @@ axes:
       feed_mm_per_min: 80
     motor0:
       limit_neg_pin: NO_PIN
-      # When an NC limit switch is fitted at the Z home end (usually the top):
-      # limit_neg_pin: gpio.17:pu
+      # No Z limit is active. The floating-head probe (gpio.32) finds the sheet,
+      # and Z stays out of $H (cycle: 0). Keep Z retracts small so the torch
+      # cannot drive into the top of its travel. If a switch is fitted later:
+      # limit_neg_pin: gpio.26:pu
       hard_limits: false
       pulloff_mm: 1
       standard_stepper:
-        step_pin: gpio.25:low
-        direction_pin: gpio.26
+        step_pin: gpio.19:low
+        direction_pin: gpio.21
         disable_pin: NO_PIN
 
 # Torch on/off through a relay module. M3 S1 turns it on, M5 turns it off.
-# Never wire gpio.27 to the plasma cutter itself.
-# output_pin is gpio.27 (not :low). FluidNC 4.1.1 does accept :low to invert the
+# Never wire gpio.13 to the plasma cutter itself.
+# output_pin is gpio.13 (not :low). FluidNC 4.1.1 does accept :low to invert the
 # pin, but this module is high-trigger: a HIGH from the ESP32 closes the relay.
 # The always-on light on the module is its power LED, not the coil. If Test
 # torch does not close the relay, check the module's high/low jumper is on high.
 # off_on_alarm turns the relay off if an alarm or the hardware E-stop trips.
 Relay:
-  output_pin: gpio.27
+  output_pin: gpio.13
   enable_pin: NO_PIN
   direction_pin: NO_PIN
   off_on_alarm: true
@@ -191,6 +214,9 @@ Relay:
 probe:
   pin: gpio.32:low:pu
 
+# Arc OK is reserved on gpio.22. Not wired yet — do not assign a pin here
+# until the cutter's Arc OK dry contact is connected.
+#
 # Hardware E-stop is reserved on gpio.4. Leave it NO_PIN until the button
 # is wired, or FluidNC will think the E-stop is pressed (the pin would float
 # high). When a normally-closed E-stop to GND is fitted:
@@ -210,7 +236,7 @@ control:
 # i2c_address: 61 (0x3D). Turned off: with no screen fitted it can stall the board (stop-start jogging). Remove the # marks only once a screen is fitted.
 # i2c0:
 #   sda_pin: gpio.14
-#   scl_pin: gpio.13
+#   scl_pin: gpio.27
 #   frequency: 100000
 
 # oled:

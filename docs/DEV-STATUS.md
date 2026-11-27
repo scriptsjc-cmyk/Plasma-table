@@ -2,7 +2,7 @@
 
 The checker reads this file. Its rules are in README.md on the `checker-reports` branch. Plan: `combined-plan-r15.md` (Josh changes it).
 
-Last updated: 22 Nov 2026, 06:36 (UK time). Live: r15 Round 10 @ 21e59af (CI green, version.json 2026.11.22-21e59af), on top of the editor-redesign test review and Round 9. Working on: nothing new until Josh answers the questions below.
+Last updated: 27 Nov 2026, 21:40 (UK time). Live: r18 on main @ da68ba9. Hardware pin layout (Josh, 27 Nov) is in this commit; the app is unchanged. Working on: nothing new on the app until Josh answers the questions below.
 
 ## r18 – choose your plasma cutter, by Claude (LIVE on main; Josh: "ok go live" 23 Nov 10:29, marker pen "go live straight away")
 Josh, 23 Nov: "adjust the cnc depending on what plazma cutter is being used … a reboot aswell but made default what it is now".
@@ -55,7 +55,8 @@ Josh, 22 Nov 13:13: "Would you be able to do this update as dev is out of action
   checks in them still expect the laptop choice; please align them with C1.
 
 ## Working on
-- Nothing new: Round 10 is done (below). Waiting on the questions in "For Josh to decide".
+- Nothing new on the app: Round 10 is done (below). Waiting on the questions in "For Josh to decide".
+- Hardware (Josh 27 Nov): FluidNC pin layout in `hardware/config.yaml` (and the no-OLED copy) moved so the six motor wires sit in one run on the breakout, Z at the top of that run and X at the bottom, dir before step. X/Y limits stay NO_PIN until the switches are fitted (reserved gpio.33 and gpio.25). Z limit reserved as a comment on gpio.26 only (not active); the float sensor probes Z, and Z stays out of `$H`. Torch relay gpio.13, OLED SDA 14 / SCL 27. Arc OK reserved on gpio.22 as a comment only. No app, G-code or safety-gate change.
 
 ## Ready to check
 - r15 Round 10 (later / nice to have; approved in the same t534u words as Round 9), tests first: unit 64 (58 checks) @ 0f7d0f6,

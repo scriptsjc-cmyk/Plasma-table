@@ -16,6 +16,15 @@ Josh is driving the table with a **DUBEUYEW ESP32-DevKitC V1 (30-pin)** and a sc
 1. Flash FluidNC onto the DevKitC, then put `hardware/config.yaml` (Josh’s board) or `config/fluidnc-plasma.yaml` (template) on the board as `config.yaml`. Edit the GPIO numbers to match your breakout, and confirm direction-pin `:low` flags against the real machine.
 2. DM542TE: set the DIP switches for the current your motors need. `steps_per_mm` in the YAML is a starting point — measure a commanded 100 mm move and use Settings → calibration (Pro) to correct it, then write the new value back into the YAML.
 3. Wire step/dir/enable, the torch relay (M3/M5), the floating-head probe, and (if you have them) limit / e-stop inputs.
+   Josh's board pins (27 Nov 2026) are in `hardware/config.yaml`. Summary:
+   X dir gpio.17:low, X step gpio.16:low; Y dir gpio.18:low, Y step gpio.5:low;
+   Z dir gpio.21 (no :low), Z step gpio.19:low. X/Y limits stay NO_PIN until the
+   switches are fitted and reading correctly (reserved gpio.33:pu and gpio.25:pu).
+   Z limit is reserved as a comment on gpio.26 only (not active): the floating-head
+   probe (gpio.32:low:pu) finds the sheet, and Z stays out of `$H`. Torch relay
+   gpio.13, E-stop reserved gpio.4, OLED SDA 14 / SCL 27. Arc OK reserved on
+   gpio.22 as a comment only (not wired yet). Spares: 23, 2, 15, and 34/35/36/39
+   (input only). Do not use gpio.12.
 4. On a computer in Chrome or Edge, press **Connect (USB or Bluetooth)** and pick the port. Close the FluidNC installer or any other program using the port first.
 5. If you are using Bluetooth, turn FluidNC Wi-Fi off (`$WiFi/Mode=Off`, then `$Bye`). Wi-Fi is only for FluidNC’s own web installer; Wi-Fi + Bluetooth together can be unstable on an ESP32.
 
